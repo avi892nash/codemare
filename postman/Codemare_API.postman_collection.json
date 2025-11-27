@@ -2,7 +2,7 @@
 	"info": {
 		"_postman_id": "codemare-api-collection",
 		"name": "Codemare Backend API",
-		"description": "Complete API collection for the Codemare online code execution platform.\n\n## Features\n- Health check endpoint\n- Problem listing and retrieval\n- Code execution for Python, JavaScript, C++, and Java\n- Comprehensive test coverage\n- Working examples for all languages\n\n## Base URL\nDefault: {{baseUrl}} (http://localhost:3000)\n\n## Authentication\nNo authentication required for this API.\n\n## Problems Available\n1. Two Sum (Easy)\n2. Reverse String (Easy)\n\n## Supported Languages\n- python\n- javascript\n- cpp\n- java\n\n## Usage\n1. Import the collection and environment into Postman\n2. Ensure the backend server is running on port 3000\n3. Run requests individually or use the Collection Runner for full test suite\n\nFor detailed documentation, see the README.md file in the postman directory.",
+		"description": "Complete API collection for the Codemare online code execution platform.\n\n## Features\n- Health check endpoint\n- Problem listing and retrieval\n- Code execution for Python, JavaScript, C++, and Java\n- **NEW: IDE execution with custom test cases (stdin/stdout)**\n- Comprehensive test coverage\n- Working examples for all languages\n\n## Base URL\nDefault: {{baseUrl}} (http://localhost:3000)\n\n## Authentication\nNo authentication required for this API.\n\n## Endpoints\n1. **Problem-based execution** (`/api/execute`) - Execute function-based code against predefined test cases\n2. **IDE execution** (`/api/ide/execute`) - Execute complete programs with custom stdin/stdout test cases\n\n## Problems Available\n1. Two Sum (Easy)\n2. Reverse String (Easy)\n\n## Supported Languages\n- python\n- javascript\n- cpp\n- java\n\n## Usage\n1. Import the collection and environment into Postman\n2. Ensure the backend server is running on port 3000\n3. Run requests individually or use the Collection Runner for full test suite\n\nFor detailed documentation, see the README.md file in the postman directory.",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [
@@ -982,7 +982,399 @@
 			]
 		},
 		{
-			"name": "07 - Error Cases",
+			"name": "07 - IDE Execution",
+			"item": [
+				{
+					"name": "IDE - Python (Simple Addition)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"All tests passed\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.totalPassed).to.equal(jsonData.totalTests);",
+									"});",
+									"",
+									"pm.test(\"Test results are correct\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.testResults).to.be.an('array');",
+									"    jsonData.testResults.forEach(function(result) {",
+									"        pm.expect(result.passed).to.be.true;",
+									"    });",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"code\": \"a, b = map(int, input().split())\\nprint(a + b)\",\n  \"language\": \"python\",\n  \"testCases\": [\n    {\"input\": \"2 3\", \"expectedOutput\": \"5\\n\"},\n    {\"input\": \"10 20\", \"expectedOutput\": \"30\\n\"},\n    {\"input\": \"-5 15\", \"expectedOutput\": \"10\\n\"}\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/ide/execute",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"ide",
+								"execute"
+							]
+						},
+						"description": "Execute Python code that reads two numbers from stdin and outputs their sum."
+					},
+					"response": []
+				},
+				{
+					"name": "IDE - JavaScript (String Manipulation)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"All tests passed\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"code\": \"const line = readline();\\nconsole.log(line.toUpperCase());\",\n  \"language\": \"javascript\",\n  \"testCases\": [\n    {\"input\": \"hello\", \"expectedOutput\": \"HELLO\\n\"},\n    {\"input\": \"world\", \"expectedOutput\": \"WORLD\\n\"}\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/ide/execute",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"ide",
+								"execute"
+							]
+						},
+						"description": "Execute JavaScript code that converts input to uppercase."
+					},
+					"response": []
+				},
+				{
+					"name": "IDE - C++ (Simple I/O)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"All tests passed\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"code\": \"#include <iostream>\\nusing namespace std;\\nint main() {\\n    int a, b;\\n    cin >> a >> b;\\n    cout << a + b << endl;\\n    return 0;\\n}\",\n  \"language\": \"cpp\",\n  \"testCases\": [\n    {\"input\": \"3 4\", \"expectedOutput\": \"7\\n\"},\n    {\"input\": \"100 200\", \"expectedOutput\": \"300\\n\"}\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/ide/execute",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"ide",
+								"execute"
+							]
+						},
+						"description": "Execute C++ code with stdin/stdout."
+					},
+					"response": []
+				},
+				{
+					"name": "IDE - Java (Scanner Input)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"All tests passed\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"code\": \"import java.util.*;\\npublic class Main {\\n    public static void main(String[] args) {\\n        Scanner sc = new Scanner(System.in);\\n        int a = sc.nextInt();\\n        int b = sc.nextInt();\\n        System.out.println(a + b);\\n    }\\n}\",\n  \"language\": \"java\",\n  \"testCases\": [\n    {\"input\": \"8 12\", \"expectedOutput\": \"20\\n\"},\n    {\"input\": \"50 75\", \"expectedOutput\": \"125\\n\"}\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/ide/execute",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"ide",
+								"execute"
+							]
+						},
+						"description": "Execute Java code with Scanner for stdin input."
+					},
+					"response": []
+				},
+				{
+					"name": "IDE - Python (Failed Test)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Test fails as expected\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.false;",
+									"    pm.expect(jsonData.totalPassed).to.be.below(jsonData.totalTests);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"code\": \"a, b = map(int, input().split())\\nprint(a * b)\",\n  \"language\": \"python\",\n  \"testCases\": [\n    {\"input\": \"2 3\", \"expectedOutput\": \"5\\n\"}\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/ide/execute",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"ide",
+								"execute"
+							]
+						},
+						"description": "Execute code where output doesn't match expected (multiplication instead of addition)."
+					},
+					"response": []
+				},
+				{
+					"name": "IDE - Python (Runtime Error)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Runtime error is reported\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.false;",
+									"    pm.expect(jsonData.testResults[0].error).to.exist;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"code\": \"a, b = map(int, input().split())\\nprint(a / 0)\",\n  \"language\": \"python\",\n  \"testCases\": [\n    {\"input\": \"10 5\", \"expectedOutput\": \"2\\n\"}\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/ide/execute",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"ide",
+								"execute"
+							]
+						},
+						"description": "Execute code with runtime error (division by zero)."
+					},
+					"response": []
+				},
+				{
+					"name": "IDE - Too Many Test Cases",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 400\", function () {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test(\"Error message about limit\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.error).to.include('10 test cases');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"code\": \"print('test')\",\n  \"language\": \"python\",\n  \"testCases\": [\n    {\"input\": \"1\", \"expectedOutput\": \"test\\n\"},\n    {\"input\": \"2\", \"expectedOutput\": \"test\\n\"},\n    {\"input\": \"3\", \"expectedOutput\": \"test\\n\"},\n    {\"input\": \"4\", \"expectedOutput\": \"test\\n\"},\n    {\"input\": \"5\", \"expectedOutput\": \"test\\n\"},\n    {\"input\": \"6\", \"expectedOutput\": \"test\\n\"},\n    {\"input\": \"7\", \"expectedOutput\": \"test\\n\"},\n    {\"input\": \"8\", \"expectedOutput\": \"test\\n\"},\n    {\"input\": \"9\", \"expectedOutput\": \"test\\n\"},\n    {\"input\": \"10\", \"expectedOutput\": \"test\\n\"},\n    {\"input\": \"11\", \"expectedOutput\": \"test\\n\"}\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/ide/execute",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"ide",
+								"execute"
+							]
+						},
+						"description": "Test validation error for exceeding 10 test case limit."
+					},
+					"response": []
+				},
+				{
+					"name": "IDE - Invalid Language",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 400\", function () {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test(\"Error message present\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.error).to.exist;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"code\": \"puts 'hello'\",\n  \"language\": \"ruby\",\n  \"testCases\": [\n    {\"input\": \"\", \"expectedOutput\": \"hello\\n\"}\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/ide/execute",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"ide",
+								"execute"
+							]
+						},
+						"description": "Test validation error for unsupported language."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "08 - Error Cases",
 			"item": [
 				{
 					"name": "Execute - Invalid Language",
