@@ -30,8 +30,12 @@ export async function executeIdeCode(
 
         const executionTime = Date.now() - testStartTime;
         const actualOutput = dockerResult.output || '';
+
+        // Normalize outputs by trimming trailing whitespace for comparison
+        const normalizedActual = actualOutput.trimEnd();
+        const normalizedExpected = testCase.expectedOutput.trimEnd();
         const passed =
-          actualOutput === testCase.expectedOutput && !dockerResult.error;
+          normalizedActual === normalizedExpected && !dockerResult.error;
 
         results.push({
           input: testCase.input,
