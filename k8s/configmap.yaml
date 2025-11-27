@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: codemare-config
+  namespace: codemare
+data:
+  ALLOWED_ORIGINS: "https://yourdomain.com"
+  LOG_LEVEL: "info"

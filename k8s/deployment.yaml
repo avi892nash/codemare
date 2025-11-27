@@ -1,0 +1,110 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: codemare-backend
+  namespace: codemare
+  labels:
+    app: codemare-backend
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: codemare-backend
+  template:
+    metadata:
+      labels:
+        app: codemare-backend
+    spec:
+      securityContext:
+        fsGroup: 1000
+
+      containers:
+        # Main application container
+        - name: backend
+          image: your-registry/codemare-backend:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3000
+              protocol: TCP
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: PORT
+              value: "3000"
+            - name: DOCKER_HOST
+              value: "tcp://localhost:2375"  # Connect to DinD sidecar
+          envFrom:
+            - configMapRef:
+                name: codemare-config
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "1Gi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 2
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+
+        # Docker-in-Docker sidecar
+        - name: dind
+          image: docker:24-dind
+          securityContext:
+            privileged: true  # Required for Docker daemon
+          env:
+            - name: DOCKER_TLS_CERTDIR
+              value: ""  # Disable TLS for localhost communication
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "2Gi"
+              cpu: "1000m"
+          volumeMounts:
+            - name: docker-graph-storage
+              mountPath: /var/lib/docker
+            - name: tmp
+              mountPath: /tmp
+
+      volumes:
+        - name: docker-graph-storage
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}
+
+      # Pod anti-affinity to spread pods across nodes
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - codemare-backend
+                topologyKey: kubernetes.io/hostname

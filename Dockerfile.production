@@ -1,0 +1,40 @@
+FROM node:20-alpine
+
+# Install Docker CLI for code execution
+RUN apk add --no-cache docker-cli
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install production dependencies only
+RUN npm ci --only=production
+
+# Copy TypeScript config and source
+COPY tsconfig.json ./
+COPY src ./src
+
+# Build TypeScript
+RUN npm install -D typescript @types/node @types/express @types/cors @types/dockerode && \
+    npm run build && \
+    npm uninstall -D typescript @types/node @types/express @types/cors @types/dockerode
+
+# Remove source files after build
+RUN rm -rf src tsconfig.json
+
+# Copy data directory
+COPY src/data ./dist/data
+
+# Expose port
+EXPOSE 3000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+
+# Run as node user for security
+USER node
+
+# Start production server
+CMD ["node", "dist/server.js"]

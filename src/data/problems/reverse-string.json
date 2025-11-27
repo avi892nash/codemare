@@ -1,0 +1,49 @@
+{
+  "id": "reverse-string",
+  "title": "Reverse String",
+  "difficulty": "Easy",
+  "description": "Write a function that reverses a string. The input string is given as an array of characters `s`.\n\nYou must do this by modifying the input array in-place with O(1) extra memory.\n\nReturn the modified array.",
+  "examples": [
+    {
+      "input": "s = ['h','e','l','l','o']",
+      "output": "['o','l','l','e','h']"
+    },
+    {
+      "input": "s = ['H','a','n','n','a','h']",
+      "output": "['h','a','n','n','a','H']"
+    }
+  ],
+  "constraints": [
+    "1 <= s.length <= 10^5",
+    "s[i] is a printable ascii character."
+  ],
+  "testCases": [
+    {
+      "input": [["h", "e", "l", "l", "o"]],
+      "expectedOutput": ["o", "l", "l", "e", "h"],
+      "hidden": false
+    },
+    {
+      "input": [["H", "a", "n", "n", "a", "h"]],
+      "expectedOutput": ["h", "a", "n", "n", "a", "H"],
+      "hidden": false
+    },
+    {
+      "input": [["a"]],
+      "expectedOutput": ["a"],
+      "hidden": false
+    },
+    {
+      "input": [["a", "b", "c", "d", "e"]],
+      "expectedOutput": ["e", "d", "c", "b", "a"],
+      "hidden": true
+    }
+  ],
+  "starterCode": {
+    "python": "def reverseString(s):\n    # Write your code here\n    pass",
+    "javascript": "function reverseString(s) {\n    // Write your code here\n}",
+    "cpp": "#include <vector>\nusing namespace std;\n\nvector<char> reverseString(vector<char>& s) {\n    // Write your code here\n}",
+    "java": "class Solution {\n    public char[] reverseString(char[] s) {\n        // Write your code here\n    }\n}"
+  },
+  "functionName": "reverseString"
+}

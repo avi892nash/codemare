@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.production
+    image: codemare-backend:latest
+    container_name: codemare-backend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock  # Docker socket access for code execution
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:5173}
+    networks:
+      - codemare
+    depends_on:
+      - python-executor
+      - javascript-executor
+      - cpp-executor
+      - java-executor
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # Executor images - built but not run as services
+  python-executor:
+    build:
+      context: ./docker/python-executor
+    image: codemare-python-executor:latest
+    command: /bin/true  # Exit immediately after build
+
+  javascript-executor:
+    build:
+      context: ./docker/javascript-executor
+    image: codemare-js-executor:latest
+    command: /bin/true
+
+  cpp-executor:
+    build:
+      context: ./docker/cpp-executor
+    image: codemare-cpp-executor:latest
+    command: /bin/true
+
+  java-executor:
+    build:
+      context: ./docker/java-executor
+    image: codemare-java-executor:latest
+    command: /bin/true
+
+networks:
+  codemare:
+    driver: bridge
