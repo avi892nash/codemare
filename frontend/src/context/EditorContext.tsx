@@ -2,7 +2,13 @@ import { createContext, useContext, useState, ReactNode } from 'react';
 import { Problem } from '../types/problem';
 import { Language, ExecutionResponse } from '../types/execution';
 
+type Mode = 'problem' | 'ide';
+
 interface EditorContextType {
+  // Current mode
+  mode: Mode;
+  setMode: (mode: Mode) => void;
+
   // Current problem
   currentProblem: Problem | null;
   setCurrentProblem: (problem: Problem | null) => void;
@@ -27,6 +33,7 @@ interface EditorContextType {
 const EditorContext = createContext<EditorContextType | undefined>(undefined);
 
 export function EditorProvider({ children }: { children: ReactNode }) {
+  const [mode, setMode] = useState<Mode>('problem');
   const [currentProblem, setCurrentProblem] = useState<Problem | null>(null);
   const [selectedLanguage, setSelectedLanguage] = useState<Language>('python');
   const [code, setCode] = useState<string>('');
@@ -36,6 +43,8 @@ export function EditorProvider({ children }: { children: ReactNode }) {
   return (
     <EditorContext.Provider
       value={{
+        mode,
+        setMode,
         currentProblem,
         setCurrentProblem,
         selectedLanguage,

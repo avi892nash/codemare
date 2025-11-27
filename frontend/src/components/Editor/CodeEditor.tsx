@@ -11,7 +11,7 @@ const LANGUAGE_MAP: Record<string, string> = {
 };
 
 export function CodeEditor() {
-  const { code, setCode, selectedLanguage, currentProblem } = useEditor();
+  const { code, setCode, selectedLanguage, currentProblem, mode } = useEditor();
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
 
   const handleEditorDidMount: OnMount = (editor) => {
@@ -36,13 +36,13 @@ export function CodeEditor() {
     setCode(value || '');
   };
 
-  // Load starter code when problem or language changes
+  // Load starter code when problem or language changes (only in problem mode)
   useEffect(() => {
-    if (currentProblem) {
+    if (mode === 'problem' && currentProblem) {
       const starterCode = currentProblem.starterCode[selectedLanguage];
       setCode(starterCode);
     }
-  }, [currentProblem, selectedLanguage, setCode]);
+  }, [mode, currentProblem, selectedLanguage, setCode]);
 
   return (
     <div className="h-full w-full">

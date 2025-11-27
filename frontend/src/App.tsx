@@ -9,10 +9,10 @@ import { OutputDisplay } from './components/Results/OutputDisplay';
 import { IdeView } from './components/IDE/IdeView';
 import { useCodeExecution } from './hooks/useCodeExecution';
 
-type Mode = 'problem' | 'ide';
-
 function AppContent() {
   const {
+    mode,
+    setMode,
     currentProblem,
     selectedLanguage,
     code,
@@ -24,7 +24,6 @@ function AppContent() {
 
   const { executeCode } = useCodeExecution();
   const [showProblemList] = useState(true);
-  const [mode, setMode] = useState<Mode>('problem');
 
   const handleRun = async () => {
     if (!currentProblem) return;
