@@ -1,10 +1,6 @@
 import Docker from 'dockerode';
 import { spawn } from 'child_process';
-import {
-  Language,
-  DockerExecutionInput,
-  DockerExecutionOutput,
-} from '../models/ExecutionResult.js';
+import { Language } from '../models/ExecutionResult.js';
 import { DOCKER_CONFIG } from '../config/docker.js';
 
 /**
@@ -75,13 +71,14 @@ export interface ExecutionConfig {
 const DEFAULT_CONFIG: ExecutionConfig = DOCKER_CONFIG.limits;
 
 /**
- * Execute code in a sandboxed Docker container
+ * Execute code in a sandboxed Docker container (generic stdin/stdout)
  */
 export async function executeInDocker(
   language: Language,
-  input: DockerExecutionInput,
+  code: string,
+  input: string,
   config: ExecutionConfig = DEFAULT_CONFIG
-): Promise<DockerExecutionOutput> {
+): Promise<{ output: string; error?: string }> {
   const imageName = LANGUAGE_IMAGES[language];
 
   if (!imageName) {
@@ -89,8 +86,8 @@ export async function executeInDocker(
   }
 
   try {
-    // Prepare input data
-    const inputData = JSON.stringify(input);
+    // Prepare input data in generic format
+    const inputData = JSON.stringify({ code, input });
 
     // Build docker run command
     const dockerCmd = [
@@ -123,30 +120,34 @@ export async function executeInDocker(
       ),
     ]);
 
-    const output = stdout.trim();
+    const output = stdout.trim() || stderr.trim();
 
-    // Parse output
+    // Parse output from executor
     try {
-      const parsedOutput: DockerExecutionOutput = JSON.parse(output);
+      const parsedOutput: { output: string; error?: string } = JSON.parse(output);
       return parsedOutput;
     } catch (parseError) {
-      // If JSON parsing fails, return raw output as error
+      // If JSON parsing fails, return raw output
       return {
-        error: `Failed to parse executor output: ${output || stderr}`,
+        output: stdout,
+        error: stderr || 'Failed to parse executor output',
       };
     }
   } catch (error) {
     if (error instanceof Error) {
       if (error.message.includes('timeout')) {
         return {
+          output: '',
           error: 'Time Limit Exceeded',
         };
       }
       return {
+        output: '',
         error: `Execution failed: ${error.message}`,
       };
     }
     return {
+      output: '',
       error: 'Unknown execution error',
     };
   }

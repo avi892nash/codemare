@@ -1,4 +1,5 @@
 import { executeInDocker } from './dockerService.js';
+import { wrapFunctionCode } from './codeWrapperService.js';
 import { validateResults } from './validationService.js';
 import {
   ExecutionRequest,
@@ -43,18 +44,20 @@ export async function executeCode(
       };
     }
 
-    // Prepare test cases for Docker executor
-    const dockerInput = {
-      code: request.code,
-      tests: problem.testCases.map((tc) => ({
-        input: tc.input,
-        expected: tc.expectedOutput,
-      })),
-      functionName: problem.functionName,
-    };
+    // Wrap user's function code with test harness
+    const { wrappedCode, input } = wrapFunctionCode(
+      request.code,
+      problem.functionName,
+      problem.testCases,
+      request.language
+    );
 
-    // Execute in Docker
-    const dockerOutput = await executeInDocker(request.language, dockerInput);
+    // Execute wrapped code with generic executor
+    const dockerOutput = await executeInDocker(
+      request.language,
+      wrappedCode,
+      input
+    );
 
     // Check for Docker execution errors
     if (dockerOutput.error) {
@@ -69,9 +72,25 @@ export async function executeCode(
       };
     }
 
+    // Parse results from wrapped code output
+    let parsedResults;
+    try {
+      parsedResults = JSON.parse(dockerOutput.output);
+    } catch (parseError) {
+      return {
+        success: false,
+        testResults: [],
+        totalPassed: 0,
+        totalTests: problem.testCases.length,
+        executionTime: Date.now() - startTime,
+        memoryUsed: 0,
+        error: 'Failed to parse test results',
+      };
+    }
+
     // Validate results
     const testResults = validateResults(
-      dockerOutput.results || [],
+      parsedResults.results || [],
       problem.testCases
     );
 

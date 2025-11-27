@@ -102,3 +102,63 @@ export function sanitizeResults(results: TestCaseResult[]): TestCaseResult[] {
     return result;
   });
 }
+
+/**
+ * Validate IDE execution request
+ */
+export function validateIdeRequest(request: any): { valid: boolean; error?: string } {
+  // Validate language
+  const validLanguages = ['python', 'javascript', 'cpp', 'java'];
+  if (!validLanguages.includes(request.language)) {
+    return { valid: false, error: 'Invalid language. Must be: python, javascript, cpp, or java' };
+  }
+
+  // Validate code
+  if (!request.code || typeof request.code !== 'string') {
+    return { valid: false, error: 'Code is required and must be a string' };
+  }
+
+  if (request.code.trim().length === 0) {
+    return { valid: false, error: 'Code cannot be empty' };
+  }
+
+  if (request.code.length > 50000) {
+    return { valid: false, error: 'Code exceeds maximum size of 50KB' };
+  }
+
+  // Validate test cases
+  if (!Array.isArray(request.testCases)) {
+    return { valid: false, error: 'Test cases must be an array' };
+  }
+
+  if (request.testCases.length === 0) {
+    return { valid: false, error: 'At least one test case is required' };
+  }
+
+  if (request.testCases.length > 10) {
+    return { valid: false, error: 'Maximum 10 test cases allowed' };
+  }
+
+  // Validate each test case
+  for (let i = 0; i < request.testCases.length; i++) {
+    const tc = request.testCases[i];
+
+    if (typeof tc.input !== 'string') {
+      return { valid: false, error: `Test ${i + 1}: input must be a string` };
+    }
+
+    if (typeof tc.expectedOutput !== 'string') {
+      return { valid: false, error: `Test ${i + 1}: expectedOutput must be a string` };
+    }
+
+    if (tc.input.length > 10000) {
+      return { valid: false, error: `Test ${i + 1}: input too large (max 10KB)` };
+    }
+
+    if (tc.expectedOutput.length > 100000) {
+      return { valid: false, error: `Test ${i + 1}: expected output too large (max 100KB)` };
+    }
+  }
+
+  return { valid: true };
+}

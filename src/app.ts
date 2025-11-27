@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import problemRoutes from './routes/problemRoutes.js';
 import executionRoutes from './routes/executionRoutes.js';
+import ideRoutes from './routes/ideRoutes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 const app = express();
@@ -30,6 +31,7 @@ app.get('/health', (_req, res) => {
 // API Routes
 app.use('/api/problems', problemRoutes);
 app.use('/api/execute', executionRoutes);
+app.use('/api/ide', ideRoutes);
 
 // 404 handler
 app.use((_req, res) => {
