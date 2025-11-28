@@ -46,7 +46,7 @@ export function OutputDisplay({ results }: OutputDisplayProps) {
             results.success ? 'text-green-500' : 'text-yellow-500'
           }`}
         >
-          {results.success ? 'All Tests Passed! 🎉' : 'Some Tests Failed'}
+          {results.success ? 'All Tests Passed!' : 'Some Tests Failed'}
         </h2>
         <p className="text-gray-300 mt-2">
           {results.totalPassed} / {results.totalTests} test cases passed

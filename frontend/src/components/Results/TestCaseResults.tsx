@@ -23,7 +23,7 @@ export function TestCaseResults({ results }: TestCaseResultsProps) {
                   result.passed ? 'text-green-500' : 'text-red-500'
                 }`}
               >
-                {result.passed ? '✓' : '✗'}
+                {result.passed ? 'PASS' : 'FAIL'}
               </span>
               <span className="font-semibold text-white">
                 {result.hidden ? 'Hidden Test Case' : `Test Case ${index + 1}`}
@@ -75,8 +75,8 @@ export function TestCaseResults({ results }: TestCaseResultsProps) {
           {result.hidden && (
             <div className="text-sm text-gray-400 italic">
               {result.passed
-                ? 'Passed hidden test case ✓'
-                : 'Failed hidden test case ✗'}
+                ? 'Passed hidden test case'
+                : 'Failed hidden test case'}
             </div>
           )}
         </div>

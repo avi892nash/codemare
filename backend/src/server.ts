@@ -17,7 +17,7 @@ async function startServer() {
 
     // Start server
     app.listen(PORT, () => {
-      console.log(`\n🚀 Codemare backend running on http://localhost:${PORT}`);
+      console.log(`\nCodemare backend running on http://localhost:${PORT}`);
       console.log(`   Health check: http://localhost:${PORT}/health`);
       console.log(`   API Endpoints:`);
       console.log(`     GET  /api/problems`);
