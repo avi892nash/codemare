@@ -16,3 +16,20 @@ export interface IdePersistedState {
     java: LanguageData;
   };
 }
+
+// App-level state persistence
+export type Mode = 'problem' | 'ide';
+
+export interface ProblemCodeData {
+  [problemId: string]: {
+    [language: string]: string; // code for each language
+  };
+}
+
+export interface AppPersistedState {
+  version: number;
+  mode: Mode;
+  selectedLanguage: Language;
+  currentProblemId: string | null;
+  problemCode: ProblemCodeData;
+}
