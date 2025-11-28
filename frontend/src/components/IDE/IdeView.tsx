@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { CodeEditor } from '../Editor/CodeEditor';
 import { LanguageSelector } from '../Editor/LanguageSelector';
 import { TestCaseManager } from './TestCaseManager';
@@ -10,6 +10,8 @@ import {
   IdeExecutionResponse,
 } from '../../types/execution';
 import { IDE_TEMPLATES } from '../../constants/ideTemplates';
+import { useIdePersistence } from '../../hooks/useIdePersistence';
+import { clearLanguageData } from '../../utils/localStorage';
 
 export function IdeView() {
   const { selectedLanguage, code, setCode, mode } = useEditor();
@@ -20,22 +22,9 @@ export function IdeView() {
     null
   );
   const [isExecuting, setIsExecuting] = useState(false);
-  const [initialized, setInitialized] = useState(false);
 
-  // Initialize with template code when entering IDE mode for the first time
-  useEffect(() => {
-    if (mode === 'ide' && !initialized) {
-      setCode(IDE_TEMPLATES[selectedLanguage]);
-      setInitialized(true);
-    }
-  }, [mode, initialized, selectedLanguage, setCode]);
-
-  // Update template when language changes in IDE mode
-  useEffect(() => {
-    if (mode === 'ide' && initialized) {
-      setCode(IDE_TEMPLATES[selectedLanguage]);
-    }
-  }, [selectedLanguage]);
+  // Persist IDE code and test cases in localStorage
+  useIdePersistence(selectedLanguage, code, setCode, testCases, setTestCases, mode);
 
   const handleRun = async () => {
     // Validate test cases
@@ -84,6 +73,10 @@ export function IdeView() {
   };
 
   const handleReset = () => {
+    // Clear localStorage for current language
+    clearLanguageData(selectedLanguage);
+
+    // Reset to template
     setCode(IDE_TEMPLATES[selectedLanguage]);
     setIdeResults(null);
     setTestCases([{ input: '2\n3', expectedOutput: '5' }]);
