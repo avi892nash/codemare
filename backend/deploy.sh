@@ -41,7 +41,7 @@ echo "✅ Deployment complete!"
 echo "🌐 Backend running on http://localhost:3000"
 echo ""
 echo "📊 Container status:"
-docker-compose -f docker-compose.production.yml ps
+docker compose -f docker-compose.production.yml ps
 echo ""
 echo "📋 To view logs: docker-compose -f docker-compose.production.yml logs -f backend"
 echo "🛑 To stop: docker-compose -f docker-compose.production.yml down"
