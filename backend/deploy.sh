@@ -71,13 +71,26 @@ else
 fi
 
 # Stop existing containers first to free up memory
-log_step "STEP 2: Stopping Existing Containers"
+log_step "STEP 2: Cleaning Up Existing Containers"
 log_info "Freeing up system resources before building..."
-if docker compose -f docker-compose.production.yml down 2>/dev/null; then
-    log_success "Existing containers stopped"
-else
-    log_info "No existing containers to stop"
-fi
+
+# Force remove all containers, networks, and volumes related to this project
+log_info "Stopping and removing containers..."
+docker compose -f docker-compose.production.yml down --remove-orphans 2>/dev/null || true
+
+# Clean up any stale containers that might be left from crashes
+log_info "Removing any stale Codemare containers..."
+docker ps -a --filter "name=backend" --filter "name=codemare" -q | xargs -r docker rm -f 2>/dev/null || true
+
+# Remove any dangling networks
+log_info "Cleaning up Docker networks..."
+docker network ls --filter "name=backend" --filter "name=codemare" -q | xargs -r docker network rm 2>/dev/null || true
+
+# Optional: Clean up unused images to free space (commented out by default)
+# Uncomment the next line if you want to remove old unused images
+# log_info "Pruning unused images..." && docker image prune -f
+
+log_success "Cleanup completed"
 log_info "System memory after cleanup: $(get_memory_info)"
 
 # Build Docker images sequentially to prevent memory exhaustion
