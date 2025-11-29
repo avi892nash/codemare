@@ -13,15 +13,15 @@ fi
 
 # Build all Docker images
 echo "📦 Building Docker images (this may take a few minutes)..."
-docker-compose -f docker-compose.production.yml build --no-cache
+docker compose -f docker-compose.production.yml build --no-cache
 
 # Stop existing containers
 echo "🛑 Stopping existing containers..."
-docker-compose -f docker-compose.production.yml down
+docker compose -f docker-compose.production.yml down
 
 # Start new containers
 echo "▶️  Starting containers..."
-docker-compose -f docker-compose.production.yml up -d
+docker compose -f docker-compose.production.yml up -d
 
 # Wait for backend to be healthy
 echo "⏳ Waiting for backend to be healthy..."
@@ -33,7 +33,7 @@ if curl -sf http://localhost:3000/health > /dev/null; then
 else
     echo "❌ Health check failed!"
     echo "📋 Recent logs:"
-    docker-compose -f docker-compose.production.yml logs --tail=50 backend
+    docker compose -f docker-compose.production.yml logs --tail=50 backend
     exit 1
 fi
 
