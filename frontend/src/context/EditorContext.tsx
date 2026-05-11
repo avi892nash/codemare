@@ -5,7 +5,7 @@ import { useAppPersistence, useAppStateRestoration } from '../hooks/useAppPersis
 import { getProblemCode } from '../utils/localStorage';
 import { problemsApi } from '../services/api';
 
-type Mode = 'problem' | 'ide';
+export type Mode = 'problem' | 'ide' | 'design' | 'auth';
 
 interface EditorContextType {
   // Current mode

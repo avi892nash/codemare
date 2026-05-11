@@ -7,6 +7,8 @@ import { CodeEditor } from './components/Editor/CodeEditor';
 import { EditorToolbar } from './components/Editor/EditorToolbar';
 import { OutputDisplay } from './components/Results/OutputDisplay';
 import { IdeView } from './components/IDE/IdeView';
+import { DesignSystemPage } from './components/DesignSystem/DesignSystemPage';
+import { AuthPage } from './components/Auth/AuthPage';
 import { useCodeExecution } from './hooks/useCodeExecution';
 
 function AppContent() {
@@ -51,41 +53,49 @@ function AppContent() {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-gray-900">
+    <div
+      className="cm"
+      style={{
+        height: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        background: 'var(--bg-0)',
+        color: 'var(--fg-0)',
+      }}
+    >
       <Navbar mode={mode} onModeChange={setMode} />
 
       {mode === 'problem' ? (
-        <div className="flex-1 flex overflow-hidden">
-          {/* Left Sidebar - Problem List */}
+        <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
+          {/* Left — Problem catalog */}
           {showProblemList && (
-            <div className="w-80 border-r border-gray-700 overflow-y-auto bg-gray-900">
+            <div style={{ width: 280, flex: 'none', borderRight: '1px solid var(--line-2)', overflow: 'hidden', minHeight: 0 }}>
               <ProblemList />
             </div>
           )}
 
-          {/* Middle - Problem Description */}
-          <div className="w-1/3 border-r border-gray-700 overflow-hidden">
+          {/* Middle — Problem description */}
+          <div style={{ width: 460, flex: 'none', borderRight: '1px solid var(--line-2)', overflow: 'hidden', minHeight: 0 }}>
             <ProblemDescription />
           </div>
 
-          {/* Right - Code Editor + Results */}
-          <div className="flex-1 flex flex-col overflow-hidden">
-            {/* Editor Toolbar */}
+          {/* Right — Editor + Results */}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 0 }}>
             <EditorToolbar onRun={handleRun} onReset={handleReset} />
-
-            {/* Code Editor */}
-            <div className="flex-1 overflow-hidden">
+            <div style={{ flex: 1, overflow: 'hidden', minHeight: 0 }}>
               <CodeEditor />
             </div>
-
-            {/* Results Panel */}
-            <div className="h-1/2 border-t border-gray-700 overflow-hidden">
+            <div style={{ height: '50%', borderTop: '1px solid var(--line-2)', overflow: 'hidden', minHeight: 0 }}>
               <OutputDisplay results={executionResults} />
             </div>
           </div>
         </div>
-      ) : (
+      ) : mode === 'ide' ? (
         <IdeView />
+      ) : mode === 'design' ? (
+        <DesignSystemPage />
+      ) : (
+        <AuthPage />
       )}
     </div>
   );

@@ -7,7 +7,7 @@ import {
 } from '../utils/localStorage';
 import { IDE_TEMPLATES } from '../constants/ideTemplates';
 
-type Mode = 'problem' | 'ide';
+type Mode = 'problem' | 'ide' | 'design' | 'auth';
 
 const DEFAULT_TEST_CASE: IdeTestCase = {
   input: '2\n3',

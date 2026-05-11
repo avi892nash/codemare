@@ -6,12 +6,17 @@ export interface ExecutionRequest {
   code: string;
 }
 
+export type SandboxStatus = 'OK' | 'TLE' | 'MLE' | 'RE' | 'CE' | 'XX';
+
 export interface TestCaseResult {
   input: any[];
   expectedOutput: any;
   actualOutput: any;
   passed: boolean;
   executionTime: number;
+  runMs?: number;
+  wallMs?: number;
+  memoryKb?: number;
   error?: string;
   hidden?: boolean;
 }
@@ -23,6 +28,11 @@ export interface ExecutionResponse {
   totalTests: number;
   executionTime: number;
   memoryUsed: number;
+  runMs?: number;
+  wallMs?: number;
+  memoryKb?: number;
+  compileMs?: number;
+  status?: SandboxStatus;
   error?: string;
 }
 
@@ -44,6 +54,11 @@ export interface IdeTestResult {
   actualOutput: string;
   passed: boolean;
   executionTime: number;
+  runMs?: number;
+  wallMs?: number;
+  memoryKb?: number;
+  compileMs?: number;
+  status?: SandboxStatus;
   error?: string;
 }
 

@@ -9,11 +9,27 @@ import {
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
+/**
+ * Internal-auth token for the compile service. The legacy Vite frontend
+ * carries this so dev keeps working; once the Next.js backend is in place,
+ * the browser will never see this token — it'll be a server-only env var
+ * attached to API calls inside Next.js server actions / route handlers.
+ *
+ * Leave VITE_INTERNAL_TOKEN unset in dev when the backend itself has no
+ * INTERNAL_TOKEN configured (dev-open mode).
+ */
+const INTERNAL_TOKEN = import.meta.env.VITE_INTERNAL_TOKEN as string | undefined;
+
+const headers: Record<string, string> = {
+  'Content-Type': 'application/json',
+};
+if (INTERNAL_TOKEN) {
+  headers['X-Codemare-Token'] = INTERNAL_TOKEN;
+}
+
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  headers,
   timeout: 30000, // 30 second timeout
 });
 

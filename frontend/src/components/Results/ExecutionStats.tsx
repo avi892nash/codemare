@@ -3,6 +3,9 @@ interface ExecutionStatsProps {
   totalTests: number;
   executionTime: number;
   memoryUsed: number;
+  runMs?: number;
+  memoryKb?: number;
+  compileMs?: number;
 }
 
 export function ExecutionStats({
@@ -10,8 +13,13 @@ export function ExecutionStats({
   totalTests,
   executionTime,
   memoryUsed,
+  runMs,
+  memoryKb,
+  compileMs,
 }: ExecutionStatsProps) {
   const passRate = (totalPassed / totalTests) * 100;
+  const displayTimeMs = runMs ?? executionTime;
+  const memoryBytes = memoryKb !== undefined ? memoryKb * 1024 : memoryUsed;
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -30,17 +38,22 @@ export function ExecutionStats({
       <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
         <div className="text-gray-400 text-sm mb-1">Time</div>
         <div className="text-2xl font-bold text-white">
-          {executionTime.toFixed(0)}
+          {displayTimeMs.toFixed(displayTimeMs < 10 ? 2 : 0)}
           <span className="text-lg text-gray-400">ms</span>
         </div>
+        {compileMs !== undefined && compileMs > 0 && (
+          <div className="text-xs text-gray-400 mt-1">
+            +{compileMs.toFixed(0)}ms compile
+          </div>
+        )}
       </div>
 
       {/* Memory Used */}
       <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
         <div className="text-gray-400 text-sm mb-1">Memory</div>
         <div className="text-2xl font-bold text-white">
-          {memoryUsed > 0
-            ? `${(memoryUsed / 1024 / 1024).toFixed(1)}MB`
+          {memoryBytes > 0
+            ? `${(memoryBytes / 1024 / 1024).toFixed(1)}MB`
             : 'N/A'}
         </div>
       </div>

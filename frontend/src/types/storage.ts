@@ -18,7 +18,7 @@ export interface IdePersistedState {
 }
 
 // App-level state persistence
-export type Mode = 'problem' | 'ide';
+export type Mode = 'problem' | 'ide' | 'design' | 'auth';
 
 export interface ProblemCodeData {
   [problemId: string]: {

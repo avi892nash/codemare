@@ -1,4 +1,6 @@
 import { IdeExecutionResponse } from '../../types/execution';
+import { MetricChip, Pill, fmtMem, fmtTime } from '../ui/primitives';
+import { Icon } from '../ui/Icon';
 
 interface IdeOutputDisplayProps {
   results: IdeExecutionResponse | null;
@@ -7,135 +9,120 @@ interface IdeOutputDisplayProps {
 export function IdeOutputDisplay({ results }: IdeOutputDisplayProps) {
   if (!results) {
     return (
-      <div className="flex items-center justify-center h-full bg-gray-900">
-        <div className="text-gray-400 text-center">
-          <p className="text-lg mb-2">No results yet</p>
-          <p className="text-sm">Run your code to see the results</p>
+      <div className="cm" style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-0)' }}>
+        <div style={{ textAlign: 'center', color: 'var(--fg-3)' }}>
+          <Icon name="terminal" size={26} style={{ color: 'var(--fg-4)', marginBottom: 12 }} />
+          <p style={{ margin: 0, fontSize: 14, color: 'var(--fg-1)' }}>No results yet</p>
+          <p style={{ margin: '4px 0 0', fontSize: 12 }}>Run your code to see runtime and memory.</p>
         </div>
       </div>
     );
   }
 
-  if (results.error) {
-    return (
-      <div className="p-6 bg-gray-900 h-full overflow-y-auto">
-        <div className="bg-red-900/20 border-2 border-red-600 rounded-lg p-4">
-          <h3 className="text-xl font-semibold text-red-500 mb-3">Error</h3>
-          <pre className="text-red-300 font-mono text-sm whitespace-pre-wrap">
-            {results.error}
-          </pre>
-        </div>
-      </div>
-    );
-  }
+  const verdict = results.error
+    ? 'XX' as const
+    : results.success
+      ? 'OK' as const
+      : 'WA' as const;
+
+  const accent =
+    verdict === 'OK' ? 'var(--ok)' :
+    verdict === 'WA' ? 'var(--warn)' :
+    'var(--err)';
+
+  const [tVal, tUnit] = fmtTime(results.totalExecutionTime);
 
   return (
-    <div className="p-6 bg-gray-900 h-full overflow-y-auto">
-      {/* Success/Failure Banner */}
-      <div
-        className={`rounded-lg p-4 mb-6 border-2 ${
-          results.success
-            ? 'bg-green-900/20 border-green-600'
-            : 'bg-yellow-900/20 border-yellow-600'
-        }`}
-      >
-        <h2
-          className={`text-2xl font-bold ${
-            results.success ? 'text-green-500' : 'text-yellow-500'
-          }`}
-        >
-          {results.success ? 'All Tests Passed!' : 'Some Tests Failed'}
-        </h2>
-        <p className="text-gray-300 mt-2">
-          {results.totalPassed} / {results.totalTests} test cases passed
-        </p>
-        <p className="text-gray-400 text-sm mt-1">
-          Total execution time: {results.totalExecutionTime.toFixed(2)}ms
-        </p>
-      </div>
-
-      {/* Test Results */}
-      <div className="space-y-4">
-        <h3 className="text-xl font-semibold text-white mb-4">Test Results</h3>
-        {results.testResults.map((testResult, index) => (
-          <div
-            key={index}
-            className={`rounded-lg border-2 p-4 ${
-              testResult.passed
-                ? 'bg-green-900/10 border-green-700'
-                : 'bg-red-900/10 border-red-700'
-            }`}
-          >
-            <div className="flex items-center justify-between mb-3">
-              <h4 className="text-white font-semibold">
-                Test Case {index + 1}
-              </h4>
-              <div className="flex items-center gap-3">
-                <span className="text-gray-400 text-sm">
-                  {testResult.executionTime.toFixed(2)}ms
-                </span>
-                <span
-                  className={`px-3 py-1 rounded text-sm font-semibold ${
-                    testResult.passed
-                      ? 'bg-green-600 text-white'
-                      : 'bg-red-600 text-white'
-                  }`}
-                >
-                  {testResult.passed ? 'PASSED' : 'FAILED'}
-                </span>
-              </div>
-            </div>
-
-            {/* Input */}
-            <div className="mb-3">
-              <label className="text-gray-400 text-sm font-medium block mb-1">
-                Input (stdin):
-              </label>
-              <pre className="bg-gray-800 text-gray-200 p-3 rounded font-mono text-sm overflow-x-auto border border-gray-700">
-                {testResult.input || '<empty>'}
-              </pre>
-            </div>
-
-            {/* Expected Output */}
-            <div className="mb-3">
-              <label className="text-gray-400 text-sm font-medium block mb-1">
-                Expected Output (stdout):
-              </label>
-              <pre className="bg-gray-800 text-gray-200 p-3 rounded font-mono text-sm overflow-x-auto border border-gray-700">
-                {testResult.expectedOutput || '<empty>'}
-              </pre>
-            </div>
-
-            {/* Actual Output */}
-            <div className="mb-3">
-              <label className="text-gray-400 text-sm font-medium block mb-1">
-                Actual Output (stdout):
-              </label>
-              <pre
-                className={`p-3 rounded font-mono text-sm overflow-x-auto border ${
-                  testResult.passed
-                    ? 'bg-gray-800 text-gray-200 border-gray-700'
-                    : 'bg-red-900/20 text-red-200 border-red-700'
-                }`}
-              >
-                {testResult.actualOutput || '<empty>'}
-              </pre>
-            </div>
-
-            {/* Error if any */}
-            {testResult.error && (
-              <div>
-                <label className="text-red-400 text-sm font-medium block mb-1">
-                  Error:
-                </label>
-                <pre className="bg-red-900/20 text-red-200 p-3 rounded font-mono text-sm overflow-x-auto border border-red-700">
-                  {testResult.error}
-                </pre>
-              </div>
-            )}
+    <div className="cm scroll" style={{ height: '100%', overflowY: 'auto', background: 'var(--bg-0)' }}>
+      <div style={{ padding: 16 }}>
+        <div className="card" style={{
+          padding: 14,
+          marginBottom: 14,
+          borderColor: `color-mix(in oklab, ${accent} 35%, var(--line-2))`,
+          background: `color-mix(in oklab, ${accent} 7%, var(--bg-1))`,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Icon name={verdict === 'OK' ? 'check-circle' : verdict === 'WA' ? 'alert-circle' : 'alert'}
+              size={18} style={{ color: accent }} />
+            <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: accent }}>
+              {verdict === 'OK' ? 'All passed' : verdict === 'WA' ? 'Some failed' : 'Error'}
+            </h3>
+            <span style={{ flex: 1 }} />
+            <Pill tone={verdict === 'OK' ? 'ok' : verdict === 'WA' ? 'warn' : 'err'} size="sm" className="mono">
+              {verdict}
+            </Pill>
           </div>
-        ))}
+          <p style={{ margin: '6px 0 0', color: 'var(--fg-2)', fontSize: 12.5 }}>
+            {results.totalPassed} / {results.totalTests} test cases passed · total {tVal} {tUnit}
+            {results.error && <> · {results.error}</>}
+          </p>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {results.testResults.map((tr, i) => {
+            const [trT, trTUnit] = fmtTime(tr.runMs ?? tr.executionTime);
+            const [trM, trMUnit] = fmtMem(tr.memoryKb);
+            const ok = tr.passed;
+            const a = ok ? 'var(--ok)' : 'var(--err)';
+            return (
+              <div key={i} className="card" style={{
+                padding: 12,
+                borderColor: `color-mix(in oklab, ${a} 25%, var(--line-2))`,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                  <Icon name={ok ? 'check-circle' : 'x'} size={15} style={{ color: a }} />
+                  <span style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--fg-0)' }}>Test case {i + 1}</span>
+                  <span style={{ flex: 1 }} />
+                  <span className="mono" style={{ fontSize: 11.5, color: 'var(--fg-1)' }}>
+                    {trT}
+                    <span style={{ color: 'var(--fg-3)' }}> {trTUnit}</span>
+                    {tr.memoryKb != null && tr.memoryKb > 0 && (
+                      <>
+                        {' · '}{trM}
+                        <span style={{ color: 'var(--fg-3)' }}> {trMUnit}</span>
+                      </>
+                    )}
+                  </span>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '90px 1fr', gap: 6, fontSize: 12, alignItems: 'baseline', marginBottom: 6 }}>
+                  <span style={{ color: 'var(--fg-3)' }}>stdin</span>
+                  <Pre value={tr.input} color="var(--fg-1)" />
+                  <span style={{ color: 'var(--fg-3)' }}>expected</span>
+                  <Pre value={tr.expectedOutput} color="var(--ok)" />
+                  <span style={{ color: 'var(--fg-3)' }}>actual</span>
+                  <Pre value={tr.actualOutput} color={ok ? 'var(--ok)' : 'var(--err)'} />
+                </div>
+
+                {tr.error && (
+                  <Pre value={tr.error} color="var(--err)" tone="err" />
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {results.testResults.length === 0 && results.error && (
+          <MetricChip label="Error" value={results.error.slice(0, 32)} />
+        )}
       </div>
     </div>
+  );
+}
+
+function Pre({ value, color, tone }: { value: string; color: string; tone?: 'err' }) {
+  return (
+    <pre className="mono" style={{
+      margin: 0,
+      background: tone === 'err' ? 'var(--err-bg)' : 'var(--bg-2)',
+      border: `1px solid ${tone === 'err' ? 'color-mix(in oklab, var(--err) 25%, transparent)' : 'var(--line-1)'}`,
+      borderRadius: 'var(--r-sm)',
+      padding: '6px 8px',
+      fontSize: 11.5,
+      color,
+      whiteSpace: 'pre-wrap',
+      wordBreak: 'break-word',
+      lineHeight: 1.5,
+    }}>{value || <span style={{ color: 'var(--fg-4)', fontStyle: 'italic' }}>{'<empty>'}</span>}</pre>
   );
 }
