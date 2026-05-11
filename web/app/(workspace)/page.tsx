@@ -2,13 +2,14 @@ import { Suspense } from 'react';
 import { compile, CompileServiceError } from '@/lib/compile';
 import { CatalogList } from '@/components/Catalog/CatalogList';
 import { Icon } from '@/components/ui/Icon';
+import type { ProblemListItem } from '@/lib/types';
 
 export const metadata = {
   title: 'Problems · Codemare',
 };
 
 export default async function CatalogPage() {
-  let problems;
+  let problems: ProblemListItem[] = [];
   let error: string | null = null;
   try {
     problems = await compile.listProblems();
@@ -19,7 +20,6 @@ export default async function CatalogPage() {
         : err instanceof Error
           ? err.message
           : 'unknown error';
-    problems = [];
   }
 
   return (

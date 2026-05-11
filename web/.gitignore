@@ -19,3 +19,4 @@ prisma/migrations/*.local.sql
 # Editor / OS
 .DS_Store
 *.log
+tsconfig.tsbuildinfo
