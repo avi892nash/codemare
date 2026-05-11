@@ -24,7 +24,7 @@ const NAV_ITEMS: NavItem[] = [
   { name: 'Problems',      href: '/',              icon: 'list',       match: (p) => p === '/' || p.startsWith('/p/') },
   { name: 'Learn',         href: null,             icon: 'graduation' },
   { name: 'IDE',           href: '/ide',           icon: 'terminal' },
-  { name: 'Submissions',   href: null,             icon: 'history' },
+  { name: 'Submissions',   href: '/submissions',   icon: 'history' },
   { name: 'Design system', href: '/design-system', icon: 'sparkle' },
 ];
 
@@ -113,7 +113,9 @@ export function Navbar({ user }: NavbarProps) {
       </a>
 
       {user ? (
-        <Avatar name={user.name} size={26} />
+        <Link href="/profile" title={user.name}>
+          <Avatar name={user.name} size={26} />
+        </Link>
       ) : (
         <Link
           href="/auth"
