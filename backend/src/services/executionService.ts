@@ -1,4 +1,4 @@
-import { executeInDocker } from './dockerService.js';
+import { executeSandboxed } from './sandboxService.js';
 import { wrapFunctionCode } from './codeWrapperService.js';
 import { validateResults } from './validationService.js';
 import {
@@ -52,38 +52,47 @@ export async function executeCode(
       request.language
     );
 
-    // Execute wrapped code with generic executor
-    const dockerOutput = await executeInDocker(
+    // Execute wrapped code through the active sandbox adapter
+    const sandbox = await executeSandboxed(
       request.language,
       wrappedCode,
       input
     );
 
-    // Check for Docker execution errors
-    if (dockerOutput.error) {
+    if (sandbox.error || sandbox.status === 'CE' || sandbox.status === 'XX') {
       return {
         success: false,
         testResults: [],
         totalPassed: 0,
         totalTests: problem.testCases.length,
         executionTime: Date.now() - startTime,
-        memoryUsed: 0,
-        error: dockerOutput.error,
+        memoryUsed: sandbox.memoryKb * 1024,
+        runMs: sandbox.runMs,
+        wallMs: sandbox.wallMs,
+        memoryKb: sandbox.memoryKb,
+        compileMs: sandbox.compileMs,
+        status: sandbox.status,
+        error: sandbox.error,
       };
     }
 
     // Parse results from wrapped code output
     let parsedResults;
     try {
-      parsedResults = JSON.parse(dockerOutput.output);
-    } catch (parseError) {
+      parsedResults = JSON.parse(sandbox.output);
+    } catch {
       return {
         success: false,
         testResults: [],
         totalPassed: 0,
         totalTests: problem.testCases.length,
         executionTime: Date.now() - startTime,
-        memoryUsed: 0,
+        memoryUsed: sandbox.memoryKb * 1024,
+        runMs: sandbox.runMs,
+        wallMs: sandbox.wallMs,
+        memoryKb: sandbox.memoryKb,
+        compileMs: sandbox.compileMs,
+        status: sandbox.status,
         error: 'Failed to parse test results',
       };
     }
@@ -97,13 +106,39 @@ export async function executeCode(
     const totalPassed = testResults.filter((r) => r.passed).length;
     const totalTests = testResults.length;
 
+    // Prefer the wrapper-reported algorithm-only metrics. Fall back to the
+    // sandbox's whole-process numbers (which include interpreter startup) only
+    // if the wrapper didn't emit them — e.g. for the C++/Java stubs.
+    const wrapperRunMs =
+      typeof parsedResults.totalRunNs === 'number'
+        ? parsedResults.totalRunNs / 1_000_000
+        : undefined;
+    const wrapperMemoryKb =
+      typeof parsedResults.peakBytes === 'number'
+        ? parsedResults.peakBytes / 1024
+        : undefined;
+    const runMs = wrapperRunMs ?? sandbox.runMs;
+    const memoryKb = wrapperMemoryKb ?? sandbox.memoryKb;
+
+    // The wrapper itself may declare failure via an `error` field — e.g. the
+    // C++/Java stubs that report Problems mode isn't implemented yet. Surface
+    // that to the response so the verdict banner shows a real message.
+    const wrapperError: string | undefined =
+      typeof parsedResults.error === 'string' ? parsedResults.error : undefined;
+
     return {
-      success: totalPassed === totalTests,
+      success: totalPassed === totalTests && sandbox.status === 'OK' && !wrapperError,
       testResults,
       totalPassed,
       totalTests,
       executionTime: Date.now() - startTime,
-      memoryUsed: 0, // TODO: Get actual memory usage from Docker stats
+      memoryUsed: memoryKb * 1024,
+      runMs,
+      wallMs: sandbox.wallMs,
+      memoryKb,
+      compileMs: sandbox.compileMs,
+      status: sandbox.status,
+      error: wrapperError,
     };
   } catch (error) {
     return {

@@ -1,21 +1,19 @@
 import app from './app.js';
-import { checkDockerImages } from './services/dockerService.js';
+import { sandboxReadinessProbe } from './services/sandboxService.js';
 
 const PORT = process.env.PORT || 3000;
 
 async function startServer() {
   try {
-    // Check if Docker images are available
-    const { available, missing } = await checkDockerImages();
-
-    console.log('Docker Images Status:');
-    console.log('  Available:', available.join(', ') || 'none');
-    if (missing.length > 0) {
-      console.warn('  Missing:', missing.join(', '));
-      console.warn('  Please build missing images with: docker-compose build');
+    const probe = await sandboxReadinessProbe();
+    console.log('Sandbox: isolate');
+    console.log(`  Available: ${probe.available.join(', ') || 'none'}`);
+    if (probe.unavailable.length > 0) {
+      for (const u of probe.unavailable) {
+        console.warn(`  Unavailable: ${u.language} (${u.reason})`);
+      }
     }
 
-    // Start server
     app.listen(PORT, () => {
       console.log(`\nCodemare backend running on http://localhost:${PORT}`);
       console.log(`   Health check: http://localhost:${PORT}/health`);

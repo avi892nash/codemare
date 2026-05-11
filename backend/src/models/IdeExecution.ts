@@ -18,25 +18,32 @@ export interface IdeExecutionRequest {
 }
 
 /**
- * Result for a single test case execution
+ * Result for a single test case execution.
+ * `runMs` / `memoryKb` are the accurate per-run measurements from the sandbox
+ * adapter; `executionTime` is preserved as wall-clock ms for backwards compat.
  */
 export interface IdeTestResult {
   input: string;
   expectedOutput: string;
   actualOutput: string;
   passed: boolean;
-  executionTime: number;  // milliseconds
-  error?: string;         // Runtime error if any
+  executionTime: number;
+  runMs?: number;
+  wallMs?: number;
+  memoryKb?: number;
+  compileMs?: number;
+  status?: 'OK' | 'TLE' | 'MLE' | 'RE' | 'CE' | 'XX';
+  error?: string;
 }
 
 /**
  * Response for IDE execution
  */
 export interface IdeExecutionResponse {
-  success: boolean;        // All tests passed
+  success: boolean;
   testResults: IdeTestResult[];
   totalPassed: number;
   totalTests: number;
   totalExecutionTime: number;
-  error?: string;          // Compilation or system error
+  error?: string;
 }

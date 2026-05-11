@@ -1,4 +1,4 @@
-import { Language } from '../config/docker.js';
+import { Language } from '../models/ExecutionResult.js';
 
 export function getStarterCode(
   functionName: string,

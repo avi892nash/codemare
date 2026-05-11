@@ -1,0 +1,29 @@
+[Unit]
+Description=Codemare backend
+After=network.target
+
+[Service]
+Type=simple
+User=codemare
+Group=codemare
+WorkingDirectory=/opt/codemare/backend
+Environment=NODE_ENV=production
+Environment=SANDBOX_MODE=isolate
+Environment=PORT=3000
+# Load INTERNAL_TOKEN (and any other secrets) from /etc/codemare/env
+# Format: KEY=value lines, mode 0640, owner root:codemare.
+EnvironmentFile=/etc/codemare/env
+ExecStart=/usr/bin/node dist/server.js
+Restart=on-failure
+RestartSec=2
+
+# Hardening. NoNewPrivileges MUST be false because isolate is setuid root and
+# needs to elevate to set up namespaces / cgroups for each user-code run.
+NoNewPrivileges=false
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/local/lib/isolate /tmp /var/log/codemare
+
+[Install]
+WantedBy=multi-user.target

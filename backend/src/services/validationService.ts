@@ -2,15 +2,20 @@ import { TestCaseResult } from '../models/ExecutionResult.js';
 import { TestCase } from '../models/Problem.js';
 
 /**
- * Validate and format test results from Docker executor
+ * Validate and format test results from the wrapped-code harness. The harness
+ * emits per-call `runNs` and `peakBytes`; we surface those as `runMs` and
+ * `memoryKb` on each TestCaseResult so the frontend can show algorithm-only
+ * timing (excluding interpreter startup).
  */
 export function validateResults(
-  dockerResults: Array<{
+  wrappedResults: Array<{
     output: any;
     expected: any;
     passed: boolean;
     error?: string;
     executionTime?: number;
+    runNs?: number;
+    peakBytes?: number;
   }>,
   testCases: TestCase[]
 ): TestCaseResult[] {
@@ -18,10 +23,9 @@ export function validateResults(
 
   for (let i = 0; i < testCases.length; i++) {
     const testCase = testCases[i];
-    const dockerResult = dockerResults[i];
+    const wrapped = wrappedResults[i];
 
-    if (!dockerResult) {
-      // If Docker didn't return a result for this test case
+    if (!wrapped) {
       results.push({
         input: testCase.input,
         expectedOutput: testCase.expectedOutput,
@@ -34,16 +38,20 @@ export function validateResults(
       continue;
     }
 
-    // Deep equality check for complex types
-    const passed = deepEqual(dockerResult.output, dockerResult.expected);
+    const passed = deepEqual(wrapped.output, wrapped.expected);
+    const runMs = wrapped.runNs !== undefined ? wrapped.runNs / 1_000_000 : undefined;
+    const memoryKb =
+      wrapped.peakBytes !== undefined ? wrapped.peakBytes / 1024 : undefined;
 
     results.push({
       input: testCase.input,
       expectedOutput: testCase.expectedOutput,
-      actualOutput: dockerResult.output,
-      passed: passed && !dockerResult.error,
-      executionTime: dockerResult.executionTime || 0,
-      error: dockerResult.error,
+      actualOutput: wrapped.output,
+      passed: passed && !wrapped.error,
+      executionTime: runMs ?? wrapped.executionTime ?? 0,
+      runMs,
+      memoryKb,
+      error: wrapped.error,
       hidden: testCase.hidden,
     });
   }

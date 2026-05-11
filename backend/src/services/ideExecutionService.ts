@@ -1,4 +1,4 @@
-import { executeInDocker } from './dockerService.js';
+import { executeSandboxed } from './sandboxService.js';
 import {
   IdeExecutionRequest,
   IdeExecutionResponse,
@@ -21,29 +21,33 @@ export async function executeIdeCode(
       const testStartTime = Date.now();
 
       try {
-        // Execute code directly (no wrapping)
-        const dockerResult = await executeInDocker(
+        // Execute code through the active sandbox adapter (no wrapper for IDE mode)
+        const sandbox = await executeSandboxed(
           request.language,
-          request.code, // User code as-is
-          testCase.input // Test input as-is
+          request.code,
+          testCase.input
         );
 
-        const executionTime = Date.now() - testStartTime;
-        const actualOutput = dockerResult.output || '';
+        const wallMs = Date.now() - testStartTime;
+        const actualOutput = sandbox.output || '';
 
-        // Normalize outputs by trimming trailing whitespace for comparison
         const normalizedActual = actualOutput.trimEnd();
         const normalizedExpected = testCase.expectedOutput.trimEnd();
         const passed =
-          normalizedActual === normalizedExpected && !dockerResult.error;
+          sandbox.status === 'OK' && normalizedActual === normalizedExpected;
 
         results.push({
           input: testCase.input,
           expectedOutput: testCase.expectedOutput,
           actualOutput: actualOutput,
           passed: passed,
-          executionTime: executionTime,
-          error: dockerResult.error,
+          executionTime: wallMs,
+          runMs: sandbox.runMs,
+          wallMs: sandbox.wallMs,
+          memoryKb: sandbox.memoryKb,
+          compileMs: sandbox.compileMs,
+          status: sandbox.status,
+          error: sandbox.error,
         });
       } catch (error) {
         results.push({
