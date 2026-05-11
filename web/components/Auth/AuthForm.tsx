@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
+import { signIn } from 'next-auth/react';
 import { Button } from '../ui/Button';
 import { Logomark } from '../ui/Logomark';
 import { Pill } from '../ui/Pill';
@@ -55,8 +56,24 @@ export function AuthForm({ mode, onModeChange, onSubmit }: AuthFormProps) {
         {mode !== 'forgot' && (
           <>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 18 }}>
-              <Button variant="outline" full size="lg" icon="github">Continue with GitHub</Button>
-              <Button variant="outline" full size="lg" icon="google">Continue with Google</Button>
+              <Button
+                variant="outline"
+                full
+                size="lg"
+                icon="github"
+                onClick={() => signIn('github', { redirectTo: '/' })}
+              >
+                Continue with GitHub
+              </Button>
+              <Button
+                variant="outline"
+                full
+                size="lg"
+                icon="google"
+                onClick={() => signIn('google', { redirectTo: '/' })}
+              >
+                Continue with Google
+              </Button>
             </div>
             <div
               style={{

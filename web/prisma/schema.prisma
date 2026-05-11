@@ -1,0 +1,147 @@
+// Codemare web — Prisma schema.
+//
+// Three concerns live here:
+//   1. Auth.js identity tables (User / Account / Session / VerificationToken)
+//      — these match the @auth/prisma-adapter contract verbatim. Don't rename.
+//   2. Problem catalog — moves out of the compile service's file-based JSON,
+//      including the C++ / Java harness templates the compile service doesn't
+//      need to know about.
+//   3. Submission history — every run a signed-in user makes.
+//
+// Migration: `npx prisma migrate dev --name init` after setting DATABASE_URL.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Identity ────────────────────────────────────────────────────────────
+
+model User {
+  id            String       @id @default(cuid())
+  email         String       @unique
+  name          String?
+  image         String?
+  handle        String?      @unique
+  emailVerified DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  accounts      Account[]
+  sessions      Session[]
+  submissions   Submission[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ─── Problems ────────────────────────────────────────────────────────────
+
+enum Difficulty {
+  Easy
+  Medium
+  Hard
+}
+
+model Problem {
+  id            String       @id @default(cuid())
+  slug          String       @unique
+  title         String
+  difficulty    Difficulty
+  description   String       @db.Text
+  examples      Json
+  constraints   Json
+  starterCode   Json
+  // The function signature for Problems-mode wrappers. Server-only code in
+  // lib/wrappers/ reads this when assembling per-language harnesses.
+  functionName  String
+  // Map of language -> harness template (with {{USER_CODE}} placeholder).
+  // Per-problem C++/Java harnesses live here so the compile service stays
+  // dumb. Null entries mean "Problems mode disabled for that language".
+  harnessTemplate Json?
+  testCases     Json
+  tags          String[]
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  submissions   Submission[]
+}
+
+// ─── Submissions ─────────────────────────────────────────────────────────
+
+enum SubmissionStatus {
+  OK
+  WA
+  TLE
+  MLE
+  RE
+  CE
+  XX
+}
+
+enum SubmissionLanguage {
+  python
+  javascript
+  cpp
+  java
+}
+
+model Submission {
+  id          String             @id @default(cuid())
+  userId      String
+  problemId   String
+  language    SubmissionLanguage
+  code        String             @db.Text
+  status      SubmissionStatus
+  totalPassed Int                @default(0)
+  totalTests  Int                @default(0)
+  runMs       Float?
+  wallMs      Float?
+  memoryKb    Float?
+  compileMs   Float?
+  error       String?            @db.Text
+  createdAt   DateTime           @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  problem Problem @relation(fields: [problemId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([problemId, status])
+}

@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import { Inter, JetBrains_Mono } from 'next/font/google';
+import { auth } from '@/auth';
+import { SessionProvider } from '@/components/Auth/SessionProvider';
 import './globals.css';
 
 const inter = Inter({
@@ -20,14 +22,17 @@ export const metadata: Metadata = {
 };
 
 /**
- * The root layout wires fonts (loaded with next/font so they're inlined and
- * pre-loaded), and applies the `cm` class so the design tokens cascade to
- * every page. The actual chrome (navbar etc.) lives in app/(workspace)/layout.
+ * Root layout. Loads fonts via next/font (inlined, preloaded), applies the
+ * `cm` class so the design tokens cascade, and wraps the tree in
+ * SessionProvider so client components can `useSession()` / `signIn()`.
  */
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const session = await auth().catch(() => null);
   return (
     <html lang="en" className={`${inter.variable} ${jetbrains.variable}`}>
-      <body className="cm">{children}</body>
+      <body className="cm">
+        <SessionProvider session={session}>{children}</SessionProvider>
+      </body>
     </html>
   );
 }
