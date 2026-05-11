@@ -1,0 +1,21 @@
+# Next.js
+.next/
+out/
+
+# Dependencies
+node_modules/
+
+# Build
+build/
+dist/
+
+# Environment
+.env
+.env*.local
+
+# Prisma (generated client lives in node_modules, but keep migrations)
+prisma/migrations/*.local.sql
+
+# Editor / OS
+.DS_Store
+*.log
