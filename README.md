@@ -91,8 +91,15 @@ frontend/       LEGACY Vite SPA. Retire once web/ is at parity in staging.
 git clone https://github.com/avi892nash/codemare.git
 cd codemare
 npm install              # installs backend/ and web/ via workspaces
+npm run setup            # web/.env.local + Prisma client + (DB seed if configured)
 npm run dev              # starts both services
 ```
+
+`npm run setup` is idempotent — safe to re-run. It writes `web/.env.local`
+with a fresh `AUTH_SECRET`, generates the Prisma client, and (if
+`DATABASE_URL` points at a reachable Postgres) pushes the schema and seeds
+**Two Sum** + **Reverse String** so the catalog has rows on first load.
+Without a DB the app still works; submissions just don't persist.
 
 Open `http://localhost:3001` for the web app. The backend boots on `:3000`.
 
