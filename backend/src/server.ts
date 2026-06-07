@@ -6,7 +6,7 @@ const PORT = process.env.PORT || 3000;
 async function startServer() {
   try {
     const probe = await sandboxReadinessProbe();
-    console.log('Sandbox: isolate');
+    console.log(`Sandbox: ${probe.backend}`);
     console.log(`  Available: ${probe.available.join(', ') || 'none'}`);
     if (probe.unavailable.length > 0) {
       for (const u of probe.unavailable) {

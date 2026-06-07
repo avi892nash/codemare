@@ -1,12 +1,65 @@
+import { spawnSync } from 'node:child_process';
 import { Language } from '../models/ExecutionResult.js';
+import { SANDBOX_CONFIG } from '../config/sandbox.js';
 import { isolateAdapter } from './sandbox/isolateAdapter.js';
+import { executeLocal } from './sandbox/localAdapter.js';
 import { RunOptions, SandboxResult } from './sandbox/types.js';
 
 /**
- * Single entry point for executing user code. The backend now runs only on
- * Linux with `isolate` — there is no longer a strategy facade selecting between
- * Docker / direct / isolate, because Docker and the macOS dev fallback were
- * removed in Phase 6.
+ * Selects the execution backend exactly once at module load.
+ *
+ *   1. If `SANDBOX_MODE=local` (or `=isolate`) is set explicitly, honour it.
+ *   2. Otherwise: try isolate (Linux + binary on PATH). On Linux without
+ *      isolate, or any non-Linux host, fall back to the local adapter.
+ *   3. In production (`NODE_ENV=production`) the local adapter is REFUSED —
+ *      the process throws at startup so we never silently ship unsandboxed
+ *      execution.
+ *
+ * The selection runs synchronously at import time so requests don't pay the
+ * `which isolate` cost on every call.
+ */
+type BackendName = 'isolate' | 'local';
+
+function isIsolateAvailable(): boolean {
+  if (process.platform !== 'linux') return false;
+  try {
+    const result = spawnSync(SANDBOX_CONFIG.isolate.binary, ['--version']);
+    return result.status === 0;
+  } catch {
+    return false;
+  }
+}
+
+function pickBackend(): BackendName {
+  const forced = (process.env.SANDBOX_MODE ?? '').toLowerCase().trim();
+  if (forced === 'isolate' || forced === 'local') {
+    if (forced === 'local' && process.env.NODE_ENV === 'production') {
+      throw new Error(
+        'SANDBOX_MODE=local is refused in production. ' +
+          'Install isolate (see deploy/install.sh) and unset SANDBOX_MODE or set =isolate.'
+      );
+    }
+    return forced;
+  }
+
+  if (isIsolateAvailable()) return 'isolate';
+
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(
+      'isolate is not available on this host and NODE_ENV=production. ' +
+        'Install it with deploy/install.sh, or run with NODE_ENV=development ' +
+        'to use the unsandboxed local adapter.'
+    );
+  }
+  return 'local';
+}
+
+export const SANDBOX_BACKEND: BackendName = pickBackend();
+
+/**
+ * Single entry point for executing user code. Dispatches to the backend that
+ * was selected at module load. The selection is logged once at startup
+ * (see server.ts) so the operator always knows which adapter is live.
  */
 export async function executeSandboxed(
   language: Language,
@@ -14,7 +67,9 @@ export async function executeSandboxed(
   input: string,
   options?: RunOptions
 ): Promise<SandboxResult> {
-  return isolateAdapter.execute(language, code, input, options);
+  return SANDBOX_BACKEND === 'isolate'
+    ? isolateAdapter.execute(language, code, input, options)
+    : executeLocal(language, code, input, options);
 }
 
 /**
@@ -23,6 +78,7 @@ export async function executeSandboxed(
  * should disable Java rather than take the service down.
  */
 export async function sandboxReadinessProbe(): Promise<{
+  backend: BackendName;
   available: Language[];
   unavailable: Array<{ language: Language; reason: string }>;
 }> {
@@ -39,7 +95,7 @@ export async function sandboxReadinessProbe(): Promise<{
   await Promise.all(
     probes.map(async ({ lang, code, expect, input }) => {
       try {
-        const res = await isolateAdapter.execute(lang, code, input);
+        const res = await executeSandboxed(lang, code, input);
         if (res.status === 'OK' && res.output.trim() === expect) {
           available.push(lang);
         } else {
@@ -57,5 +113,5 @@ export async function sandboxReadinessProbe(): Promise<{
     })
   );
 
-  return { available, unavailable };
+  return { backend: SANDBOX_BACKEND, available, unavailable };
 }
