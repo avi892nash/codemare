@@ -85,26 +85,42 @@ deploy/         Linux VM provisioning for the compile service
 frontend/       LEGACY Vite SPA. Retire once web/ is at parity in staging.
 ```
 
-## Quick start
-
-**Compile service (on a Linux VM):**
+## Quick start — local dev (macOS, Linux, anywhere)
 
 ```bash
-sudo bash deploy/install.sh        # installs isolate + runtimes, generates INTERNAL_TOKEN
-deploy/release.sh user@your-vm     # build locally + rsync + systemctl restart
+git clone https://github.com/avi892nash/codemare.git
+cd codemare
+npm install              # installs backend/ and web/ via workspaces
+npm run dev              # starts both services
 ```
 
-**Web app (anywhere):**
+Open `http://localhost:3001` for the web app. The backend boots on `:3000`.
+
+On a host **without** `isolate` (typical dev: macOS, Windows, a Linux box
+without isolate installed), the compile service starts in **`local`** mode:
+user code runs via `child_process.spawn` with no isolation. A loud yellow
+warning is printed on every boot so you don't mistake it for production
+behaviour. The wrapper-level `runMs` / `memoryKb` numbers for Python and
+JavaScript are still accurate — those are measured inside the user process.
+
+On Linux **with** `isolate` installed (production), the backend
+auto-detects it and uses it. No env var change needed. Set
+`SANDBOX_MODE=isolate` if you want to be explicit, or
+`NODE_ENV=production` to make missing isolate a hard failure.
+
+## Quick start — production
 
 ```bash
+# On a Linux VM (Ubuntu 22.04+ / Debian 12+)
+sudo bash deploy/install.sh                       # installs isolate + runtimes, generates INTERNAL_TOKEN
+deploy/release.sh user@your-vm                    # builds locally, rsyncs, systemctl restart
+
+# Web app — Vercel or any Node host
 cd web
-cp .env.example .env.local
-# Set COMPILE_SERVICE_URL + INTERNAL_TOKEN (match the value in /etc/codemare/env)
-# Set DATABASE_URL, AUTH_SECRET, AUTH_GITHUB_* / AUTH_GOOGLE_*
-npm install
-npx prisma generate
-npx prisma migrate dev --name init
-npm run dev                        # http://localhost:3001
+# Vercel dashboard: set COMPILE_SERVICE_URL, INTERNAL_TOKEN (match /etc/codemare/env),
+#                   DATABASE_URL (Neon / Supabase / RDS),
+#                   AUTH_SECRET, AUTH_GITHUB_* / AUTH_GOOGLE_*
+vercel --prod
 ```
 
 ## API contract
