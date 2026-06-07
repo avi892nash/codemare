@@ -1,0 +1,25 @@
+{
+  "name": "codemare",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Codemare monorepo — backend (compile service, isolate) + web (Next.js).",
+  "workspaces": [
+    "backend",
+    "web"
+  ],
+  "scripts": {
+    "install:all": "npm install",
+    "dev": "concurrently -n backend,web -c blue,green --kill-others-on-fail \"npm run dev -w backend\" \"npm run dev -w web\"",
+    "dev:backend": "npm run dev -w backend",
+    "dev:web": "npm run dev -w web",
+    "build": "npm run build -w backend && npm run build -w web",
+    "test": "npm run test -w backend",
+    "typecheck": "tsc --noEmit -p backend && tsc --noEmit -p web"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
