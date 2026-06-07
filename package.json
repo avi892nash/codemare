@@ -9,12 +9,14 @@
   ],
   "scripts": {
     "install:all": "npm install",
+    "setup": "npm run setup -w web",
     "dev": "concurrently -n backend,web -c blue,green --kill-others-on-fail \"npm run dev -w backend\" \"npm run dev -w web\"",
     "dev:backend": "npm run dev -w backend",
     "dev:web": "npm run dev -w web",
     "build": "npm run build -w backend && npm run build -w web",
     "test": "npm run test -w backend",
-    "typecheck": "tsc --noEmit -p backend && tsc --noEmit -p web"
+    "typecheck": "tsc --noEmit -p backend && tsc --noEmit -p web",
+    "seed": "npm run seed -w web"
   },
   "devDependencies": {
     "concurrently": "^9.1.0"

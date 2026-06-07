@@ -4,11 +4,16 @@
   "private": true,
   "description": "Codemare web app — Next.js (App Router) frontend + user-facing API. Calls the compile service over HTTPS with X-Codemare-Token.",
   "scripts": {
+    "setup": "node scripts/setup.mjs",
     "dev": "next dev -p 3001",
     "build": "next build",
     "start": "next start -p 3001",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "seed": "tsx prisma/seed.ts"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.7.0",
@@ -31,6 +36,7 @@
     "postcss": "^8.4.49",
     "prisma": "^5.20.0",
     "tailwindcss": "^3.4.15",
+    "tsx": "^4.19.2",
     "typescript": "^5.6.3"
   }
 }
