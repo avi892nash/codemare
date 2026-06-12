@@ -1,11 +1,12 @@
 import { spawn } from 'node:child_process';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { cp, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { Language } from '../../models/ExecutionResult.js';
 import { SANDBOX_CONFIG } from '../../config/sandbox.js';
+import { compileCache, type FreshCompileOutcome } from './compileCache.js';
 import { getLanguageSpec } from './languageSpec.js';
-import { RunOptions, SandboxResult, SandboxStatus } from './types.js';
+import { LanguageSpec, RunOptions, SandboxResult, SandboxStatus } from './types.js';
 
 /**
  * Dev-only adapter: spawns the language runtime directly on the host with no
@@ -98,6 +99,42 @@ function runProcess(
   });
 }
 
+/**
+ * Compile into a standalone temp dir that outlives the run dir. This is the
+ * compile-cache thunk for the local adapter — same contract as the isolate
+ * adapter's, so both share one CompileCache instance.
+ */
+async function compileLocalToDir(
+  spec: LanguageSpec,
+  mainFile: string,
+  code: string,
+  artifactNames: string[],
+  compileTimeoutMs: number
+): Promise<FreshCompileOutcome> {
+  const compileDir = await mkdtemp(path.join(os.tmpdir(), 'codemare-art-'));
+  await writeFile(path.join(compileDir, mainFile), code);
+  const res = await runProcess(spec.compileArgv!(mainFile), compileDir, {
+    timeoutMs: compileTimeoutMs,
+  });
+  if (res.timedOut || res.exitCode !== 0) {
+    await rm(compileDir, { recursive: true, force: true }).catch(() => undefined);
+    return {
+      kind: 'fail',
+      result: {
+        output: '',
+        error: res.stderr || 'Compilation failed',
+        status: 'CE',
+        runMs: 0,
+        wallMs: res.wallMs,
+        memoryKb: 0,
+        compileMs: res.wallMs,
+        exitCode: res.exitCode ?? undefined,
+      },
+    };
+  }
+  return { kind: 'ok', dir: compileDir, artifacts: artifactNames, compileMs: res.wallMs };
+}
+
 export async function executeLocal(
   language: Language,
   code: string,
@@ -111,32 +148,48 @@ export async function executeLocal(
   const spec = getLanguageSpec(language);
 
   const tmpDir = await mkdtemp(path.join(os.tmpdir(), 'codemare-local-'));
-  const wallStart = process.hrtime.bigint();
 
   try {
     const mainFile = spec.mainFileName(code);
-    await writeFile(path.join(tmpDir, mainFile), code);
     const stdinPath = path.join(tmpDir, 'stdin.txt');
     await writeFile(stdinPath, input);
 
     let compileMs: number | undefined;
     if (spec.needsCompile && spec.compileArgv) {
-      const compileResult = await runProcess(spec.compileArgv(mainFile), tmpDir, {
-        timeoutMs: compileTimeoutMs,
-      });
-      compileMs = compileResult.wallMs;
-      if (compileResult.timedOut || compileResult.exitCode !== 0) {
-        return {
-          output: '',
-          error: compileResult.stderr || 'Compilation failed',
-          status: 'CE',
-          runMs: 0,
-          wallMs: Number(process.hrtime.bigint() - wallStart) / 1_000_000,
-          memoryKb: 0,
-          compileMs,
-          exitCode: compileResult.exitCode ?? undefined,
-        };
+      const artifactNames = spec.artifacts!(mainFile);
+      const thunk = (): Promise<FreshCompileOutcome> =>
+        compileLocalToDir(spec, mainFile, code, artifactNames, compileTimeoutMs);
+
+      // Same compile-cache path as the isolate adapter: a re-run of unchanged
+      // code skips compilation. When disabled, run once and clean up the
+      // throwaway artifact dir.
+      let artifactDir: string;
+      let ownDir = false;
+      if (SANDBOX_CONFIG.compileCache.enabled) {
+        const key = compileCache.key(language, spec.compileArgv(mainFile), code);
+        const outcome = await compileCache.getOrCompile(key, thunk);
+        if (outcome.kind === 'fail') return outcome.result;
+        compileMs = outcome.compileMs;
+        artifactDir = outcome.dir;
+      } else {
+        const fresh = await thunk();
+        if (fresh.kind === 'fail') return fresh.result;
+        compileMs = fresh.compileMs;
+        artifactDir = fresh.dir;
+        ownDir = true;
       }
+
+      try {
+        await Promise.all(
+          artifactNames.map((name) =>
+            cp(path.join(artifactDir, name), path.join(tmpDir, name))
+          )
+        );
+      } finally {
+        if (ownDir) await rm(artifactDir, { recursive: true, force: true }).catch(() => undefined);
+      }
+    } else {
+      await writeFile(path.join(tmpDir, mainFile), code);
     }
 
     const runResult = await runProcess(spec.runArgv(mainFile), tmpDir, {

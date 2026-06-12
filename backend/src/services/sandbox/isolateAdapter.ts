@@ -5,7 +5,7 @@ import path from 'node:path';
 import { Language } from '../../models/ExecutionResult.js';
 import { SANDBOX_CONFIG } from '../../config/sandbox.js';
 import { BoxPool } from './boxPool.js';
-import { CompileCache, type FreshCompileOutcome } from './compileCache.js';
+import { compileCache, type FreshCompileOutcome } from './compileCache.js';
 import { getLanguageSpec } from './languageSpec.js';
 import { mapMetaToStatus, parseIsolateMeta } from './metaParser.js';
 import { LanguageSpec, RunOptions, SandboxAdapter, SandboxResult } from './types.js';
@@ -27,7 +27,6 @@ import { LanguageSpec, RunOptions, SandboxAdapter, SandboxResult } from './types
  */
 
 const pool = new BoxPool(SANDBOX_CONFIG.isolate.maxBoxes);
-const compileCache = new CompileCache(SANDBOX_CONFIG.compileCache.maxEntries);
 const META_DIR = '/tmp';
 
 /**

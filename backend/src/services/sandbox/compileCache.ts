@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { rm } from 'node:fs/promises';
 import { Language } from '../../models/ExecutionResult.js';
+import { SANDBOX_CONFIG } from '../../config/sandbox.js';
 import { SandboxResult } from './types.js';
 
 /**
@@ -134,3 +135,10 @@ function toOutcome(entry: StoredEntry, cached: boolean): CompileOutcome {
     ? { kind: 'ok', dir: entry.dir, artifacts: entry.artifacts, compileMs: entry.compileMs, cached }
     : { kind: 'fail', result: entry.result, cached };
 }
+
+/**
+ * Process-wide singleton. Only one sandbox adapter is active per process
+ * (chosen at startup), so a single shared cache is correct and lets both the
+ * isolate and local adapters reuse the same instance.
+ */
+export const compileCache = new CompileCache(SANDBOX_CONFIG.compileCache.maxEntries);
