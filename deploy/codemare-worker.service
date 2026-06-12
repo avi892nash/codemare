@@ -1,0 +1,31 @@
+[Unit]
+Description=Codemare execution worker (drains the Redis queue)
+After=network.target
+
+[Service]
+Type=simple
+User=codemare
+Group=codemare
+WorkingDirectory=/opt/codemare/backend
+Environment=NODE_ENV=production
+Environment=SANDBOX_MODE=isolate
+# REDIS_URL and WORKER_CONCURRENCY come from /etc/codemare/env
+EnvironmentFile=/etc/codemare/env
+ExecStart=/usr/bin/node dist/worker.js
+Restart=on-failure
+RestartSec=2
+
+# Same hardening as the API. NoNewPrivileges must be false for isolate's
+# setuid binary; the worker runs the same sandbox stack as the API.
+NoNewPrivileges=false
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/local/lib/isolate /tmp /var/log/codemare
+
+[Install]
+WantedBy=multi-user.target
+
+# Scale by templating: copy to codemare-worker@.service and
+# `systemctl enable --now codemare-worker@{1,2,3}` to run N workers, or run
+# this unit on dedicated worker VMs that share the same REDIS_URL.
