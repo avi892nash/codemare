@@ -1,10 +1,11 @@
 import { spawn } from 'node:child_process';
-import { copyFile, readFile, writeFile } from 'node:fs/promises';
+import { cp, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { Language } from '../../models/ExecutionResult.js';
 import { SANDBOX_CONFIG } from '../../config/sandbox.js';
 import { BoxPool } from './boxPool.js';
+import { CompileCache, type FreshCompileOutcome } from './compileCache.js';
 import { getLanguageSpec } from './languageSpec.js';
 import { mapMetaToStatus, parseIsolateMeta } from './metaParser.js';
 import { LanguageSpec, RunOptions, SandboxAdapter, SandboxResult } from './types.js';
@@ -26,6 +27,7 @@ import { LanguageSpec, RunOptions, SandboxAdapter, SandboxResult } from './types
  */
 
 const pool = new BoxPool(SANDBOX_CONFIG.isolate.maxBoxes);
+const compileCache = new CompileCache(SANDBOX_CONFIG.compileCache.maxEntries);
 const META_DIR = '/tmp';
 
 /**
@@ -116,58 +118,59 @@ async function runInBox(boxId: number, spec: IsolateRunSpec): Promise<IsolateRun
   return { metaText, stdout, stderr };
 }
 
-async function compileInBox(
-  boxId: number,
-  boxDir: string,
+/**
+ * Compile in a fresh box and, on success, copy the artifacts out to a
+ * standalone temp dir that outlives the box. This is the compile-cache thunk:
+ * it owns the compile box's whole lifecycle (acquire → init → compile →
+ * cleanup → release) and hands back a dir the cache adopts. The cache removes
+ * that dir on eviction.
+ */
+async function compileToArtifactDir(
   spec: LanguageSpec,
   mainFile: string,
-  code: string
-): Promise<{ compileMs: number; failure?: SandboxResult }> {
-  await writeFile(path.join(boxDir, mainFile), code);
-  const compileSpec: IsolateRunSpec = {
-    argv: spec.compileArgv!(mainFile),
-    timeoutMs: SANDBOX_CONFIG.compileLimits.timeoutMs,
-    memoryKb: SANDBOX_CONFIG.compileLimits.memoryKb,
-    pidsLimit: SANDBOX_CONFIG.compileLimits.pidsLimit,
-  };
-  const result = await runInBox(boxId, compileSpec);
-  const meta = parseIsolateMeta(result.metaText);
-  const compileMs = (meta.timeWall ?? meta.time ?? 0) * 1000;
+  code: string,
+  artifactNames: string[]
+): Promise<FreshCompileOutcome> {
+  const boxId = await pool.acquire();
+  try {
+    const boxDir = await initBox(boxId);
+    await writeFile(path.join(boxDir, mainFile), code);
 
-  if (mapMetaToStatus(meta) !== 'OK') {
-    return {
-      compileMs,
-      failure: {
-        output: '',
-        error: result.stderr.trim() || meta.message || 'Compilation failed',
-        status: 'CE',
-        runMs: 0,
-        wallMs: compileMs,
-        memoryKb: meta.cgMem ?? meta.maxRss ?? 0,
-        compileMs,
-        exitCode: meta.exitcode,
-      },
-    };
-  }
-  return { compileMs };
-}
+    const result = await runInBox(boxId, {
+      argv: spec.compileArgv!(mainFile),
+      timeoutMs: SANDBOX_CONFIG.compileLimits.timeoutMs,
+      memoryKb: SANDBOX_CONFIG.compileLimits.memoryKb,
+      pidsLimit: SANDBOX_CONFIG.compileLimits.pidsLimit,
+    });
+    const meta = parseIsolateMeta(result.metaText);
+    const compileMs = (meta.timeWall ?? meta.time ?? 0) * 1000;
 
-async function copyArtifact(
-  fromDir: string,
-  toDir: string,
-  language: Language,
-  mainFile: string
-): Promise<void> {
-  if (language === 'cpp') {
-    await copyFile(path.join(fromDir, 'a.out'), path.join(toDir, 'a.out'));
-    return;
-  }
-  if (language === 'java') {
-    const className = mainFile.replace(/\.java$/, '');
-    await copyFile(
-      path.join(fromDir, `${className}.class`),
-      path.join(toDir, `${className}.class`)
+    if (mapMetaToStatus(meta) !== 'OK') {
+      return {
+        kind: 'fail',
+        result: {
+          output: '',
+          error: result.stderr.trim() || meta.message || 'Compilation failed',
+          status: 'CE',
+          runMs: 0,
+          wallMs: compileMs,
+          memoryKb: meta.cgMem ?? meta.maxRss ?? 0,
+          compileMs,
+          exitCode: meta.exitcode,
+        },
+      };
+    }
+
+    const artifactDir = await mkdtemp(path.join(os.tmpdir(), 'codemare-art-'));
+    await Promise.all(
+      artifactNames.map((name) =>
+        cp(path.join(boxDir, name), path.join(artifactDir, name))
+      )
     );
+    return { kind: 'ok', dir: artifactDir, artifacts: artifactNames, compileMs };
+  } finally {
+    await cleanupBox(boxId);
+    pool.release(boxId);
   }
 }
 
@@ -188,27 +191,44 @@ async function execute(
   const mainFile = spec.mainFileName(code);
 
   const runBoxId = await pool.acquire();
-  let compileBoxId: number | undefined;
   let compileMs: number | undefined;
 
   try {
     const runBoxDir = await initBox(runBoxId);
 
     if (spec.needsCompile) {
-      compileBoxId = await pool.acquire();
-      const compileBoxDir = await initBox(compileBoxId);
-      const compileResult = await compileInBox(
-        compileBoxId,
-        compileBoxDir,
-        spec,
-        mainFile,
-        code
-      );
-      compileMs = compileResult.compileMs;
-      if (compileResult.failure) {
-        return compileResult.failure;
+      const artifactNames = spec.artifacts!(mainFile);
+      const thunk = (): Promise<FreshCompileOutcome> =>
+        compileToArtifactDir(spec, mainFile, code, artifactNames);
+
+      // Compile through the cache: a re-run of unchanged code skips the
+      // compile box entirely. When caching is disabled, run the thunk once and
+      // clean up the throwaway artifact dir ourselves.
+      let artifactDir: string;
+      let ownDir = false;
+      if (SANDBOX_CONFIG.compileCache.enabled) {
+        const key = compileCache.key(language, spec.compileArgv!(mainFile), code);
+        const outcome = await compileCache.getOrCompile(key, thunk);
+        if (outcome.kind === 'fail') return outcome.result;
+        compileMs = outcome.compileMs;
+        artifactDir = outcome.dir;
+      } else {
+        const fresh = await thunk();
+        if (fresh.kind === 'fail') return fresh.result;
+        compileMs = fresh.compileMs;
+        artifactDir = fresh.dir;
+        ownDir = true;
       }
-      await copyArtifact(compileBoxDir, runBoxDir, language, mainFile);
+
+      try {
+        await Promise.all(
+          artifactNames.map((name) =>
+            cp(path.join(artifactDir, name), path.join(runBoxDir, name))
+          )
+        );
+      } finally {
+        if (ownDir) await rm(artifactDir, { recursive: true, force: true }).catch(() => undefined);
+      }
     } else {
       await writeFile(path.join(runBoxDir, mainFile), code);
     }
@@ -246,10 +266,6 @@ async function execute(
   } finally {
     await cleanupBox(runBoxId);
     pool.release(runBoxId);
-    if (compileBoxId !== undefined) {
-      await cleanupBox(compileBoxId);
-      pool.release(compileBoxId);
-    }
   }
 }
 

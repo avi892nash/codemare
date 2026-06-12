@@ -20,4 +20,12 @@ export const SANDBOX_CONFIG = {
     maxBoxes: 100,
     binary: 'isolate',
   },
+  compileCache: {
+    // Content-addressed cache of compiled artifacts (a.out / *.class) keyed on
+    // (language, compiler flags, source). A re-run of unchanged C++/Java code
+    // skips compilation entirely. Bounded LRU; entries are evicted oldest-first
+    // and their artifact dirs removed.
+    enabled: true,
+    maxEntries: 256,
+  },
 } as const;

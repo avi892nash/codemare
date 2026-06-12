@@ -55,6 +55,7 @@ const SPECS: Record<Language, LanguageSpec> = {
       mainFile,
     ],
     runArgv: () => ['./a.out'],
+    artifacts: () => ['a.out'],
     pidsLimit: 1,
   },
   java: {
@@ -66,6 +67,7 @@ const SPECS: Record<Language, LanguageSpec> = {
       const className = mainFile.replace(/\.java$/, '');
       return ['/usr/bin/env', 'java', '-cp', '.', className];
     },
+    artifacts: (mainFile) => [`${mainFile.replace(/\.java$/, '')}.class`],
     pidsLimit: 64,
   },
 };

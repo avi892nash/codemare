@@ -9,7 +9,7 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "lint": "eslint . --ext .ts",
-    "test": "tsx --test tests/sandbox/metaParser.test.ts tests/sandbox/boxPool.test.ts",
+    "test": "tsx --test tests/sandbox/metaParser.test.ts tests/sandbox/boxPool.test.ts tests/sandbox/compileCache.test.ts",
     "test:deployment": "./tests/deployment.test.sh"
   },
   "keywords": [

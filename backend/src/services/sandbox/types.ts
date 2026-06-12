@@ -42,6 +42,12 @@ export interface LanguageSpec {
   /** Argv for the run phase. For compiled langs, the compile artifact is implied to be present. */
   runArgv(mainFile: string): string[];
   /**
+   * Files produced by the compile phase that must be copied into the run box
+   * (and into the compile cache). e.g. cpp → ['a.out'], java → ['Main.class'].
+   * Undefined for interpreted languages.
+   */
+  artifacts?(mainFile: string): string[];
+  /**
    * Maximum number of tasks (processes + threads) the user submission is
    * allowed to create at runtime. Competitive-programming convention is to
    * forbid user-spawned threads; this cap is set just high enough for the
