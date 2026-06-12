@@ -7,6 +7,7 @@ import { Button } from '../ui/Button';
 import { Logomark } from '../ui/Logomark';
 import { Pill } from '../ui/Pill';
 import { AuthInput, FormField, authLinkStyle } from './FormField';
+import { signUp } from '@/app/auth/actions';
 
 export type AuthMode = 'signin' | 'signup' | 'forgot';
 
@@ -32,22 +33,38 @@ export function AuthForm({ mode, onModeChange }: AuthFormProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const next = useSearchParams().get('next') || '/';
   const t = TITLE[mode];
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
+    setError(null);
     if (mode === 'forgot') return; // password reset not wired yet
-    if (!email.trim()) return;
+    if (!email.trim() || !password) return;
     setBusy(true);
-    // Dev login: email (+ name on signup). In production this path is the
-    // real credentials/email flow; the 'dev' provider only exists outside prod.
-    await signIn('dev', {
-      email: email.trim(),
-      name: mode === 'signup' ? handle.trim() : '',
-      redirectTo: next,
-    });
-    setBusy(false);
+    try {
+      if (mode === 'signup') {
+        const res = await signUp({ email: email.trim(), password, handle: handle.trim() || undefined });
+        if (!res.ok) {
+          setError(res.error ?? 'Could not create account');
+          return;
+        }
+      }
+      // Sign in with the same credentials (also runs right after sign-up).
+      const result = await signIn('credentials', {
+        email: email.trim(),
+        password,
+        redirect: false,
+      });
+      if (result?.error) {
+        setError('Invalid email or password');
+        return;
+      }
+      window.location.href = next;
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -100,6 +117,21 @@ export function AuthForm({ mode, onModeChange }: AuthFormProps) {
         )}
 
         <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {error && (
+            <div
+              role="alert"
+              style={{
+                fontSize: 12.5,
+                color: 'var(--err)',
+                background: 'var(--err-bg)',
+                border: '1px solid color-mix(in oklab, var(--err) 30%, transparent)',
+                borderRadius: 'var(--r)',
+                padding: '8px 10px',
+              }}
+            >
+              {error}
+            </div>
+          )}
           {mode === 'signup' && (
             <FormField
               label="Handle"

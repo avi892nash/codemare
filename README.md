@@ -161,15 +161,16 @@ retired.
   internal-auth lockdown; optional Redis queue + worker pool for horizontal
   scale; systemd + install.sh deploy story; 21/21 unit tests.
 - Web: full design-language port; catalog + problem detail + Monaco editor
-  + Results panel; IDE mode + stdin/stdout test cases; design system page;
-  auth page with OAuth wired; Prisma schema + submission persistence;
-  submissions history + profile page; transparent sync/async submission client.
+  + Results panel; IDE mode + stdin/stdout test cases;
+  email/password auth (bcrypt + sign-up) plus OAuth, login wall via
+  middleware; Prisma schema + submission persistence; submissions history +
+  profile page; transparent sync/async submission client.
 
 ## What's parked
 
 - Per-problem C++/Java harness templates (the `Problem.harnessTemplate`
   field exists in Prisma; logic lands when the catalog migrates into the DB).
-- Email/password Credentials provider (needs bcrypt + sign-up route).
+- Password reset / email verification (needs an email provider).
 - Learn section (tracks / modules / lessons / quizzes / runnable code blocks).
 - Migrating the problem catalog from compile-service JSON into Postgres.
 - Multi-iteration median for sub-millisecond timing on tiny algorithms.
