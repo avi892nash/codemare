@@ -138,11 +138,17 @@ against `INTERNAL_TOKEN`).
 
 ```
 GET  /health                          → open
-POST /v1/execute                      → ExecutionResponse (Problems mode)
-POST /v1/ide/execute                  → IdeExecutionResponse (IDE mode)
 GET  /v1/problems                     → ProblemListItem[]
 GET  /v1/problems/:id                 → Problem
+POST /v1/execute                      → ExecutionResponse, or { token } (202) if queued
+POST /v1/ide/execute                  → IdeExecutionResponse, or { token } (202) if queued
+GET  /v1/execute/:token               → poll a queued Problems submission
+GET  /v1/ide/execute/:token           → poll a queued IDE submission
 ```
+
+`POST /v1/execute?wait=true` forces the synchronous path. The async token
+flow activates only when the compile service has `REDIS_URL` set; otherwise
+every submit is synchronous. The web client handles both transparently.
 
 `/api/*` is kept as a legacy alias for one release while the Vite SPA is
 retired.
@@ -150,12 +156,14 @@ retired.
 ## What's done
 
 - Backend: Docker → isolate migration; per-language pid caps; single-core
-  pinning; algorithm-only timing for Python and JS; internal-auth lockdown;
-  systemd + install.sh deploy story; 12/12 unit tests.
+  pinning; algorithm-only timing for Python and JS; content-addressed compile
+  cache (C++/Java re-runs skip compilation); parallel IDE test cases;
+  internal-auth lockdown; optional Redis queue + worker pool for horizontal
+  scale; systemd + install.sh deploy story; 21/21 unit tests.
 - Web: full design-language port; catalog + problem detail + Monaco editor
   + Results panel; IDE mode + stdin/stdout test cases; design system page;
   auth page with OAuth wired; Prisma schema + submission persistence;
-  submissions history + profile page.
+  submissions history + profile page; transparent sync/async submission client.
 
 ## What's parked
 
@@ -165,6 +173,8 @@ retired.
 - Learn section (tracks / modules / lessons / quizzes / runnable code blocks).
 - Migrating the problem catalog from compile-service JSON into Postgres.
 - Multi-iteration median for sub-millisecond timing on tiny algorithms.
+- Live-Redis integration test (the queue's gating is unit-tested; the
+  enqueue→worker→poll path is verified manually against a real Redis).
 
 ## License
 

@@ -105,13 +105,52 @@ Sandbox: isolate
 
 - No Dockerfile, no `docker-compose`, no `backend/docker/*-executor/`.
 - No Kubernetes manifests (the DinD sidecar was retired).
-- No macOS dev fallback — the only sandbox is `isolate`, which is Linux-only.
-  For local dev, use a Linux VM (Multipass / Lima / a remote box) or SSH to
-  the same VM that hosts staging.
 
-## Horizontal scaling later
+For local dev on macOS/Windows, the backend falls back to an unsandboxed
+`localAdapter` (loud warning on boot) so `npm run dev` works without isolate.
+That fallback is refused in production (`NODE_ENV=production` throws if isolate
+is missing) — see [src/services/sandboxService.ts](src/services/sandboxService.ts).
 
-The backend is stateless (file-based problem catalog, no DB). To scale:
-provision a second VM with `deploy/install.sh`, put both behind a load
-balancer, and replicate `/var/log/codemare` to your log sink. Submission
-history will land in a managed Postgres separately when that feature ships.
+## Scaling: synchronous vs. queued
+
+The backend runs in one of two modes, chosen by whether `REDIS_URL` is set.
+
+**Synchronous (default, single-node).** No Redis. `POST /v1/execute` runs the
+submission inline and returns the result. Concurrency is bounded by the
+in-memory BoxPool (100 isolate boxes) on the one host. Simplest; fine until a
+single VM's cores are the bottleneck.
+
+**Queued (horizontal scale).** Set `REDIS_URL`. The API enqueues each
+submission and returns `{ token }` (202); clients poll `GET /v1/execute/:token`.
+Workers drain the queue:
+
+```
+                 ┌─────────────┐     enqueue      ┌─────────┐
+  clients  ────▶ │  API (N)    │ ───────────────▶ │  Redis  │
+                 │  stateless  │ ◀─── poll ─────── │  queue  │
+                 └─────────────┘                   └────┬────┘
+                                                        │ pull
+                                          ┌─────────────┴──────────────┐
+                                          ▼              ▼             ▼
+                                      worker 1       worker 2  …   worker M
+                                   (isolate + toolchains, own VM/proc)
+```
+
+- API hosts: `deploy/codemare-backend.service` (no workers), behind a load balancer.
+- Worker hosts: `deploy/codemare-worker.service` — run M of them, each its own
+  VM/process, all sharing one `REDIS_URL`. Scale execution by adding workers
+  without touching the API tier.
+- Single VM: set `WORKER_INLINE=true` to run a worker inside the API process —
+  you still get the async API + backpressure without a separate process.
+
+Relevant env (in `/etc/codemare/env`):
+
+```
+REDIS_URL=redis://10.0.0.5:6379    # unset → synchronous mode
+WORKER_CONCURRENCY=4               # jobs one worker runs at once
+QUEUE_RESULT_TTL_SEC=3600          # how long completed results are retained
+WORKER_INLINE=true                 # single-VM: run a worker in the API process
+```
+
+The backend is stateless either way (file-based problem catalog, no DB).
+Submission history lives in the web app's Postgres, not here.
