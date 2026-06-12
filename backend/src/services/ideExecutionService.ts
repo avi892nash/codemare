@@ -6,75 +6,80 @@ import {
 } from '../models/IdeExecution.js';
 
 /**
- * Execute code with custom test cases (stdin/stdout mode)
- * Runs code once per test case
+ * Execute code against custom test cases (stdin/stdout mode).
+ *
+ * Test cases are independent — same code, different stdin — so they run
+ * concurrently. The sandbox's BoxPool bounds real parallelism, and (for
+ * C++/Java) the compile cache means the first case to reach the compiler
+ * populates it via single-flight while the rest wait on that one compile
+ * rather than each compiling their own copy. Net effect for N cases of a
+ * compiled language: 1 compile + N parallel runs, instead of N sequential
+ * (compile + run).
  */
 export async function executeIdeCode(
   request: IdeExecutionRequest
 ): Promise<IdeExecutionResponse> {
-  const results: IdeTestResult[] = [];
   const startTime = Date.now();
 
   try {
-    // Execute each test case separately
-    for (const testCase of request.testCases) {
-      const testStartTime = Date.now();
+    // Each callback always resolves to an IdeTestResult (never throws) so
+    // Promise.all returns every case's result, in order, even on failure.
+    const results: IdeTestResult[] = await Promise.all(
+      request.testCases.map(async (testCase): Promise<IdeTestResult> => {
+        try {
+          const sandbox = await executeSandboxed(
+            request.language,
+            request.code,
+            testCase.input
+          );
 
-      try {
-        // Execute code through the active sandbox adapter (no wrapper for IDE mode)
-        const sandbox = await executeSandboxed(
-          request.language,
-          request.code,
-          testCase.input
-        );
+          const actualOutput = sandbox.output || '';
+          const normalizedActual = actualOutput.trimEnd();
+          const normalizedExpected = testCase.expectedOutput.trimEnd();
+          const passed =
+            sandbox.status === 'OK' && normalizedActual === normalizedExpected;
 
-        const wallMs = Date.now() - testStartTime;
-        const actualOutput = sandbox.output || '';
-
-        const normalizedActual = actualOutput.trimEnd();
-        const normalizedExpected = testCase.expectedOutput.trimEnd();
-        const passed =
-          sandbox.status === 'OK' && normalizedActual === normalizedExpected;
-
-        results.push({
-          input: testCase.input,
-          expectedOutput: testCase.expectedOutput,
-          actualOutput: actualOutput,
-          passed: passed,
-          executionTime: wallMs,
-          runMs: sandbox.runMs,
-          wallMs: sandbox.wallMs,
-          memoryKb: sandbox.memoryKb,
-          compileMs: sandbox.compileMs,
-          status: sandbox.status,
-          error: sandbox.error,
-        });
-      } catch (error) {
-        results.push({
-          input: testCase.input,
-          expectedOutput: testCase.expectedOutput,
-          actualOutput: '',
-          passed: false,
-          executionTime: Date.now() - testStartTime,
-          error:
-            error instanceof Error ? error.message : 'Execution failed',
-        });
-      }
-    }
+          return {
+            input: testCase.input,
+            expectedOutput: testCase.expectedOutput,
+            actualOutput,
+            passed,
+            // Service-side wall is meaningless under parallelism; use the
+            // sandbox's per-process wall for an honest per-case number.
+            executionTime: sandbox.wallMs,
+            runMs: sandbox.runMs,
+            wallMs: sandbox.wallMs,
+            memoryKb: sandbox.memoryKb,
+            compileMs: sandbox.compileMs,
+            status: sandbox.status,
+            error: sandbox.error,
+          };
+        } catch (error) {
+          return {
+            input: testCase.input,
+            expectedOutput: testCase.expectedOutput,
+            actualOutput: '',
+            passed: false,
+            executionTime: 0,
+            error: error instanceof Error ? error.message : 'Execution failed',
+          };
+        }
+      })
+    );
 
     const totalPassed = results.filter((r) => r.passed).length;
 
     return {
       success: totalPassed === results.length,
       testResults: results,
-      totalPassed: totalPassed,
+      totalPassed,
       totalTests: results.length,
       totalExecutionTime: Date.now() - startTime,
     };
   } catch (error) {
     return {
       success: false,
-      testResults: results,
+      testResults: [],
       totalPassed: 0,
       totalTests: request.testCases.length,
       totalExecutionTime: Date.now() - startTime,
