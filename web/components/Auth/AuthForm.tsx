@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from 'react';
 import { signIn } from 'next-auth/react';
+import { useSearchParams } from 'next/navigation';
 import { Button } from '../ui/Button';
 import { Logomark } from '../ui/Logomark';
 import { Pill } from '../ui/Pill';
@@ -12,7 +13,6 @@ export type AuthMode = 'signin' | 'signup' | 'forgot';
 interface AuthFormProps {
   mode: AuthMode;
   onModeChange: (m: AuthMode) => void;
-  onSubmit?: (values: { handle?: string; email: string; password?: string }) => void;
 }
 
 const TITLE: Record<AuthMode, { h1: string; sub: string }> = {
@@ -27,19 +27,27 @@ const CTA: Record<AuthMode, string> = {
   forgot: 'Send reset link',
 };
 
-export function AuthForm({ mode, onModeChange, onSubmit }: AuthFormProps) {
-  const [handle, setHandle] = useState('mira_k');
+export function AuthForm({ mode, onModeChange }: AuthFormProps) {
+  const [handle, setHandle] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [busy, setBusy] = useState(false);
+  const next = useSearchParams().get('next') || '/';
   const t = TITLE[mode];
 
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
-    onSubmit?.({
-      handle: mode === 'signup' ? handle : undefined,
-      email,
-      password: mode === 'forgot' ? undefined : password,
+    if (mode === 'forgot') return; // password reset not wired yet
+    if (!email.trim()) return;
+    setBusy(true);
+    // Dev login: email (+ name on signup). In production this path is the
+    // real credentials/email flow; the 'dev' provider only exists outside prod.
+    await signIn('dev', {
+      email: email.trim(),
+      name: mode === 'signup' ? handle.trim() : '',
+      redirectTo: next,
     });
+    setBusy(false);
   };
 
   return (
@@ -150,9 +158,10 @@ export function AuthForm({ mode, onModeChange, onSubmit }: AuthFormProps) {
             full
             type="submit"
             iconRight="chev-right"
+            disabled={busy}
             style={{ marginTop: 8 }}
           >
-            {CTA[mode]}
+            {busy ? 'Signing in…' : CTA[mode]}
           </Button>
         </form>
 
