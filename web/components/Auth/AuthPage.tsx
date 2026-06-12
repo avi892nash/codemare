@@ -2,12 +2,11 @@
 
 import { useState } from 'react';
 import { AuthForm, type AuthMode } from './AuthForm';
-import { AuthBrandPanel } from './AuthBrandPanel';
 
 /**
- * Full-page two-column auth screen. Form on the left, brand panel on the
- * right. The mode (signin / signup / forgot) is owned here so the inner links
- * can swap views without a route change.
+ * Full-page auth screen — a single centered column. The mode
+ * (signin / signup / forgot) is owned here so the inner links can swap views
+ * without a route change.
  */
 export function AuthPage() {
   const [mode, setMode] = useState<AuthMode>('signin');
@@ -20,17 +19,12 @@ export function AuthPage() {
         overflowY: 'auto',
         background: 'var(--bg-0)',
         color: 'var(--fg-0)',
+        display: 'flex',
+        justifyContent: 'center',
       }}
     >
-      <div
-        style={{
-          minHeight: '100%',
-          display: 'grid',
-          gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
-        }}
-      >
+      <div style={{ width: '100%', maxWidth: 480 }}>
         <AuthForm mode={mode} onModeChange={setMode} />
-        <AuthBrandPanel />
       </div>
     </div>
   );
