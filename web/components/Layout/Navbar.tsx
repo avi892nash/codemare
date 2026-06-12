@@ -52,6 +52,7 @@ export function Navbar({ user }: NavbarProps) {
         <span style={{ fontWeight: 600, letterSpacing: -0.2 }}>codemare</span>
       </Link>
 
+      {user && (
       <nav style={{ display: 'flex', gap: 2, marginLeft: 8 }}>
         {NAV_ITEMS.map((it) => {
           const active = it.href != null && (it.match ? it.match(pathname) : pathname === it.href);
@@ -88,10 +89,11 @@ export function Navbar({ user }: NavbarProps) {
           );
         })}
       </nav>
+      )}
 
       <span style={{ flex: 1 }} />
 
-      <Input icon="search" placeholder="Jump to problem…" kbd="⌘K" size="sm" />
+      {user && <Input icon="search" placeholder="Jump to problem…" kbd="⌘K" size="sm" />}
 
       <a
         href="https://github.com/avi892nash/codemare"
