@@ -25,7 +25,6 @@ const NAV_ITEMS: NavItem[] = [
   { name: 'Learn',         href: null,             icon: 'graduation' },
   { name: 'IDE',           href: '/ide',           icon: 'terminal' },
   { name: 'Submissions',   href: '/submissions',   icon: 'history' },
-  { name: 'Design system', href: '/design-system', icon: 'sparkle' },
 ];
 
 interface NavbarProps {
