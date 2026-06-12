@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Avatar, Input, Logomark, Pill } from '@/components/ui/primitives';
+import { Avatar, Input, Logomark } from '@/components/ui/primitives';
 import { Icon, type IconName } from '@/components/ui/Icon';
 
 /**
@@ -50,9 +50,6 @@ export function Navbar({ user }: NavbarProps) {
       <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none', color: 'var(--fg-0)' }}>
         <Logomark />
         <span style={{ fontWeight: 600, letterSpacing: -0.2 }}>codemare</span>
-        <Pill tone="muted" size="xs" style={{ fontFamily: 'var(--font-mono)', marginLeft: 6 }}>
-          µs-judge
-        </Pill>
       </Link>
 
       <nav style={{ display: 'flex', gap: 2, marginLeft: 8 }}>
