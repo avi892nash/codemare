@@ -50,6 +50,55 @@ export class CompileServiceError extends Error {
   }
 }
 
+/** A 202 token response from the async submit path. */
+interface TokenResponse {
+  token: string;
+  status: 'PND';
+}
+
+function isToken(v: unknown): v is TokenResponse {
+  return typeof v === 'object' && v !== null && 'token' in v;
+}
+
+/** Pending poll responses are exactly `{ status: 'PND' }`; the final result
+ *  never carries that marker (Problems results use OK/WA/…; IDE has none). */
+function isPending(v: unknown): boolean {
+  return typeof v === 'object' && v !== null && (v as { status?: string }).status === 'PND';
+}
+
+const POLL_INTERVAL_MS = 200;
+const POLL_TIMEOUT_MS = 60_000;
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Resolve a submission to its final result. The compile service replies either
+ * with the full result (synchronous mode — queue disabled, or ?wait=true) or
+ * with a { token } (async mode — queue enabled). For a token we poll the
+ * matching GET endpoint until it is no longer pending. The web app needs no
+ * config: it transparently uses whichever mode the service is running.
+ */
+async function resolveSubmission<T>(
+  submitPath: string,
+  pollPathFor: (token: string) => string,
+  body: string
+): Promise<T> {
+  const first = await call<T | TokenResponse>(submitPath, { method: 'POST', body });
+  if (!isToken(first)) return first as T;
+
+  const deadline = Date.now() + POLL_TIMEOUT_MS;
+  const pollPath = pollPathFor(first.token);
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    await sleep(POLL_INTERVAL_MS);
+    const polled = await call<T>(pollPath);
+    if (!isPending(polled)) return polled;
+    if (Date.now() > deadline) {
+      throw new CompileServiceError(504, `submission ${first.token} timed out`);
+    }
+  }
+}
+
 export const compile = {
   /** List all problems in the catalog. Cheap, cacheable per-request. */
   listProblems(): Promise<ProblemListItem[]> {
@@ -63,20 +112,22 @@ export const compile = {
     );
   },
 
-  /** Run a Problems-mode submission against the testcases. */
+  /** Run a Problems-mode submission. Works in both sync and async service modes. */
   execute(request: ExecutionRequest): Promise<ExecutionResponse> {
-    return call<ExecutionResponse>('/v1/execute', {
-      method: 'POST',
-      body: JSON.stringify(request),
-    });
+    return resolveSubmission<ExecutionResponse>(
+      '/v1/execute',
+      (token) => `/v1/execute/${token}`,
+      JSON.stringify(request)
+    );
   },
 
   /** Run an IDE-mode submission (raw stdin/stdout, multiple custom testcases). */
   executeIde(request: IdeExecutionRequest): Promise<IdeExecutionResponse> {
-    return call<IdeExecutionResponse>('/v1/ide/execute', {
-      method: 'POST',
-      body: JSON.stringify(request),
-    });
+    return resolveSubmission<IdeExecutionResponse>(
+      '/v1/ide/execute',
+      (token) => `/v1/ide/execute/${token}`,
+      JSON.stringify(request)
+    );
   },
 
   /** Liveness probe — useful for an /api/health proxy or a status page. */
