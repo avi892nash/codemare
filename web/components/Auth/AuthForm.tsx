@@ -1,46 +1,60 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
-import { signIn } from 'next-auth/react';
+import { useEffect, useState, type FormEvent } from 'react';
+import { signIn, getProviders } from 'next-auth/react';
 import { useSearchParams } from 'next/navigation';
 import { Button } from '../ui/Button';
 import { Logomark } from '../ui/Logomark';
-import { Pill } from '../ui/Pill';
+import { Icon } from '../ui/Icon';
 import { AuthInput, FormField, authLinkStyle } from './FormField';
 import { signUp } from '@/app/auth/actions';
 
-export type AuthMode = 'signin' | 'signup' | 'forgot';
+export type AuthMode = 'signin' | 'signup';
 
 interface AuthFormProps {
   mode: AuthMode;
   onModeChange: (m: AuthMode) => void;
 }
 
-const TITLE: Record<AuthMode, { h1: string; sub: string }> = {
-  signin: { h1: 'Welcome back.',        sub: 'Pick up where you left off — your scratchpad is still warm.' },
-  signup: { h1: 'Make an account.',     sub: 'Anonymous solving is fine. Save streaks, climb leaderboards, claim a handle.' },
-  forgot: { h1: 'Forgot your password.', sub: "We'll send a one-time link. Expires in 15 minutes." },
-};
-
-const CTA: Record<AuthMode, string> = {
-  signin: 'Sign in',
-  signup: 'Create account',
-  forgot: 'Send reset link',
+const COPY: Record<AuthMode, { h1: string; sub: string; cta: string }> = {
+  signin: {
+    h1: 'Welcome back.',
+    sub: 'Sign in to keep solving and pick up where your last session left off.',
+    cta: 'Sign in',
+  },
+  signup: {
+    h1: 'Create your account.',
+    sub: 'Free to start — solve problems, build your own sets, and track every run.',
+    cta: 'Create account',
+  },
 };
 
 export function AuthForm({ mode, onModeChange }: AuthFormProps) {
   const [handle, setHandle] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPw, setShowPw] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [oauth, setOauth] = useState<{ github: boolean; google: boolean }>({
+    github: false,
+    google: false,
+  });
   const next = useSearchParams().get('next') || '/';
-  const t = TITLE[mode];
+  const c = COPY[mode];
+
+  // Only surface OAuth buttons for providers the server actually has
+  // configured — in dev with none set, the email form stands alone.
+  useEffect(() => {
+    getProviders()
+      .then((p) => setOauth({ github: !!p?.github, google: !!p?.google }))
+      .catch(() => undefined);
+  }, []);
+  const anyOauth = oauth.github || oauth.google;
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (mode === 'forgot') return; // password reset not wired yet
     if (!email.trim() || !password) return;
     setBusy(true);
     try {
@@ -51,7 +65,6 @@ export function AuthForm({ mode, onModeChange }: AuthFormProps) {
           return;
         }
       }
-      // Sign in with the same credentials (also runs right after sign-up).
       const result = await signIn('credentials', {
         email: email.trim(),
         password,
@@ -68,55 +81,38 @@ export function AuthForm({ mode, onModeChange }: AuthFormProps) {
   };
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 56, minHeight: 0 }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 40px', minHeight: 0 }}>
       <div style={{ width: '100%', maxWidth: 380 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 36 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 32 }}>
           <Logomark size={26} />
           <span style={{ fontSize: 18, fontWeight: 600, letterSpacing: -0.2 }}>codemare</span>
         </div>
 
-        <h1 style={{ margin: 0, fontSize: 26, fontWeight: 600, letterSpacing: -0.4 }}>{t.h1}</h1>
-        <p style={{ margin: '6px 0 28px', fontSize: 13.5, color: 'var(--fg-2)' }}>{t.sub}</p>
+        <h1 style={{ margin: 0, fontSize: 26, fontWeight: 600, letterSpacing: -0.4 }}>{c.h1}</h1>
+        <p style={{ margin: '6px 0 28px', fontSize: 13.5, color: 'var(--fg-2)', lineHeight: 1.5 }}>{c.sub}</p>
 
-        {mode !== 'forgot' && (
+        {anyOauth && (
           <>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 18 }}>
-              <Button
-                variant="outline"
-                full
-                size="lg"
-                icon="github"
-                onClick={() => signIn('github', { redirectTo: '/' })}
-              >
-                Continue with GitHub
-              </Button>
-              <Button
-                variant="outline"
-                full
-                size="lg"
-                icon="google"
-                onClick={() => signIn('google', { redirectTo: '/' })}
-              >
-                Continue with Google
-              </Button>
+              {oauth.github && (
+                <Button variant="outline" full size="lg" icon="github" onClick={() => signIn('github', { redirectTo: next })}>
+                  Continue with GitHub
+                </Button>
+              )}
+              {oauth.google && (
+                <Button variant="outline" full size="lg" icon="google" onClick={() => signIn('google', { redirectTo: next })}>
+                  Continue with Google
+                </Button>
+              )}
             </div>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                margin: '18px 0',
-                color: 'var(--fg-3)',
-                fontSize: 11,
-              }}
-            >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '18px 0', color: 'var(--fg-3)', fontSize: 11 }}>
               <span style={{ flex: 1, height: 1, background: 'var(--line-2)' }} /> or with email
               <span style={{ flex: 1, height: 1, background: 'var(--line-2)' }} />
             </div>
           </>
         )}
 
-        <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {error && (
             <div
               role="alert"
@@ -127,19 +123,20 @@ export function AuthForm({ mode, onModeChange }: AuthFormProps) {
                 border: '1px solid color-mix(in oklab, var(--err) 30%, transparent)',
                 borderRadius: 'var(--r)',
                 padding: '8px 10px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
               }}
             >
+              <Icon name="alert-circle" size={14} />
               {error}
             </div>
           )}
+
           {mode === 'signup' && (
-            <FormField
-              label="Handle"
-              hint="3–24 chars · letters, numbers, underscore"
-              right={<Pill tone="ok" size="xs" icon="check">available</Pill>}
-            >
+            <FormField label="Handle" hint="Optional · 3–24 chars: letters, numbers, underscore">
               <AuthInput
-                placeholder="mira_k"
+                placeholder="ada_lovelace"
                 value={handle}
                 onChange={(e) => setHandle(e.target.value)}
                 autoComplete="username"
@@ -147,6 +144,7 @@ export function AuthForm({ mode, onModeChange }: AuthFormProps) {
               />
             </FormField>
           )}
+
           <FormField label="Email">
             <AuthInput
               type="email"
@@ -157,72 +155,78 @@ export function AuthForm({ mode, onModeChange }: AuthFormProps) {
               required
             />
           </FormField>
-          {mode !== 'forgot' && (
-            <FormField
-              label="Password"
-              right={
-                mode === 'signin' ? (
-                  <a
-                    style={authLinkStyle}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      onModeChange('forgot');
-                    }}
-                  >
-                    Forgot?
-                  </a>
-                ) : null
-              }
-            >
+
+          <FormField
+            label="Password"
+            hint={mode === 'signup' ? 'At least 8 characters' : undefined}
+          >
+            <div style={{ position: 'relative' }}>
               <AuthInput
-                type="password"
+                type={showPw ? 'text' : 'password'}
                 placeholder="••••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
                 required
+                style={{ paddingRight: 38 }}
               />
-            </FormField>
-          )}
+              <button
+                type="button"
+                onClick={() => setShowPw((v) => !v)}
+                aria-label={showPw ? 'Hide password' : 'Show password'}
+                style={{
+                  position: 'absolute',
+                  right: 6,
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--fg-3)',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  padding: 4,
+                }}
+              >
+                <Icon name={showPw ? 'eye-off' : 'eye'} size={15} />
+              </button>
+            </div>
+          </FormField>
+
           <Button
             variant="primary"
             size="lg"
             full
             type="submit"
-            iconRight="chev-right"
+            iconRight="arrow-right"
             disabled={busy}
-            style={{ marginTop: 8 }}
+            style={{ marginTop: 6 }}
           >
-            {busy ? 'Signing in…' : CTA[mode]}
+            {busy ? 'One moment…' : c.cta}
           </Button>
         </form>
 
         <div style={{ marginTop: 22, fontSize: 12.5, color: 'var(--fg-2)', textAlign: 'center' }}>
-          {mode === 'signin' && (
+          {mode === 'signin' ? (
             <>
-              New here?{' '}
-              <a style={authLinkStyle} onClick={() => onModeChange('signup')}>
-                Make an account →
+              New to Codemare?{' '}
+              <a style={authLinkStyle} onClick={() => { setError(null); onModeChange('signup'); }}>
+                Create an account →
               </a>
             </>
-          )}
-          {mode === 'signup' && (
+          ) : (
             <>
-              Already in?{' '}
-              <a style={authLinkStyle} onClick={() => onModeChange('signin')}>
+              Already have an account?{' '}
+              <a style={authLinkStyle} onClick={() => { setError(null); onModeChange('signin'); }}>
                 Sign in →
               </a>
             </>
           )}
-          {mode === 'forgot' && (
-            <>
-              Remembered it?{' '}
-              <a style={authLinkStyle} onClick={() => onModeChange('signin')}>
-                Back to sign in →
-              </a>
-            </>
-          )}
         </div>
+
+        <p style={{ marginTop: 28, fontSize: 11, color: 'var(--fg-4)', textAlign: 'center', lineHeight: 1.5 }}>
+          By continuing you agree to run code in a sandboxed environment for
+          practice and learning.
+        </p>
       </div>
     </div>
   );

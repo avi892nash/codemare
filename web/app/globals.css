@@ -150,3 +150,14 @@ body {
 .skel { background: var(--bg-3); border-radius: 4px; animation: cm-pulse 1.6s ease-in-out infinite; }
 
 .hm-cell { width: 11px; height: 11px; border-radius: 2px; }
+
+/* Auth screen layout — two columns on wide, single (form only) on narrow */
+.auth-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  min-height: 100%;
+}
+@media (max-width: 900px) {
+  .auth-grid { grid-template-columns: 1fr; }
+  .auth-panel { display: none !important; }
+}

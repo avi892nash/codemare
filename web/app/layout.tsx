@@ -18,7 +18,8 @@ const jetbrains = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: 'Codemare',
-  description: 'µs-precision online judge. Solve in microseconds.',
+  description:
+    'Practice DSA and competitive programming with instant, sandboxed judging — and author your own lessons and problem sets.',
 };
 
 /**
