@@ -3,6 +3,7 @@ import cors from 'cors';
 import problemRoutes from './routes/problemRoutes.js';
 import executionRoutes from './routes/executionRoutes.js';
 import ideRoutes from './routes/ideRoutes.js';
+import queueRoutes from './routes/queueRoutes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { requireInternalToken } from './middleware/internalAuth.js';
 
@@ -41,6 +42,7 @@ authed.use(requireInternalToken);
 authed.use('/problems', problemRoutes);
 authed.use('/execute', executionRoutes);
 authed.use('/ide', ideRoutes);
+authed.use('/queue', queueRoutes);
 
 app.use('/v1', authed);
 app.use('/api', authed);

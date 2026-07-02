@@ -86,6 +86,37 @@ export async function enqueue(payload: JobPayload): Promise<string> {
   return token;
 }
 
+export interface QueueStats {
+  enabled: boolean;
+  name?: string;
+  workerConcurrency?: number;
+  resultTtlSec?: number;
+  counts?: Record<string, number>;
+}
+
+/**
+ * Live queue depth for tuning/observability: how many jobs are waiting,
+ * active, completed, failed, delayed right now. Cheap — a single Redis call.
+ * Returns { enabled: false } when the queue is off.
+ */
+export async function getQueueStats(): Promise<QueueStats> {
+  if (!isQueueEnabled()) return { enabled: false };
+  const counts = await getQueue().getJobCounts(
+    'waiting',
+    'active',
+    'completed',
+    'failed',
+    'delayed'
+  );
+  return {
+    enabled: true,
+    name: QUEUE_NAME,
+    workerConcurrency: WORKER_CONCURRENCY,
+    resultTtlSec: RESULT_TTL_SEC,
+    counts,
+  };
+}
+
 /** Poll for a job's result by token. */
 export async function getResult(token: string): Promise<PollResult> {
   if (!isQueueEnabled()) {
