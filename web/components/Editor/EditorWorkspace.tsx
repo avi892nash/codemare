@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState } from 'react';
 import type { ExecutionResponse, Language, Problem } from '@/lib/types';
 import { Button } from '@/components/ui/primitives';
 import { CodeEditor } from './CodeEditor';
@@ -20,7 +20,7 @@ export function EditorWorkspace({ problem }: { problem: Problem }) {
   const [language, setLanguage] = useState<Language>('python');
   const [code, setCode] = useState<string>(problem.starterCode?.[language] ?? '');
   const [results, setResults] = useState<ExecutionResponse | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const [busy, setBusy] = useState(false);
 
   function switchLanguage(next: Language) {
     setLanguage(next);
@@ -33,12 +33,15 @@ export function EditorWorkspace({ problem }: { problem: Problem }) {
     setResults(null);
   }
 
-  function submit() {
+  async function submit() {
     if (!code.trim()) return;
-    startTransition(async () => {
+    setBusy(true);
+    try {
       const r = await runSolution({ problemId: problem.id, language, code });
       setResults(r);
-    });
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -58,16 +61,16 @@ export function EditorWorkspace({ problem }: { problem: Problem }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <LanguageSelector value={language} onChange={switchLanguage} />
           <span style={{ width: 1, height: 18, background: 'var(--line-2)', margin: '0 4px' }} />
-          <Button variant="ghost" size="sm" icon="refresh" onClick={reset} disabled={isPending}>
+          <Button variant="ghost" size="sm" icon="refresh" onClick={reset} disabled={busy}>
             Reset stub
           </Button>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Button variant="default" size="md" icon="play" onClick={submit} disabled={isPending} kbd="⌘ ↵">
+          <Button variant="default" size="md" icon="play" onClick={submit} disabled={busy} kbd="⌘ ↵">
             Run
           </Button>
-          <Button variant="primary" size="md" icon="send" onClick={submit} disabled={isPending}>
-            {isPending ? 'Running…' : 'Submit'}
+          <Button variant="primary" size="md" icon="send" onClick={submit} disabled={busy}>
+            {busy ? 'Running…' : 'Submit'}
           </Button>
         </div>
       </div>

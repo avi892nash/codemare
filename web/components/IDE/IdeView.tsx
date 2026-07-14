@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState } from 'react';
 import type {
   IdeExecutionResponse,
   IdeTestCase,
@@ -32,7 +32,7 @@ export function IdeView() {
     { input: '2\n3', expectedOutput: '5' },
   ]);
   const [results, setResults] = useState<IdeExecutionResponse | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const [busy, setBusy] = useState(false);
 
   function switchLanguage(next: Language) {
     setLanguage(next);
@@ -46,14 +46,17 @@ export function IdeView() {
     setTestCases([{ input: '2\n3', expectedOutput: '5' }]);
   }
 
-  function submit() {
+  async function submit() {
     const nonEmpty = testCases.filter((tc) => tc.input.trim() || tc.expectedOutput.trim());
     if (nonEmpty.length === 0) return;
     if (!code.trim()) return;
-    startTransition(async () => {
+    setBusy(true);
+    try {
       const r = await runIdeCode({ code, language, testCases: nonEmpty });
       setResults(r);
-    });
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -102,11 +105,11 @@ export function IdeView() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Button variant="ghost" size="sm" icon="refresh" onClick={reset} disabled={isPending}>
+            <Button variant="ghost" size="sm" icon="refresh" onClick={reset} disabled={busy}>
               Reset
             </Button>
-            <Button variant="primary" size="md" icon="play" onClick={submit} disabled={isPending} kbd="⌘ ↵">
-              {isPending ? 'Running…' : 'Run'}
+            <Button variant="primary" size="md" icon="play" onClick={submit} disabled={busy} kbd="⌘ ↵">
+              {busy ? 'Running…' : 'Run'}
             </Button>
           </div>
         </div>

@@ -39,7 +39,7 @@ export function CodeEditor({ language, value, onChange }: CodeEditorProps) {
       <Monaco
         language={MONACO_LANG[language]}
         value={value}
-        onChange={(v) => onChange(v ?? '')}
+        onChange={(v: string | undefined) => onChange(v ?? '')}
         theme="vs-dark"
         options={{
           fontSize: 13,

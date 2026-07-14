@@ -1,8 +1,9 @@
-import { auth, signOut } from '@/auth';
+import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { redirect } from 'next/navigation';
-import { Avatar, Button, Pill, DifficultyPill, fmtTime, fmtMem } from '@/components/ui/primitives';
+import { Avatar, Pill, DifficultyPill, fmtTime, fmtMem } from '@/components/ui/primitives';
 import { Icon } from '@/components/ui/Icon';
+import { SignOutButton } from '@/components/SignOutButton';
 
 export const metadata = { title: 'Profile · Codemare' };
 
@@ -69,16 +70,7 @@ export default async function ProfilePage() {
               {user?.email && <> · <span className="mono">{user.email}</span></>}
             </p>
           </div>
-          <form
-            action={async () => {
-              'use server';
-              await signOut({ redirectTo: '/' });
-            }}
-          >
-            <Button type="submit" variant="outline" size="sm" icon="lock-open">
-              Sign out
-            </Button>
-          </form>
+          <SignOutButton />
         </div>
 
         {/* Stats grid */}
