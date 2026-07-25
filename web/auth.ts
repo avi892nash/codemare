@@ -65,6 +65,10 @@ if (process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET) {
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
   providers,
+  // Self-hosted deployment behind our own host/proxy: there is no vendor
+  // platform setting AUTH_URL for us, so Auth.js must trust the incoming
+  // Host header or every /api/auth/* call throws UntrustedHost in prod.
+  trustHost: true,
   session: { strategy: 'jwt' },
   pages: {
     signIn: '/auth',

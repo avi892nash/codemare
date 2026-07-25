@@ -163,7 +163,7 @@ function EmptyState() {
         <Pill tone="muted" size="xs">Tip</Pill>
         <span style={{ fontSize: 11.5, color: 'var(--fg-3)', marginLeft: 8 }}>
           Submissions are persisted to Postgres only when the DB is reachable; runs from a
-          DB-less dev environment won't appear here.
+          DB-less dev environment won&apos;t appear here.
         </span>
       </div>
     </div>

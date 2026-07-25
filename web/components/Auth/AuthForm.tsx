@@ -16,6 +16,18 @@ interface AuthFormProps {
   onModeChange: (m: AuthMode) => void;
 }
 
+/**
+ * Only allow same-origin path redirects for the ?next= param. Anything that
+ * doesn't start with '/' — or starts with '//' or '/\' (protocol-relative
+ * and backslash open-redirect tricks) — falls back to '/'.
+ */
+function sanitizeNext(raw: string | null): string {
+  if (!raw || !raw.startsWith('/') || raw.startsWith('//') || raw.startsWith('/\\')) {
+    return '/';
+  }
+  return raw;
+}
+
 const COPY: Record<AuthMode, { h1: string; sub: string; cta: string }> = {
   signin: {
     h1: 'Welcome back.',
@@ -40,7 +52,7 @@ export function AuthForm({ mode, onModeChange }: AuthFormProps) {
     github: false,
     google: false,
   });
-  const next = useSearchParams().get('next') || '/';
+  const next = sanitizeNext(useSearchParams().get('next'));
   const c = COPY[mode];
 
   // Only surface OAuth buttons for providers the server actually has

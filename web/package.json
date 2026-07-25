@@ -5,9 +5,9 @@
   "description": "Codemare web app — Next.js (App Router) frontend + user-facing API. Calls the compile service over HTTPS with X-Codemare-Token.",
   "scripts": {
     "setup": "node scripts/setup.mjs",
-    "dev": "next dev -p 3001",
+    "dev": "next dev -p 4001",
     "build": "next build",
-    "start": "next start -p 3001",
+    "start": "next start -p 4001",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "seed": "tsx prisma/seed.ts"

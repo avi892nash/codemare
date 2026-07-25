@@ -25,6 +25,17 @@ import type {
 const BASE = (process.env.COMPILE_SERVICE_URL ?? 'http://localhost:3000').replace(/\/$/, '');
 const TOKEN = process.env.INTERNAL_TOKEN ?? '';
 
+// Startup guard: in production a missing or placeholder INTERNAL_TOKEN means
+// every compile-service call would go out unauthenticated (or with a
+// well-known value). Fail loudly at module load instead of at request time.
+// Never log the token itself.
+if (process.env.NODE_ENV === 'production' && (!TOKEN || TOKEN.startsWith('replace-me'))) {
+  throw new Error(
+    'INTERNAL_TOKEN is missing or still the placeholder. Generate one with ' +
+      '`openssl rand -hex 32` and set it in the environment before starting the web app.'
+  );
+}
+
 async function call<T>(path: string, init?: RequestInit): Promise<T> {
   const headers = new Headers(init?.headers);
   headers.set('Content-Type', 'application/json');

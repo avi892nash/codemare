@@ -64,20 +64,29 @@ export async function runSolution(req: ExecutionRequest): Promise<ExecutionRespo
         select: { id: true },
       });
 
+      // Defense-in-depth: the compile service has been observed reporting
+      // status 'OK' for runs whose tests actually failed (backend fix owned
+      // elsewhere). Never persist 'OK' unless the run really passed; real
+      // failure statuses (TLE/RE/CE/…) pass through untouched.
+      let status = (response.status ?? (response.success ? 'OK' : 'WA')) as
+        | 'OK'
+        | 'WA'
+        | 'TLE'
+        | 'MLE'
+        | 'RE'
+        | 'CE'
+        | 'XX';
+      const failed =
+        response.success === false || response.totalPassed < response.totalTests;
+      if (status === 'OK' && failed) status = 'WA';
+
       await prisma.submission.create({
         data: {
           userId: session.user.id,
           problemId: problem.id,
           language: req.language,
           code: req.code,
-          status: response.status ?? (response.success ? 'OK' : 'WA' as const) as
-            | 'OK'
-            | 'WA'
-            | 'TLE'
-            | 'MLE'
-            | 'RE'
-            | 'CE'
-            | 'XX',
+          status,
           totalPassed: response.totalPassed,
           totalTests: response.totalTests,
           runMs: response.runMs ?? null,
