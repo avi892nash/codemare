@@ -51,7 +51,9 @@ export async function executeIdeCode(
             wallMs: sandbox.wallMs,
             memoryKb: sandbox.memoryKb,
             compileMs: sandbox.compileMs,
-            status: sandbox.status,
+            // Sandbox 'OK' only means a clean exit — a clean run with the
+            // wrong stdout is a Wrong Answer for this case.
+            status: sandbox.status === 'OK' && !passed ? 'WA' : sandbox.status,
             error: sandbox.error,
           };
         } catch (error) {

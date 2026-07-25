@@ -1,5 +1,9 @@
-import { TestCaseResult } from '../models/ExecutionResult.js';
-import { TestCase } from '../models/Problem.js';
+import {
+  ExecutionStatus,
+  SandboxResultStatus,
+  TestCaseResult,
+} from '../models/ExecutionResult.js';
+import { CompareMode, TestCase } from '../models/Problem.js';
 
 /**
  * Validate and format test results from the wrapped-code harness. The harness
@@ -17,7 +21,8 @@ export function validateResults(
     runNs?: number;
     peakBytes?: number;
   }>,
-  testCases: TestCase[]
+  testCases: TestCase[],
+  compareMode: CompareMode = 'ordered'
 ): TestCaseResult[] {
   const results: TestCaseResult[] = [];
 
@@ -38,7 +43,7 @@ export function validateResults(
       continue;
     }
 
-    const passed = deepEqual(wrapped.output, wrapped.expected);
+    const passed = deepEqual(wrapped.output, wrapped.expected, compareMode);
     const runMs = wrapped.runNs !== undefined ? wrapped.runNs / 1_000_000 : undefined;
     const memoryKb =
       wrapped.peakBytes !== undefined ? wrapped.peakBytes / 1024 : undefined;
@@ -60,9 +65,13 @@ export function validateResults(
 }
 
 /**
- * Deep equality check for comparing outputs
+ * Deep equality check for comparing outputs.
+ *
+ * With compareMode 'unordered', arrays are compared as multisets: both sides
+ * are sorted by a canonical key before the element-wise deep-compare, so
+ * [1, 0] equals [0, 1]. This applies recursively to nested arrays too.
  */
-export function deepEqual(a: any, b: any): boolean {
+export function deepEqual(a: any, b: any, compareMode: CompareMode = 'ordered'): boolean {
   // Handle null/undefined
   if (a === null || a === undefined || b === null || b === undefined) {
     return a === b;
@@ -76,7 +85,9 @@ export function deepEqual(a: any, b: any): boolean {
   // Handle arrays
   if (Array.isArray(a) && Array.isArray(b)) {
     if (a.length !== b.length) return false;
-    return a.every((item, index) => deepEqual(item, b[index]));
+    const left = compareMode === 'unordered' ? sortCanonical(a) : a;
+    const right = compareMode === 'unordered' ? sortCanonical(b) : b;
+    return left.every((item, index) => deepEqual(item, right[index], compareMode));
   }
 
   // Handle objects
@@ -91,7 +102,35 @@ export function deepEqual(a: any, b: any): boolean {
     return false;
   }
 
-  return keysA.every((key) => deepEqual(a[key], b[key]));
+  return keysA.every((key) => deepEqual(a[key], b[key], compareMode));
+}
+
+/**
+ * Return a copy of the array sorted by a canonical (JSON) key. Sorting both
+ * sides with the same total order makes element-wise comparison equivalent to
+ * multiset equality.
+ */
+function sortCanonical(arr: any[]): any[] {
+  return [...arr].sort((x, y) => {
+    const kx = JSON.stringify(x) ?? '';
+    const ky = JSON.stringify(y) ?? '';
+    return kx < ky ? -1 : kx > ky ? 1 : 0;
+  });
+}
+
+/**
+ * Derive the final judge verdict from the sandbox status and test outcomes.
+ * The sandbox reports 'OK' whenever the process exits cleanly — a clean exit
+ * with failing tests is a Wrong Answer, not an accepted run. Real sandbox
+ * statuses (TLE/RE/CE/MLE/XX) pass through untouched.
+ */
+export function deriveVerdict(
+  sandboxStatus: SandboxResultStatus | undefined,
+  totalPassed: number,
+  totalTests: number
+): ExecutionStatus | undefined {
+  if (sandboxStatus !== 'OK') return sandboxStatus;
+  return totalPassed === totalTests ? 'OK' : 'WA';
 }
 
 /**

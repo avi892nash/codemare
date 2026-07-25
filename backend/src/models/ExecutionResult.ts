@@ -27,6 +27,13 @@ export interface TestCaseResult {
 
 export type SandboxResultStatus = 'OK' | 'TLE' | 'MLE' | 'RE' | 'CE' | 'XX';
 
+/**
+ * Judge-level verdict: the sandbox statuses plus 'WA' (Wrong Answer), which
+ * the sandbox itself never emits — it only knows the process exited cleanly.
+ * 'WA' is derived in the execution services when a clean run fails tests.
+ */
+export type ExecutionStatus = SandboxResultStatus | 'WA';
+
 export interface ExecutionResponse {
   success: boolean;
   testResults: TestCaseResult[];
@@ -38,7 +45,7 @@ export interface ExecutionResponse {
   wallMs?: number;
   memoryKb?: number;
   compileMs?: number;
-  status?: SandboxResultStatus;
+  status?: ExecutionStatus;
   error?: string;
 }
 

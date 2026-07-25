@@ -1,20 +1,23 @@
 import { Language } from '../models/ExecutionResult.js';
-import { TestCase } from '../models/Problem.js';
+import { CompareMode, TestCase } from '../models/Problem.js';
 
 /**
- * Wrap user's function code with test harness for stdin/stdout execution
+ * Wrap user's function code with test harness for stdin/stdout execution.
+ * `compareMode: 'unordered'` makes the harness compare array results as
+ * multisets (both sides sorted by a canonical key) instead of element order.
  */
 export function wrapFunctionCode(
   userCode: string,
   functionName: string,
   testCases: TestCase[],
-  language: Language
+  language: Language,
+  compareMode: CompareMode = 'ordered'
 ): { wrappedCode: string; input: string } {
   switch (language) {
     case 'python':
-      return wrapPythonFunction(userCode, functionName, testCases);
+      return wrapPythonFunction(userCode, functionName, testCases, compareMode);
     case 'javascript':
-      return wrapJavaScriptFunction(userCode, functionName, testCases);
+      return wrapJavaScriptFunction(userCode, functionName, testCases, compareMode);
     case 'cpp':
       return wrapCppFunction(userCode, functionName, testCases);
     case 'java':
@@ -25,7 +28,8 @@ export function wrapFunctionCode(
 function wrapPythonFunction(
   userCode: string,
   functionName: string,
-  testCases: TestCase[]
+  testCases: TestCase[],
+  compareMode: CompareMode
 ): { wrappedCode: string; input: string } {
   // The harness times each call with perf_counter_ns and tracks heap peak via
   // tracemalloc. Reported runMs / memoryKb are from these per-call numbers
@@ -38,6 +42,20 @@ import json
 import sys
 import time
 import tracemalloc
+
+# 'unordered' compares list results as multisets: both sides are sorted by a
+# canonical JSON key before comparing, so [1, 0] == [0, 1].
+COMPARE_MODE = ${JSON.stringify(compareMode)}
+
+def _canonical(value):
+    if isinstance(value, list):
+        return sorted((_canonical(v) for v in value), key=lambda v: json.dumps(v, sort_keys=True))
+    return value
+
+def _outputs_equal(actual, expected):
+    if COMPARE_MODE == 'unordered':
+        return _canonical(actual) == _canonical(expected)
+    return actual == expected
 
 test_data = json.loads(sys.stdin.read())
 results = []
@@ -58,7 +76,7 @@ for test in test_data:
         results.append({
             'output': result,
             'expected': test['expected'],
-            'passed': result == test['expected'],
+            'passed': _outputs_equal(result, test['expected']),
             'runNs': elapsed,
             'peakBytes': call_peak
         })
@@ -91,7 +109,8 @@ print(json.dumps({
 function wrapJavaScriptFunction(
   userCode: string,
   functionName: string,
-  testCases: TestCase[]
+  testCases: TestCase[],
+  compareMode: CompareMode
 ): { wrappedCode: string; input: string } {
   // Times each call with hrtime.bigint (nanosecond resolution) and approximates
   // per-call peak heap by reading process.memoryUsage().heapUsed before and
@@ -102,6 +121,31 @@ function wrapJavaScriptFunction(
 
 // Auto-generated test harness
 const __fs = require('fs');
+
+// 'unordered' compares array results as multisets: both sides are sorted by a
+// canonical JSON key before comparing, so [1, 0] == [0, 1].
+const COMPARE_MODE = ${JSON.stringify(compareMode)};
+
+function __canonical(value) {
+  if (Array.isArray(value)) {
+    return value
+      .map(__canonical)
+      .sort((x, y) => {
+        const kx = JSON.stringify(x);
+        const ky = JSON.stringify(y);
+        return kx < ky ? -1 : kx > ky ? 1 : 0;
+      });
+  }
+  return value;
+}
+
+function __outputsEqual(actual, expected) {
+  if (COMPARE_MODE === 'unordered') {
+    return JSON.stringify(__canonical(actual)) === JSON.stringify(__canonical(expected));
+  }
+  return JSON.stringify(actual) === JSON.stringify(expected);
+}
+
 const testData = JSON.parse(__fs.readFileSync(0, 'utf8'));
 const results = [];
 let totalRunNs = 0n;
@@ -123,7 +167,7 @@ for (const test of testData) {
     results.push({
       output: result,
       expected: test.expected,
-      passed: JSON.stringify(result) === JSON.stringify(test.expected),
+      passed: __outputsEqual(result, test.expected),
       runNs: Number(elapsed),
       peakBytes: callPeak
     });

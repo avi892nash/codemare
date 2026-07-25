@@ -7,11 +7,11 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "worker": "tsx watch src/worker.ts",
-    "build": "tsc",
+    "build": "tsc && rm -rf dist/data && cp -R src/data dist/data",
     "start": "node dist/server.js",
     "start:worker": "node dist/worker.js",
     "lint": "eslint . --ext .ts",
-    "test": "tsx --test tests/sandbox/metaParser.test.ts tests/sandbox/boxPool.test.ts tests/sandbox/compileCache.test.ts tests/queue/queue.test.ts",
+    "test": "tsx --test tests/sandbox/metaParser.test.ts tests/sandbox/boxPool.test.ts tests/sandbox/compileCache.test.ts tests/queue/queue.test.ts tests/validation/deepEqual.test.ts",
     "test:deployment": "./tests/deployment.test.sh"
   },
   "keywords": [

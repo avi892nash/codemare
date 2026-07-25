@@ -41,7 +41,7 @@
       "hidden": false
     },
     {
-      "input": [[1, 5, 3, 7, 9], 10],
+      "input": [[1, 5, 3, 7, 8], 10],
       "expectedOutput": [2, 3],
       "hidden": true
     },
@@ -57,5 +57,6 @@
     "cpp": "#include <vector>\nusing namespace std;\n\nvector<int> twoSum(vector<int>& nums, int target) {\n    // Write your code here\n}",
     "java": "class Solution {\n    public int[] twoSum(int[] nums, int target) {\n        // Write your code here\n    }\n}"
   },
-  "functionName": "twoSum"
+  "functionName": "twoSum",
+  "compareMode": "unordered"
 }

@@ -7,7 +7,7 @@ import rateLimit from 'express-rate-limit';
 export const executionRateLimit = rateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: 10, // 10 requests per minute per IP
-  message: 'Too many code execution requests, please try again later',
+  message: { error: 'Too many code execution requests, please try again later' }, // sent as JSON, consistent with other errors
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
 });
@@ -19,7 +19,7 @@ export const executionRateLimit = rateLimit({
 export const apiRateLimit = rateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: 100, // 100 requests per minute per IP
-  message: 'Too many requests, please try again later',
+  message: { error: 'Too many requests, please try again later' }, // sent as JSON, consistent with other errors
   standardHeaders: true,
   legacyHeaders: false,
 });

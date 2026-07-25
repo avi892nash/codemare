@@ -19,6 +19,15 @@ export interface StarterCode {
 
 export type Difficulty = 'Easy' | 'Medium' | 'Hard';
 
+/**
+ * How the judge compares actual output against expected output.
+ *   'ordered'   — element order matters (default when omitted)
+ *   'unordered' — array results are compared as multisets (both sides are
+ *                 sorted before deep-compare), for problems that say
+ *                 "you can return the answer in any order"
+ */
+export type CompareMode = 'ordered' | 'unordered';
+
 export interface Problem {
   id: string;
   title: string;
@@ -29,6 +38,7 @@ export interface Problem {
   testCases: TestCase[];
   starterCode: StarterCode;
   functionName: string; // e.g., "twoSum", "reverseString"
+  compareMode?: CompareMode; // defaults to 'ordered' when omitted
 }
 
 export interface ProblemListItem {

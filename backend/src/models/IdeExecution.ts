@@ -32,7 +32,7 @@ export interface IdeTestResult {
   wallMs?: number;
   memoryKb?: number;
   compileMs?: number;
-  status?: 'OK' | 'TLE' | 'MLE' | 'RE' | 'CE' | 'XX';
+  status?: 'OK' | 'WA' | 'TLE' | 'MLE' | 'RE' | 'CE' | 'XX';
   error?: string;
 }
 

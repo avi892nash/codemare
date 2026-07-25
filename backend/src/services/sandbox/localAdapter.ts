@@ -200,8 +200,14 @@ export async function executeLocal(
     const status = classify(runResult);
     return {
       output: runResult.stdout,
+      // A timeout kill leaves no stderr and a null exit code — report a human
+      // message instead of the meaningless "exit null".
       error:
-        status === 'OK' ? undefined : runResult.stderr || `exit ${runResult.exitCode}`,
+        status === 'OK'
+          ? undefined
+          : status === 'TLE'
+            ? `Time limit exceeded (${timeoutMs} ms)`
+            : runResult.stderr || `exit ${runResult.exitCode}`,
       status,
       // Without a meta file, runMs falls back to wall. The wrapper-emitted
       // totalRunNs (inside the user process) is what the response actually

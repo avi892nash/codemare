@@ -1,6 +1,6 @@
 import { executeSandboxed } from './sandboxService.js';
 import { wrapFunctionCode } from './codeWrapperService.js';
-import { validateResults } from './validationService.js';
+import { deriveVerdict, validateResults } from './validationService.js';
 import {
   ExecutionRequest,
   ExecutionResponse,
@@ -49,7 +49,8 @@ export async function executeCode(
       request.code,
       problem.functionName,
       problem.testCases,
-      request.language
+      request.language,
+      problem.compareMode
     );
 
     // Execute wrapped code through the active sandbox adapter
@@ -100,7 +101,8 @@ export async function executeCode(
     // Validate results
     const testResults = validateResults(
       parsedResults.results || [],
-      problem.testCases
+      problem.testCases,
+      problem.compareMode
     );
 
     const totalPassed = testResults.filter((r) => r.passed).length;
@@ -137,7 +139,11 @@ export async function executeCode(
       wallMs: sandbox.wallMs,
       memoryKb,
       compileMs: sandbox.compileMs,
-      status: sandbox.status,
+      // The sandbox says 'OK' for any clean exit — derive the real verdict
+      // ('WA' when tests failed) so downstream consumers can trust the status.
+      // A wrapper-declared error (e.g. the C++/Java Problems-mode stubs) is a
+      // platform-side failure, not the user's code being wrong — report 'XX'.
+      status: wrapperError ? 'XX' : deriveVerdict(sandbox.status, totalPassed, totalTests),
       error: wrapperError,
     };
   } catch (error) {
