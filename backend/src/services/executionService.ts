@@ -50,7 +50,8 @@ export async function executeCode(
       problem.functionName,
       problem.testCases,
       request.language,
-      problem.compareMode
+      problem.compareMode,
+      problem.signature
     );
 
     // Execute wrapped code through the active sandbox adapter

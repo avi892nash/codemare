@@ -5,7 +5,7 @@ import path from 'node:path';
 import { Language } from '../../models/ExecutionResult.js';
 import { SANDBOX_CONFIG } from '../../config/sandbox.js';
 import { compileCache, type FreshCompileOutcome } from './compileCache.js';
-import { getLanguageSpec } from './languageSpec.js';
+import { getLanguageSpec, resolveArtifactNames } from './languageSpec.js';
 import { LanguageSpec, RunOptions, SandboxResult, SandboxStatus } from './types.js';
 
 /**
@@ -132,7 +132,10 @@ async function compileLocalToDir(
       },
     };
   }
-  return { kind: 'ok', dir: compileDir, artifacts: artifactNames, compileMs: res.wallMs };
+  // Artifact patterns may contain globs (java: '*.class') — resolve them to
+  // concrete file names now, while we're looking at the compile output.
+  const resolved = await resolveArtifactNames(compileDir, artifactNames);
+  return { kind: 'ok', dir: compileDir, artifacts: resolved, compileMs: res.wallMs };
 }
 
 export async function executeLocal(
@@ -164,6 +167,7 @@ export async function executeLocal(
       // code skips compilation. When disabled, run once and clean up the
       // throwaway artifact dir.
       let artifactDir: string;
+      let resolvedArtifacts: string[];
       let ownDir = false;
       if (SANDBOX_CONFIG.compileCache.enabled) {
         const key = compileCache.key(language, spec.compileArgv(mainFile), code);
@@ -171,17 +175,19 @@ export async function executeLocal(
         if (outcome.kind === 'fail') return outcome.result;
         compileMs = outcome.compileMs;
         artifactDir = outcome.dir;
+        resolvedArtifacts = outcome.artifacts;
       } else {
         const fresh = await thunk();
         if (fresh.kind === 'fail') return fresh.result;
         compileMs = fresh.compileMs;
         artifactDir = fresh.dir;
+        resolvedArtifacts = fresh.artifacts;
         ownDir = true;
       }
 
       try {
         await Promise.all(
-          artifactNames.map((name) =>
+          resolvedArtifacts.map((name) =>
             cp(path.join(artifactDir, name), path.join(tmpDir, name))
           )
         );

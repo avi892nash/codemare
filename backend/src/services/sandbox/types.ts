@@ -43,8 +43,10 @@ export interface LanguageSpec {
   runArgv(mainFile: string): string[];
   /**
    * Files produced by the compile phase that must be copied into the run box
-   * (and into the compile cache). e.g. cpp → ['a.out'], java → ['Main.class'].
-   * Undefined for interpreted languages.
+   * (and into the compile cache). e.g. cpp → ['a.out'], java → ['*.class'].
+   * Entries may contain `*` globs; adapters expand them against the compile
+   * output dir via resolveArtifactNames (Java can emit several .class files
+   * from one source). Undefined for interpreted languages.
    */
   artifacts?(mainFile: string): string[];
   /**

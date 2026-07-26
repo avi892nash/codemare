@@ -11,7 +11,7 @@
     "start": "node dist/server.js",
     "start:worker": "node dist/worker.js",
     "lint": "eslint . --ext .ts",
-    "test": "tsx --test tests/sandbox/metaParser.test.ts tests/sandbox/boxPool.test.ts tests/sandbox/compileCache.test.ts tests/queue/queue.test.ts tests/validation/deepEqual.test.ts",
+    "test": "tsx --test tests/sandbox/metaParser.test.ts tests/sandbox/boxPool.test.ts tests/sandbox/compileCache.test.ts tests/queue/queue.test.ts tests/validation/deepEqual.test.ts tests/wrapper/codeWrapper.test.ts",
     "test:deployment": "./tests/deployment.test.sh"
   },
   "keywords": [

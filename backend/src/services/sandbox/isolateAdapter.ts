@@ -6,7 +6,7 @@ import { Language } from '../../models/ExecutionResult.js';
 import { SANDBOX_CONFIG } from '../../config/sandbox.js';
 import { BoxPool } from './boxPool.js';
 import { compileCache, type FreshCompileOutcome } from './compileCache.js';
-import { getLanguageSpec } from './languageSpec.js';
+import { getLanguageSpec, resolveArtifactNames } from './languageSpec.js';
 import { mapMetaToStatus, parseIsolateMeta } from './metaParser.js';
 import { LanguageSpec, RunOptions, SandboxAdapter, SandboxResult } from './types.js';
 
@@ -160,13 +160,16 @@ async function compileToArtifactDir(
       };
     }
 
+    // Artifact patterns may contain globs (java: '*.class') — resolve them to
+    // concrete file names against the compile box before copying out.
+    const resolvedNames = await resolveArtifactNames(boxDir, artifactNames);
     const artifactDir = await mkdtemp(path.join(os.tmpdir(), 'codemare-art-'));
     await Promise.all(
-      artifactNames.map((name) =>
+      resolvedNames.map((name) =>
         cp(path.join(boxDir, name), path.join(artifactDir, name))
       )
     );
-    return { kind: 'ok', dir: artifactDir, artifacts: artifactNames, compileMs };
+    return { kind: 'ok', dir: artifactDir, artifacts: resolvedNames, compileMs };
   } finally {
     await cleanupBox(boxId);
     pool.release(boxId);
@@ -204,6 +207,7 @@ async function execute(
       // compile box entirely. When caching is disabled, run the thunk once and
       // clean up the throwaway artifact dir ourselves.
       let artifactDir: string;
+      let resolvedArtifacts: string[];
       let ownDir = false;
       if (SANDBOX_CONFIG.compileCache.enabled) {
         const key = compileCache.key(language, spec.compileArgv!(mainFile), code);
@@ -211,17 +215,19 @@ async function execute(
         if (outcome.kind === 'fail') return outcome.result;
         compileMs = outcome.compileMs;
         artifactDir = outcome.dir;
+        resolvedArtifacts = outcome.artifacts;
       } else {
         const fresh = await thunk();
         if (fresh.kind === 'fail') return fresh.result;
         compileMs = fresh.compileMs;
         artifactDir = fresh.dir;
+        resolvedArtifacts = fresh.artifacts;
         ownDir = true;
       }
 
       try {
         await Promise.all(
-          artifactNames.map((name) =>
+          resolvedArtifacts.map((name) =>
             cp(path.join(artifactDir, name), path.join(runBoxDir, name))
           )
         );

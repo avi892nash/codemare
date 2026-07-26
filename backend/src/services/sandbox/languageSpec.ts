@@ -1,5 +1,38 @@
+import { readdir } from 'node:fs/promises';
 import { Language } from '../../models/ExecutionResult.js';
 import { LanguageSpec } from './types.js';
+
+/**
+ * Expand artifact name patterns against a directory listing. A pattern may
+ * contain `*` (e.g. "*.class"); plain names pass through untouched. Needed for
+ * Java, where one source file can produce several .class files (the Problems
+ * harness compiles a Solution class alongside Main; user code may also declare
+ * inner/anonymous classes) whose names aren't known before compiling.
+ */
+export async function resolveArtifactNames(
+  dir: string,
+  patterns: string[]
+): Promise<string[]> {
+  let listing: string[] | undefined;
+  const resolved: string[] = [];
+  for (const pattern of patterns) {
+    if (!pattern.includes('*')) {
+      resolved.push(pattern);
+      continue;
+    }
+    if (!listing) listing = await readdir(dir);
+    const re = new RegExp(
+      '^' +
+        pattern
+          .split('*')
+          .map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+          .join('.*') +
+        '$'
+    );
+    resolved.push(...listing.filter((name) => re.test(name)));
+  }
+  return resolved;
+}
 
 /**
  * Extract the public class name from Java source. Falls back to "Main" if no
@@ -67,7 +100,10 @@ const SPECS: Record<Language, LanguageSpec> = {
       const className = mainFile.replace(/\.java$/, '');
       return ['/usr/bin/env', 'java', '-cp', '.', className];
     },
-    artifacts: (mainFile) => [`${mainFile.replace(/\.java$/, '')}.class`],
+    // Glob: javac emits one .class per top-level/inner class, and the Problems
+    // harness always produces at least Main.class + Solution.class. The
+    // adapters expand this against the compile dir via resolveArtifactNames.
+    artifacts: () => ['*.class'],
     pidsLimit: 64,
   },
 };

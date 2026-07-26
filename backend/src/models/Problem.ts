@@ -28,6 +28,43 @@ export type Difficulty = 'Easy' | 'Medium' | 'Hard';
  */
 export type CompareMode = 'ordered' | 'unordered';
 
+/**
+ * Scalar types a problem signature may use. Arrays are expressed with `[]`
+ * (one-dimensional) or `[][]` (two-dimensional) suffixes, e.g. "int[]",
+ * "string[]", "int[][]".
+ *
+ * Note: `int`/`long` map to int / long long in C++ and int / long in Java;
+ * `double` results are compared with an absolute tolerance of 1e-6 by the
+ * generated C++/Java harnesses.
+ */
+export type SignatureBaseType =
+  | 'int'
+  | 'long'
+  | 'double'
+  | 'bool'
+  | 'string'
+  | 'char';
+
+export type SignatureType =
+  | SignatureBaseType
+  | `${SignatureBaseType}[]`
+  | `${SignatureBaseType}[][]`;
+
+export interface SignatureParam {
+  name: string;
+  type: SignatureType;
+}
+
+/**
+ * Typed function signature for the problem. Required for C++/Java Problems
+ * mode (the harness generator embeds test inputs as typed literals); optional
+ * for Python/JavaScript, whose harnesses are dynamically typed.
+ */
+export interface ProblemSignature {
+  params: SignatureParam[];
+  returns: SignatureType;
+}
+
 export interface Problem {
   id: string;
   title: string;
@@ -39,6 +76,7 @@ export interface Problem {
   starterCode: StarterCode;
   functionName: string; // e.g., "twoSum", "reverseString"
   compareMode?: CompareMode; // defaults to 'ordered' when omitted
+  signature?: ProblemSignature; // required for C++/Java Problems mode
 }
 
 export interface ProblemListItem {
