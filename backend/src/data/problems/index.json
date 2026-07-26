@@ -9,6 +9,46 @@
       "id": "reverse-string",
       "title": "Reverse String",
       "difficulty": "Easy"
+    },
+    {
+      "id": "valid-parentheses",
+      "title": "Valid Parentheses",
+      "difficulty": "Easy"
+    },
+    {
+      "id": "contains-duplicate",
+      "title": "Contains Duplicate",
+      "difficulty": "Easy"
+    },
+    {
+      "id": "valid-anagram",
+      "title": "Valid Anagram",
+      "difficulty": "Easy"
+    },
+    {
+      "id": "best-time-to-buy-sell-stock",
+      "title": "Best Time to Buy and Sell Stock",
+      "difficulty": "Easy"
+    },
+    {
+      "id": "binary-search",
+      "title": "Binary Search",
+      "difficulty": "Easy"
+    },
+    {
+      "id": "climbing-stairs",
+      "title": "Climbing Stairs",
+      "difficulty": "Easy"
+    },
+    {
+      "id": "maximum-subarray",
+      "title": "Maximum Subarray",
+      "difficulty": "Medium"
+    },
+    {
+      "id": "longest-substring-without-repeating-characters",
+      "title": "Longest Substring Without Repeating Characters",
+      "difficulty": "Medium"
     }
   ]
 }

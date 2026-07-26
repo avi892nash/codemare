@@ -55,8 +55,15 @@
     "python": "def twoSum(nums, target):\n    # Write your code here\n    pass",
     "javascript": "function twoSum(nums, target) {\n    // Write your code here\n}",
     "cpp": "#include <vector>\nusing namespace std;\n\nvector<int> twoSum(vector<int>& nums, int target) {\n    // Write your code here\n}",
-    "java": "class Solution {\n    public int[] twoSum(int[] nums, int target) {\n        // Write your code here\n    }\n}"
+    "java": "class Solution {\n    public static int[] twoSum(int[] nums, int target) {\n        // Write your code here\n        return new int[]{};\n    }\n}"
   },
   "functionName": "twoSum",
-  "compareMode": "unordered"
+  "compareMode": "unordered",
+  "signature": {
+    "params": [
+      { "name": "nums", "type": "int[]" },
+      { "name": "target", "type": "int" }
+    ],
+    "returns": "int[]"
+  }
 }

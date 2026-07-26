@@ -1,0 +1,92 @@
+{
+  "id": "climbing-stairs",
+  "title": "Climbing Stairs",
+  "difficulty": "Easy",
+  "description": "You are climbing a staircase. It takes `n` steps to reach the top.\n\nEach time you can either climb `1` or `2` steps. In how many distinct ways can you climb to the top?",
+  "examples": [
+    {
+      "input": "n = 2",
+      "output": "2",
+      "explanation": "There are two ways to climb to the top: 1 step + 1 step, or 2 steps."
+    },
+    {
+      "input": "n = 3",
+      "output": "3",
+      "explanation": "There are three ways: 1+1+1, 1+2, and 2+1."
+    },
+    {
+      "input": "n = 5",
+      "output": "8"
+    }
+  ],
+  "constraints": [
+    "1 <= n <= 45"
+  ],
+  "testCases": [
+    {
+      "input": [
+        2
+      ],
+      "expectedOutput": 2,
+      "hidden": false
+    },
+    {
+      "input": [
+        3
+      ],
+      "expectedOutput": 3,
+      "hidden": false
+    },
+    {
+      "input": [
+        5
+      ],
+      "expectedOutput": 8,
+      "hidden": false
+    },
+    {
+      "input": [
+        1
+      ],
+      "expectedOutput": 1,
+      "hidden": true
+    },
+    {
+      "input": [
+        10
+      ],
+      "expectedOutput": 89,
+      "hidden": true
+    },
+    {
+      "input": [
+        35
+      ],
+      "expectedOutput": 14930352,
+      "hidden": true
+    },
+    {
+      "input": [
+        45
+      ],
+      "expectedOutput": 1836311903,
+      "hidden": true
+    }
+  ],
+  "starterCode": {
+    "python": "def climbStairs(n):\n    # Write your code here\n    pass",
+    "javascript": "function climbStairs(n) {\n    // Write your code here\n}",
+    "cpp": "int climbStairs(int n) {\n    // Write your code here\n}",
+    "java": "class Solution {\n    public static int climbStairs(int n) {\n        // Write your code here\n        return 0;\n    }\n}"
+  },
+  "functionName": "climbStairs",
+  "signature": {
+    "params": [
+      {
+        "name": "n",
+        "type": "int"
+      }
+    ],
+    "returns": "int"
+  }
+}

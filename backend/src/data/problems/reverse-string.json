@@ -43,7 +43,11 @@
     "python": "def reverseString(s):\n    # Write your code here\n    pass",
     "javascript": "function reverseString(s) {\n    // Write your code here\n}",
     "cpp": "#include <vector>\nusing namespace std;\n\nvector<char> reverseString(vector<char>& s) {\n    // Write your code here\n}",
-    "java": "class Solution {\n    public char[] reverseString(char[] s) {\n        // Write your code here\n    }\n}"
+    "java": "class Solution {\n    public static char[] reverseString(char[] s) {\n        // Write your code here\n        return new char[]{};\n    }\n}"
   },
-  "functionName": "reverseString"
+  "functionName": "reverseString",
+  "signature": {
+    "params": [{ "name": "s", "type": "char[]" }],
+    "returns": "char[]"
+  }
 }
