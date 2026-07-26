@@ -78,7 +78,7 @@ jobs:
           submit "python wrong answer" wrong.json WA
       - name: Catalog sanity
         run: |
-          count=$(curl -sf http://localhost:4000/v1/problems | jq 'length')
+          count=$(curl -sf http://localhost:4000/v1/problems | jq '.problems | length')
           echo "problems: $count"
           [ "$count" -ge 10 ]
       - name: Server log on failure
