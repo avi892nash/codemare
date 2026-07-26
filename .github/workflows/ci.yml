@@ -1,0 +1,124 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  # Unit tests + build. Needs a JDK because the wrapper test suite
+  # javac-compiles the generated Java harness for large-literal problems.
+  backend:
+    name: Backend — build & unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: npm ci
+      - run: npm run build -w backend
+      - run: npm test -w backend
+
+  # End-to-end judge smoke on Linux: boot the built server with the local
+  # adapter and submit real solutions in all four languages. This is the
+  # closest CI gets to the production Linux path without isolate.
+  backend-e2e:
+    name: Backend — e2e judge smoke (4 languages)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: npm ci
+      - run: npm run build -w backend
+      - name: Start judge (local adapter)
+        working-directory: backend
+        run: |
+          SANDBOX_MODE=local PORT=4000 node dist/server.js > server.log 2>&1 &
+          for i in $(seq 1 20); do
+            curl -sf http://localhost:4000/health > /dev/null && break
+            sleep 1
+          done
+          curl -sf http://localhost:4000/health
+      - name: Submit solutions in all four languages
+        run: |
+          set -euo pipefail
+          submit() { # $1=label $2=payload-file $3=expected-status
+            resp=$(curl -sf -X POST 'http://localhost:4000/v1/execute?wait=true' \
+              -H 'Content-Type: application/json' --data @"$2")
+            status=$(echo "$resp" | jq -r .status)
+            passed=$(echo "$resp" | jq -r .totalPassed)
+            total=$(echo "$resp" | jq -r .totalTests)
+            echo "$1: $status $passed/$total"
+            [ "$status" = "$3" ] || { echo "::error::$1 expected $3, got $status"; echo "$resp" | jq .; exit 1; }
+          }
+
+          jq -n '{problemId:"two-sum",language:"python",code:"def twoSum(nums, target):\n    seen = {}\n    for i, n in enumerate(nums):\n        if target - n in seen:\n            return [seen[target - n], i]\n        seen[n] = i\n    return []"}' > py.json
+          jq -n '{problemId:"two-sum",language:"javascript",code:"function twoSum(nums, target) {\n  const seen = new Map();\n  for (let i = 0; i < nums.length; i++) {\n    if (seen.has(target - nums[i])) return [seen.get(target - nums[i]), i];\n    seen.set(nums[i], i);\n  }\n  return [];\n}"}' > js.json
+          jq -n '{problemId:"two-sum",language:"cpp",code:"std::vector<int> twoSum(std::vector<int>& nums, int target) {\n    std::unordered_map<int,int> seen;\n    for (int i = 0; i < (int)nums.size(); i++) {\n        auto it = seen.find(target - nums[i]);\n        if (it != seen.end()) return {it->second, i};\n        seen[nums[i]] = i;\n    }\n    return {};\n}"}' > cpp.json
+          jq -n '{problemId:"binary-search",language:"java",code:"class Solution { public static int search(int[] nums, int target) { int lo = 0, hi = nums.length - 1; while (lo <= hi) { int m = lo + (hi - lo) / 2; if (nums[m] == target) return m; if (nums[m] < target) lo = m + 1; else hi = m - 1; } return -1; } }"}' > java.json
+          jq -n '{problemId:"two-sum",language:"python",code:"def twoSum(nums, target):\n    return [0, 0]"}' > wrong.json
+
+          submit "python two-sum"      py.json    OK
+          submit "javascript two-sum"  js.json    OK
+          submit "cpp two-sum"         cpp.json   OK
+          submit "java binary-search"  java.json  OK
+          submit "python wrong answer" wrong.json WA
+      - name: Catalog sanity
+        run: |
+          count=$(curl -sf http://localhost:4000/v1/problems | jq 'length')
+          echo "problems: $count"
+          [ "$count" -ge 10 ]
+      - name: Server log on failure
+        if: failure()
+        working-directory: backend
+        run: cat server.log
+
+  web:
+    name: Web — typecheck, lint, build
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: codemare
+          POSTGRES_PASSWORD: codemare
+          POSTGRES_DB: codemare
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready --health-interval 5s
+          --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://codemare:codemare@localhost:5432/codemare
+      AUTH_SECRET: ci-only-not-a-real-secret
+      # 64-hex dummy: next build runs with NODE_ENV=production, and the
+      # compile client refuses placeholder tokens in production.
+      INTERNAL_TOKEN: "0000000000000000000000000000000000000000000000000000000000000000"
+      COMPILE_SERVICE_URL: http://localhost:4000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - working-directory: web
+        run: npx prisma db push --skip-generate
+      - working-directory: web
+        run: npx prisma generate
+      - run: npm run typecheck -w web
+      - run: npm run lint -w web
+      - run: npm run build -w web
