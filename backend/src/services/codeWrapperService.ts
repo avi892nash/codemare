@@ -549,13 +549,36 @@ ${cppCatchChain()}
   // the user-function call only. peakBytes is best-effort: whole-process
   // ru_maxrss from getrusage (bytes on macOS, KB->bytes on Linux); per-test
   // peakBytes is reported as 0.
+  // The user writes a bare function, so the harness owns the includes. Provide
+  // the full standard competitive-programming set explicitly — libstdc++ on
+  // Linux does NOT transitively include e.g. <unordered_map> the way libc++
+  // on macOS does, and a missing header here is a CE for correct user code.
   const wrappedCode = `#include <algorithm>
+#include <array>
+#include <bitset>
 #include <chrono>
+#include <climits>
 #include <cmath>
+#include <cstdint>
 #include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <deque>
+#include <functional>
+#include <limits>
+#include <map>
 #include <new>
+#include <numeric>
+#include <queue>
+#include <set>
+#include <sstream>
+#include <stack>
 #include <stdexcept>
 #include <string>
+#include <tuple>
+#include <unordered_map>
+#include <unordered_set>
+#include <utility>
 #include <vector>
 #if !defined(_WIN32)
 #include <sys/resource.h>
