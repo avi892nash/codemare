@@ -1,10 +1,20 @@
-import NextAuth, { type NextAuthConfig } from 'next-auth';
+import NextAuth, { CredentialsSignin, type NextAuthConfig } from 'next-auth';
 import GitHub from 'next-auth/providers/github';
 import Google from 'next-auth/providers/google';
 import Credentials from 'next-auth/providers/credentials';
 import { PrismaAdapter } from '@auth/prisma-adapter';
 import { prisma } from '@/lib/prisma';
 import { verifyPassword } from '@/lib/password';
+import { clientIp, consume, reset, LOGIN_PER_EMAIL, LOGIN_PER_IP } from '@/lib/rateLimit';
+
+/**
+ * Thrown from authorize() when the caller is over the login rate limit. The
+ * `code` reaches the client as `result.code`, so the form can say "too many
+ * attempts" instead of the generic "invalid email or password".
+ */
+class RateLimited extends CredentialsSignin {
+  code = 'rate_limited';
+}
 
 /**
  * Auth.js v5 configuration.
@@ -29,10 +39,18 @@ const providers: NextAuthConfig['providers'] = [
       email: { label: 'Email', type: 'email' },
       password: { label: 'Password', type: 'password' },
     },
-    async authorize(creds) {
+    async authorize(creds, request) {
       const email = String(creds?.email ?? '').trim().toLowerCase();
       const password = String(creds?.password ?? '');
       if (!email || !password) return null;
+
+      // Two buckets: per source address (one attacker, many accounts) and per
+      // target email (many addresses, one account). Counted before the bcrypt
+      // compare so a locked-out caller costs nothing.
+      const ip = clientIp(request.headers);
+      const byIp = consume(`login:ip:${ip}`, LOGIN_PER_IP.limit, LOGIN_PER_IP.windowMs);
+      const byEmail = consume(`login:email:${email}`, LOGIN_PER_EMAIL.limit, LOGIN_PER_EMAIL.windowMs);
+      if (!byIp.ok || !byEmail.ok) throw new RateLimited();
 
       const user = await prisma.user.findUnique({ where: { email } });
       if (!user?.passwordHash) return null; // no such user, or OAuth-only
@@ -40,6 +58,7 @@ const providers: NextAuthConfig['providers'] = [
       const ok = await verifyPassword(password, user.passwordHash);
       if (!ok) return null;
 
+      reset(`login:email:${email}`);
       return { id: user.id, email: user.email, name: user.name };
     },
   }),

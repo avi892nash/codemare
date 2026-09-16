@@ -83,7 +83,11 @@ export function AuthForm({ mode, onModeChange }: AuthFormProps) {
         redirect: false,
       });
       if (result?.error) {
-        setError('Invalid email or password');
+        setError(
+          result.code === 'rate_limited'
+            ? 'Too many login attempts. Wait a few minutes and try again.'
+            : 'Invalid email or password'
+        );
         return;
       }
       window.location.href = next;

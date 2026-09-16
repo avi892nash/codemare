@@ -1,7 +1,9 @@
 'use server';
 
+import { headers } from 'next/headers';
 import { prisma } from '@/lib/prisma';
 import { hashPassword, validatePassword } from '@/lib/password';
+import { clientIp, consume, retryMessage, SIGNUP_PER_IP } from '@/lib/rateLimit';
 
 export interface SignUpResult {
   ok: boolean;
@@ -19,6 +21,10 @@ export async function signUp(input: {
   password: string;
   handle?: string;
 }): Promise<SignUpResult> {
+  const ip = clientIp(await headers());
+  const limit = consume(`signup:ip:${ip}`, SIGNUP_PER_IP.limit, SIGNUP_PER_IP.windowMs);
+  if (!limit.ok) return { ok: false, error: retryMessage(limit.retryAfterSec) };
+
   const email = input.email.trim().toLowerCase();
   if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
     return { ok: false, error: 'Enter a valid email' };

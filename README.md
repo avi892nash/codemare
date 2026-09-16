@@ -175,7 +175,6 @@ retired.
 ## What's parked
 
 - Isolate smoke test on a Linux host (the one untested path; see release plan).
-- Rate limiting on sign-up / login.
 - Password reset / email verification (needs an email provider).
 - Learn section (tracks / modules / lessons / quizzes / runnable code blocks).
 - Migrating the problem catalog from compile-service JSON into Postgres.

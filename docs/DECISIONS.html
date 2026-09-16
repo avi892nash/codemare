@@ -565,6 +565,7 @@
             <dt>Situation</dt><dd><p>The pivot to a content platform needs identity. OAuth alone blocks anyone without a GitHub/Google account and needs client IDs to even test.</p></dd>
             <dt>Choice</dt><dd><p>Auth.js v5 with a Credentials provider — bcrypt (cost 12), minimum 8-character passwords, sign-up as a server action — plus GitHub/Google when configured. JWT session strategy (no session-table round-trip per request). A middleware login wall: everything except <code>/auth</code> redirects unauthenticated users.</p></dd>
             <dt>Consequence</dt><dd><p>Self-hosting requires <code>trustHost: true</code>, and this is where the worst bug of the project hid (section 6).</p></dd>
+            <dt>Rate limits</dt><dd><p>Both entry points are throttled in-process (<code>web/lib/rateLimit.ts</code>, sliding window): sign-up 5 per hour per IP; login 10 per 15 min per IP <em>and</em> 5 per 15 min per email, counted before the bcrypt compare and reset on success. Over the limit, <code>authorize()</code> throws a <code>CredentialsSignin</code> with code <code>rate_limited</code> so the form can say so. In-memory is correct for one instance; a multi-instance deploy swaps in Redis behind the same <code>consume()</code>.</p></dd>
           </dl>
         </article>
 
@@ -854,7 +855,6 @@ GET  /v1/queue/stats            { enabled, counts }   enabled:false without Redi
         <h2><span class="n">7</span>What's deliberately not done yet</h2>
         <ul>
           <li><strong>Isolate smoke test on Linux</strong> — the only untested code path; blocks a real production launch (release plan, stage 1).</li>
-          <li><strong>Auth rate limiting</strong> — sign-up and login accept unlimited attempts.</li>
           <li><strong>Catalog into Postgres + pure-executor contract</strong> — Phase A of <code>authoring-v1.md</code>; the prerequisite for user-authored content.</li>
           <li><strong>Learn section</strong>, <strong>books / marketplace</strong>, <strong>monetization</strong> — in that order.</li>
           <li>Double-returning problems: the harness tolerates 1e-6 but the server-side re-check is exact; no current problem returns doubles.</li>
