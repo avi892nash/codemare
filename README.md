@@ -49,11 +49,12 @@ plus an `apt-get install` in `deploy/install.sh`.
 
 All four languages work in both Problems mode and IDE mode. C++/Java
 Problems-mode harnesses are *generated* from each problem's typed
-`signature` (see [docs/DECISIONS.md](docs/DECISIONS.md) §4.11).
+`signature` (see decision 11 in `docs/DECISIONS.html`).
 
-**Why things are the way they are:** [docs/DECISIONS.md](docs/DECISIONS.md)
-— decision records, the life of a submission, verdict semantics, and the
-bugs that shaped the rules.
+**Why things are the way they are:** [docs/DECISIONS.html](docs/DECISIONS.html)
+— decision records, the life of a submission as a swimlane flow, the
+verdict decision tree, and the bugs that shaped the rules. It's a
+self-contained page with rendered diagrams: open it in a browser.
 
 ## Layout
 
@@ -77,7 +78,7 @@ web/            Next.js app — user-facing
   middleware.ts         Login wall — everything except /auth requires a session
   README.md             Detailed dev guide
 
-docs/           DECISIONS.md (architecture + decision log) · authoring-v1.md (content platform plan)
+docs/           DECISIONS.html (architecture + decision log, with diagrams) · authoring-v1.md (content platform plan)
 .github/        CI: unit tests · Linux e2e judge smoke in 4 languages · web build
 
 deploy/         Linux VM provisioning for the compile service

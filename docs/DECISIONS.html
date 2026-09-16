@@ -1,0 +1,881 @@
+<title>Codemare Decisions</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:wght@500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --paper: #F4F6F8;
+    --paper-2: #FFFFFF;
+    --lane: #EEF2F5;
+    --ink: #16202A;
+    --ink-2: #55636F;
+    --rule: #D3DAE0;
+    --accent: #0E6F6C;
+    --accent-soft: #DCEFEE;
+    --accent-ink: #FFFFFF;
+    --code-bg: #ECF0F2;
+    --ok: #2E7D4F;
+    --wa: #B3392B;
+    --tle: #B7791F;
+    --ce: #6B4FA3;
+    --xx: #5A6470;
+    --serif: "IBM Plex Serif", Georgia, "Times New Roman", serif;
+    --sans: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+    --mono: "IBM Plex Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #10161C;
+      --paper-2: #182029;
+      --lane: #141B22;
+      --ink: #E4E9ED;
+      --ink-2: #9AA6B1;
+      --rule: #2C3742;
+      --accent: #4CC3BD;
+      --accent-soft: #163C3B;
+      --accent-ink: #0B1513;
+      --code-bg: #0C1116;
+      --ok: #4CAF7A;
+      --wa: #E0654F;
+      --tle: #D9A441;
+      --ce: #9B82D1;
+      --xx: #8E9AA6;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #10161C;
+    --paper-2: #182029;
+    --lane: #141B22;
+    --ink: #E4E9ED;
+    --ink-2: #9AA6B1;
+    --rule: #2C3742;
+    --accent: #4CC3BD;
+    --accent-soft: #163C3B;
+    --accent-ink: #0B1513;
+    --code-bg: #0C1116;
+    --ok: #4CAF7A;
+    --wa: #E0654F;
+    --tle: #D9A441;
+    --ce: #9B82D1;
+    --xx: #8E9AA6;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.6;
+    padding-inline: 20px;
+    padding-block: 0 80px;
+  }
+  a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+
+  .wrap { max-width: 1100px; margin: 0 auto; }
+
+  header.masthead {
+    padding-block: 40px 28px;
+    border-bottom: 1px solid var(--rule);
+    margin-bottom: 36px;
+  }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+  }
+  h1 {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: clamp(30px, 4vw, 42px);
+    line-height: 1.15;
+    margin: 6px 0 12px;
+    text-wrap: balance;
+  }
+  .dek { max-width: 68ch; margin: 0 0 14px; font-size: 18px; color: var(--ink-2); }
+  .meta { font-family: var(--mono); font-size: 12.5px; color: var(--ink-2); display: flex; flex-wrap: wrap; gap: 6px 18px; }
+
+  .layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 48px; }
+  nav.toc { position: sticky; top: 24px; align-self: start; font-size: 13.5px; }
+  nav.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+  nav.toc a { color: var(--ink); text-decoration: none; display: block; padding: 5px 10px; border-left: 2px solid var(--rule); }
+  nav.toc a:hover { border-left-color: var(--accent); color: var(--accent); }
+  nav.toc .toc-n { font-family: var(--mono); color: var(--ink-2); margin-right: 8px; font-size: 12px; }
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; gap: 24px; }
+    nav.toc { position: static; }
+    nav.toc ol { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+  }
+
+  main { min-width: 0; }
+  main > section { margin-bottom: 56px; }
+  h2 {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: 28px;
+    line-height: 1.2;
+    margin: 0 0 6px;
+    text-wrap: balance;
+  }
+  h2 .n { font-family: var(--mono); font-weight: 400; font-size: 15px; color: var(--ink-2); margin-right: 10px; vertical-align: 0.15em; }
+  h3 { font-family: var(--serif); font-weight: 600; font-size: 20px; margin: 30px 0 6px; text-wrap: balance; }
+  p, li { max-width: 68ch; }
+  p { margin: 0 0 14px; }
+  ul, ol { padding-left: 22px; margin: 0 0 14px; }
+  li { margin-bottom: 4px; }
+  .lede { font-size: 17px; color: var(--ink-2); }
+  code, .mono { font-family: var(--mono); font-size: 0.92em; }
+  :not(pre) > code { background: var(--code-bg); padding: 1px 5px; border-radius: 3px; }
+  pre { background: var(--code-bg); padding: 12px 14px; overflow-x: auto; margin: 0 0 16px; font-size: 13px; line-height: 1.5; }
+  pre code { background: none; padding: 0; }
+  strong { font-weight: 600; }
+
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; margin: 8px 0 20px; font-variant-numeric: tabular-nums; }
+  .table-wrap { overflow-x: auto; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  th { font-family: var(--mono); font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-2); font-weight: 500; }
+  td:first-child { white-space: nowrap; }
+
+  /* verdict pills — semantic color, separate from the accent */
+  .pill { display: inline-block; font-family: var(--mono); font-size: 12px; font-weight: 500; padding: 1px 8px; border-radius: 3px; color: #fff; letter-spacing: 0.04em; }
+  .pill.ok { background: var(--ok); } .pill.wa { background: var(--wa); } .pill.tle { background: var(--tle); }
+  .pill.ce { background: var(--ce); } .pill.re { background: var(--tle); } .pill.mle { background: var(--ce); } .pill.xx { background: var(--xx); }
+
+  /* figures */
+  figure.fig { margin: 22px 0 28px; }
+  figure.fig .scroll { overflow-x: auto; }
+  figure.fig svg { display: block; max-width: 100%; height: auto; color: var(--ink); font-family: var(--sans); }
+  figure.fig .scroll svg { min-width: 640px; }
+  figure.fig text { font-size: 12.5px; fill: currentColor; }
+  figure.fig text.sm { font-size: 11px; fill: var(--ink-2); }
+  figure.fig text.mono { font-family: var(--mono); font-size: 11.5px; }
+  figure.fig text.lanelabel { font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; fill: var(--ink-2); }
+  figure.fig text.title { font-weight: 600; }
+  figure.fig text.warn { fill: var(--wa); font-weight: 500; }
+  figure.fig .box { fill: var(--paper-2); stroke: currentColor; stroke-width: 1.2; }
+  figure.fig .box.hi { stroke: var(--accent); stroke-width: 1.8; }
+  figure.fig .box.dashed { stroke-dasharray: 5 4; }
+  figure.fig .panel { fill: var(--lane); stroke: var(--rule); stroke-width: 1; }
+  figure.fig .lane { fill: var(--lane); stroke: var(--rule); stroke-width: 1; }
+  figure.fig .lane.alt { fill: var(--paper-2); }
+  figure.fig .codebox { fill: var(--code-bg); stroke: var(--rule); stroke-width: 1; }
+  figure.fig .edge { stroke: currentColor; fill: none; stroke-width: 1.3; }
+  figure.fig .edge.dashed { stroke-dasharray: 5 4; }
+  figure.fig .edge.accent { stroke: var(--accent); }
+  figure.fig .dot { fill: var(--accent); stroke: var(--paper); stroke-width: 2; }
+  figure.fig .vp { stroke: none; }
+  figure.fig .vp.ok { fill: var(--ok); } figure.fig .vp.wa { fill: var(--wa); } figure.fig .vp.tle { fill: var(--tle); }
+  figure.fig .vp.ce { fill: var(--ce); } figure.fig .vp.xx { fill: var(--xx); }
+  figure.fig text.vt { fill: #fff; font-family: var(--mono); font-weight: 500; font-size: 12px; }
+  figcaption { font-size: 13.5px; color: var(--ink-2); margin-top: 8px; max-width: 68ch; }
+
+  /* decision records */
+  article.dr { border-top: 1px solid var(--rule); padding-top: 18px; margin-top: 26px; }
+  article.dr h3 { margin: 2px 0 12px; }
+  dl.drg { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 8px 16px; margin: 0; }
+  dl.drg dt { font-family: var(--mono); font-size: 11.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-2); padding-top: 4px; }
+  dl.drg dd { margin: 0; }
+  dl.drg dd p:last-child, dl.drg dd ul:last-child { margin-bottom: 0; }
+  @media (max-width: 560px) { dl.drg { grid-template-columns: 1fr; gap: 2px 0; } dl.drg dd { margin-bottom: 10px; } }
+
+  /* lessons */
+  .lesson { margin-top: 26px; }
+  .lesson h3 { margin-top: 0; }
+  p.rule { background: var(--accent-soft); padding: 10px 14px; max-width: 68ch; }
+  p.rule .tag { font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); margin-right: 10px; font-weight: 500; }
+
+  .phase-table td:nth-child(2) { max-width: 30ch; }
+  .kv { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; font-size: 14.5px; margin: 0 0 16px; }
+  .kv dt { font-family: var(--mono); font-size: 13px; }
+  .kv dd { margin: 0; }
+</style>
+
+<div class="wrap">
+  <header class="masthead">
+    <div class="eyebrow">Engineering record · codemare</div>
+    <h1>Codemare Decisions</h1>
+    <p class="dek">Why the judge is shaped the way it is: every decision with the alternatives it beat, the path a submission takes, what each verdict means, and the bugs that set the rules.</p>
+    <div class="meta">
+      <span>59 commits · Nov 2025 → Sep 2026</span>
+      <span>grounded in <code>git log --reverse</code></span>
+      <span>companion to README.md</span>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav class="toc" aria-label="Sections">
+      <ol>
+        <li><a href="#s1"><span class="toc-n">1</span>How the goal moved</a></li>
+        <li><a href="#s2"><span class="toc-n">2</span>System at a glance</a></li>
+        <li><a href="#s3"><span class="toc-n">3</span>Life of a submission</a></li>
+        <li><a href="#s4"><span class="toc-n">4</span>Decision records</a></li>
+        <li><a href="#s5"><span class="toc-n">5</span>Contracts</a></li>
+        <li><a href="#s6"><span class="toc-n">6</span>Bugs that taught us</a></li>
+        <li><a href="#s7"><span class="toc-n">7</span>Not done yet</a></li>
+        <li><a href="#s8"><span class="toc-n">8</span>Glossary</a></li>
+      </ol>
+    </nav>
+
+    <main>
+      <!-- ============================================================ 1 -->
+      <section id="s1">
+        <h2><span class="n">1</span>What Codemare is, and how the goal moved</h2>
+        <p class="lede">Today: a platform to practice DSA and competitive programming. Pick a problem, write a solution in Python, JavaScript, C++ or Java, and a judge returns OK / WA / TLE / CE with microsecond-accurate timing of <em>your algorithm alone</em>. An IDE mode runs free-form programs against stdin. Where it's going: a content platform where users author "books" of lessons and problems for others (v1 free; monetization designed for, not built — see <code>authoring-v1.md</code>).</p>
+        <p>The goal moved three times, and each move explains a chunk of the codebase.</p>
+
+        <figure class="fig">
+          <svg viewBox="0 0 860 150" role="img" aria-label="Timeline of four project phases: resume project in November 2025, production judge in May 2026, a product in June and July 2026, cleanup in September 2026">
+            <line class="edge" x1="40" y1="66" x2="820" y2="66"/>
+            <circle class="dot" cx="100" cy="66" r="7"/>
+            <circle class="dot" cx="330" cy="66" r="7"/>
+            <circle class="dot" cx="560" cy="66" r="7"/>
+            <circle class="dot" cx="770" cy="66" r="7"/>
+            <text class="mono" x="100" y="44" text-anchor="middle">Nov 2025</text>
+            <text class="title" x="100" y="96" text-anchor="middle">Resume project</text>
+            <text class="sm" x="100" y="114" text-anchor="middle">Express + Vite SPA, Docker executors</text>
+            <text class="mono" x="330" y="44" text-anchor="middle">May 2026</text>
+            <text class="title" x="330" y="96" text-anchor="middle">Production judge</text>
+            <text class="sm" x="330" y="114" text-anchor="middle">isolate · two services · Next.js</text>
+            <text class="mono" x="560" y="44" text-anchor="middle">Jun – Jul 2026</text>
+            <text class="title" x="560" y="96" text-anchor="middle">A product</text>
+            <text class="sm" x="560" y="114" text-anchor="middle">auth · content pivot · QA gates · CI</text>
+            <text class="mono" x="770" y="44" text-anchor="middle">Sep 2026</text>
+            <text class="title" x="770" y="96" text-anchor="middle">Consolidation</text>
+            <text class="sm" x="770" y="114" text-anchor="middle">decision log · legacy SPA deleted</text>
+          </svg>
+          <figcaption>Four phases. What each one left behind: the <code>/api/*</code> route alias (phase 1), the <code>isolate</code> sandbox and the <code>web/</code> app (phase 2), the login wall, Postgres and the QA process (phase 3).</figcaption>
+        </figure>
+      </section>
+
+      <!-- ============================================================ 2 -->
+      <section id="s2">
+        <h2><span class="n">2</span>System at a glance</h2>
+        <p>Two services, one shared secret. <strong><code>web/</code></strong> owns <em>identity and state</em> — who you are, what you submitted, the UI — and is the only thing the browser talks to. <strong><code>backend/</code></strong> owns <em>execution</em>: take <code>(language, code, tests)</code>, run it in a sandbox, return a verdict with timing. It has no database, no users, no sessions. It doesn't know who you are, and that is deliberate (decision 06).</p>
+
+        <figure class="fig">
+          <div class="scroll">
+          <svg viewBox="0 0 860 300" role="img" aria-label="Browser talks only to the Next.js web app; the web app talks to Postgres and, with an internal token, to the compile service; the compile service runs code in isolate and optionally hands jobs to a Redis queue and worker">
+            <defs><marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+            <!-- nodes -->
+            <rect class="box" x="20" y="120" width="130" height="60" rx="3"/>
+            <text class="title" x="85" y="155" text-anchor="middle">Browser</text>
+            <rect class="box hi" x="230" y="100" width="200" height="100" rx="3"/>
+            <text class="title" x="330" y="130" text-anchor="middle">web/ — Next.js 15</text>
+            <text class="sm" x="330" y="150" text-anchor="middle">Auth.js · Prisma · server actions</text>
+            <text class="sm" x="330" y="168" text-anchor="middle">owns identity and state</text>
+            <rect class="box" x="250" y="240" width="160" height="48" rx="3"/>
+            <text class="title" x="330" y="260" text-anchor="middle">Postgres</text>
+            <text class="sm" x="330" y="277" text-anchor="middle">User · Problem · Submission</text>
+            <rect class="box hi" x="520" y="100" width="200" height="100" rx="3"/>
+            <text class="title" x="620" y="130" text-anchor="middle">backend/ — compile service</text>
+            <text class="sm" x="620" y="150" text-anchor="middle">Express · stateless · no DB</text>
+            <text class="sm" x="620" y="168" text-anchor="middle">owns execution</text>
+            <rect class="box" x="560" y="240" width="120" height="48" rx="3"/>
+            <text class="title" x="620" y="260" text-anchor="middle">isolate sandbox</text>
+            <text class="sm" x="620" y="277" text-anchor="middle">Linux only</text>
+            <rect class="box dashed" x="560" y="10" width="120" height="48" rx="3"/>
+            <text class="title" x="620" y="30" text-anchor="middle">Redis / BullMQ</text>
+            <text class="sm" x="620" y="47" text-anchor="middle">optional</text>
+            <rect class="box dashed" x="740" y="10" width="100" height="48" rx="3"/>
+            <text class="title" x="790" y="30" text-anchor="middle">worker</text>
+            <text class="sm" x="790" y="47" text-anchor="middle">npm run worker</text>
+            <!-- edges -->
+            <line class="edge" x1="150" y1="150" x2="230" y2="150" marker-end="url(#a1)"/>
+            <text class="sm" x="190" y="140" text-anchor="middle">session cookie</text>
+            <line class="edge accent" x1="430" y1="150" x2="520" y2="150" marker-end="url(#a1)"/>
+            <text class="sm" x="475" y="140" text-anchor="middle">X-Codemare-Token</text>
+            <line class="edge" x1="330" y1="200" x2="330" y2="240" marker-end="url(#a1)"/>
+            <text class="sm" x="338" y="224">reads / writes</text>
+            <line class="edge" x1="620" y1="200" x2="620" y2="240" marker-end="url(#a1)"/>
+            <text class="sm" x="628" y="224">runs code</text>
+            <line class="edge dashed" x1="620" y1="100" x2="620" y2="58" marker-end="url(#a1)"/>
+            <text class="sm" x="628" y="84">enqueue if REDIS_URL</text>
+            <line class="edge dashed" x1="680" y1="34" x2="740" y2="34" marker-end="url(#a1)"/>
+            <polyline class="edge dashed" points="790,58 790,264 680,264" marker-end="url(#a1)"/>
+            <text class="sm" x="798" y="160">runs job</text>
+          </svg>
+          </div>
+          <figcaption>The token edge (teal) is the only trust boundary between services; it never reaches the browser. Dashed parts exist only when <code>REDIS_URL</code> is set.</figcaption>
+        </figure>
+
+        <dl class="kv">
+          <dt>Ports (dev)</dt><dd>web <code>4001</code> · backend <code>4000</code> · Postgres <code>5432</code> · Redis <code>6379</code></dd>
+        </dl>
+      </section>
+
+      <!-- ============================================================ 3 -->
+      <section id="s3">
+        <h2><span class="n">3</span>Life of a submission</h2>
+        <p>Follow one submission end to end; most of the design decisions become obvious once you can picture this path.</p>
+
+        <figure class="fig">
+          <div class="scroll">
+          <svg viewBox="0 0 800 400" role="img" aria-label="Swimlane flow: the browser submits, the web app checks the session and posts to the compile service with the token, the backend validates and wraps the code, the sandbox compiles and runs it, the backend re-validates results and derives a verdict, the web app persists the submission, the browser shows the verdict">
+            <defs><marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+            <!-- lanes -->
+            <rect class="lane" x="0" y="30" width="800" height="85"/>
+            <rect class="lane alt" x="0" y="120" width="800" height="85"/>
+            <rect class="lane" x="0" y="210" width="800" height="85"/>
+            <rect class="lane alt" x="0" y="300" width="800" height="85"/>
+            <text class="lanelabel" x="14" y="77">BROWSER</text>
+            <text class="lanelabel" x="14" y="167">WEB/</text>
+            <text class="lanelabel" x="14" y="257">BACKEND/</text>
+            <text class="lanelabel" x="14" y="347">SANDBOX</text>
+            <!-- boxes -->
+            <rect class="box" x="130" y="47" width="140" height="50" rx="3"/>
+            <text x="200" y="76" text-anchor="middle">Press Submit</text>
+            <rect class="box" x="130" y="137" width="140" height="50" rx="3"/>
+            <text x="200" y="158" text-anchor="middle">Session check</text>
+            <text class="sm" x="200" y="175" text-anchor="middle">none → 307 /auth</text>
+            <rect class="box hi" x="290" y="137" width="140" height="50" rx="3"/>
+            <text x="360" y="158" text-anchor="middle">POST /v1/execute</text>
+            <text class="sm" x="360" y="175" text-anchor="middle">+ X-Codemare-Token</text>
+            <rect class="box" x="290" y="227" width="140" height="50" rx="3"/>
+            <text x="360" y="248" text-anchor="middle">Validate · wrap</text>
+            <text class="sm" x="360" y="265" text-anchor="middle">harness around the fn</text>
+            <rect class="box" x="290" y="317" width="140" height="50" rx="3"/>
+            <text x="360" y="338" text-anchor="middle">Compile → run</text>
+            <text class="sm" x="360" y="355" text-anchor="middle">10 s · 256 MB · 1 core</text>
+            <rect class="box" x="450" y="227" width="140" height="50" rx="3"/>
+            <text x="520" y="248" text-anchor="middle">Re-validate results</text>
+            <text class="sm" x="520" y="265" text-anchor="middle">derive verdict</text>
+            <rect class="box" x="450" y="137" width="140" height="50" rx="3"/>
+            <text x="520" y="158" text-anchor="middle">Persist Submission</text>
+            <text class="sm" x="520" y="175" text-anchor="middle">WA if tests failed</text>
+            <rect class="box" x="450" y="47" width="140" height="50" rx="3"/>
+            <text x="520" y="68" text-anchor="middle">Verdict shown</text>
+            <text class="sm" x="520" y="85" text-anchor="middle">+ per-test results</text>
+            <rect class="box dashed" x="620" y="227" width="160" height="50" rx="3"/>
+            <text x="700" y="248" text-anchor="middle">Redis queue + worker</text>
+            <text class="sm" x="700" y="265" text-anchor="middle">only if REDIS_URL is set</text>
+            <!-- edges -->
+            <line class="edge" x1="200" y1="97" x2="200" y2="137" marker-end="url(#a2)"/>
+            <line class="edge" x1="270" y1="162" x2="290" y2="162" marker-end="url(#a2)"/>
+            <line class="edge" x1="360" y1="187" x2="360" y2="227" marker-end="url(#a2)"/>
+            <line class="edge" x1="360" y1="277" x2="360" y2="317" marker-end="url(#a2)"/>
+            <polyline class="edge" points="430,342 520,342 520,277" marker-end="url(#a2)"/>
+            <text class="sm" x="528" y="312">stdout JSON + meta</text>
+            <line class="edge" x1="520" y1="227" x2="520" y2="187" marker-end="url(#a2)"/>
+            <text class="sm" x="528" y="212">ExecutionResponse</text>
+            <line class="edge" x1="520" y1="137" x2="520" y2="97" marker-end="url(#a2)"/>
+            <line class="edge dashed" x1="430" y1="252" x2="620" y2="252" marker-end="url(#a2)"/>
+            <text class="sm" x="525" y="222" text-anchor="middle"> </text>
+            <polyline class="edge dashed" points="700,277 700,362 430,362" marker-end="url(#a2)"/>
+            <text class="sm" x="600" y="378" text-anchor="middle">202 {token} · web polls · worker runs the same steps</text>
+          </svg>
+          </div>
+          <figcaption>The solid path is a synchronous submission. With Redis on, the backend returns <code>202 {token}</code>, the web client polls <code>GET /v1/execute/:token</code>, and a worker does the compile→run step; the client handles both modes transparently.</figcaption>
+        </figure>
+
+        <h3>Inside the backend</h3>
+        <figure class="fig">
+          <div class="scroll">
+          <svg viewBox="0 0 860 150" role="img" aria-label="Five backend steps in order: validate, wrap, sandbox, validate results, derive verdict; each annotated with its source file">
+            <defs><marker id="a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+            <rect class="box" x="20" y="30" width="140" height="58" rx="3"/>
+            <text class="title" x="90" y="53" text-anchor="middle">1 Validate</text>
+            <text class="sm" x="90" y="71" text-anchor="middle">≤ 10 KB · language · problem</text>
+            <text class="mono sm" x="90" y="112" text-anchor="middle">executionService.ts</text>
+            <rect class="box" x="190" y="30" width="140" height="58" rx="3"/>
+            <text class="title" x="260" y="53" text-anchor="middle">2 Wrap</text>
+            <text class="sm" x="260" y="71" text-anchor="middle">harness around the function</text>
+            <text class="mono sm" x="260" y="112" text-anchor="middle">codeWrapperService.ts</text>
+            <rect class="box" x="360" y="30" width="140" height="58" rx="3"/>
+            <text class="title" x="430" y="53" text-anchor="middle">3 Sandbox</text>
+            <text class="sm" x="430" y="71" text-anchor="middle">compile → run under limits</text>
+            <text class="mono sm" x="430" y="112" text-anchor="middle">sandboxService.ts → adapter</text>
+            <rect class="box" x="530" y="30" width="140" height="58" rx="3"/>
+            <text class="title" x="600" y="53" text-anchor="middle">4 Re-validate</text>
+            <text class="sm" x="600" y="71" text-anchor="middle">server-side, honors compareMode</text>
+            <text class="mono sm" x="600" y="112" text-anchor="middle">validationService.ts</text>
+            <rect class="box" x="700" y="30" width="140" height="58" rx="3"/>
+            <text class="title" x="770" y="53" text-anchor="middle">5 Derive verdict</text>
+            <text class="sm" x="770" y="71" text-anchor="middle">OK · WA · XX</text>
+            <text class="mono sm" x="770" y="112" text-anchor="middle">deriveVerdict()</text>
+            <line class="edge" x1="160" y1="59" x2="190" y2="59" marker-end="url(#a3)"/>
+            <line class="edge" x1="330" y1="59" x2="360" y2="59" marker-end="url(#a3)"/>
+            <line class="edge" x1="500" y1="59" x2="530" y2="59" marker-end="url(#a3)"/>
+            <line class="edge" x1="670" y1="59" x2="700" y2="59" marker-end="url(#a3)"/>
+          </svg>
+          </div>
+          <figcaption>Step 4 re-checks every test on the server — the harness's own pass/fail is never trusted alone. Step 5 exists because the sandbox says <span class="pill ok">OK</span> for <em>any</em> clean exit (decision 12).</figcaption>
+        </figure>
+      </section>
+
+      <!-- ============================================================ 4 -->
+      <section id="s4">
+        <h2><span class="n">4</span>Decision records</h2>
+        <p class="lede">Each entry: the situation, the options, what we chose, and what it cost. Numbered because they build on one another in roughly this order.</p>
+
+        <article class="dr" id="d1">
+          <div class="eyebrow">Decision 01</div>
+          <h3>Replace Docker with <code>isolate</code></h3>
+          <dl class="drg">
+            <dt>Situation</dt><dd><p>The original executors ran each submission in a Docker container. Timing was wrong — container startup (hundreds of ms) dwarfed the algorithm — and "very accurate" was a hard requirement.</p></dd>
+            <dt>Options</dt><dd><ul><li>Keep Docker, subtract a measured baseline.</li><li>Firecracker / gVisor micro-VMs.</li><li><code>isolate</code> — the IOI contest sandbox (namespaces + cgroups v2), used by real judges.</li><li>No sandbox.</li></ul></dd>
+            <dt>Choice</dt><dd><p><code>isolate</code>. It boots in about a millisecond, meters CPU time and peak memory via cgroups, writes a machine-readable meta file, and is what competitive-programming judges already trust. Firecracker was overkill for a single VM; subtracting a Docker baseline is guesswork.</p></dd>
+            <dt>Consequences</dt><dd><p>Linux-only in production (macOS dev needs the local adapter, decision 04). Per-submission overhead dropped from ~300 ms to a few ms. Limits live in <code>backend/src/config/sandbox.ts</code>:</p>
+              <div class="table-wrap"><table>
+                <thead><tr><th>Phase</th><th>CPU time</th><th>Wall time</th><th>Memory</th><th>PIDs</th></tr></thead>
+                <tbody>
+                  <tr><td>run</td><td>10 s</td><td>20 s (2× CPU)</td><td>256 MB</td><td>50, then per-language cap</td></tr>
+                  <tr><td>compile</td><td>15 s</td><td>30 s</td><td>512 MB</td><td>16</td></tr>
+                </tbody>
+              </table></div>
+            </dd>
+          </dl>
+        </article>
+
+        <article class="dr" id="d2">
+          <div class="eyebrow">Decision 02</div>
+          <h3>Measure the algorithm, not the process</h3>
+          <dl class="drg">
+            <dt>Situation</dt><dd><p>Even with a 1 ms sandbox, "time" for Python included interpreter startup (~20 ms) — useless for comparing O(n) against O(n log n) on small inputs.</p></dd>
+            <dt>Choice</dt><dd><p>Two clocks, reported separately.</p>
+              <ul>
+                <li><code>runMs</code> — measured <em>inside</em> the user process, around the function call only: <code>time.perf_counter_ns()</code> (Python), <code>process.hrtime.bigint()</code> (JS), <code>std::chrono::steady_clock</code> (C++), <code>System.nanoTime()</code> (Java).</li>
+                <li><code>wallMs</code> / <code>compileMs</code> — from the sandbox meta file, kept as diagnostics. Compile time is never charged to the user.</li>
+              </ul>
+              <p>Memory follows the same idea: <code>tracemalloc</code> peak (Python), heap delta (JS), <code>getrusage</code> RSS (C++, best-effort), <code>0</code> for Java — JVM heap is too noisy per call.</p></dd>
+            <dt>Lesson</dt><dd><p>The sandbox can only meter the whole process; the harness is the only place that can meter the algorithm. Both numbers are needed, and they answer different questions.</p></dd>
+          </dl>
+        </article>
+
+        <article class="dr" id="d3">
+          <div class="eyebrow">Decision 03</div>
+          <h3>Fairness: one core, tight PID caps</h3>
+          <dl class="drg">
+            <dt>Situation</dt><dd><p>With accurate timing, the next question is whether a user can cheat it by parallelizing.</p></dd>
+            <dt>Choice</dt><dd><p>Every run box is pinned to a single host core (<code>--core=N</code>, round-robin), so threads cannot win a timing comparison. PID caps are defense-in-depth and a fork-bomb stop, set per language to what the runtime itself needs (<code>languageSpec.ts</code>):</p>
+              <div class="table-wrap"><table>
+                <thead><tr><th>Language</th><th>PID cap</th><th>Why</th></tr></thead>
+                <tbody>
+                  <tr><td>C++</td><td>1</td><td>Truly single-threaded; <code>std::thread</code> is denied</td></tr>
+                  <tr><td>Python</td><td>1</td><td>GIL anyway; blocks <code>multiprocessing</code></td></tr>
+                  <tr><td>JavaScript</td><td>16</td><td>Node needs ~7 threads just to boot (libuv pool, V8 GC)</td></tr>
+                  <tr><td>Java</td><td>64</td><td>The JVM spawns ~25 internal threads (GC, JIT, finalizer…)</td></tr>
+                </tbody>
+              </table></div></dd>
+          </dl>
+        </article>
+
+        <article class="dr" id="d4">
+          <div class="eyebrow">Decision 04</div>
+          <h3>Two adapters: <code>isolate</code> in production, <code>local</code> in development</h3>
+          <dl class="drg">
+            <dt>Situation</dt><dd><p><code>isolate</code> doesn't run on macOS, and development happens on macOS.</p></dd>
+            <dt>Choice</dt><dd><p>A <code>SandboxAdapter</code> interface with two implementations. Selection is automatic (isolate present → use it), overridable with <code>SANDBOX_MODE</code>.</p></dd>
+          </dl>
+          <figure class="fig">
+            <div class="scroll">
+            <svg viewBox="0 0 860 320" role="img" aria-label="sandboxService picks an adapter at boot: with isolate on the path, the production adapter runs a compile box then a run box and reads a meta file; otherwise the local adapter spawns the process with no isolation and is refused in production">
+              <defs><marker id="a4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+              <rect class="box" x="300" y="12" width="260" height="44" rx="3"/>
+              <text x="430" y="39" text-anchor="middle">sandboxService picks an adapter at boot</text>
+              <line class="edge" x1="380" y1="56" x2="380" y2="90" marker-end="url(#a4)"/>
+              <text class="sm" x="370" y="78" text-anchor="end">isolate on PATH</text>
+              <line class="edge" x1="480" y1="56" x2="480" y2="90" marker-end="url(#a4)"/>
+              <text class="sm" x="490" y="78">otherwise, or SANDBOX_MODE=local</text>
+              <!-- left panel -->
+              <rect class="panel" x="20" y="90" width="400" height="215" rx="3"/>
+              <text class="title" x="36" y="112">isolateAdapter — production, Linux</text>
+              <rect class="box" x="40" y="130" width="170" height="56" rx="3"/>
+              <text x="125" y="152" text-anchor="middle">compile box</text>
+              <text class="sm" x="125" y="170" text-anchor="middle">15 s · 512 MB · 16 pids</text>
+              <rect class="box hi" x="230" y="130" width="170" height="56" rx="3"/>
+              <text x="315" y="152" text-anchor="middle">run box</text>
+              <text class="sm" x="315" y="170" text-anchor="middle">10 s · 256 MB · --core=k</text>
+              <line class="edge" x1="210" y1="158" x2="230" y2="158" marker-end="url(#a4)"/>
+              <rect class="box" x="120" y="228" width="220" height="56" rx="3"/>
+              <text x="230" y="250" text-anchor="middle">meta file per box</text>
+              <text class="sm" x="230" y="268" text-anchor="middle">cpu time · peak memory · exit status</text>
+              <polyline class="edge" points="125,186 125,206 170,206 170,228" marker-end="url(#a4)"/>
+              <polyline class="edge" points="315,186 315,206 290,206 290,228" marker-end="url(#a4)"/>
+              <text class="sm" x="60" y="300">artifacts cached by content hash</text>
+              <!-- right panel -->
+              <rect class="panel" x="440" y="90" width="400" height="215" rx="3"/>
+              <text class="title" x="456" y="112">localAdapter — dev, any host</text>
+              <rect class="box" x="460" y="130" width="360" height="56" rx="3"/>
+              <text x="640" y="152" text-anchor="middle">child_process.spawn</text>
+              <text class="sm" x="640" y="170" text-anchor="middle">no namespaces · no cgroups · no memory cap</text>
+              <rect class="box" x="460" y="208" width="360" height="56" rx="3"/>
+              <text x="640" y="230" text-anchor="middle">harness timing is still real</text>
+              <text class="sm" x="640" y="248" text-anchor="middle">runMs is measured inside the user process</text>
+              <text class="warn" x="640" y="292" text-anchor="middle">refused when NODE_ENV=production</text>
+            </svg>
+            </div>
+            <figcaption>Same interface, very different guarantees. Only the left side meters memory, kills on the cap, and copies artifacts between boxes — which is exactly the set of things a Mac cannot test.</figcaption>
+          </figure>
+          <dl class="drg">
+            <dt>Consequences</dt><dd><p>Development works anywhere and the harness-level timing is still real. The price: anything specific to isolate is untestable locally. That gap bit us once (the Java <code>*.class</code> glob, section 6) and is why the release plan demands an isolate smoke test on Linux.</p></dd>
+          </dl>
+        </article>
+
+        <article class="dr" id="d5">
+          <div class="eyebrow">Decision 05</div>
+          <h3>Compile cache and parallel IDE cases</h3>
+          <dl class="drg">
+            <dt>Situation</dt><dd><p>C++ compile is ~500 ms; users re-run unchanged code constantly; IDE mode ran its test cases one after another.</p></dd>
+            <dt>Choice</dt><dd><p>A content-addressed compile cache keyed on <code>sha256(language + compiler argv + source)</code>, single-flight (concurrent identical compiles wait for one), bounded LRU of 256 entries, shared by both adapters. IDE test cases run in parallel.</p></dd>
+            <dt>Result</dt><dd><p>About 10× faster C++ re-runs; about 4× faster multi-case IDE runs.</p></dd>
+          </dl>
+        </article>
+
+        <article class="dr" id="d6">
+          <div class="eyebrow">Decision 06</div>
+          <h3>Split into two services with an internal token</h3>
+          <dl class="drg">
+            <dt>Situation</dt><dd><p>The original monolith mixed "run untrusted code" with "manage users". Those have opposite scaling and security profiles.</p></dd>
+            <dt>Choice</dt><dd><p><code>backend/</code> became a stateless compile service; <code>web/</code> holds everything user-facing. They share one secret, <code>INTERNAL_TOKEN</code>, sent as <code>X-Codemare-Token</code> and compared timing-safely. The token lives only in server code (<code>web/lib/compile.ts</code> is <code>server-only</code>), never in the browser.</p></dd>
+            <dt>Rules</dt><dd><ul>
+              <li>Dev with no token set is "open" — but production with no token <strong>throws at boot</strong> on both sides; the web guard also rejects placeholder values.</li>
+              <li>The compile service is identity-blind. It can be scaled horizontally or swapped without touching auth.</li>
+              <li>CORS is effectively moot (server-to-server); kept for the legacy alias.</li>
+            </ul></dd>
+          </dl>
+        </article>
+
+        <article class="dr" id="d7">
+          <div class="eyebrow">Decision 07</div>
+          <h3>An optional Redis queue, not a mandatory one</h3>
+          <dl class="drg">
+            <dt>Situation</dt><dd><p>Burst load — a class submitting at once — would pile onto a single VM.</p></dd>
+            <dt>Choice</dt><dd><p>BullMQ over Redis, gated entirely on <code>REDIS_URL</code>. Unset → everything is synchronous, exactly as before. Set → <code>POST /v1/execute</code> returns <code>202 {token}</code> and the client polls, or forces sync with <code>?wait=true</code>. Workers run as a separate process (<code>npm run worker</code>) or inline (<code>WORKER_INLINE=true</code>) for a single-VM deploy. <code>GET /v1/queue/stats</code> exposes depth for tuning.</p></dd>
+            <dt>Why optional</dt><dd><p>One VM handles the first thousand users; forcing Redis on day one adds an operational dependency for nothing. The web client handles both modes transparently, so turning it on later is a config change.</p></dd>
+          </dl>
+        </article>
+
+        <article class="dr" id="d8">
+          <div class="eyebrow">Decision 08</div>
+          <h3>Next.js App Router with server actions</h3>
+          <dl class="drg">
+            <dt>Situation</dt><dd><p>The Vite SPA would have needed its own API layer to hold sessions and call the compile service without leaking the token.</p></dd>
+            <dt>Choice</dt><dd><p>Next.js 15 App Router. Server actions (<code>runSolution</code>, <code>runIdeCode</code>, <code>signUp</code>) <em>are</em> the API — they run on the server, hold the token, and talk to Postgres directly. Monaco for the editor; design tokens as CSS variables ported component by component from a Claude Design bundle.</p></dd>
+            <dt>Consequence</dt><dd><p>There is no public JSON API for the browser to call, which is why the middleware can wall all of <code>/api</code> except <code>/api/auth</code>.</p></dd>
+          </dl>
+        </article>
+
+        <article class="dr" id="d9">
+          <div class="eyebrow">Decision 09</div>
+          <h3>Auth: email/password on Postgres, JWT sessions, a login wall</h3>
+          <dl class="drg">
+            <dt>Situation</dt><dd><p>The pivot to a content platform needs identity. OAuth alone blocks anyone without a GitHub/Google account and needs client IDs to even test.</p></dd>
+            <dt>Choice</dt><dd><p>Auth.js v5 with a Credentials provider — bcrypt (cost 12), minimum 8-character passwords, sign-up as a server action — plus GitHub/Google when configured. JWT session strategy (no session-table round-trip per request). A middleware login wall: everything except <code>/auth</code> redirects unauthenticated users.</p></dd>
+            <dt>Consequence</dt><dd><p>Self-hosting requires <code>trustHost: true</code>, and this is where the worst bug of the project hid (section 6).</p></dd>
+          </dl>
+        </article>
+
+        <article class="dr" id="d10">
+          <div class="eyebrow">Decision 10</div>
+          <h3>Remove what doesn't serve the mission</h3>
+          <dl class="drg">
+            <dt>Choice</dt><dd><p>Removed the design-system page, the "µs-judge" badge and the "µs-precision" brand panel; hid navigation until login.</p></dd>
+            <dt>Reasoning</dt><dd><p>The judge's precision is an implementation virtue, not the pitch. The pitch is <em>learn and practice</em>, and eventually <em>author and share</em>.</p></dd>
+          </dl>
+        </article>
+
+        <article class="dr" id="d11">
+          <div class="eyebrow">Decision 11</div>
+          <h3>Generate C++/Java harnesses from a typed signature</h3>
+          <dl class="drg">
+            <dt>Situation</dt><dd><p>Python and JS harnesses can call <code>f(*args)</code> on JSON values. C++ and Java are statically typed; the harness must know that <code>nums</code> is a <code>std::vector&lt;int&gt;</code> before it can compile.</p></dd>
+            <dt>Options</dt><dd><ul>
+              <li>Hand-write a harness per problem — doesn't scale to user-authored content.</li>
+              <li>Parse JSON at runtime in C++/Java — needs a JSON library inside the sandbox; slow and fragile.</li>
+              <li>Give each problem a typed <code>signature</code> and <em>generate</em> the program with test data embedded as typed literals.</li>
+            </ul></dd>
+            <dt>Choice</dt><dd><p>The third. Problems declare their parameter and return types from <code>int, long, double, bool, string, char</code> and their <code>[]</code> / <code>[][]</code> forms; the generator does the rest.</p></dd>
+          </dl>
+          <figure class="fig">
+            <div class="scroll">
+            <svg viewBox="0 0 860 250" role="img" aria-label="The signature, the test cases and the user function feed a TypeScript generator that emits a program with typed literals; that program is compiled, run, and prints one line of JSON">
+              <defs><marker id="a5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+              <rect class="box" x="20" y="20" width="190" height="48" rx="3"/>
+              <text x="115" y="40" text-anchor="middle">problem.signature</text>
+              <text class="sm" x="115" y="57" text-anchor="middle">param types · return type</text>
+              <rect class="box" x="20" y="100" width="190" height="48" rx="3"/>
+              <text x="115" y="120" text-anchor="middle">testCases[]</text>
+              <text class="sm" x="115" y="137" text-anchor="middle">input args · expected output</text>
+              <rect class="box" x="20" y="180" width="190" height="48" rx="3"/>
+              <text x="115" y="200" text-anchor="middle">user function</text>
+              <text class="sm" x="115" y="217" text-anchor="middle">bare C++ / Java source</text>
+              <rect class="box hi" x="270" y="90" width="170" height="70" rx="3"/>
+              <text x="355" y="120" text-anchor="middle">generator (TypeScript)</text>
+              <text class="mono sm" x="355" y="140" text-anchor="middle">codeWrapperService.ts</text>
+              <polyline class="edge" points="210,44 240,44 240,110 270,110" marker-end="url(#a5)"/>
+              <line class="edge" x1="210" y1="124" x2="270" y2="124" marker-end="url(#a5)"/>
+              <polyline class="edge" points="210,204 240,204 240,140 270,140" marker-end="url(#a5)"/>
+              <rect class="codebox" x="500" y="40" width="340" height="110" rx="3"/>
+              <text class="mono" x="512" y="62">std::vector&lt;int&gt; nums0{2, 7, 11, 15};</text>
+              <text class="mono" x="512" y="80">auto t0 = steady_clock::now();</text>
+              <text class="mono" x="512" y="98">auto out = twoSum(nums0, 9);</text>
+              <text class="mono" x="512" y="116">ns += now() - t0;  cmp(out, {0, 1});</text>
+              <text class="mono sm" x="512" y="136">// one block per test, then print JSON</text>
+              <line class="edge" x1="440" y1="125" x2="500" y2="125" marker-end="url(#a5)"/>
+              <rect class="box" x="500" y="185" width="340" height="44" rx="3"/>
+              <text x="670" y="212" text-anchor="middle">compile → run → one line of JSON, same schema as Python/JS</text>
+              <line class="edge" x1="670" y1="150" x2="670" y2="185" marker-end="url(#a5)"/>
+            </svg>
+            </div>
+            <figcaption>Test data becomes typed literals at generation time, so the sandboxed program parses no JSON and links no library. Doubles compare with a 1e-6 tolerance inside the harness.</figcaption>
+          </figure>
+          <dl class="drg">
+            <dt>Convention</dt><dd><p>Content authors must follow this or the harness cannot compile the submission:</p><ul>
+              <li><strong>C++</strong>: a free function <code>ret name(params)</code>, no <code>main</code>, no includes needed — the harness provides the full standard header set.</li>
+              <li><strong>Java</strong>: <code>class Solution { public static ret name(params) { … } }</code> — not <code>public class</code>, and the method must be <code>static</code>.</li>
+            </ul></dd>
+            <dt>JVM limit</dt><dd><p>Java caps a method at 64 KB of bytecode; a 10 000-element test literal in <code>main()</code> blew it. The generator now emits one method per test and chunks large literals.</p></dd>
+          </dl>
+          <figure class="fig">
+            <div class="scroll">
+            <svg viewBox="0 0 860 175" role="img" aria-label="Generated Java structure: main calls one method per test; a test with a large literal delegates to a builder method that assembles the array from chunk methods of at most 400 scalars each">
+              <defs><marker id="a6" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+              <rect class="box" x="20" y="44" width="110" height="40" rx="3"/>
+              <text class="mono" x="75" y="69" text-anchor="middle">main()</text>
+              <line class="edge" x1="130" y1="64" x2="190" y2="64" marker-end="url(#a6)"/>
+              <text class="sm" x="160" y="54" text-anchor="middle">calls</text>
+              <rect class="box" x="190" y="46" width="78" height="36" rx="3"/><text class="mono" x="229" y="69" text-anchor="middle">__test0()</text>
+              <rect class="box" x="278" y="46" width="78" height="36" rx="3"/><text class="mono" x="317" y="69" text-anchor="middle">__test1()</text>
+              <rect class="box" x="366" y="46" width="78" height="36" rx="3"/><text class="mono" x="405" y="69" text-anchor="middle">__test2()</text>
+              <rect class="box hi" x="454" y="46" width="78" height="36" rx="3"/><text class="mono" x="493" y="69" text-anchor="middle">__test3()</text>
+              <rect class="box" x="542" y="46" width="78" height="36" rx="3"/><text class="mono" x="581" y="69" text-anchor="middle">__test4()</text>
+              <text x="650" y="69">…</text>
+              <rect class="box" x="690" y="46" width="78" height="36" rx="3"/><text class="mono" x="729" y="69" text-anchor="middle">__testN()</text>
+              <line class="edge" x1="493" y1="82" x2="493" y2="112" marker-end="url(#a6)"/>
+              <rect class="box" x="440" y="112" width="106" height="36" rx="3"/><text class="mono" x="493" y="135" text-anchor="middle">__lit3()</text>
+              <line class="edge" x1="546" y1="130" x2="580" y2="130" marker-end="url(#a6)"/>
+              <rect class="box" x="580" y="112" width="90" height="36" rx="3"/><text class="mono" x="625" y="135" text-anchor="middle">__lit3_c0()</text>
+              <text x="690" y="135">…</text>
+              <rect class="box" x="720" y="112" width="100" height="36" rx="3"/><text class="mono" x="770" y="135" text-anchor="middle">__lit3_c24()</text>
+              <text class="sm" x="493" y="168" text-anchor="middle">a large literal becomes a builder that fills the array from ≤ 400-scalar chunks (~4 KB bytecode each)</text>
+            </svg>
+            </div>
+            <figcaption>No generated method can approach the 64 KB cap. A regression test <code>javac</code>-compiles the harness for every large-literal problem in the catalog.</figcaption>
+          </figure>
+        </article>
+
+        <article class="dr" id="d12">
+          <div class="eyebrow">Decision 12</div>
+          <h3>Verdicts are derived, never echoed</h3>
+          <dl class="drg">
+            <dt>Situation</dt><dd><p>The sandbox reports <span class="pill ok">OK</span> whenever the process exits 0 — which a wrong answer does. For a while, failed submissions were stored and shown as "Accepted".</p></dd>
+            <dt>Choice</dt><dd><p><code>deriveVerdict()</code> in <code>validationService.ts</code> decides; the web app adds a defense-in-depth check before persisting.</p></dd>
+          </dl>
+          <figure class="fig">
+            <div class="scroll">
+            <svg viewBox="0 0 860 340" role="img" aria-label="Verdict decision tree: non-OK sandbox statuses pass through; an OK exit becomes XX if the harness declared a platform error, OK if every test passed, otherwise WA">
+              <defs><marker id="a7" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+              <rect class="box hi" x="330" y="16" width="200" height="44" rx="3"/>
+              <text x="430" y="37" text-anchor="middle">Sandbox status</text>
+              <text class="sm" x="430" y="53" text-anchor="middle">from the meta file / exit code</text>
+              <!-- left: pass-through -->
+              <polyline class="edge" points="400,60 400,86 150,86 150,110" marker-end="url(#a7)"/>
+              <text class="sm" x="275" y="80" text-anchor="middle">CE · TLE · RE · MLE</text>
+              <rect class="box" x="40" y="110" width="220" height="44" rx="3"/>
+              <text x="150" y="137" text-anchor="middle">Pass through unchanged</text>
+              <line class="edge" x1="150" y1="154" x2="150" y2="196" marker-end="url(#a7)"/>
+              <rect class="vp ce" x="42" y="200" width="52" height="28" rx="3"/><text class="vt" x="68" y="219" text-anchor="middle">CE</text>
+              <rect class="vp tle" x="100" y="200" width="52" height="28" rx="3"/><text class="vt" x="126" y="219" text-anchor="middle">TLE</text>
+              <rect class="vp tle" x="158" y="200" width="52" height="28" rx="3"/><text class="vt" x="184" y="219" text-anchor="middle">RE</text>
+              <rect class="vp ce" x="216" y="200" width="52" height="28" rx="3"/><text class="vt" x="242" y="219" text-anchor="middle">MLE</text>
+              <!-- right: derive -->
+              <polyline class="edge" points="460,60 460,86 580,86 580,110" marker-end="url(#a7)"/>
+              <text class="sm" x="520" y="80" text-anchor="middle">OK — exited 0</text>
+              <rect class="box" x="460" y="110" width="240" height="44" rx="3"/>
+              <text x="580" y="137" text-anchor="middle">Did the harness declare an error?</text>
+              <line class="edge" x1="700" y1="132" x2="740" y2="132" marker-end="url(#a7)"/>
+              <text class="sm" x="720" y="125" text-anchor="middle">yes</text>
+              <rect class="vp xx" x="742" y="118" width="90" height="28" rx="3"/><text class="vt" x="787" y="137" text-anchor="middle">XX</text>
+              <text class="sm" x="787" y="164" text-anchor="middle">platform fault, not the user's</text>
+              <line class="edge" x1="580" y1="154" x2="580" y2="200" marker-end="url(#a7)"/>
+              <text class="sm" x="588" y="182">no</text>
+              <rect class="box" x="460" y="200" width="240" height="44" rx="3"/>
+              <text x="580" y="227" text-anchor="middle">Did every test pass?</text>
+              <line class="edge" x1="700" y1="222" x2="740" y2="222" marker-end="url(#a7)"/>
+              <text class="sm" x="720" y="215" text-anchor="middle">yes</text>
+              <rect class="vp ok" x="742" y="208" width="90" height="28" rx="3"/><text class="vt" x="787" y="227" text-anchor="middle">OK</text>
+              <line class="edge" x1="580" y1="244" x2="580" y2="290" marker-end="url(#a7)"/>
+              <text class="sm" x="588" y="272">no</text>
+              <rect class="vp wa" x="535" y="292" width="90" height="28" rx="3"/><text class="vt" x="580" y="311" text-anchor="middle">WA</text>
+              <text class="sm" x="640" y="311">includes a per-test exception caught by the harness</text>
+            </svg>
+            </div>
+            <figcaption>Only the judge can turn "exited cleanly" into a verdict. A per-test exception (<code>ZeroDivisionError</code>, <code>out_of_range: vector</code>, <code>ArrayIndexOutOfBounds</code>) is caught by the harness and yields WA with the message on that test — consistently in all four languages.</figcaption>
+          </figure>
+        </article>
+
+        <article class="dr" id="d13">
+          <div class="eyebrow">Decision 13</div>
+          <h3>Order-insensitive judging via <code>compareMode</code></h3>
+          <dl class="drg">
+            <dt>Situation</dt><dd><p>Two Sum says "return in any order", but the judge compared <code>[0,1]</code> to <code>[1,0]</code> and failed correct solutions.</p></dd>
+            <dt>Choice</dt><dd><p>An optional per-problem <code>"compareMode": "unordered"</code>: arrays are compared as multisets by sorting both sides on a canonical JSON key, recursively, in the validator <em>and</em> in every language's harness. The default stays ordered. Set it only when the statement promises any order.</p></dd>
+          </dl>
+        </article>
+
+        <article class="dr" id="d14">
+          <div class="eyebrow">Decision 14</div>
+          <h3>Process: dev → QA → manager agents, then CI on Linux</h3>
+          <dl class="drg">
+            <dt>Situation</dt><dd><p>With one human, self-review misses what an adversarial second reader catches.</p></dd>
+            <dt>Choice</dt><dd><p>Work is split across agents with separate contexts: a <em>dev</em> agent implements and self-verifies; an independent <em>QA</em> agent tries to break it against a written test plan and files P0–P2 defects; a <em>manager</em> triages, routes fixes, and commits only after a re-verification pass. Then GitHub Actions runs on every push.</p></dd>
+          </dl>
+          <figure class="fig">
+            <div class="scroll">
+            <svg viewBox="0 0 860 150" role="img" aria-label="Every push or pull request fans out to three CI jobs: backend build and unit tests, a Linux end-to-end judge smoke in four languages, and the web typecheck, lint and build">
+              <defs><marker id="a8" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+              <rect class="box" x="20" y="53" width="120" height="44" rx="3"/>
+              <text x="80" y="80" text-anchor="middle">push / PR</text>
+              <polyline class="edge" points="140,75 170,75 170,28 200,28" marker-end="url(#a8)"/>
+              <line class="edge" x1="140" y1="75" x2="200" y2="75" marker-end="url(#a8)"/>
+              <polyline class="edge" points="140,75 170,75 170,122 200,122" marker-end="url(#a8)"/>
+              <rect class="box" x="200" y="10" width="640" height="36" rx="3"/>
+              <text x="216" y="33">backend — build + 43 unit tests <tspan class="sm">(JDK present: the suite javac-compiles generated harnesses)</tspan></text>
+              <rect class="box hi" x="200" y="57" width="640" height="36" rx="3"/>
+              <text x="216" y="80">e2e on Linux — real submissions: py · js · cpp · java → OK, wrong answer → WA, catalog ≥ 10</text>
+              <rect class="box" x="200" y="104" width="640" height="36" rx="3"/>
+              <text x="216" y="127">web — typecheck · lint · production build against a Postgres service</text>
+            </svg>
+            </div>
+            <figcaption>The e2e job runs on the deployment OS. On its first run it caught a compile error macOS could not (section 6).</figcaption>
+          </figure>
+          <dl class="drg">
+            <dt>Why it earned its keep</dt><dd><p>QA found 13 defects the developers' own verification missed, including two P0s; the cross-product QA pass (new problems × new languages) found the JVM limit; CI on Linux found the header bug.</p></dd>
+          </dl>
+        </article>
+      </section>
+
+      <!-- ============================================================ 5 -->
+      <section id="s5">
+        <h2><span class="n">5</span>Contracts everything depends on</h2>
+
+        <h3>Problem JSON — <code>backend/src/data/problems/*.json</code></h3>
+<pre><code>id, title, difficulty, description, examples[], constraints[]
+functionName      camelCase; the harness calls this
+signature         { params:[{name,type}], returns }   required for C++/Java
+compareMode?      "unordered" for any-order answers   default: ordered
+testCases[]       { input:[...args], expectedOutput, hidden? }
+starterCode       { python, javascript, cpp, java }   must compile as-is</code></pre>
+        <p>Hidden tests are stripped (<code>input: []</code>, <code>expectedOutput: null</code>) by <code>/v1/problems/:id</code>. Every test must have exactly one correct answer under the statement — the "two valid pairs" bug in section 6 is why this is underlined.</p>
+
+        <h3>Verdict semantics</h3>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Status</th><th>Meaning</th><th>Who decides</th></tr></thead>
+          <tbody>
+            <tr><td><span class="pill ok">OK</span></td><td>Clean exit <em>and</em> every test passed</td><td>judge (derived)</td></tr>
+            <tr><td><span class="pill wa">WA</span></td><td>Clean exit; at least one test failed or threw inside the harness</td><td>judge (derived)</td></tr>
+            <tr><td><span class="pill tle">TLE</span></td><td>CPU or wall limit hit; error reads "Time limit exceeded (N ms)"</td><td>sandbox</td></tr>
+            <tr><td><span class="pill ce">CE</span></td><td>Compiler exited non-zero; the message is the compiler's</td><td>sandbox</td></tr>
+            <tr><td><span class="pill re">RE</span></td><td>Process died (signal / non-zero) <em>outside</em> the harness's catch</td><td>sandbox</td></tr>
+            <tr><td><span class="pill mle">MLE</span></td><td>Memory cap hit (isolate only)</td><td>sandbox</td></tr>
+            <tr><td><span class="pill xx">XX</span></td><td>Platform-side failure, e.g. a problem with no signature submitted in C++ — not the user's fault</td><td>judge</td></tr>
+          </tbody>
+        </table></div>
+
+        <h3>Compile-service API</h3>
+<pre><code>GET  /health                    open
+GET  /v1/problems               { problems: [...] }     ← an object, not an array
+GET  /v1/problems/:id           sanitized problem
+POST /v1/execute                ExecutionResponse, or 202 {token} when queued
+POST /v1/execute?wait=true      force synchronous
+GET  /v1/execute/:token         poll
+POST /v1/ide/execute            free-form program + stdin cases
+GET  /v1/queue/stats            { enabled, counts }   enabled:false without Redis</code></pre>
+        <p>All <code>/v1/*</code> routes require <code>X-Codemare-Token</code> in production. Errors are always JSON: <code>400</code> bad JSON, <code>413</code> body over 1 MB, <code>429</code> rate limit (10 execute-family requests per minute per IP), <code>500</code> opaque.</p>
+
+        <h3>Environment variables</h3>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Variable</th><th>Where</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td><code>INTERNAL_TOKEN</code></td><td>both</td><td>64-hex; must match; production refuses missing or placeholder values</td></tr>
+            <tr><td><code>COMPILE_SERVICE_URL</code></td><td>web</td><td>e.g. <code>http://localhost:4000</code></td></tr>
+            <tr><td><code>DATABASE_URL</code></td><td>web</td><td>Postgres</td></tr>
+            <tr><td><code>AUTH_SECRET</code></td><td>web</td><td>JWT signing</td></tr>
+            <tr><td><code>SANDBOX_MODE</code></td><td>backend</td><td><code>isolate</code> / <code>local</code>; local is refused in production</td></tr>
+            <tr><td><code>REDIS_URL</code></td><td>backend</td><td>enables the queue; <code>WORKER_INLINE=true</code> runs a worker in-process</td></tr>
+            <tr><td><code>NODE_ENV=production</code></td><td>both</td><td>turns soft warnings into hard failures</td></tr>
+          </tbody>
+        </table></div>
+      </section>
+
+      <!-- ============================================================ 6 -->
+      <section id="s6">
+        <h2><span class="n">6</span>Bugs that taught us something</h2>
+        <p class="lede">The ones worth remembering, because each encodes a rule.</p>
+
+        <div class="lesson">
+          <h3>Dev mode hides production bugs — twice</h3>
+          <p><code>npm run dev</code> (tsx) reads problem JSON from <code>src/</code>; <code>tsc</code> never copied it to <code>dist/</code>, so every production deploy had a dead Problems API. Same shape in the web app: Auth.js trusts any host in development, but in production it threw <code>UntrustedHost</code> and the middleware <strong>failed open</strong> — the whole app was served to anonymous visitors while login returned 500.</p>
+          <p class="rule"><span class="tag">Rule</span>QA the production build (<code>npm run build &amp;&amp; npm start</code>), not the dev server. Write security middleware to fail closed.</p>
+        </div>
+
+        <div class="lesson">
+          <h3>Never echo a lower layer's status as your verdict</h3>
+          <p>Sandbox <span class="pill ok">OK</span> means "exited 0". The judge shipped it as "Accepted" for wrong answers.</p>
+          <p class="rule"><span class="tag">Rule</span>Every layer derives its own status from its own evidence.</p>
+        </div>
+
+        <div class="lesson">
+          <h3>Test data must be unambiguous</h3>
+          <p>Two Sum's hidden test 4 (<code>[1,5,3,7,9], 10</code>) had two valid pairs; a correct brute-force solution was rejected on a test the user couldn't even see.</p>
+          <p class="rule"><span class="tag">Rule</span>Hand-check every test against the statement's promises. When a statement says "any order", the judge must honor it.</p>
+        </div>
+
+        <div class="lesson">
+          <h3>The cross product is where the bugs are</h3>
+          <p>The Java harness passed on Two Sum; the new problems passed in Python. Only Java × the new problems' 10 000-element tests hit the JVM's 64 KB method limit.</p>
+          <p class="rule"><span class="tag">Rule</span>When two features land together, QA their combination, not each in isolation.</p>
+        </div>
+
+        <div class="lesson">
+          <h3>macOS is not Linux</h3>
+          <p>libc++ transitively includes <code>&lt;unordered_map&gt;</code>; libstdc++ doesn't. Correct C++ solutions compiled locally and got <span class="pill ce">CE</span> on the Linux CI runner.</p>
+          <p class="rule"><span class="tag">Rule</span>CI must run on the deployment OS, and the harness — not the user — owns the includes.</p>
+        </div>
+
+        <div class="lesson">
+          <h3>An open redirect hides in the friendliest feature</h3>
+          <p><code>/auth?next=&lt;url&gt;</code> sent users wherever <code>next</code> said, including off-site, right after they typed a real password.</p>
+          <p class="rule"><span class="tag">Rule</span>Sanitize redirect targets to same-origin paths at the single point they're read.</p>
+        </div>
+
+        <div class="lesson">
+          <h3>Stubs must compile</h3>
+          <p>Java starter code with an empty body and a non-void return is a compile error — a user pressing Run on an untouched template saw <span class="pill ce">CE</span> pointing at harness line numbers.</p>
+          <p class="rule"><span class="tag">Rule</span>Submit every starter verbatim in QA; it should produce WA, never CE.</p>
+        </div>
+      </section>
+
+      <!-- ============================================================ 7 -->
+      <section id="s7">
+        <h2><span class="n">7</span>What's deliberately not done yet</h2>
+        <ul>
+          <li><strong>Isolate smoke test on Linux</strong> — the only untested code path; blocks a real production launch (release plan, stage 1).</li>
+          <li><strong>Auth rate limiting</strong> — sign-up and login accept unlimited attempts.</li>
+          <li><strong>Catalog into Postgres + pure-executor contract</strong> — Phase A of <code>authoring-v1.md</code>; the prerequisite for user-authored content.</li>
+          <li><strong>Learn section</strong>, <strong>books / marketplace</strong>, <strong>monetization</strong> — in that order.</li>
+          <li>Double-returning problems: the harness tolerates 1e-6 but the server-side re-check is exact; no current problem returns doubles.</li>
+          <li>Local-adapter <code>memoryKb</code> units look off (dev only; isolate meters properly).</li>
+        </ul>
+      </section>
+
+      <!-- ============================================================ 8 -->
+      <section id="s8">
+        <h2><span class="n">8</span>Glossary</h2>
+        <dl class="kv">
+          <dt>Harness / wrapper</dt><dd>The generated program around the user's function that runs the tests, times them, and prints JSON.</dd>
+          <dt>Adapter</dt><dd>The sandbox driver — <code>isolate</code> in production, <code>local</code> in development.</dd>
+          <dt>Box</dt><dd>One isolate sandbox instance; C++/Java use two (compile, run).</dd>
+          <dt>Meta file</dt><dd>isolate's machine-readable record of time, memory and exit status.</dd>
+          <dt>Problems vs IDE mode</dt><dd>Function-against-tests versus a free program with stdin.</dd>
+          <dt>Signature</dt><dd>A problem's typed parameter/return declaration; what lets C++/Java harnesses be generated.</dd>
+          <dt>compareMode</dt><dd>Ordered (default) or unordered array comparison.</dd>
+          <dt>Internal token</dt><dd>The shared secret between <code>web/</code> and <code>backend/</code>.</dd>
+        </dl>
+      </section>
+    </main>
+  </div>
+</div>
