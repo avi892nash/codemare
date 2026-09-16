@@ -51,9 +51,13 @@ Python · JavaScript · C++ · Java. Adding a language is ~10 lines in
 [`backend/src/services/sandbox/languageSpec.ts`](backend/src/services/sandbox/languageSpec.ts)
 plus an `apt-get install` in `deploy/install.sh`.
 
-C++ and Java Problems mode currently emits a "not yet implemented" verdict —
-per-problem harness templates land alongside the catalog migration into
-Postgres. IDE mode works fully for all four languages.
+All four languages work in both Problems mode and IDE mode. C++/Java
+Problems-mode harnesses are *generated* from each problem's typed
+`signature` (see [docs/DECISIONS.md](docs/DECISIONS.md) §4.11).
+
+**Why things are the way they are:** [docs/DECISIONS.md](docs/DECISIONS.md)
+— decision records, the life of a submission, verdict semantics, and the
+bugs that shaped the rules.
 
 ## Layout
 
@@ -65,17 +69,20 @@ backend/        Compile service (Express + isolate)
     middleware/         internalAuth, errorHandler, rateLimit
     routes/             problemRoutes, executionRoutes, ideRoutes
     config/sandbox.ts   limits, isolate config
-  tests/sandbox/        metaParser + boxPool unit tests
+  tests/                sandbox, queue, validation, wrapper (javac-compiles generated harnesses)
   DEPLOYMENT.md         systemd + install.sh guide
 
 web/            Next.js app — user-facing
-  app/(workspace)/      catalog · problem detail · ide · design-system · auth · submissions · profile
-  components/           ui · Catalog · Problem · Editor · Results · IDE · DesignSystem · Auth · Layout
+  app/(workspace)/      catalog · problem detail · ide · auth · submissions · profile
+  components/           ui · Catalog · Problem · Editor · Results · IDE · Auth · Layout
   lib/                  compile.ts (server-only HTTP client), prisma.ts, types.ts
   prisma/schema.prisma  User, Account, Session, Problem, Submission
-  auth.ts               NextAuth (GitHub + Google + PrismaAdapter)
-  middleware.ts         Gates /submissions and /profile
+  auth.ts               Auth.js: email/password (bcrypt) + optional GitHub/Google
+  middleware.ts         Login wall — everything except /auth requires a session
   README.md             Detailed dev guide
+
+docs/           DECISIONS.md (architecture + decision log) · authoring-v1.md (content platform plan)
+.github/        CI: unit tests · Linux e2e judge smoke in 4 languages · web build
 
 deploy/         Linux VM provisioning for the compile service
   install.sh            apt-get isolate + node + python3 + jdk + g++; generates INTERNAL_TOKEN
@@ -101,7 +108,7 @@ with a fresh `AUTH_SECRET`, generates the Prisma client, and (if
 **Two Sum** + **Reverse String** so the catalog has rows on first load.
 Without a DB the app still works; submissions just don't persist.
 
-Open `http://localhost:3001` for the web app. The backend boots on `:3000`.
+Open `http://localhost:4001` for the web app. The backend boots on `:4000`.
 
 On a host **without** `isolate` (typical dev: macOS, Windows, a Linux box
 without isolate installed), the compile service starts in **`local`** mode:
@@ -159,17 +166,21 @@ retired.
   pinning; algorithm-only timing for Python and JS; content-addressed compile
   cache (C++/Java re-runs skip compilation); parallel IDE test cases;
   internal-auth lockdown; optional Redis queue + worker pool for horizontal
-  scale; systemd + install.sh deploy story; 21/21 unit tests.
+  scale; systemd + install.sh deploy story; generated C++/Java Problems-mode
+  harnesses; derived verdicts (WA/XX) and unordered compare; 43/43 unit tests.
 - Web: full design-language port; catalog + problem detail + Monaco editor
   + Results panel; IDE mode + stdin/stdout test cases;
-  email/password auth (bcrypt + sign-up) plus OAuth, login wall via
-  middleware; Prisma schema + submission persistence; submissions history +
-  profile page; transparent sync/async submission client.
+  email/password auth (bcrypt + sign-up) plus OAuth, fail-closed login wall
+  via middleware; Prisma schema + submission persistence; submissions
+  history + profile page; transparent sync/async submission client.
+- Content: 10 problems (Two Sum, Reverse String + 8 interview classics),
+  each verified on the judge in all four languages.
+- Process: QA-gated releases; GitHub Actions CI on every push.
 
 ## What's parked
 
-- Per-problem C++/Java harness templates (the `Problem.harnessTemplate`
-  field exists in Prisma; logic lands when the catalog migrates into the DB).
+- Isolate smoke test on a Linux host (the one untested path; see release plan).
+- Rate limiting on sign-up / login.
 - Password reset / email verification (needs an email provider).
 - Learn section (tracks / modules / lessons / quizzes / runnable code blocks).
 - Migrating the problem catalog from compile-service JSON into Postgres.
