@@ -78,7 +78,8 @@ web/            Next.js app — user-facing
   middleware.ts         Login wall — everything except /auth requires a session
   README.md             Detailed dev guide
 
-docs/           DECISIONS.html (architecture + decision log, with diagrams) · authoring-v1.md (content platform plan)
+docs/           REPO-GUIDE.html (what is where: interactive map, reading paths, status board)
+                DECISIONS.html (why: decision records with diagrams) · authoring-v1.md (content platform plan)
 .github/        CI: unit tests · Linux e2e judge smoke in 4 languages · web build
 
 deploy/         Linux VM provisioning for the compile service

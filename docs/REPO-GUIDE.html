@@ -1,0 +1,689 @@
+<title>Codemare Repo Guide</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:wght@500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --paper: #F4F6F8; --paper-2: #FFFFFF; --lane: #EEF2F5;
+    --ink: #16202A; --ink-2: #55636F; --rule: #D3DAE0;
+    --accent: #0E6F6C; --accent-soft: #DCEFEE; --accent-ink: #FFFFFF;
+    --code-bg: #ECF0F2;
+    --ok: #2E7D4F; --wa: #B3392B; --tle: #B7791F; --ce: #6B4FA3; --xx: #5A6470;
+    --serif: "IBM Plex Serif", Georgia, "Times New Roman", serif;
+    --sans: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+    --mono: "IBM Plex Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #10161C; --paper-2: #182029; --lane: #141B22;
+      --ink: #E4E9ED; --ink-2: #9AA6B1; --rule: #2C3742;
+      --accent: #4CC3BD; --accent-soft: #163C3B; --accent-ink: #0B1513;
+      --code-bg: #0C1116;
+      --ok: #4CAF7A; --wa: #E0654F; --tle: #D9A441; --ce: #9B82D1; --xx: #8E9AA6;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #10161C; --paper-2: #182029; --lane: #141B22;
+    --ink: #E4E9ED; --ink-2: #9AA6B1; --rule: #2C3742;
+    --accent: #4CC3BD; --accent-soft: #163C3B; --accent-ink: #0B1513;
+    --code-bg: #0C1116;
+    --ok: #4CAF7A; --wa: #E0654F; --tle: #D9A441; --ce: #9B82D1; --xx: #8E9AA6;
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--sans); font-size: 16px; line-height: 1.6; padding-inline: 20px; padding-block: 0 80px; }
+  a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  a:focus-visible, button:focus-visible, summary:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+  .wrap { max-width: 1100px; margin: 0 auto; }
+
+  header.masthead { padding-block: 40px 28px; border-bottom: 1px solid var(--rule); margin-bottom: 36px; }
+  .eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-2); }
+  h1 { font-family: var(--serif); font-weight: 600; font-size: clamp(30px, 4vw, 42px); line-height: 1.15; margin: 6px 0 12px; text-wrap: balance; }
+  .dek { max-width: 68ch; margin: 0 0 18px; font-size: 18px; color: var(--ink-2); }
+  .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-top: 8px; }
+  .fact { border-top: 2px solid var(--accent); padding-top: 8px; }
+  .fact b { display: block; font-family: var(--mono); font-size: 24px; font-weight: 500; line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .fact span { font-size: 13px; color: var(--ink-2); }
+
+  .layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 48px; }
+  nav.toc { position: sticky; top: 24px; align-self: start; font-size: 13.5px; }
+  nav.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+  nav.toc a { color: var(--ink); text-decoration: none; display: block; padding: 5px 10px; border-left: 2px solid var(--rule); }
+  nav.toc a:hover { border-left-color: var(--accent); color: var(--accent); }
+  nav.toc .toc-n { font-family: var(--mono); color: var(--ink-2); margin-right: 8px; font-size: 12px; }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; gap: 24px; } nav.toc { position: static; } nav.toc ol { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); } }
+
+  main { min-width: 0; }
+  main > section { margin-bottom: 56px; }
+  h2 { font-family: var(--serif); font-weight: 600; font-size: 28px; line-height: 1.2; margin: 0 0 6px; text-wrap: balance; }
+  h2 .n { font-family: var(--mono); font-weight: 400; font-size: 15px; color: var(--ink-2); margin-right: 10px; vertical-align: 0.15em; }
+  h3 { font-family: var(--serif); font-weight: 600; font-size: 20px; margin: 28px 0 6px; text-wrap: balance; }
+  p, li { max-width: 68ch; }
+  p { margin: 0 0 14px; }
+  ul, ol { padding-left: 22px; margin: 0 0 14px; }
+  li { margin-bottom: 4px; }
+  .lede { font-size: 17px; color: var(--ink-2); }
+  code, .mono { font-family: var(--mono); font-size: 0.92em; }
+  :not(pre) > code { background: var(--code-bg); padding: 1px 5px; border-radius: 3px; }
+  pre { background: var(--code-bg); padding: 12px 14px; overflow-x: auto; margin: 0 0 16px; font-size: 13px; line-height: 1.5; }
+  pre code { background: none; padding: 0; }
+  strong { font-weight: 600; }
+
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; margin: 8px 0 20px; font-variant-numeric: tabular-nums; }
+  .table-wrap { overflow-x: auto; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  th { font-family: var(--mono); font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-2); font-weight: 500; }
+  td:first-child { white-space: nowrap; }
+
+  .pill { display: inline-block; font-family: var(--mono); font-size: 12px; font-weight: 500; padding: 1px 8px; border-radius: 3px; color: #fff; letter-spacing: 0.04em; }
+  .pill.ok { background: var(--ok); } .pill.wa { background: var(--wa); } .pill.tle { background: var(--tle); } .pill.ce { background: var(--ce); } .pill.xx { background: var(--xx); }
+
+  /* figures (same conventions as DECISIONS.html) */
+  figure.fig { margin: 22px 0 28px; }
+  figure.fig .scroll { overflow-x: auto; }
+  figure.fig svg { display: block; max-width: 100%; height: auto; color: var(--ink); font-family: var(--sans); }
+  figure.fig .scroll svg { min-width: 640px; }
+  figure.fig text { font-size: 12.5px; fill: currentColor; }
+  figure.fig text.sm { font-size: 11px; fill: var(--ink-2); }
+  figure.fig text.mono { font-family: var(--mono); font-size: 11.5px; }
+  figure.fig text.title { font-weight: 600; }
+  figure.fig .box { fill: var(--paper-2); stroke: currentColor; stroke-width: 1.2; }
+  figure.fig .box.hi { stroke: var(--accent); stroke-width: 1.8; }
+  figure.fig .box.dashed { stroke-dasharray: 5 4; }
+  figure.fig .panel { fill: var(--lane); stroke: var(--rule); stroke-width: 1; }
+  figure.fig .edge { stroke: currentColor; fill: none; stroke-width: 1.3; }
+  figure.fig .edge.dashed { stroke-dasharray: 5 4; }
+  figure.fig .edge.accent { stroke: var(--accent); }
+  figcaption { font-size: 13.5px; color: var(--ink-2); margin-top: 8px; max-width: 68ch; }
+
+  /* repo map */
+  .map { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; border: 1px solid var(--rule); background: var(--paper-2); }
+  @media (max-width: 720px) { .map { grid-template-columns: 1fr; } }
+  .tree { padding: 12px 8px; font-family: var(--mono); font-size: 13px; line-height: 1.5; max-height: 560px; overflow: auto; border-right: 1px solid var(--rule); }
+  @media (max-width: 720px) { .tree { border-right: 0; border-bottom: 1px solid var(--rule); max-height: 320px; } }
+  .tree ul { list-style: none; margin: 0; padding-left: 16px; }
+  .tree > ul { padding-left: 4px; }
+  .tree li { margin: 0; max-width: none; }
+  .tree button { all: unset; cursor: pointer; display: block; width: 100%; padding: 1px 6px; border-radius: 3px; color: var(--ink); }
+  .tree button:hover { background: var(--lane); }
+  .tree button[aria-current="true"] { background: var(--accent-soft); color: var(--accent); }
+  .tree button:focus-visible { outline: 2px solid var(--accent); }
+  .tree .dir > button::before { content: "▸ "; color: var(--ink-2); }
+  .tree .dir.open > button::before { content: "▾ "; }
+  .tree .dir > ul { display: none; }
+  .tree .dir.open > ul { display: block; }
+  .tree .file > button::before { content: "  "; }
+  .explain { padding: 16px 18px; font-size: 14.5px; }
+  .explain .path { font-family: var(--mono); font-size: 12.5px; color: var(--accent); word-break: break-all; }
+  .explain h4 { font-family: var(--serif); font-size: 18px; margin: 4px 0 8px; }
+  .explain p { margin: 0 0 10px; max-width: none; }
+  .explain .role { font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-2); }
+
+  /* tabs */
+  .tabs { display: flex; gap: 0; border-bottom: 1px solid var(--rule); margin-bottom: 16px; flex-wrap: wrap; }
+  .tabs button { all: unset; cursor: pointer; padding: 8px 14px; font-size: 14px; font-weight: 500; color: var(--ink-2); border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .tabs button[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); }
+  .tabs button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .path-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+  .path-list li { display: grid; grid-template-columns: 22px 1fr; gap: 10px; align-items: start; max-width: none; padding: 8px 10px; border: 1px solid var(--rule); background: var(--paper-2); }
+  .path-list input { margin: 5px 0 0; accent-color: var(--accent); }
+  .path-list label { cursor: pointer; }
+  .path-list .step { font-family: var(--mono); font-size: 12px; color: var(--ink-2); }
+  .path-list .why { display: block; font-size: 13.5px; color: var(--ink-2); }
+  .path-list li.done label { color: var(--ink-2); text-decoration: line-through; }
+  .progress { font-family: var(--mono); font-size: 12.5px; color: var(--ink-2); margin: 10px 0 0; }
+
+  /* status board */
+  .board { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+  .col { border: 1px solid var(--rule); background: var(--paper-2); padding: 12px 14px; }
+  .col h4 { margin: 0 0 8px; font-family: var(--mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 500; display: flex; align-items: center; gap: 8px; }
+  .col h4 i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  .col.good h4 i { background: var(--ok); } .col.mid h4 i { background: var(--tle); } .col.todo h4 i { background: var(--xx); }
+  .col ul { padding-left: 18px; margin: 0; font-size: 14px; }
+
+  .rails { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+  .rail { border-left: 3px solid var(--accent); padding: 4px 12px; background: var(--paper-2); font-size: 14px; }
+  .rail b { display: block; font-weight: 600; }
+  .rail code { font-size: 12.5px; }
+
+  .kv { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; font-size: 14.5px; margin: 0 0 16px; }
+  .kv dt { font-family: var(--mono); font-size: 13px; }
+  .kv dd { margin: 0; }
+</style>
+
+<div class="wrap">
+  <header class="masthead">
+    <div class="eyebrow">Onboarding · codemare · as of Sep 2026</div>
+    <h1>Codemare Repo Guide</h1>
+    <p class="dek">What is where, right now, and how it fits together. Click through the repo map, follow a reading path, and check the status board before you touch anything. For <em>why</em> things are shaped this way, the companion page is <a href="DECISIONS.html">Codemare Decisions</a>.</p>
+    <div class="facts">
+      <div class="fact"><b>2</b><span>services (web, compile)</span></div>
+      <div class="fact"><b>4</b><span>languages judged</span></div>
+      <div class="fact"><b>10</b><span>problems in the catalog</span></div>
+      <div class="fact"><b>43</b><span>backend unit tests</span></div>
+      <div class="fact"><b>3</b><span>CI jobs per push</span></div>
+      <div class="fact"><b>65</b><span>commits, Nov 2025 →</span></div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav class="toc" aria-label="Sections">
+      <ol>
+        <li><a href="#s1"><span class="toc-n">1</span>Orientation</a></li>
+        <li><a href="#s2"><span class="toc-n">2</span>Repo map</a></li>
+        <li><a href="#s3"><span class="toc-n">3</span>Running it</a></li>
+        <li><a href="#s4"><span class="toc-n">4</span>The stack</a></li>
+        <li><a href="#s5"><span class="toc-n">5</span>Data model</a></li>
+        <li><a href="#s6"><span class="toc-n">6</span>Routes &amp; actions</a></li>
+        <li><a href="#s7"><span class="toc-n">7</span>Safety rails</a></li>
+        <li><a href="#s8"><span class="toc-n">8</span>Tests &amp; CI</a></li>
+        <li><a href="#s9"><span class="toc-n">9</span>Status board</a></li>
+        <li><a href="#s10"><span class="toc-n">10</span>Reading paths</a></li>
+        <li><a href="#s11"><span class="toc-n">11</span>Commands</a></li>
+      </ol>
+    </nav>
+
+    <main>
+      <section id="s1">
+        <h2><span class="n">1</span>Orientation</h2>
+        <p class="lede">Codemare is an online judge for DSA practice. A signed-in user picks a problem, writes a function in Python, JavaScript, C++ or Java, and gets a verdict with microsecond timing of the algorithm itself. There is also an IDE mode: a whole program run against stdin cases.</p>
+        <p>The repository is an <strong>npm workspaces monorepo</strong> with two deployable packages and one root lockfile:</p>
+        <ul>
+          <li><code>web/</code> — the Next.js app the browser talks to. Owns users, sessions, submissions, the UI.</li>
+          <li><code>backend/</code> — the compile service. Owns running untrusted code. No database, no users.</li>
+        </ul>
+        <p>Everything else is support: <code>deploy/</code> provisions a Linux VM for the compile service, <code>.github/</code> is CI, <code>docs/</code> is this page and its siblings.</p>
+      </section>
+
+      <section id="s2">
+        <h2><span class="n">2</span>Repo map</h2>
+        <p>Click any folder to open it and any file to read what it does. Generated files (<code>node_modules</code>, <code>dist</code>, <code>.next</code>) are omitted.</p>
+        <div class="map">
+          <div class="tree" id="tree" role="tree" aria-label="Repository files"></div>
+          <div class="explain" id="explain" aria-live="polite">
+            <div class="role">Start here</div>
+            <h4>Pick a file on the left</h4>
+            <p>Suggested first clicks: <code>backend/src/services/executionService.ts</code> (the judge's spine), <code>web/middleware.ts</code> (the login wall), <code>web/lib/compile.ts</code> (how the two services talk).</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="s3">
+        <h2><span class="n">3</span>Running it</h2>
+        <p>Three commands from the repo root get a full local stack; the compile service falls back to an unsandboxed <em>local</em> adapter on any machine without <code>isolate</code> (all of macOS), printing a loud warning so you can't mistake it for production.</p>
+<pre><code>npm install       # both workspaces via the root lockfile
+npm run setup     # writes web/.env.local, generates the Prisma client, pushes schema + seeds if Postgres is reachable
+npm run dev       # backend :4000 (tsx watch) + web :4001 (next dev), side by side</code></pre>
+        <figure class="fig">
+          <div class="scroll">
+          <svg viewBox="0 0 860 260" role="img" aria-label="Local development processes: npm run dev starts the backend on port 4000 and the web app on port 4001; the web app uses Postgres on 5432; the backend optionally uses Redis on 6379; production instead runs systemd units with isolate">
+            <defs><marker id="g1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+            <rect class="panel" x="10" y="10" width="520" height="240" rx="3"/>
+            <text class="title" x="26" y="32">local dev — npm run dev</text>
+            <rect class="box" x="30" y="60" width="200" height="56" rx="3"/>
+            <text x="130" y="82" text-anchor="middle">web/ — next dev</text>
+            <text class="mono sm" x="130" y="100" text-anchor="middle">:4001</text>
+            <rect class="box" x="300" y="60" width="200" height="56" rx="3"/>
+            <text x="400" y="82" text-anchor="middle">backend/ — tsx watch</text>
+            <text class="mono sm" x="400" y="100" text-anchor="middle">:4000 · SANDBOX_MODE=local</text>
+            <line class="edge accent" x1="230" y1="88" x2="300" y2="88" marker-end="url(#g1)"/>
+            <rect class="box" x="30" y="160" width="200" height="56" rx="3"/>
+            <text x="130" y="182" text-anchor="middle">Postgres</text>
+            <text class="mono sm" x="130" y="200" text-anchor="middle">:5432 · DATABASE_URL</text>
+            <line class="edge" x1="130" y1="116" x2="130" y2="160" marker-end="url(#g1)"/>
+            <rect class="box dashed" x="300" y="160" width="200" height="56" rx="3"/>
+            <text x="400" y="182" text-anchor="middle">Redis (optional)</text>
+            <text class="mono sm" x="400" y="200" text-anchor="middle">:6379 · REDIS_URL</text>
+            <line class="edge dashed" x1="400" y1="116" x2="400" y2="160" marker-end="url(#g1)"/>
+            <rect class="panel" x="560" y="10" width="290" height="240" rx="3"/>
+            <text class="title" x="576" y="32">production — Linux VM</text>
+            <rect class="box" x="580" y="60" width="250" height="44" rx="3"/>
+            <text x="705" y="87" text-anchor="middle">codemare-backend.service</text>
+            <rect class="box dashed" x="580" y="118" width="250" height="44" rx="3"/>
+            <text x="705" y="145" text-anchor="middle">codemare-worker.service</text>
+            <rect class="box hi" x="580" y="176" width="250" height="44" rx="3"/>
+            <text x="705" y="203" text-anchor="middle">isolate · cgroups v2 · /etc/codemare/env</text>
+            <text class="sm" x="705" y="238" text-anchor="middle">deploy/install.sh then deploy/release.sh</text>
+          </svg>
+          </div>
+          <figcaption>Left: what <code>npm run dev</code> starts. Right: the compile service in production — provisioned by <code>deploy/install.sh</code>, shipped by <code>deploy/release.sh</code>. The web app can run anywhere Node runs (a VM or Vercel) with the four env vars in section 7.</figcaption>
+        </figure>
+      </section>
+
+      <section id="s4">
+        <h2><span class="n">4</span>The stack</h2>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Layer</th><th>Choice</th><th>Where</th></tr></thead>
+          <tbody>
+            <tr><td>UI</td><td>React 18 · Next.js 15 App Router · Monaco editor · inline-style components on CSS-variable design tokens</td><td><code>web/app</code>, <code>web/components</code></td></tr>
+            <tr><td>Auth</td><td>Auth.js v5 (beta.31) · Credentials (bcryptjs, cost 12) + optional GitHub/Google · JWT sessions</td><td><code>web/auth.ts</code></td></tr>
+            <tr><td>Data</td><td>Postgres via Prisma 5 · seeded from the backend's problem JSON</td><td><code>web/prisma</code></td></tr>
+            <tr><td>Service link</td><td>Server-only HTTP client with <code>X-Codemare-Token</code>; handles sync and queued responses</td><td><code>web/lib/compile.ts</code></td></tr>
+            <tr><td>API</td><td>Express 4 · zod validation · express-rate-limit · timing-safe internal token</td><td><code>backend/src/app.ts</code>, <code>routes/</code>, <code>middleware/</code></td></tr>
+            <tr><td>Judge</td><td>Harness generation per language · server-side re-validation · derived verdicts</td><td><code>backend/src/services/</code></td></tr>
+            <tr><td>Sandbox</td><td><code>isolate</code> (prod) / <code>child_process</code> (dev) behind one adapter interface · compile cache · box pool</td><td><code>backend/src/services/sandbox/</code></td></tr>
+            <tr><td>Queue</td><td>BullMQ on Redis, optional; separate or inline worker</td><td><code>backend/src/queue/queue.ts</code>, <code>worker.ts</code></td></tr>
+            <tr><td>Ops</td><td>systemd units · idempotent install script · rsync release · GitHub Actions</td><td><code>deploy/</code>, <code>.github/workflows/ci.yml</code></td></tr>
+          </tbody>
+        </table></div>
+      </section>
+
+      <section id="s5">
+        <h2><span class="n">5</span>Data model</h2>
+        <p>One Prisma schema, three concerns: Auth.js identity tables (kept verbatim to the adapter contract), the problem catalog, and submission history. Today the compile service still reads problems from JSON files; the <code>Problem</code> table is a seeded mirror, ready for the move described in <code>authoring-v1.md</code>.</p>
+        <figure class="fig">
+          <div class="scroll">
+          <svg viewBox="0 0 860 280" role="img" aria-label="Entity diagram: User has many Submissions and many Accounts and Sessions; Problem has many Submissions; Submission stores language, status, pass counts and timings">
+            <defs><marker id="g2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+            <rect class="box" x="20" y="40" width="220" height="130" rx="3"/>
+            <text class="title" x="130" y="62" text-anchor="middle">User</text>
+            <line class="edge" x1="20" y1="70" x2="240" y2="70"/>
+            <text class="mono" x="32" y="90">id · email (unique)</text>
+            <text class="mono" x="32" y="108">name · handle (unique)</text>
+            <text class="mono" x="32" y="126">passwordHash? (null = OAuth-only)</text>
+            <text class="mono" x="32" y="144">emailVerified? · image?</text>
+            <rect class="box" x="20" y="200" width="220" height="56" rx="3"/>
+            <text class="title" x="130" y="222" text-anchor="middle">Account · Session · VerificationToken</text>
+            <text class="sm" x="130" y="240" text-anchor="middle">Auth.js adapter tables, unchanged</text>
+            <line class="edge" x1="130" y1="170" x2="130" y2="200" marker-end="url(#g2)"/>
+            <rect class="box hi" x="320" y="40" width="220" height="200" rx="3"/>
+            <text class="title" x="430" y="62" text-anchor="middle">Submission</text>
+            <line class="edge" x1="320" y1="70" x2="540" y2="70"/>
+            <text class="mono" x="332" y="90">userId → User</text>
+            <text class="mono" x="332" y="108">problemId → Problem</text>
+            <text class="mono" x="332" y="126">language: python|javascript|cpp|java</text>
+            <text class="mono" x="332" y="144">status: OK WA TLE MLE RE CE XX</text>
+            <text class="mono" x="332" y="162">totalPassed / totalTests</text>
+            <text class="mono" x="332" y="180">runMs · wallMs · memoryKb · compileMs</text>
+            <text class="mono" x="332" y="198">code · error? · createdAt</text>
+            <text class="sm" x="332" y="226">indexes: (userId, createdAt) (problemId, status)</text>
+            <rect class="box" x="620" y="40" width="220" height="150" rx="3"/>
+            <text class="title" x="730" y="62" text-anchor="middle">Problem</text>
+            <line class="edge" x1="620" y1="70" x2="840" y2="70"/>
+            <text class="mono" x="632" y="90">slug (unique) · title</text>
+            <text class="mono" x="632" y="108">difficulty: Easy|Medium|Hard</text>
+            <text class="mono" x="632" y="126">functionName · starterCode</text>
+            <text class="mono" x="632" y="144">examples · constraints · testCases</text>
+            <text class="mono" x="632" y="162">tags[] · harnessTemplate?</text>
+            <text class="sm" x="632" y="182">seeded from backend JSON</text>
+            <line class="edge" x1="240" y1="100" x2="320" y2="100" marker-end="url(#g2)"/>
+            <text class="sm" x="280" y="92" text-anchor="middle">1 → many</text>
+            <line class="edge" x1="620" y1="100" x2="540" y2="100" marker-end="url(#g2)"/>
+            <text class="sm" x="580" y="92" text-anchor="middle">1 → many</text>
+          </svg>
+          </div>
+          <figcaption>A submission is the join between a user and a problem, with the verdict and all four timing/memory numbers stored so history pages never need to re-run anything.</figcaption>
+        </figure>
+      </section>
+
+      <section id="s6">
+        <h2><span class="n">6</span>Routes and actions</h2>
+        <h3>Web app — <code>web/app/</code></h3>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Route</th><th>What it is</th><th>Wall</th></tr></thead>
+          <tbody>
+            <tr><td><code>/auth</code></td><td>Sign in / sign up. The only public page.</td><td>open</td></tr>
+            <tr><td><code>/</code></td><td>Problem catalog, fetched live from the compile service.</td><td>login</td></tr>
+            <tr><td><code>/p/[id]</code></td><td>Problem workspace: statement, Monaco editor, results. Calls the <code>runSolution</code> server action.</td><td>login</td></tr>
+            <tr><td><code>/ide</code></td><td>Free-form program + stdin cases. Calls <code>runIdeCode</code>.</td><td>login</td></tr>
+            <tr><td><code>/submissions</code></td><td>The signed-in user's history with status pills and timings.</td><td>login</td></tr>
+            <tr><td><code>/profile</code></td><td>Account details and sign-out.</td><td>login</td></tr>
+            <tr><td><code>/api/auth/*</code></td><td>Auth.js handlers (csrf, callback, session, signout).</td><td>open</td></tr>
+            <tr><td><code>/api/*</code> (anything else)</td><td>Nothing exists yet — and the middleware walls it by default.</td><td>login</td></tr>
+          </tbody>
+        </table></div>
+        <p>Server actions are the app's real API: <code>signUp</code> (<code>app/auth/actions.ts</code>), <code>runSolution</code> (<code>app/(workspace)/p/[id]/actions.ts</code>), <code>runIdeCode</code> (<code>app/(workspace)/ide/actions.ts</code>). They run on the server, hold the internal token, and write to Postgres.</p>
+
+        <h3>Compile service — <code>backend/src/routes/</code></h3>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Endpoint</th><th>Returns</th></tr></thead>
+          <tbody>
+            <tr><td><code>GET /health</code></td><td><code>{status:"ok"}</code> — the only open route</td></tr>
+            <tr><td><code>GET /v1/problems</code></td><td><code>{ problems: [{id,title,difficulty}] }</code></td></tr>
+            <tr><td><code>GET /v1/problems/:id</code></td><td>Full problem with hidden tests blanked</td></tr>
+            <tr><td><code>POST /v1/execute</code></td><td><code>ExecutionResponse</code>, or <code>202 {token}</code> when the queue is on; <code>?wait=true</code> forces sync</td></tr>
+            <tr><td><code>GET /v1/execute/:token</code></td><td>Poll a queued submission</td></tr>
+            <tr><td><code>POST /v1/ide/execute</code></td><td>Per-case stdout comparison for IDE mode</td></tr>
+            <tr><td><code>GET /v1/queue/stats</code></td><td>Queue depth, or <code>{enabled:false}</code></td></tr>
+          </tbody>
+        </table></div>
+        <p>All <code>/v1/*</code> routes need <code>X-Codemare-Token</code> in production; <code>/api/*</code> is a legacy alias of the same router. Execute-family routes share a limiter of 10 requests per minute per IP.</p>
+      </section>
+
+      <section id="s7">
+        <h2><span class="n">7</span>Safety rails</h2>
+        <p>The guards that are in place today. Each one exists because of a specific bug or threat — the decisions page tells those stories.</p>
+        <div class="rails">
+          <div class="rail"><b>Login wall, fail-closed</b><code>web/middleware.ts</code> — everything but <code>/auth</code> and <code>/api/auth</code> requires a session; an auth error redirects instead of passing through.</div>
+          <div class="rail"><b>Internal token</b><code>web/lib/compile.ts</code> · <code>backend/src/middleware/internalAuth.ts</code> — timing-safe compare; production refuses to boot without a real value on either side.</div>
+          <div class="rail"><b>Auth rate limits</b><code>web/lib/rateLimit.ts</code> — sign-up 5/h per IP; login 10/15 min per IP and 5/15 min per email; the form says "too many attempts" rather than "wrong password".</div>
+          <div class="rail"><b>Execute rate limit</b><code>backend/src/middleware/rateLimit.ts</code> — 10 execute-family requests per minute per IP, JSON 429.</div>
+          <div class="rail"><b>Redirect sanitizer</b><code>components/Auth/AuthForm.tsx</code> — <code>?next=</code> accepts same-origin paths only.</div>
+          <div class="rail"><b>Sandbox limits</b><code>backend/src/config/sandbox.ts</code> — 10 s CPU, 256 MB, one core, per-language PID caps; compile gets 15 s / 512 MB. Code ≤ 10 KB, body ≤ 1 MB.</div>
+          <div class="rail"><b>Production guards</b>local adapter refused with <code>NODE_ENV=production</code>; placeholder tokens rejected; <code>trustHost</code> set for self-hosting.</div>
+          <div class="rail"><b>Verdict integrity</b>server-side re-validation of every test; WA derived, never echoed; hidden tests blanked in API responses.</div>
+        </div>
+      </section>
+
+      <section id="s8">
+        <h2><span class="n">8</span>Tests and CI</h2>
+        <div class="table-wrap"><table>
+          <thead><tr><th>File</th><th>Tests</th><th>Covers</th></tr></thead>
+          <tbody>
+            <tr><td><code>tests/wrapper/codeWrapper.test.ts</code></td><td>15</td><td>C++/Java literal emission for every type, escaping, unordered canon, no-signature fallback, and <code>javac</code>-compiling the generated harness for every large-literal problem</td></tr>
+            <tr><td><code>tests/sandbox/metaParser.test.ts</code></td><td>8</td><td>Parsing isolate meta files into status, time, memory</td></tr>
+            <tr><td><code>tests/validation/deepEqual.test.ts</code></td><td>7</td><td>Ordered vs unordered compare, <code>deriveVerdict</code> (WA derivation, pass-through of TLE/RE/CE/MLE)</td></tr>
+            <tr><td><code>tests/sandbox/compileCache.test.ts</code></td><td>6</td><td>Content-addressed keys, single-flight, LRU eviction</td></tr>
+            <tr><td><code>tests/sandbox/boxPool.test.ts</code></td><td>4</td><td>Box id allocation and release</td></tr>
+            <tr><td><code>tests/queue/queue.test.ts</code></td><td>3</td><td>Queue gating on <code>REDIS_URL</code>, connection option parsing</td></tr>
+            <tr><td><code>tests/deployment.test.sh</code></td><td>—</td><td>Shell smoke for the VM install (run on the host)</td></tr>
+          </tbody>
+        </table></div>
+        <p>The web app has no unit tests; it is covered by typecheck, lint, the production build, and the QA passes recorded in the decisions page. CI (<code>.github/workflows/ci.yml</code>) runs three jobs on every push: backend build + unit tests with a JDK; an end-to-end judge smoke on a Linux runner that submits real Python/JS/C++/Java solutions and expects <span class="pill ok">OK</span> and a wrong answer to get <span class="pill wa">WA</span>; and the web typecheck/lint/build against a Postgres container.</p>
+      </section>
+
+      <section id="s9">
+        <h2><span class="n">9</span>Status board</h2>
+        <div class="board">
+          <div class="col good">
+            <h4><i></i>Working and verified</h4>
+            <ul>
+              <li>Judging in all 4 languages, Problems and IDE mode</li>
+              <li>Algorithm-only timing; compile time separated</li>
+              <li>Derived verdicts, unordered compare, labeled runtime errors</li>
+              <li>Email/password auth, login wall, rate limits, open-redirect fix</li>
+              <li>Submission history and profile</li>
+              <li>Optional Redis queue + worker (verified against real Redis)</li>
+              <li>10-problem catalog, every test hand-audited</li>
+              <li>CI green on Linux</li>
+            </ul>
+          </div>
+          <div class="col mid">
+            <h4><i></i>Built, verified only locally</h4>
+            <ul>
+              <li><code>isolate</code> adapter path: memory-cap kills, cgroup metering, artifact copy between boxes — no Linux host with isolate has run it yet</li>
+              <li><code>deploy/install.sh</code> and the systemd units</li>
+              <li>OAuth providers (no client IDs configured anywhere)</li>
+            </ul>
+          </div>
+          <div class="col todo">
+            <h4><i></i>Not built</h4>
+            <ul>
+              <li>Catalog in Postgres + pure-executor compile contract (Phase A of <code>authoring-v1.md</code>)</li>
+              <li>Learn section; books / marketplace; monetization</li>
+              <li>Password reset, email verification</li>
+              <li>Web unit tests</li>
+              <li>Double-returning problems (harness tolerance vs exact re-check)</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section id="s10">
+        <h2><span class="n">10</span>Reading paths</h2>
+        <p>Three routes through the code, each ordered so every file makes sense given the ones before it. Checkboxes are remembered in this browser only.</p>
+        <div class="tabs" role="tablist" aria-label="Reading paths">
+          <button role="tab" aria-selected="true" aria-controls="path-judge" id="tab-judge">The judge</button>
+          <button role="tab" aria-selected="false" aria-controls="path-web" id="tab-web">The web app</button>
+          <button role="tab" aria-selected="false" aria-controls="path-ops" id="tab-ops">Ops and CI</button>
+        </div>
+        <div id="path-judge" role="tabpanel" aria-labelledby="tab-judge"></div>
+        <div id="path-web" role="tabpanel" aria-labelledby="tab-web" hidden></div>
+        <div id="path-ops" role="tabpanel" aria-labelledby="tab-ops" hidden></div>
+        <p class="progress" id="progress"></p>
+      </section>
+
+      <section id="s11">
+        <h2><span class="n">11</span>Commands</h2>
+        <dl class="kv">
+          <dt>npm run dev</dt><dd>Both services with watch, from the root</dd>
+          <dt>npm run build</dt><dd>Backend <code>tsc</code> + copy problem data into <code>dist/</code>, then <code>next build</code></dd>
+          <dt>npm test</dt><dd>Backend unit tests (needs a JDK on PATH for the harness suite)</dd>
+          <dt>npm run typecheck</dt><dd>Both workspaces, no emit</dd>
+          <dt>npm run seed</dt><dd>Upsert the JSON catalog into Postgres</dd>
+          <dt>npm run worker -w backend</dt><dd>Standalone queue worker (needs <code>REDIS_URL</code>)</dd>
+          <dt>sudo bash deploy/install.sh</dt><dd>Provision a Linux VM: isolate, runtimes, service user, token, systemd unit</dd>
+          <dt>deploy/release.sh user@vm</dt><dd>Build locally, rsync, restart the service</dd>
+        </dl>
+        <p>Environment: <code>web/.env.local</code> (from <code>.env.example</code>) holds <code>DATABASE_URL</code>, <code>AUTH_SECRET</code>, <code>COMPILE_SERVICE_URL</code>, <code>INTERNAL_TOKEN</code>; the backend reads <code>INTERNAL_TOKEN</code>, <code>SANDBOX_MODE</code>, <code>REDIS_URL</code>, <code>PORT</code>. Neither env file is committed.</p>
+      </section>
+    </main>
+  </div>
+</div>
+
+<script>
+(function () {
+  // ---- repo map ---------------------------------------------------------
+  // [name, role, description] — a trailing array marks a directory.
+  var TREE = [
+    ['.github/workflows/ci.yml', 'CI', 'Three GitHub Actions jobs on every push/PR: backend build + unit tests (with a JDK), an end-to-end judge smoke on Linux in all four languages, and the web typecheck/lint/build against a Postgres service.'],
+    ['backend', 'Compile service', 'The stateless judge. Express API, harness generation, sandbox adapters, optional queue.', [
+      ['src/server.ts', 'Entry', 'Boots the Express app on PORT (4000), probes sandbox readiness, and starts an inline queue worker when WORKER_INLINE=true.'],
+      ['src/worker.ts', 'Entry', 'Standalone BullMQ worker process (`npm run worker`). Drains the same queue the API enqueues into.'],
+      ['src/app.ts', 'HTTP', 'Express app: CORS, JSON body limit (1 MB), open /health, and the authed /v1 router (also mounted at legacy /api).'],
+      ['src/config/sandbox.ts', 'Config', 'Run limits (10 s, 256 MB, 50 pids), compile limits (15 s, 512 MB), isolate box count, compile-cache size.'],
+      ['src/routes', 'HTTP', 'One router per resource; each wires validation + controller.', [
+        ['executionRoutes.ts', 'HTTP', 'POST /execute (sync or 202+token), GET /execute/:token.'],
+        ['ideRoutes.ts', 'HTTP', 'POST /ide/execute, GET /ide/execute/:token.'],
+        ['problemRoutes.ts', 'HTTP', 'GET /problems, GET /problems/:id.'],
+        ['queueRoutes.ts', 'HTTP', 'GET /queue/stats.']
+      ]],
+      ['src/controllers', 'HTTP', 'Request parsing and response shaping; no judging logic here.', [
+        ['executionController.ts', 'HTTP', 'Validates the execute request, loads the problem, enqueues or runs inline, sanitizes hidden-test details before responding.'],
+        ['ideExecutionController.ts', 'HTTP', 'Same shape for IDE mode (max 10 cases).'],
+        ['problemController.ts', 'HTTP', 'Reads problems from data/problems, blanks hidden tests in responses.']
+      ]],
+      ['src/middleware', 'HTTP', 'Cross-cutting request guards.', [
+        ['internalAuth.ts', 'Security', 'Timing-safe X-Codemare-Token check. Open in dev when no token is set; throws at boot in production without one.'],
+        ['rateLimit.ts', 'Security', 'express-rate-limit: 10 execute-family requests per minute per IP, JSON 429 body.'],
+        ['errorHandler.ts', 'HTTP', 'Respects err.status (400 bad JSON, 413 too large); 500 stays opaque.']
+      ]],
+      ['src/models', 'Types', 'Shared TypeScript types for problems, requests and responses.', [
+        ['Problem.ts', 'Types', 'Problem shape incl. compareMode and the typed signature (param/return types) used to generate C++/Java harnesses.'],
+        ['ExecutionResult.ts', 'Types', 'ExecutionRequest/Response; ExecutionStatus = sandbox statuses + judge-level WA.'],
+        ['IdeExecution.ts', 'Types', 'IDE-mode request/response with per-case statuses.']
+      ]],
+      ['src/services', 'Judge', 'The judging pipeline.', [
+        ['executionService.ts', 'Judge', 'The spine: validate → wrap → sandbox → re-validate → derive verdict. Start reading the backend here.'],
+        ['codeWrapperService.ts', 'Judge', 'Harness generation per language. Python/JS embed the tests as JSON; C++/Java are generated from the signature with typed literals, per-test methods and chunked large literals (Java).'],
+        ['validationService.ts', 'Judge', 'deepEqual (ordered / unordered), validateResults, deriveVerdict, and hidden-test sanitizing.'],
+        ['ideExecutionService.ts', 'Judge', 'Runs IDE cases in parallel and compares stdout (trailing whitespace normalized).'],
+        ['sandboxService.ts', 'Sandbox', 'Picks the adapter at boot (isolate if present, else local; refuses local in production) and exposes executeSandboxed().'],
+        ['sandbox', 'Sandbox', 'Adapters and their helpers.', [
+          ['types.ts', 'Sandbox', 'SandboxAdapter / SandboxResult / LanguageSpec interfaces.'],
+          ['languageSpec.ts', 'Sandbox', 'Per-language compile/run argv, artifact names (Java uses a *.class glob), PID caps with the reasoning for each.'],
+          ['isolateAdapter.ts', 'Sandbox', 'Production driver: box pool, two-phase compile/run, --core pinning, meta-file parsing, artifact copy via the compile cache.'],
+          ['localAdapter.ts', 'Sandbox', 'Dev driver: child_process.spawn with no isolation; TLE via kill; loud warning on boot.'],
+          ['compileCache.ts', 'Sandbox', 'Content-addressed cache of compiled artifacts, single-flight, bounded LRU; shared by both adapters.'],
+          ['boxPool.ts', 'Sandbox', 'Allocates isolate box ids (0..99) and releases them.'],
+          ['metaParser.ts', 'Sandbox', 'Parses isolate\'s meta file into status/time/memory.']
+        ]]
+      ]],
+      ['src/queue/queue.ts', 'Queue', 'BullMQ queue + worker, gated on REDIS_URL. enqueue(), getResult(), startWorker(), getQueueStats().'],
+      ['src/data/problems', 'Content', 'The catalog: index.json plus one JSON per problem (statement, examples, signature, tests with hidden flags, starter code in 4 languages). Copied into dist/ at build.'],
+      ['src/utils/codeTemplates.ts', 'Content', 'Default IDE-mode templates per language.'],
+      ['tests', 'Tests', '43 unit tests across six files (tsx --test), plus a deployment shell smoke.'],
+      ['DEPLOYMENT.md', 'Docs', 'systemd + install.sh guide for the compile host.'],
+      ['postman', 'Docs', 'Postman collection for the API.']
+    ]],
+    ['web', 'Next.js app', 'Everything user-facing: pages, auth, database, and the server-side client for the compile service.', [
+      ['app/layout.tsx', 'UI', 'Root layout: fonts, design-token class, SessionProvider.'],
+      ['app/(workspace)', 'UI', 'All signed-in pages share this layout (navbar, workspace chrome).', [
+        ['layout.tsx', 'UI', 'Workspace shell with the navbar.'],
+        ['page.tsx', 'UI', 'Catalog (route /). Fetches problems live from the compile service.'],
+        ['p/[id]/page.tsx', 'UI', 'Problem workspace: statement, editor, results.'],
+        ['p/[id]/actions.ts', 'Server action', 'runSolution: calls the compile service, derives WA defensively, persists a Submission for the signed-in user.'],
+        ['ide/page.tsx', 'UI', 'IDE mode page.'],
+        ['ide/actions.ts', 'Server action', 'runIdeCode: IDE execution through the compile service.'],
+        ['submissions/page.tsx', 'UI', 'The user\'s submission history.'],
+        ['profile/page.tsx', 'UI', 'Account page with sign-out.'],
+        ['auth/page.tsx', 'UI', 'Renders the AuthPage (route /auth).']
+      ]],
+      ['app/auth/actions.ts', 'Server action', 'signUp: validates, rate-limits per IP, checks email/handle uniqueness, hashes the password, creates the User.'],
+      ['app/api/auth/[...nextauth]/route.ts', 'Auth', 'Auth.js route handlers.'],
+      ['auth.ts', 'Auth', 'NextAuth config: Credentials provider (bcrypt verify + login rate limits), optional GitHub/Google, JWT sessions, trustHost, user id in the token.'],
+      ['middleware.ts', 'Security', 'The login wall. Fails closed; only /auth, /api/auth and static assets are open.'],
+      ['lib', 'Server libs', 'Server-only helpers.', [
+        ['compile.ts', 'Service link', 'HTTP client for the compile service; attaches X-Codemare-Token; resolves sync results or token+poll; refuses placeholder tokens in production.'],
+        ['rateLimit.ts', 'Security', 'In-memory sliding-window limiter + client IP helper; limits for login (per IP, per email) and sign-up.'],
+        ['password.ts', 'Auth', 'bcryptjs hash/verify (cost 12) and password validation.'],
+        ['prisma.ts', 'Data', 'Prisma client singleton.'],
+        ['types.ts', 'Types', 'Shared UI types.']
+      ]],
+      ['components', 'UI', 'React components, inline styles on CSS-variable tokens.', [
+        ['Auth', 'UI', 'AuthPage, AuthForm (sign in / sign up, redirect sanitizer, OAuth buttons), AuthValuePanel, FormField, SessionProvider.'],
+        ['Editor', 'UI', 'Monaco CodeEditor, EditorWorkspace (Run/Submit), LanguageSelector.'],
+        ['IDE', 'UI', 'IdeView, TestCaseManager, IdeOutputDisplay.'],
+        ['Problem', 'UI', 'ProblemDescription, ProblemExamples.'],
+        ['Results', 'UI', 'TestCaseResults, OutputDisplay with timing and memory.'],
+        ['Catalog', 'UI', 'CatalogList.'],
+        ['Layout', 'UI', 'Navbar (hidden until login).'],
+        ['ui', 'UI', 'Primitives: Button, Input, Pill, StatusPill (verdict colors), DifficultyPill, MetricChip, Tabs, Icon, formatters…']
+      ]],
+      ['prisma/schema.prisma', 'Data', 'User/Account/Session/VerificationToken, Problem, Submission (with status and timing columns).'],
+      ['prisma/seed.ts', 'Data', 'Upserts backend/src/data/problems/*.json into the Problem table.'],
+      ['scripts/setup.mjs', 'Dev', 'One-command bootstrap: writes .env.local with a fresh AUTH_SECRET, generates the Prisma client, pushes schema and seeds when Postgres is reachable.'],
+      ['.env.example', 'Config', 'Documented template for .env.local. Never commit the real one.'],
+      ['README.md', 'Docs', 'Web-specific dev guide, routes, directory map.']
+    ]],
+    ['deploy', 'Ops', 'Provisioning and release for the compile service on a Linux VM.', [
+      ['install.sh', 'Ops', 'Idempotent: checks cgroups v2, installs isolate + Node 20 + python3 + g++ + JDK, creates the service user, generates INTERNAL_TOKEN into /etc/codemare/env, installs the systemd unit.'],
+      ['release.sh', 'Ops', 'Builds locally, rsyncs dist to the VM, restarts the service.'],
+      ['codemare-backend.service', 'Ops', 'systemd unit for the API.'],
+      ['codemare-worker.service', 'Ops', 'systemd unit for the queue worker.']
+    ]],
+    ['docs', 'Docs', 'Design and decision documents.', [
+      ['DECISIONS.html', 'Docs', 'Why the system is shaped this way: decision records, the life of a submission, verdict semantics, lessons.'],
+      ['REPO-GUIDE.html', 'Docs', 'This page.'],
+      ['authoring-v1.md', 'Docs', 'Plan for the content-authoring platform (books of lessons and problems), incl. moving the catalog to Postgres.']
+    ]],
+    ['package.json', 'Root', 'npm workspaces (backend, web) and the root scripts: dev, build, test, typecheck, seed, setup.'],
+    ['README.md', 'Docs', 'Architecture overview, quick starts for dev and production, API contract, what\'s done and parked.']
+  ];
+
+  var treeEl = document.getElementById('tree');
+  var explainEl = document.getElementById('explain');
+  var current = null;
+
+  function build(items, parent, prefix) {
+    var ul = document.createElement('ul');
+    ul.setAttribute('role', 'group');
+    items.forEach(function (it) {
+      var name = it[0], role = it[1], desc = it[2], kids = it[3];
+      var li = document.createElement('li');
+      li.className = kids ? 'dir' : 'file';
+      li.setAttribute('role', 'treeitem');
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = name + (kids ? '/' : '');
+      var full = prefix ? prefix + '/' + name : name;
+      btn.addEventListener('click', function () {
+        if (kids) li.classList.toggle('open');
+        show(full, role, desc, kids ? 'directory' : 'file');
+        if (current) current.removeAttribute('aria-current');
+        btn.setAttribute('aria-current', 'true');
+        current = btn;
+      });
+      li.appendChild(btn);
+      if (kids) li.appendChild(build(kids, li, full));
+      ul.appendChild(li);
+    });
+    return ul;
+  }
+  function show(path, role, desc, kind) {
+    explainEl.innerHTML = '';
+    var r = document.createElement('div'); r.className = 'role'; r.textContent = role + ' · ' + kind;
+    var h = document.createElement('h4'); h.textContent = path.split('/').pop();
+    var p1 = document.createElement('div'); p1.className = 'path'; p1.textContent = path;
+    var p2 = document.createElement('p'); p2.textContent = desc;
+    explainEl.appendChild(r); explainEl.appendChild(h); explainEl.appendChild(p1); explainEl.appendChild(p2);
+  }
+  treeEl.appendChild(build(TREE, null, ''));
+  // open the two workspaces by default so the shape is visible at rest
+  Array.prototype.slice.call(treeEl.querySelectorAll(':scope > ul > li.dir')).forEach(function (li) {
+    var n = li.querySelector('button').textContent;
+    if (n === 'backend/' || n === 'web/') li.classList.add('open');
+  });
+
+  // ---- reading paths ------------------------------------------------------
+  var PATHS = {
+    judge: [
+      ['README.md', 'Architecture box and the API contract — the two-service picture in one screen.'],
+      ['backend/src/services/executionService.ts', 'The spine. Every other backend file is something this one calls.'],
+      ['backend/src/services/codeWrapperService.ts', 'How a bare function becomes a runnable, self-timing program. Read the Python harness first, then the C++ generator.'],
+      ['backend/src/services/validationService.ts', 'deepEqual, compareMode, and deriveVerdict — the difference between "exited 0" and "accepted".'],
+      ['backend/src/services/sandboxService.ts', 'How the adapter is chosen and why local mode is refused in production.'],
+      ['backend/src/services/sandbox/languageSpec.ts', 'Per-language argv and the PID-cap reasoning.'],
+      ['backend/src/services/sandbox/isolateAdapter.ts', 'Two-phase compile/run, core pinning, meta files. The production truth.'],
+      ['backend/src/services/sandbox/compileCache.ts', 'Why a C++ re-run is 10× faster.'],
+      ['backend/src/queue/queue.ts', 'The optional async path and how it reuses executeCode.'],
+      ['backend/src/data/problems/two-sum.json', 'One complete problem: signature, compareMode, hidden tests, starter code.'],
+      ['docs/DECISIONS.html', 'Sections 3, 5 and 6 — the life of a submission, verdict table, and the bugs that shaped the rules.']
+    ],
+    web: [
+      ['web/README.md', 'Routes and the directory map.'],
+      ['web/middleware.ts', 'The login wall and why it fails closed.'],
+      ['web/auth.ts', 'Credentials provider, rate limits, JWT callbacks, trustHost.'],
+      ['web/app/auth/actions.ts', 'Sign-up as a server action.'],
+      ['web/components/Auth/AuthForm.tsx', 'Sign in / sign up UI, the ?next= sanitizer, OAuth buttons.'],
+      ['web/lib/compile.ts', 'The only place the internal token is used; sync vs queued results.'],
+      ['web/app/(workspace)/p/[id]/actions.ts', 'runSolution: compile-service call → Submission row.'],
+      ['web/components/Editor/EditorWorkspace.tsx', 'Editor + Run/Submit + results wiring.'],
+      ['web/prisma/schema.prisma', 'Identity, catalog mirror, submissions.'],
+      ['web/scripts/setup.mjs', 'What npm run setup actually does to your machine.']
+    ],
+    ops: [
+      ['package.json', 'Workspace layout and the root scripts.'],
+      ['.github/workflows/ci.yml', 'What is verified on every push, and how the Linux e2e smoke submits real solutions.'],
+      ['backend/src/config/sandbox.ts', 'Every limit in one place.'],
+      ['backend/src/middleware/internalAuth.ts', 'Token check; dev-open vs prod-strict behaviour.'],
+      ['deploy/install.sh', 'Provisioning a compile host from scratch.'],
+      ['deploy/codemare-backend.service', 'How the service runs under systemd, where env comes from.'],
+      ['deploy/release.sh', 'Ship a build.'],
+      ['backend/DEPLOYMENT.md', 'Operational notes for the compile host.'],
+      ['docs/DECISIONS.html', 'Section 7: what is deliberately not done, starting with the isolate smoke test.']
+    ]
+  };
+  var KEY = 'codemare-repo-guide-progress';
+  var progress = {};
+  try { progress = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { progress = {}; }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(progress)); } catch (e) {} }
+
+  Object.keys(PATHS).forEach(function (k) {
+    var panel = document.getElementById('path-' + k);
+    var ol = document.createElement('ol'); ol.className = 'path-list';
+    PATHS[k].forEach(function (step, i) {
+      var id = 'p-' + k + '-' + i;
+      var li = document.createElement('li');
+      var cb = document.createElement('input'); cb.type = 'checkbox'; cb.id = id; cb.checked = !!progress[id];
+      if (cb.checked) li.classList.add('done');
+      var label = document.createElement('label'); label.htmlFor = id;
+      var s = document.createElement('span'); s.className = 'step'; s.textContent = String(i + 1).padStart(2, '0') + '  ';
+      var c = document.createElement('code'); c.textContent = step[0];
+      var w = document.createElement('span'); w.className = 'why'; w.textContent = step[1];
+      label.appendChild(s); label.appendChild(c); label.appendChild(w);
+      cb.addEventListener('change', function () {
+        progress[id] = cb.checked; li.classList.toggle('done', cb.checked); save(); renderProgress();
+      });
+      li.appendChild(cb); li.appendChild(label); ol.appendChild(li);
+    });
+    panel.appendChild(ol);
+  });
+  function renderProgress() {
+    var total = 0, done = 0;
+    Object.keys(PATHS).forEach(function (k) { PATHS[k].forEach(function (_, i) { total++; if (progress['p-' + k + '-' + i]) done++; }); });
+    document.getElementById('progress').textContent = done + ' / ' + total + ' files read across all paths';
+  }
+  renderProgress();
+
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tabs [role="tab"]'));
+  tabs.forEach(function (tab) {
+    tab.addEventListener('click', function () {
+      tabs.forEach(function (t) {
+        var on = t === tab;
+        t.setAttribute('aria-selected', on ? 'true' : 'false');
+        document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+      });
+    });
+  });
+})();
+</script>
