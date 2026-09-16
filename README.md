@@ -24,10 +24,6 @@ takes `(language, code, input)` and returns timing + memory + status. The
 Next.js app holds all user state (auth, submissions, profile) and never
 exposes the compile-service token to the browser.
 
-The legacy Vite SPA in `frontend/` is **retired** in favour of `web/` — kept
-in the tree for one cycle as a reference; will be deleted once `web/` is at
-parity in staging.
-
 ## Key features
 
 - **Algorithm-only timing.** Wrappers in the compile service measure each
@@ -88,8 +84,6 @@ deploy/         Linux VM provisioning for the compile service
   install.sh            apt-get isolate + node + python3 + jdk + g++; generates INTERNAL_TOKEN
   release.sh            build locally, rsync to VM, systemctl restart
   codemare-backend.service
-
-frontend/       LEGACY Vite SPA. Retire once web/ is at parity in staging.
 ```
 
 ## Quick start — local dev (macOS, Linux, anywhere)

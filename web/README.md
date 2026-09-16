@@ -106,6 +106,4 @@ Done:
 Parked for follow-ups:
 - Email/password Credentials provider (needs bcrypt + sign-up endpoint)
 - Migrating the problem catalog from compile-service JSON into the DB
-- Per-problem C++/Java harness templates (Problem.harnessTemplate field exists)
 - Learn section (tracks / modules / lessons / runnable code blocks / quizzes)
-- Retiring `frontend/` once this app is at parity in staging

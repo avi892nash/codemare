@@ -26,7 +26,7 @@ The goal moved three times, and each move explains a chunk of the codebase:
 
 | Phase | Goal | What it left behind |
 |---|---|---|
-| Nov 2025 | A resume project: Express backend + Vite SPA, Docker executors | `frontend/` (legacy, retired), the `/api/*` route alias |
+| Nov 2025 | A resume project: Express backend + Vite SPA, Docker executors | The `/api/*` route alias (the Vite SPA itself was deleted in Sep 2026) |
 | May 2026 | A *production* judge: accurate timing, no Docker, real deploy | `isolate` sandbox, two-service split, Next.js `web/` |
 | Jun–Jul 2026 | A *product*: auth, content pivot, QA-gated release, CI | Login wall, Postgres, agent-driven QA process, GitHub Actions |
 
@@ -467,7 +467,6 @@ harness line numbers. *Rule:* submit every starter verbatim in QA.
 - Double-returning problems: the harness tolerates `1e-6` but the server-side
   re-check is exact; none of the current problems return doubles.
 - Local-adapter `memoryKb` units look off (dev-only; isolate meters properly).
-- `frontend/` (legacy Vite SPA) is dead code awaiting deletion.
 
 ---
 

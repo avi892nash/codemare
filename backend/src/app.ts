@@ -12,7 +12,7 @@ const app = express();
 // CORS — only origins from ALLOWED_ORIGINS are accepted. Once Next.js is the
 // only caller, this can be locked down to the Next.js origin (or removed if
 // all traffic is server-to-server).
-const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') ?? ['http://localhost:5173'];
+const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') ?? ['http://localhost:4001'];
 app.use(
   cors({
     origin: allowedOrigins,

@@ -8,9 +8,8 @@ import type { Request, Response, NextFunction } from 'express';
  * `INTERNAL_TOKEN` on both sides; callers send it as `X-Codemare-Token`.
  *
  * Dev override: when NODE_ENV !== 'production' AND no token is configured,
- * requests pass without the header. This keeps the legacy Vite dev frontend
- * working until we cut over to the Next.js app. Once the migration is done,
- * unset the dev override by always setting `INTERNAL_TOKEN`.
+ * requests pass without the header, so local dev needs no token setup. Set
+ * `INTERNAL_TOKEN` to exercise the real check locally.
  *
  * Healthcheck (`/health`) is intentionally exempt — load balancers and systemd
  * need to probe without credentials.
