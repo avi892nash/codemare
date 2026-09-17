@@ -19,6 +19,7 @@ export function validateResults(
     error?: string;
     executionTime?: number;
     runNs?: number;
+    wallNs?: number;
     peakBytes?: number;
   }>,
   testCases: TestCase[],
@@ -44,7 +45,10 @@ export function validateResults(
     }
 
     const passed = deepEqual(wrapped.output, wrapped.expected, compareMode);
+    // runNs is CPU time of the call (immune to host load); wallNs is the
+    // elapsed wall clock for the same call, kept as a diagnostic.
     const runMs = wrapped.runNs !== undefined ? wrapped.runNs / 1_000_000 : undefined;
+    const wallMs = wrapped.wallNs !== undefined ? wrapped.wallNs / 1_000_000 : undefined;
     const memoryKb =
       wrapped.peakBytes !== undefined ? wrapped.peakBytes / 1024 : undefined;
 
@@ -55,6 +59,7 @@ export function validateResults(
       passed: passed && !wrapped.error,
       executionTime: runMs ?? wrapped.executionTime ?? 0,
       runMs,
+      wallMs,
       memoryKb,
       error: wrapped.error,
       hidden: testCase.hidden,

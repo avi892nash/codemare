@@ -436,9 +436,10 @@
             <dt>Situation</dt><dd><p>Even with a 1 ms sandbox, "time" for Python included interpreter startup (~20 ms) — useless for comparing O(n) against O(n log n) on small inputs.</p></dd>
             <dt>Choice</dt><dd><p>Two clocks, reported separately.</p>
               <ul>
-                <li><code>runMs</code> — measured <em>inside</em> the user process, around the function call only: <code>time.perf_counter_ns()</code> (Python), <code>process.hrtime.bigint()</code> (JS), <code>std::chrono::steady_clock</code> (C++), <code>System.nanoTime()</code> (Java).</li>
-                <li><code>wallMs</code> / <code>compileMs</code> — from the sandbox meta file, kept as diagnostics. Compile time is never charged to the user.</li>
+                <li><code>runMs</code> — measured <em>inside</em> the user process, around the function call only, on the thread's <strong>CPU clock</strong>: <code>time.thread_time_ns()</code> (Python), <code>process.cpuUsage()</code> (JS), <code>CLOCK_THREAD_CPUTIME_ID</code> (C++), <code>ThreadMXBean.getCurrentThreadCpuTime()</code> (Java). A CPU clock stops ticking while the process is descheduled, so other load on the host cannot inflate it.</li>
+                <li><code>wallMs</code> per test (elapsed wall clock for the same call) and <code>compileMs</code> — kept as diagnostics. Compile time is never charged to the user.</li>
               </ul>
+              <p>Measured on a 10-core machine with 20 busy loops running: wall time per call doubled (2.0–2.3×) while CPU <code>runMs</code> moved 7–10% — the residual is cache pressure and clock frequency, which host tuning (performance governor, no turbo, reserved cores) addresses at deploy.</p>
               <p>Memory follows the same idea: <code>tracemalloc</code> peak (Python), heap delta (JS), <code>getrusage</code> RSS (C++, best-effort), <code>0</code> for Java — JVM heap is too noisy per call.</p></dd>
             <dt>Lesson</dt><dd><p>The sandbox can only meter the whole process; the harness is the only place that can meter the algorithm. Both numbers are needed, and they answer different questions.</p></dd>
           </dl>

@@ -43,10 +43,11 @@ function wrapPythonFunction(
   testCases: TestCase[],
   compareMode: CompareMode
 ): { wrappedCode: string; input: string } {
-  // The harness times each call with perf_counter_ns and tracks heap peak via
-  // tracemalloc. Reported runMs / memoryKb are from these per-call numbers
-  // (algorithm-only), not from the sandbox wall-clock (which includes
-  // interpreter startup).
+  // The harness times each call with thread_time_ns — CPU time of this thread,
+  // which stops ticking while the process is descheduled, so a busy host
+  // can't inflate runMs. perf_counter_ns (wall) is kept per test as wallNs
+  // for diagnostics. Heap peak comes from tracemalloc. All of these are
+  // algorithm-only, unlike the sandbox wall clock (which includes startup).
   const wrappedCode = `${userCode}
 
 # Auto-generated test harness
@@ -77,9 +78,11 @@ peak_bytes = 0
 for test in test_data:
     try:
         tracemalloc.start()
-        t0 = time.perf_counter_ns()
+        w0 = time.perf_counter_ns()
+        t0 = time.thread_time_ns()
         result = ${functionName}(*test['input'])
-        elapsed = time.perf_counter_ns() - t0
+        elapsed = time.thread_time_ns() - t0
+        wall = time.perf_counter_ns() - w0
         _, call_peak = tracemalloc.get_traced_memory()
         tracemalloc.stop()
         total_run_ns += elapsed
@@ -90,6 +93,7 @@ for test in test_data:
             'expected': test['expected'],
             'passed': _outputs_equal(result, test['expected']),
             'runNs': elapsed,
+            'wallNs': wall,
             'peakBytes': call_peak
         })
     except Exception as e:
@@ -124,8 +128,12 @@ function wrapJavaScriptFunction(
   testCases: TestCase[],
   compareMode: CompareMode
 ): { wrappedCode: string; input: string } {
-  // Times each call with hrtime.bigint (nanosecond resolution) and approximates
-  // per-call peak heap by reading process.memoryUsage().heapUsed before and
+  // Times each call with process.cpuUsage() — CPU time (user+system, µs
+  // resolution) that doesn't advance while the process is descheduled, so a
+  // busy host can't inflate runMs. Node has no per-thread CPU clock, so this
+  // is process-wide (V8 helper threads included); hrtime.bigint (wall) is
+  // kept per test as wallNs for diagnostics. Per-call peak heap is
+  // approximated by reading process.memoryUsage().heapUsed before and
   // after the call. gc() is invoked when --expose-gc is set so the baseline is
   // clean; otherwise the measurement is heap-used at end of call (still a
   // sensible proxy for DSA workloads).
@@ -167,9 +175,12 @@ for (const test of testData) {
   try {
     if (typeof global.gc === 'function') global.gc();
     const memBefore = process.memoryUsage().heapUsed;
-    const t0 = process.hrtime.bigint();
+    const w0 = process.hrtime.bigint();
+    const c0 = process.cpuUsage();
     const result = ${functionName}(...test.input);
-    const elapsed = process.hrtime.bigint() - t0;
+    const cpu = process.cpuUsage(c0);
+    const wall = process.hrtime.bigint() - w0;
+    const elapsed = BigInt(Math.round((cpu.user + cpu.system) * 1000));
     const memAfter = process.memoryUsage().heapUsed;
     // Delta of heapUsed approximates allocations made by the function.
     // Negative deltas (GC freed during the call) floor to 0.
@@ -181,6 +192,7 @@ for (const test of testData) {
       expected: test.expected,
       passed: __outputsEqual(result, test.expected),
       runNs: Number(elapsed),
+      wallNs: Number(wall),
       peakBytes: callPeak
     });
   } catch (error) {
@@ -534,19 +546,23 @@ ${decls}
         ${retType} __exp = ${cppLiteral(signature.returns, tc.expectedOutput)};
         const std::string __expJson = __cm_ser(__exp);
 ${comma}        try {
-            auto __t0 = std::chrono::steady_clock::now();
+            auto __w0 = std::chrono::steady_clock::now();
+            long long __c0 = __cm_thread_cpu_ns();
             ${retType} __res = ${functionName}(${args});
-            long long __ns = (long long)std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - __t0).count();
+            long long __ns = __cm_thread_cpu_ns() - __c0;
+            long long __wallNs = (long long)std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - __w0).count();
             __totalRunNs += __ns;
             const std::string __outJson = __cm_ser(__res);
 ${canonLines}            const bool __passed = __cm_eq(__res, __exp);
-            __out += "{\\"output\\":" + __outJson + ",\\"expected\\":" + __expJson + ",\\"passed\\":" + (__passed ? "true" : "false") + ",\\"runNs\\":" + std::to_string(__ns) + ",\\"peakBytes\\":0}";
+            __out += "{\\"output\\":" + __outJson + ",\\"expected\\":" + __expJson + ",\\"passed\\":" + (__passed ? "true" : "false") + ",\\"runNs\\":" + std::to_string(__ns) + ",\\"wallNs\\":" + std::to_string(__wallNs) + ",\\"peakBytes\\":0}";
 ${cppCatchChain()}
     }`;
   });
 
-  // Timing uses std::chrono::steady_clock (monotonic, ns resolution) around
-  // the user-function call only. peakBytes is best-effort: whole-process
+  // Timing uses CLOCK_THREAD_CPUTIME_ID (this thread's CPU time, ns) around
+  // the user-function call only — it doesn't advance while descheduled, so a
+  // busy host can't inflate runMs. steady_clock (wall) is kept per test as
+  // wallNs for diagnostics. peakBytes is best-effort: whole-process
   // ru_maxrss from getrusage (bytes on macOS, KB->bytes on Linux); per-test
   // peakBytes is reported as 0.
   // The user writes a bare function, so the harness owns the includes. Provide
@@ -563,6 +579,7 @@ ${cppCatchChain()}
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <ctime>
 #include <deque>
 #include <functional>
 #include <limits>
@@ -585,6 +602,12 @@ ${cppCatchChain()}
 #endif
 
 ${CPP_HELPERS}
+
+static long long __cm_thread_cpu_ns() {
+    struct timespec __ts;
+    if (clock_gettime(CLOCK_THREAD_CPUTIME_ID, &__ts) != 0) return 0;
+    return (long long)__ts.tv_sec * 1000000000LL + (long long)__ts.tv_nsec;
+}
 
 ${userCode}
 
@@ -949,13 +972,15 @@ ${decls}
         ${retType} exp = ${javaValueExpr(signature.returns, tc.expectedOutput, ctx)};
         String expJson = ser(exp);
 ${comma}        try {
-            long t0 = System.nanoTime();
+            long w0 = System.nanoTime();
+            long t0 = __cpuNs();
             ${retType} res = Solution.${functionName}(${args});
-            long ns = System.nanoTime() - t0;
+            long ns = __cpuNs() - t0;
+            long wallNs = System.nanoTime() - w0;
             totalRunNs += ns;
             String outJson = ser(res);
 ${canonLines}            boolean passed = eq(res, exp);
-            out.append("{\\"output\\":").append(outJson).append(",\\"expected\\":").append(expJson).append(",\\"passed\\":").append(passed).append(",\\"runNs\\":").append(ns).append(",\\"peakBytes\\":0}");
+            out.append("{\\"output\\":").append(outJson).append(",\\"expected\\":").append(expJson).append(",\\"passed\\":").append(passed).append(",\\"runNs\\":").append(ns).append(",\\"wallNs\\":").append(wallNs).append(",\\"peakBytes\\":0}");
         } catch (Throwable t) {
             String msg = t.getClass().getSimpleName() + (t.getMessage() == null ? "" : ": " + t.getMessage());
             out.append("{\\"output\\":null,\\"expected\\":").append(expJson).append(",\\"passed\\":false,\\"error\\":\\"").append(esc(msg)).append("\\"}");
@@ -963,15 +988,21 @@ ${canonLines}            boolean passed = eq(res, exp);
     }`;
   });
 
-  // Timing uses System.nanoTime() (monotonic) around the Solution call only.
-  // Memory is not measured for Java (peakBytes 0) — JVM heap introspection is
-  // too noisy to be meaningful per call.
+  // Timing uses ThreadMXBean.getCurrentThreadCpuTime() (this thread's CPU
+  // time, ns) around the Solution call only — it doesn't advance while
+  // descheduled, so a busy host can't inflate runMs. System.nanoTime (wall)
+  // is kept per test as wallNs for diagnostics. Memory is not measured for
+  // Java (peakBytes 0) — JVM heap introspection is too noisy per call.
   const wrappedCode = `${userCode}
 
 // ---- Codemare auto-generated test harness ----
 public class Main {
     static StringBuilder out = new StringBuilder("{\\"results\\":[");
     static long totalRunNs = 0L;
+    static final java.lang.management.ThreadMXBean __cpu = java.lang.management.ManagementFactory.getThreadMXBean();
+    static long __cpuNs() {
+        return __cpu.isCurrentThreadCpuTimeSupported() ? __cpu.getCurrentThreadCpuTime() : System.nanoTime();
+    }
 
 ${javaHelperMethods()}
     static int __fill(Object dst, int o, Object src) {

@@ -26,10 +26,12 @@ exposes the compile-service token to the browser.
 
 ## Key features
 
-- **Algorithm-only timing.** Wrappers in the compile service measure each
-  user-function call with `time.perf_counter_ns()` (Python) or
-  `process.hrtime.bigint()` (JS), so `runMs` is microseconds-precision and
-  excludes interpreter cold-start. `wallMs` is kept as a separate diagnostic.
+- **Algorithm-only CPU timing.** Wrappers in the compile service measure each
+  user-function call with the thread's CPU clock (`time.thread_time_ns`,
+  `process.cpuUsage`, `CLOCK_THREAD_CPUTIME_ID`, `ThreadMXBean`), so `runMs`
+  is microsecond-precision, excludes interpreter cold-start, and does not
+  inflate when the host is busy — the same choice as Codeforces, ICPC and IOI
+  judges. Wall time is kept per test (`wallMs`) as a diagnostic.
 - **Single-core CPU pinning.** Every run box is bound to one host core
   (`--core=N` round-robin by box id) so user code can't parallelise the
   algorithm to win timing comparisons unfairly — CP-judge convention.
