@@ -20,6 +20,9 @@ export const metadata: Metadata = {
   title: 'Codemare',
   description:
     'Practice DSA and competitive programming with instant, sandboxed judging — and author your own lessons and problem sets.',
+  icons: {
+    icon: '/logo.svg',
+  },
 };
 
 /**
