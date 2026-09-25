@@ -17,6 +17,8 @@ export function AuthPage() {
       className="cm scroll"
       style={{
         height: '100%',
+        flex: '1 1 auto',
+        minWidth: 0,
         overflowY: 'auto',
         background: 'var(--bg-0)',
         color: 'var(--fg-0)',

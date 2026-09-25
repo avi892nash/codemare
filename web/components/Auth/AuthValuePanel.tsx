@@ -38,6 +38,7 @@ export function AuthValuePanel() {
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'center',
+        alignItems: 'flex-end',
         gap: 36,
       }}
     >
