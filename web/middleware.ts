@@ -21,7 +21,18 @@ function redirectToAuth(req: NextRequest) {
 
 const withAuth = auth((req) => {
   const path = req.nextUrl.pathname;
-  if (isPublicPath(path)) return NextResponse.next();
+  if (isPublicPath(path)) {
+    // An already-signed-in user has no reason to see the sign-in form (and
+    // /auth renders inside the workspace layout, so they'd see the full
+    // authenticated navbar sitting above it, which looks broken). Send them
+    // where they were headed instead.
+    if (req.auth) {
+      const next = req.nextUrl.searchParams.get('next');
+      const safeNext = next && next.startsWith('/') && !next.startsWith('//') ? next : '/';
+      return NextResponse.redirect(new URL(safeNext, req.nextUrl.origin));
+    }
+    return NextResponse.next();
+  }
 
   if (!req.auth) return redirectToAuth(req);
   return NextResponse.next();

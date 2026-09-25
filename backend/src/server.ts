@@ -2,7 +2,7 @@ import app from './app.js';
 import { sandboxReadinessProbe } from './services/sandboxService.js';
 import { isQueueEnabled, startWorker, QUEUE_INFO } from './queue/queue.js';
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 4000;
 
 async function startServer() {
   try {
