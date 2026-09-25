@@ -58,8 +58,17 @@ export function TestCaseManager({
           const expanded = expandedIndex === i;
           return (
             <div key={i} style={{ borderBottom: '1px solid var(--line-1)' }}>
-              <button
+              <div
+                role="button"
+                tabIndex={0}
+                aria-expanded={expanded}
                 onClick={() => setExpandedIndex(expanded ? null : i)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setExpandedIndex(expanded ? null : i);
+                  }
+                }}
                 className="focus-ring"
                 style={{
                   width: '100%', textAlign: 'left',
@@ -86,7 +95,7 @@ export function TestCaseManager({
                 >
                   <Icon name="x" size={12} />
                 </button>
-              </button>
+              </div>
 
               {expanded && (
                 <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
