@@ -147,10 +147,68 @@ Relevant env (in `/etc/codemare/env`):
 
 ```
 REDIS_URL=redis://10.0.0.5:6379    # unset → synchronous mode
-WORKER_CONCURRENCY=4               # jobs one worker runs at once
+WORKER_CONCURRENCY=<cores>         # jobs one worker runs at once — defaults to os.cpus().length
 QUEUE_RESULT_TTL_SEC=3600          # how long completed results are retained
 WORKER_INLINE=true                 # single-VM: run a worker in the API process
+EXECUTION_RATE_LIMIT_MAX=6000      # /v1/execute + /v1/ide/execute cap per API process, per minute
 ```
 
 The backend is stateless either way (file-based problem catalog, no DB).
 Submission history lives in the web app's Postgres, not here.
+
+## Capacity planning: what it takes to hit 1000 req/s
+
+Two very different numbers hide behind "1000 requests per second" for a judge,
+and they need different fixes.
+
+**The API layer (catalog reads, polling, health checks) is not the
+bottleneck.** Measured on a 10-core dev machine, one Node process serves
+`/health` at ~16k req/s and `/v1/problems` at ~8k req/s. Clustering or extra
+hardware for this tier isn't needed until well past 1000 req/s.
+
+**Executing submitted code is the bottleneck, and it's a hard, physical one.**
+A CPU profile of the API process under load (`node --prof` +
+`--prof-process`) attributes **81% of CPU time to the `spawn()` syscall
+itself** — forking and exec'ing a fresh interpreter/compiler process per
+submission. That's not fixable in application code, and shouldn't be "fixed"
+by pooling/reusing interpreter processes across submissions — that would let
+one user's process state leak into another's, which is a correctness and
+security regression for a judge. One clean process per submission is the
+right tradeoff; it just has a real per-core ceiling.
+
+Measured on that same 10-core dev machine (unsandboxed `localAdapter`, so a
+bit cheaper than production `isolate` — expect somewhat lower numbers behind
+real namespaces/cgroups):
+
+| Language | First-time compile | Cached re-run (compile skipped) | Sustained throughput (no compile) |
+|---|---|---|---|
+| Python / JavaScript | n/a (interpreted) | n/a | **~290 req/s**, flat from 20 to 150 concurrent requests |
+| C++ | ~810 ms | run-only, sub-ms | bounded by cores available for compilation |
+| Java | ~470 ms | run-only, sub-ms | bounded by cores available for compilation |
+
+The throughput ceiling for the interpreted languages was reproducible and flat
+regardless of concurrency (20 → 150 connections, 0 errors throughout) —
+confirmation that it's a genuine per-core `fork`/`exec` limit, not a queueing
+artifact. The content-addressed compile cache (`SANDBOX_CONFIG.compileCache`)
+is what makes C++/Java viable at all here: without it, every submission pays
+the ~500–800 ms compile cost, capping throughput at a couple requests per
+second per core.
+
+**The math for 1000 req/s of real submissions:** at ~290 spawns/sec/host for
+the cheap case, you need on the order of 4 hosts of this size purely for the
+run phase — more if the mix skews toward C++/Java cache misses. This is
+exactly what the queued architecture above is for: point N worker hosts at
+one `REDIS_URL` and scale this tier horizontally. There is no single-process
+or single-host trick that gets a code-execution judge to 1000 req/s of *real,
+isolated* executions — that number is a hardware/fleet-size question, not a
+software-efficiency one.
+
+**What was actually a software bug, and is now fixed:** `/v1/execute` and
+`/v1/ide/execute` previously rate-limited to 10 requests/minute **per source
+IP**. Since this service has exactly one caller (the Next.js server, behind
+`requireInternalToken`), every real user's traffic shared that one IP — the
+limiter was capping the *entire platform* at 10 submissions/minute, not
+guarding against abuse. It's now a generous, configurable circuit breaker
+(`EXECUTION_RATE_LIMIT_MAX`, default 6000/min ≈ 100 req/s) against a runaway
+caller, and real per-user throttling (30 runs/min) lives in the web app's
+server actions, where user identity actually exists.

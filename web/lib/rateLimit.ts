@@ -70,4 +70,10 @@ export function retryMessage(retryAfterSec: number): string {
 export const LOGIN_PER_IP = { limit: 10, windowMs: 15 * 60_000 };
 export const LOGIN_PER_EMAIL = { limit: 5, windowMs: 15 * 60_000 };
 export const SIGNUP_PER_IP = { limit: 5, windowMs: 60 * 60_000 };
+// Per-user submission throttle. The compile service's own limiter is a
+// per-IP circuit breaker sized for this app's total traffic (see its
+// comment) — it can't single out one abusive user, since every submission
+// arrives from this server's own IP. This is the real per-user guard,
+// applied where user identity actually exists.
+export const SUBMISSION_PER_USER = { limit: 30, windowMs: 60_000 };
 const LONGEST_WINDOW_MS = SIGNUP_PER_IP.windowMs;

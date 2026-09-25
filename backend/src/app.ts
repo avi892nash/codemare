@@ -9,6 +9,15 @@ import { requireInternalToken } from './middleware/internalAuth.js';
 
 const app = express();
 
+// Open: liveness probe for systemd / load balancer. Registered before CORS,
+// body parsing and request logging so the highest-frequency, lowest-value
+// request path (probed every few seconds per instance) skips all of it —
+// logging every probe was measured (V8 CPU profile under load) to cost more
+// than 3% of request-handling time for zero debugging value.
+app.get('/health', (_req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
 // CORS — only origins from ALLOWED_ORIGINS are accepted. Once Next.js is the
 // only caller, this can be locked down to the Next.js origin (or removed if
 // all traffic is server-to-server).
@@ -27,11 +36,6 @@ app.use(express.urlencoded({ extended: true }));
 app.use((req, _res, next) => {
   console.log(`${req.method} ${req.path}`);
   next();
-});
-
-// Open: liveness probe for systemd / load balancer.
-app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
 // Authed: anything under /v1 (the frozen API surface) and /api (legacy alias).

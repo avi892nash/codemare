@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { cpus } from 'node:os';
 import { Queue, Worker, type ConnectionOptions, type Job } from 'bullmq';
 import { ExecutionRequest, ExecutionResponse } from '../models/ExecutionResult.js';
 import { IdeExecutionRequest, IdeExecutionResponse } from '../models/IdeExecution.js';
@@ -23,7 +24,12 @@ import { sanitizeResults } from '../services/validationService.js';
 const REDIS_URL = process.env.REDIS_URL?.trim() ?? '';
 const QUEUE_NAME = 'codemare-submissions';
 const RESULT_TTL_SEC = Number(process.env.QUEUE_RESULT_TTL_SEC ?? 3600);
-const WORKER_CONCURRENCY = Number(process.env.WORKER_CONCURRENCY ?? 4);
+// One job's handler mostly awaits a child-process sandbox run (isolate /
+// localAdapter), so it barely touches the Node event loop — the real
+// concurrency ceiling is the box pool (SANDBOX_CONFIG.isolate.maxBoxes) and
+// physical cores, not this number. Default to the worker VM's core count
+// instead of a flat 4 so a bigger box is used without extra config.
+const WORKER_CONCURRENCY = Number(process.env.WORKER_CONCURRENCY ?? cpus().length);
 
 export type JobPayload =
   | { kind: 'execute'; request: ExecutionRequest; problem: Problem }

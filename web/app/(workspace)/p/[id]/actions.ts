@@ -3,6 +3,7 @@
 import { compile, CompileServiceError } from '@/lib/compile';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/auth';
+import { consume, retryMessage, SUBMISSION_PER_USER } from '@/lib/rateLimit';
 import type { ExecutionRequest, ExecutionResponse } from '@/lib/types';
 
 /**
@@ -20,6 +21,24 @@ import type { ExecutionRequest, ExecutionResponse } from '@/lib/types';
  * the catalog moves into the DB in a later commit).
  */
 export async function runSolution(req: ExecutionRequest): Promise<ExecutionResponse> {
+  const session = await auth();
+
+  if (session?.user?.id) {
+    const rl = consume(`submit:${session.user.id}`, SUBMISSION_PER_USER.limit, SUBMISSION_PER_USER.windowMs);
+    if (!rl.ok) {
+      return {
+        success: false,
+        testResults: [],
+        totalPassed: 0,
+        totalTests: 0,
+        executionTime: 0,
+        memoryUsed: 0,
+        status: 'XX',
+        error: retryMessage(rl.retryAfterSec),
+      };
+    }
+  }
+
   let response: ExecutionResponse;
   try {
     response = await compile.execute(req);
@@ -44,7 +63,6 @@ export async function runSolution(req: ExecutionRequest): Promise<ExecutionRespo
 
   // Persist if we can. Best-effort.
   try {
-    const session = await auth();
     if (session?.user?.id) {
       const problem = await prisma.problem.upsert({
         where: { slug: req.problemId },
