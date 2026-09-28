@@ -7,6 +7,7 @@ import {
   TestCase,
 } from '../models/Problem.js';
 import { HARNESS_MARK } from './harnessProtocol.js';
+import { assembleGo, joinSources, renderGoImports } from './sourceAssembly.js';
 
 /**
  * Wrap user's function code with test harness for stdin/stdout execution.
@@ -14,12 +15,16 @@ import { HARNESS_MARK } from './harnessProtocol.js';
  * multisets (both sides sorted by a canonical key) instead of element order.
  *
  * Python/JavaScript harnesses read the test data from stdin (dynamically
- * typed). C++/Java harnesses require `signature` — the generator embeds every
- * test input and expected output as typed literals directly in the generated
- * program, so there is no JSON parsing at runtime.
+ * typed). C++/Java/Go harnesses require `signature` — the generator embeds
+ * every test input (and, for C++/Java, expected output) as typed literals
+ * directly in the generated program, so there is no JSON parsing at runtime.
  *
  * Every harness reports results with the line protocol in harnessProtocol.ts
  * (one marker-prefixed JSON record per test as it finishes, then a summary).
+ *
+ * `prelude` holds dependency sources placed before the user's code (see
+ * sourceAssembly.ts). TypeScript is not wrapped directly: it is transpiled
+ * first (services/typescript.ts) and wrapped as JavaScript.
  */
 export function wrapFunctionCode(
   userCode: string,
@@ -27,17 +32,41 @@ export function wrapFunctionCode(
   testCases: TestCase[],
   language: Language,
   compareMode: CompareMode = 'ordered',
-  signature?: ProblemSignature
+  signature?: ProblemSignature,
+  prelude: readonly string[] = []
 ): { wrappedCode: string; input: string } {
   switch (language) {
     case 'python':
-      return wrapPythonFunction(userCode, functionName, testCases, compareMode);
+      return wrapPythonFunction(
+        joinSources('python', prelude, userCode).source,
+        functionName,
+        testCases,
+        compareMode
+      );
     case 'javascript':
-      return wrapJavaScriptFunction(userCode, functionName, testCases, compareMode);
+      return wrapJavaScriptFunction(
+        joinSources('javascript', prelude, userCode).source,
+        functionName,
+        testCases,
+        compareMode
+      );
     case 'cpp':
-      return wrapCppFunction(userCode, functionName, testCases, compareMode, signature);
+      return wrapCppFunction(
+        joinSources('cpp', prelude, userCode).source,
+        functionName,
+        testCases,
+        compareMode,
+        signature
+      );
     case 'java':
+      if (prelude.length > 0) {
+        throw new Error('Java does not support a prelude (single-class harness)');
+      }
       return wrapJavaFunction(userCode, functionName, testCases, compareMode, signature);
+    case 'go':
+      return wrapGoFunction(userCode, functionName, testCases, signature, prelude);
+    case 'typescript':
+      throw new Error('TypeScript must be transpiled to JavaScript before wrapping');
   }
 }
 
@@ -267,6 +296,7 @@ __cm_emit({ done: true, totalRunNs: Number(__cm_totalRunNs), peakBytes: __cm_pea
  * `results` array.)
  *
  * IDE mode works fully for C++ and Java because it bypasses this wrapper.
+ * /v1/run never reaches this: it rejects C++/Java/Go without a signature.
  */
 function unsupportedLanguageStub(
   language: 'C++' | 'Java',
@@ -612,7 +642,10 @@ ${cppCatchChain(i)}
   // Linux does NOT transitively include e.g. <unordered_map> the way libc++
   // on macOS does, and a missing header here is a CE for correct user code.
   // Each test's record is written and flushed as soon as the test finishes
-  // (see harnessProtocol.ts).
+  // (see harnessProtocol.ts). The user code arrives with a `#line 1
+  // "solution.cpp"` marker (sourceAssembly.joinSources); the `#line` after it
+  // attributes everything that follows to harness.cpp, so compile errors
+  // name the learner's own line numbers.
   const wrappedCode = `#include <algorithm>
 #include <array>
 #include <bitset>
@@ -661,6 +694,7 @@ static void __cm_emit(const std::string& __record) {
 }
 
 ${userCode}
+#line 1 "harness.cpp"
 
 int main() {
     long long __totalRunNs = 0;
@@ -1071,6 +1105,344 @@ ${ctx.aux.length > 0 ? ctx.aux.join('\n') + '\n' : ''}${testMethods.join('\n')}
 ${testCases.map((_tc, i) => `        __test${i + 1}();`).join('\n')}
         __emit("{\\"done\\":true,\\"totalRunNs\\":" + totalRunNs + ",\\"peakBytes\\":0}");
     }
+}
+`;
+
+  return { wrappedCode, input: '' };
+}
+
+/* ------------------------------------------------------------------------- *
+ * Go generator
+ * ------------------------------------------------------------------------- */
+
+/** Type mapping from spec §2.1. */
+const GO_SCALAR: Record<SignatureBaseType, string> = {
+  int: 'int',
+  long: 'int64',
+  double: 'float64',
+  bool: 'bool',
+  string: 'string',
+  char: 'byte',
+};
+
+/** Harness serializer (helper block below) for each scalar type. */
+const GO_SER: Record<SignatureBaseType, string> = {
+  int: '__cmSerInt',
+  long: '__cmSerI64',
+  double: '__cmSerF64',
+  bool: '__cmSerBool',
+  string: '__cmStr',
+  char: '__cmSerByte',
+};
+
+export function goType(type: SignatureType): string {
+  const { base, dims } = parseSignatureType(type);
+  return '[]'.repeat(dims) + GO_SCALAR[base];
+}
+
+/**
+ * Go interpreted string literal. Non-ASCII passes through as UTF-8 except
+ * what gc rejects in source: a lone surrogate has no UTF-8 form (→ U+FFFD)
+ * and a BOM is only legal as the very first character of a file.
+ */
+export function goStringLiteral(s: string): string {
+  let out = '"';
+  for (const ch of s) {
+    const code = ch.codePointAt(0)!;
+    if (ch === '"') out += '\\"';
+    else if (ch === '\\') out += '\\\\';
+    else if (ch === '\n') out += '\\n';
+    else if (ch === '\r') out += '\\r';
+    else if (ch === '\t') out += '\\t';
+    else if (code < 0x20 || code === 0x7f) out += '\\x' + code.toString(16).padStart(2, '0');
+    else if (code >= 0xd800 && code <= 0xdfff) out += '\\uFFFD';
+    else if (code === 0xfeff) out += '\\uFEFF';
+    else out += ch;
+  }
+  return out + '"';
+}
+
+function goCharLiteral(s: string): string {
+  if (typeof s !== 'string' || s.length !== 1 || s.codePointAt(0)! > 0x7f) {
+    throw new Error(
+      `Test data does not match signature: expected a single ASCII character for type char, got ${JSON.stringify(s)}`
+    );
+  }
+  const code = s.charCodeAt(0);
+  if (s === "'") return "'\\''";
+  if (s === '\\') return "'\\\\'";
+  if (s === '\n') return "'\\n'";
+  if (s === '\r') return "'\\r'";
+  if (s === '\t') return "'\\t'";
+  if (code < 0x20 || code === 0x7f) return `'\\x${code.toString(16).padStart(2, '0')}'`;
+  return `'${s}'`;
+}
+
+function goScalarLiteral(base: SignatureBaseType, value: any): string {
+  switch (base) {
+    case 'int':
+      return String(requireNumber(value, 'int', true));
+    case 'long':
+      return String(requireNumber(value, 'long', true));
+    case 'double':
+      return doubleLiteral(requireNumber(value, 'double', false));
+    case 'bool':
+      if (typeof value !== 'boolean') {
+        throw new Error(
+          `Test data does not match signature: expected bool, got ${JSON.stringify(value)}`
+        );
+      }
+      return value ? 'true' : 'false';
+    case 'string':
+      if (typeof value !== 'string') {
+        throw new Error(
+          `Test data does not match signature: expected string, got ${JSON.stringify(value)}`
+        );
+      }
+      return goStringLiteral(value);
+    case 'char':
+      return goCharLiteral(value);
+  }
+}
+
+/**
+ * Go literal for a value of a signature type. Scalars are untyped constants
+ * (the declaration supplies the type); arrays are typed composite literals,
+ * with inner row types elided as Go allows.
+ */
+export function goLiteral(type: SignatureType, value: any): string {
+  const { base, dims } = parseSignatureType(type);
+  if (dims === 0) return goScalarLiteral(base, value);
+  const scalar = GO_SCALAR[base];
+  if (dims === 1) {
+    const items = requireArrayValue(value, type).map((v) => goScalarLiteral(base, v));
+    return `[]${scalar}{${items.join(', ')}}`;
+  }
+  const rows = requireArrayValue(value, type).map((row) => {
+    const items = requireArrayValue(row, `${base}[]`).map((v) => goScalarLiteral(base, v));
+    return `{${items.join(', ')}}`;
+  });
+  return `[][]${scalar}{${rows.join(', ')}}`;
+}
+
+function goSerExpr(type: SignatureType, variable: string): string {
+  const { base, dims } = parseSignatureType(type);
+  if (dims === 0) return `${GO_SER[base]}(${variable})`;
+  return `__cmSer${dims}(${variable}, ${GO_SER[base]})`;
+}
+
+/**
+ * The harness imports its packages under __cm aliases so they can never
+ * collide with the learner's own imports (a learner's `import "fmt"` and
+ * the harness's `__cmfmt "fmt"` coexist — Go allows one path under two
+ * names). Every import is referenced by the fixed helper block, so none can
+ * trip "imported and not used".
+ */
+const GO_HARNESS_IMPORTS = `import (
+	__cmfmt "fmt"
+	__cmmath "math"
+	__cmos "os"
+	__cmrt "runtime"
+	__cmstrconv "strconv"
+	__cmsys "syscall"
+	__cmtime "time"
+)
+`;
+
+/**
+ * Fixed helper block of every generated Go program.
+ *
+ * Timing: __cmCpuNs is getrusage(RUSAGE_SELF) user+sys time. Go's standard
+ * library has no per-thread CPU clock (RUSAGE_THREAD / CLOCK_THREAD_CPUTIME_ID
+ * need golang.org/x/sys, and the harness must build on macOS dev too), so —
+ * like the Node harness — this is process-wide: GC workers and sysmon count
+ * toward the call. That is also what keeps it honest: work farmed out to
+ * goroutines is still on the clock, and with GOMAXPROCS=1 (goRunEnv) those
+ * goroutines can't run in parallel anyway. main() pins itself with
+ * runtime.LockOSThread() so the calls always run on the main thread. Wall
+ * time (time.Now, monotonic) is kept per test as wallNs for diagnostics, and
+ * runtime.GC() before each call keeps earlier tests' garbage off the clock.
+ *
+ * Memory: peakBytes is the bytes allocated during the call (MemStats
+ * TotalAlloc delta) — an upper bound on the call's live heap.
+ *
+ * A panic in the learner's function is recovered and reported as that test's
+ * error, like the exceptions the other harnesses catch (verdict WA).
+ * Unrecoverable failures (stack overflow, fatal runtime errors) kill the
+ * process: RE.
+ */
+const GO_HELPERS = `const __cmMark = "\\x1eCMR:"
+const __cmHex = "0123456789abcdef"
+
+var __cmTotalRunNs int64
+var __cmPeakBytes int64
+
+func __cmEmit(record string) {
+	__cmos.Stdout.WriteString(__cmMark + record + "\\n")
+}
+
+func __cmCpuNs() int64 {
+	var ru __cmsys.Rusage
+	if __cmsys.Getrusage(__cmsys.RUSAGE_SELF, &ru) != nil {
+		return 0
+	}
+	return ru.Utime.Nano() + ru.Stime.Nano()
+}
+
+func __cmStr(s string) string {
+	b := make([]byte, 0, len(s)+2)
+	b = append(b, '"')
+	for _, r := range s {
+		switch {
+		case r == '"':
+			b = append(b, '\\\\', '"')
+		case r == '\\\\':
+			b = append(b, '\\\\', '\\\\')
+		case r < 0x20:
+			b = append(b, '\\\\', 'u', '0', '0', __cmHex[r>>4], __cmHex[r&0xf])
+		default:
+			b = append(b, string(r)...)
+		}
+	}
+	return string(append(b, '"'))
+}
+
+func __cmSerInt(v int) string   { return __cmstrconv.Itoa(v) }
+func __cmSerI64(v int64) string { return __cmstrconv.FormatInt(v, 10) }
+func __cmSerF64(v float64) string {
+	if __cmmath.IsNaN(v) || __cmmath.IsInf(v, 0) {
+		return "null"
+	}
+	return __cmstrconv.FormatFloat(v, 'g', -1, 64)
+}
+func __cmSerBool(v bool) string {
+	if v {
+		return "true"
+	}
+	return "false"
+}
+func __cmSerByte(v byte) string { return __cmStr(string([]byte{v})) }
+
+// A nil slice serialises as [] — idiomatic Go for "empty".
+func __cmSer1[T any](v []T, f func(T) string) string {
+	b := make([]byte, 0, 2+4*len(v))
+	b = append(b, '[')
+	for i, x := range v {
+		if i > 0 {
+			b = append(b, ',')
+		}
+		b = append(b, f(x)...)
+	}
+	return string(append(b, ']'))
+}
+
+func __cmSer2[T any](v [][]T, f func(T) string) string {
+	b := make([]byte, 0, 2+8*len(v))
+	b = append(b, '[')
+	for i, row := range v {
+		if i > 0 {
+			b = append(b, ',')
+		}
+		b = append(b, __cmSer1(row, f)...)
+	}
+	return string(append(b, ']'))
+}
+
+func __cmPanicMessage(r any) string {
+	switch v := r.(type) {
+	case error:
+		return "panic: " + v.Error()
+	case string:
+		return "panic: " + v
+	default:
+		return "panic: " + __cmfmt.Sprint(v)
+	}
+}
+
+func __cmProtect(call func()) (msg string, ok bool) {
+	defer func() {
+		if r := recover(); r != nil {
+			msg, ok = __cmPanicMessage(r), false
+		}
+	}()
+	call()
+	return "", true
+}
+
+func __cmRun(i int, call func(), ser func() string) {
+	var m0, m1 __cmrt.MemStats
+	__cmrt.GC()
+	__cmrt.ReadMemStats(&m0)
+	w0 := __cmtime.Now()
+	c0 := __cmCpuNs()
+	msg, ok := __cmProtect(call)
+	cpu := __cmCpuNs() - c0
+	wall := __cmtime.Since(w0).Nanoseconds()
+	__cmrt.ReadMemStats(&m1)
+	head := "{\\"i\\":" + __cmstrconv.Itoa(i)
+	if !ok {
+		__cmEmit(head + ",\\"output\\":null,\\"error\\":" + __cmStr(msg) + "}")
+		return
+	}
+	alloc := int64(m1.TotalAlloc - m0.TotalAlloc)
+	__cmTotalRunNs += cpu
+	if alloc > __cmPeakBytes {
+		__cmPeakBytes = alloc
+	}
+	__cmEmit(head + ",\\"output\\":" + ser() +
+		",\\"runNs\\":" + __cmstrconv.FormatInt(cpu, 10) +
+		",\\"wallNs\\":" + __cmstrconv.FormatInt(wall, 10) +
+		",\\"peakBytes\\":" + __cmstrconv.FormatInt(alloc, 10) + "}")
+}
+`;
+
+/**
+ * Go harness. The learner writes bare functions — no package clause needed
+ * (any is stripped) — plus whatever imports they use; those are hoisted and
+ * merged with the prelude's (sourceAssembly.assembleGo). Test inputs are
+ * embedded as typed literals, one __cmTestN function per test. Expected
+ * values are NOT embedded: the service compares outputs itself, so they
+ * never need to exist inside the sandbox.
+ */
+function wrapGoFunction(
+  userCode: string,
+  functionName: string,
+  testCases: TestCase[],
+  signature: ProblemSignature | undefined,
+  prelude: readonly string[]
+): { wrappedCode: string; input: string } {
+  if (!signature) {
+    throw new Error('Go requires a typed signature');
+  }
+  checkTestArity(testCases, signature);
+
+  const retType = goType(signature.returns);
+  const tests = testCases.map((tc, i) => {
+    const decls = signature.params
+      .map((p, j) => `\tvar __p${j} ${goType(p.type)} = ${goLiteral(p.type, tc.input[j])}`)
+      .join('\n');
+    const args = signature.params.map((_p, j) => `__p${j}`).join(', ');
+    return `func __cmTest${i}() {
+${decls}${decls ? '\n' : ''}	var __res ${retType}
+	__cmRun(${i}, func() { __res = ${functionName}(${args}) }, func() string { return ${goSerExpr(signature.returns, '__res')} })
+}`;
+  });
+
+  const unit = assembleGo(prelude, userCode);
+  const userImports = renderGoImports(unit.imports);
+  const wrappedCode = `package main
+
+${GO_HARNESS_IMPORTS}
+${userImports}${userImports ? '\n' : ''}${unit.body}
+//line harness.go:1:1
+// ---- Codemare auto-generated test harness ----
+${GO_HELPERS}
+${tests.join('\n\n')}
+
+func main() {
+	__cmrt.LockOSThread()
+${testCases.map((_tc, i) => `\t__cmTest${i}()`).join('\n')}
+	__cmEmit("{\\"done\\":true,\\"totalRunNs\\":" + __cmstrconv.FormatInt(__cmTotalRunNs, 10) + ",\\"peakBytes\\":" + __cmstrconv.FormatInt(__cmPeakBytes, 10) + "}")
 }
 `;
 

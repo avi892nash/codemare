@@ -1,5 +1,6 @@
 import {
   ExecutionStatus,
+  LANGUAGES,
   SandboxResultStatus,
   TestCaseResult,
 } from '../models/ExecutionResult.js';
@@ -204,9 +205,8 @@ export function sanitizeResults(results: TestCaseResult[]): TestCaseResult[] {
  */
 export function validateIdeRequest(request: any): { valid: boolean; error?: string } {
   // Validate language
-  const validLanguages = ['python', 'javascript', 'cpp', 'java'];
-  if (!validLanguages.includes(request.language)) {
-    return { valid: false, error: 'Invalid language. Must be: python, javascript, cpp, or java' };
+  if (!(LANGUAGES as readonly unknown[]).includes(request.language)) {
+    return { valid: false, error: `Invalid language. Must be one of: ${LANGUAGES.join(', ')}` };
   }
 
   // Validate code

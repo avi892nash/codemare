@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process';
 import { cp, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { Language } from '../../models/ExecutionResult.js';
+import { SandboxLanguage } from '../../models/ExecutionResult.js';
 import { SANDBOX_CONFIG } from '../../config/sandbox.js';
 import { BoxPool } from './boxPool.js';
 import { compileCache, type FreshCompileOutcome } from './compileCache.js';
@@ -17,7 +17,7 @@ import { LanguageSpec, RunOptions, SandboxAdapter, SandboxResult } from './types
  * file isolate writes to extract microsecond-precision timing and peak
  * memory.
  *
- * Two-phase flow for C++ / Java:
+ * Two-phase flow for C++ / Java / Go:
  *   1. compile box: looser limits, separate meta -> compileMs.
  *      On non-zero exit, fail fast as 'CE'.
  *   2. run box: user-specified limits, separate meta -> runMs / memoryKb.
@@ -100,8 +100,8 @@ async function runInBox(boxId: number, spec: IsolateRunSpec): Promise<IsolateRun
     `--wall-time=${((spec.timeoutMs * 2) / 1000).toFixed(3)}`,
     // --cg-mem caps the control group's real memory use (and is what makes
     // cg-oom-killed → MLE work). Plain --mem would be RLIMIT_AS — an
-    // address-space cap that the JVM and V8 (and any runtime that reserves
-    // large virtual regions up front) cannot even start under at 256 MB.
+    // address-space cap that Go (~600 MB of reservations at startup), the
+    // JVM and V8 cannot even start under at 256 MB.
     `--cg-mem=${spec.memoryKb}`,
     `--processes=${spec.pidsLimit}`,
     `--meta=${metaPath}`,
@@ -203,7 +203,7 @@ function cancelled(compileMs?: number): SandboxResult {
 }
 
 async function execute(
-  language: Language,
+  language: SandboxLanguage,
   code: string,
   input: string,
   options?: RunOptions

@@ -1,4 +1,6 @@
 import { executeSandboxed } from './sandboxService.js';
+import { transpileTypeScript } from './typescript.js';
+import { SandboxLanguage } from '../models/ExecutionResult.js';
 import {
   IdeExecutionRequest,
   IdeExecutionResponse,
@@ -10,11 +12,14 @@ import {
  *
  * Test cases are independent — same code, different stdin — so they run
  * concurrently. The sandbox's BoxPool bounds real parallelism, and (for
- * C++/Java) the compile cache means the first case to reach the compiler
+ * C++/Java/Go) the compile cache means the first case to reach the compiler
  * populates it via single-flight while the rest wait on that one compile
  * rather than each compiling their own copy. Net effect for N cases of a
  * compiled language: 1 compile + N parallel runs, instead of N sequential
  * (compile + run).
+ *
+ * TypeScript is transpiled once here (the sandbox runs the JavaScript); a
+ * syntax error is a CE on every case, just like a C++ compile error.
  */
 export async function executeIdeCode(
   request: IdeExecutionRequest
@@ -22,16 +27,43 @@ export async function executeIdeCode(
   const startTime = Date.now();
 
   try {
+    let language: SandboxLanguage;
+    let code = request.code;
+    let transpileMs: number | undefined;
+    if (request.language === 'typescript') {
+      const ts = await transpileTypeScript(request.code);
+      transpileMs = Math.round(ts.ms);
+      if (!ts.ok) {
+        const results: IdeTestResult[] = request.testCases.map((testCase) => ({
+          input: testCase.input,
+          expectedOutput: testCase.expectedOutput,
+          actualOutput: '',
+          passed: false,
+          executionTime: 0,
+          compileMs: transpileMs,
+          status: 'CE',
+          error: ts.error,
+        }));
+        return {
+          success: false,
+          testResults: results,
+          totalPassed: 0,
+          totalTests: results.length,
+          totalExecutionTime: Date.now() - startTime,
+        };
+      }
+      language = 'javascript';
+      code = ts.js;
+    } else {
+      language = request.language;
+    }
+
     // Each callback always resolves to an IdeTestResult (never throws) so
     // Promise.all returns every case's result, in order, even on failure.
     const results: IdeTestResult[] = await Promise.all(
       request.testCases.map(async (testCase): Promise<IdeTestResult> => {
         try {
-          const sandbox = await executeSandboxed(
-            request.language,
-            request.code,
-            testCase.input
-          );
+          const sandbox = await executeSandboxed(language, code, testCase.input);
 
           const actualOutput = sandbox.output || '';
           const normalizedActual = actualOutput.trimEnd();
@@ -50,7 +82,7 @@ export async function executeIdeCode(
             runMs: sandbox.runMs,
             wallMs: sandbox.wallMs,
             memoryKb: sandbox.memoryKb,
-            compileMs: sandbox.compileMs,
+            compileMs: sandbox.compileMs ?? transpileMs,
             // Sandbox 'OK' only means a clean exit — a clean run with the
             // wrong stdout is a Wrong Answer for this case.
             status: sandbox.status === 'OK' && !passed ? 'WA' : sandbox.status,

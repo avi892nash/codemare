@@ -1,11 +1,16 @@
 import app from './app.js';
 import { sandboxReadinessProbe } from './services/sandboxService.js';
+import { warmGoBuildCache } from './services/sandbox/goToolchain.js';
 import { isQueueEnabled, startWorker, QUEUE_INFO } from './queue/queue.js';
 
 const PORT = process.env.PORT || 4000;
 
 async function startServer() {
   try {
+    // Before the probe, so the probe's Go compile (and every later one) hits
+    // a warm standard library. Never throws; without Go it is a no-op.
+    console.log(`Go build cache: ${await warmGoBuildCache()}`);
+
     const probe = await sandboxReadinessProbe();
     console.log(`Sandbox: ${probe.backend}`);
     console.log(`  Available: ${probe.available.join(', ') || 'none'}`);

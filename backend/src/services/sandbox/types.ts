@@ -1,4 +1,4 @@
-import { Language } from '../../models/ExecutionResult.js';
+import { SandboxLanguage } from '../../models/ExecutionResult.js';
 
 /**
  * Outcome of running user code through the sandbox adapter.
@@ -59,7 +59,7 @@ export type SandboxBackendName = 'isolate' | 'local';
  * entry class name from user code.
  */
 export interface LanguageSpec {
-  language: Language;
+  language: SandboxLanguage;
   /** File written into the sandbox box (e.g. "main.py" or "Main.java"). */
   mainFileName(code: string): string;
   /** True when we need a compile phase before run. */
@@ -108,7 +108,7 @@ export interface LanguageSpec {
 export interface SandboxAdapter {
   name: 'isolate';
   execute(
-    language: Language,
+    language: SandboxLanguage,
     code: string,
     input: string,
     options?: RunOptions

@@ -6,6 +6,7 @@ import {
   ExecutionRequest,
   ExecutionResponse,
   Language,
+  SandboxLanguage,
 } from '../models/ExecutionResult.js';
 import { Problem } from '../models/Problem.js';
 
@@ -55,9 +56,10 @@ export async function executeCode(
       problem.signature
     );
 
-    // Execute wrapped code through the active sandbox adapter
+    // Execute wrapped code through the active sandbox adapter. Only the four
+    // legacy languages reach this path (validateExecutionRequest).
     const sandbox = await executeSandboxed(
-      request.language,
+      request.language as SandboxLanguage,
       wrappedCode,
       input
     );

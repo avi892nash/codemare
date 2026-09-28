@@ -1,8 +1,9 @@
 import os from 'node:os';
+import path from 'node:path';
 
 /**
  * Centralised sandbox configuration. Limits apply to the *run* phase of user
- * code; compile phases (C++/Java) get a separate, looser budget defined
+ * code; compile phases (C++/Java/Go) get a separate, looser budget defined
  * below.
  *
  * The sandbox technology is `isolate` (https://github.com/ioi/isolate). There
@@ -31,11 +32,20 @@ export const SANDBOX_CONFIG = {
     binary: 'isolate',
   },
   compileCache: {
-    // Content-addressed cache of compiled artifacts (a.out / *.class)
-    // keyed on (language, compiler argv, source). A re-run of
-    // unchanged C++/Java code skips compilation entirely. Bounded LRU;
+    // Content-addressed cache of compiled artifacts (a.out / *.class / Go
+    // binary) keyed on (language, compiler argv, source). A re-run of
+    // unchanged C++/Java/Go code skips compilation entirely. Bounded LRU;
     // entries are evicted oldest-first and their artifact dirs removed.
     enabled: true,
     maxEntries: 256,
+  },
+  go: {
+    // Shared Go build cache, warmed at startup (see sandbox/goToolchain.ts).
+    // The default lives under the service's (private) tmp dir, which is
+    // writable under the systemd unit's ProtectSystem=strict.
+    buildCacheDir:
+      process.env.GO_BUILD_CACHE_DIR?.trim() || path.join(os.tmpdir(), 'codemare-gocache'),
+    // GOMAXPROCS for `go build` itself.
+    compileMaxProcs: 2,
   },
 } as const;

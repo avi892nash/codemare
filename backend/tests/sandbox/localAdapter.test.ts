@@ -59,3 +59,14 @@ test('an already-aborted signal never starts the run', async () => {
   assert.equal(r.status, 'XX');
   assert.deepEqual(phases, []);
 });
+
+test('go runs with GOMAXPROCS=1 and a GOMEMLIMIT under the memory limit', async () => {
+  const r = await executeLocal(
+    'go',
+    'package main\n\nimport (\n\t"fmt"\n\t"os"\n\t"runtime"\n)\n\nfunc main() {\n\tfmt.Println(runtime.GOMAXPROCS(0), os.Getenv("GOMEMLIMIT"))\n}\n',
+    '',
+    { memoryKb: 256 * 1024 }
+  );
+  assert.equal(r.status, 'OK', r.error);
+  assert.equal(r.output.trim(), '1 235929KiB');
+});

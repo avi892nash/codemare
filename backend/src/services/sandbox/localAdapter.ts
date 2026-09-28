@@ -3,7 +3,7 @@ import { createReadStream } from 'node:fs';
 import { cp, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { Language } from '../../models/ExecutionResult.js';
+import { SandboxLanguage } from '../../models/ExecutionResult.js';
 import { SANDBOX_CONFIG } from '../../config/sandbox.js';
 import { compileCache, type FreshCompileOutcome } from './compileCache.js';
 import { getLanguageSpec, resolveArtifactNames } from './languageSpec.js';
@@ -200,7 +200,7 @@ function abortedResult(compileMs?: number): SandboxResult {
 }
 
 export async function executeLocal(
-  language: Language,
+  language: SandboxLanguage,
   code: string,
   input: string,
   options?: RunOptions

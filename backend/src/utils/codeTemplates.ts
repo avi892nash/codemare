@@ -12,6 +12,11 @@ export function getStarterCode(
     javascript: (fn, params) =>
       `function ${fn}(${params.join(', ')}) {\n    // Write your code here\n}`,
 
+    typescript: (fn, params) =>
+      `function ${fn}(${params.join(', ')}) {\n    // Write your code here\n}`,
+
+    go: (fn, params) => `func ${fn}(${params.join(', ')}) {\n    // Write your code here\n}`,
+
     cpp: (fn, params) => {
       const paramList = params.length > 0 ? params.join(', ') : '';
       return `#include <vector>\n#include <string>\nusing namespace std;\n\n// Adjust return type as needed\nauto ${fn}(${paramList}) {\n    // Write your code here\n}`;
