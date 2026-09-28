@@ -12,6 +12,10 @@ const nextConfig = {
   // NEXT_OUTPUT=standalone). Opt-in so `next dev` and `next start` behave
   // exactly as before everywhere else.
   ...(process.env.NEXT_OUTPUT === 'standalone' ? { output: 'standalone' } : {}),
+  // A production build next to a running `next dev` must not share its output
+  // folder: the build overwrites .next and the dev server then serves 404s
+  // for every chunk. NEXT_DIST_DIR=.next-prod keeps them apart.
+  ...(process.env.NEXT_DIST_DIR ? { distDir: process.env.NEXT_DIST_DIR } : {}),
   experimental: {
     // Server actions are GA in Next 15 — keep the block for forward-compat.
   },
