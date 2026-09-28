@@ -1,0 +1,125 @@
+.btn {
+  --btn-bg: var(--bg-2);
+  --btn-fg: var(--fg-0);
+  --btn-bd: var(--line-2);
+  --btn-bg-hover: var(--bg-3);
+  --btn-bd-hover: var(--line-3);
+  --btn-fg-hover: var(--btn-fg);
+
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  text-decoration: none;
+  color: var(--btn-fg);
+  background: var(--btn-bg);
+  border: 1px solid var(--btn-bd);
+  border-radius: var(--r);
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.12s, border-color 0.12s, color 0.12s, box-shadow 0.12s;
+}
+.btn:hover:not(:disabled):not([aria-disabled='true']) {
+  background: var(--btn-bg-hover);
+  border-color: var(--btn-bd-hover);
+  color: var(--btn-fg-hover);
+}
+.btn:active:not(:disabled):not([aria-disabled='true']) {
+  transform: translateY(0.5px);
+}
+.btn:disabled,
+.btn[aria-disabled='true'] {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+.btn[aria-busy='true'] {
+  cursor: progress;
+  opacity: 0.85;
+}
+
+/* sizes */
+.xs { height: 22px; padding: 0 8px; font-size: 11px; gap: 4px; }
+.sm { height: 28px; padding: 0 10px; font-size: 12px; }
+.md { height: 32px; padding: 0 12px; font-size: 13px; }
+.lg { height: 38px; padding: 0 16px; font-size: 14px; gap: 8px; }
+.iconOnly { padding: 0; justify-content: center; }
+.iconOnly.xs { width: 22px; }
+.iconOnly.sm { width: 28px; }
+.iconOnly.md { width: 32px; }
+.iconOnly.lg { width: 38px; }
+.full { width: 100%; justify-content: center; }
+
+/* variants */
+.primary {
+  --btn-bg: var(--accent);
+  --btn-fg: var(--on-accent);
+  --btn-bd: var(--accent);
+  --btn-bg-hover: var(--accent-hi);
+  --btn-bd-hover: var(--accent-hi);
+}
+.default {
+  --btn-bg: var(--bg-2);
+  --btn-fg: var(--fg-0);
+  --btn-bd: var(--line-2);
+}
+.ghost {
+  --btn-bg: transparent;
+  --btn-fg: var(--fg-1);
+  --btn-bd: transparent;
+  --btn-bg-hover: var(--bg-3);
+  --btn-bd-hover: transparent;
+  --btn-fg-hover: var(--fg-0);
+}
+.outline {
+  --btn-bg: transparent;
+  --btn-fg: var(--fg-0);
+  --btn-bd: var(--line-3);
+  --btn-bg-hover: var(--bg-2);
+  --btn-bd-hover: var(--line-3);
+}
+.danger {
+  --btn-bg: var(--err-bg);
+  --btn-fg: var(--err-fg);
+  --btn-bd: color-mix(in oklab, var(--err) 30%, transparent);
+  --btn-bg-hover: color-mix(in oklab, var(--err) 22%, transparent);
+  --btn-bd-hover: color-mix(in oklab, var(--err) 45%, transparent);
+}
+.success {
+  --btn-bg: var(--ok-bg);
+  --btn-fg: var(--ok-fg);
+  --btn-bd: color-mix(in oklab, var(--ok) 30%, transparent);
+  --btn-bg-hover: color-mix(in oklab, var(--ok) 22%, transparent);
+  --btn-bd-hover: color-mix(in oklab, var(--ok) 45%, transparent);
+}
+.accent {
+  --btn-bg: var(--accent-bg);
+  --btn-fg: var(--accent-hi);
+  --btn-bd: var(--accent-line);
+  --btn-bg-hover: color-mix(in oklab, var(--accent) 22%, transparent);
+  --btn-bd-hover: color-mix(in oklab, var(--accent) 55%, transparent);
+}
+
+.label {
+  display: inline-flex;
+  align-items: center;
+  gap: inherit;
+}
+.label[data-hidden='true'] {
+  visibility: hidden;
+}
+.spinnerOverlay {
+  position: absolute;
+  inset: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}

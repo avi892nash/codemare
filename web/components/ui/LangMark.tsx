@@ -11,15 +11,19 @@ const LANG_META: Record<string, { c: string; t: string }> = {
   Java:       { c: 'oklch(0.72 0.18 22)',  t: 'Jv' },
   java:       { c: 'oklch(0.72 0.18 22)',  t: 'Jv' },
   Go:         { c: 'oklch(0.78 0.12 200)', t: 'Go' },
+  go:         { c: 'oklch(0.78 0.12 200)', t: 'Go' },
   Rust:       { c: 'oklch(0.78 0.14 40)',  t: 'Rs' },
   Kotlin:     { c: 'oklch(0.78 0.14 320)', t: 'Kt' },
   TypeScript: { c: 'oklch(0.74 0.14 240)', t: 'Ts' },
+  typescript: { c: 'oklch(0.74 0.14 240)', t: 'Ts' },
 };
 
+/* Decorative: the language name is always printed or announced nearby. */
 export function LangMark({ lang, size = 14 }: { lang: string; size?: number }) {
   const meta = LANG_META[lang] ?? { c: 'var(--fg-3)', t: (lang || '?').slice(0, 2) };
   return (
     <span
+      aria-hidden="true"
       className="mono"
       style={{
         width: size + 2,

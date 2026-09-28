@@ -1,20 +1,12 @@
-import type { Metadata } from 'next';
-import { Inter, JetBrains_Mono } from 'next/font/google';
+import type { Metadata, Viewport } from 'next';
+import { cookies } from 'next/headers';
 import { auth } from '@/auth';
 import { SessionProvider } from '@/components/Auth/SessionProvider';
+import { ThemeProvider } from '@/components/ui/ThemeProvider';
+import { ToastProvider } from '@/components/ui/Toast';
+import { fontVariables } from '@/components/ui/fonts';
+import { parseTheme, themeClassName, THEME_COOKIE } from '@/lib/theme';
 import './globals.css';
-
-const inter = Inter({
-  subsets: ['latin'],
-  variable: '--font-sans',
-  display: 'swap',
-});
-
-const jetbrains = JetBrains_Mono({
-  subsets: ['latin'],
-  variable: '--font-mono',
-  display: 'swap',
-});
 
 export const metadata: Metadata = {
   title: 'Codemare',
@@ -25,17 +17,29 @@ export const metadata: Metadata = {
   },
 };
 
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+};
+
 /**
- * Root layout. Loads fonts via next/font (inlined, preloaded), applies the
- * `cm` class so the design tokens cascade, and wraps the tree in
- * SessionProvider so client components can `useSession()` / `signIn()`.
+ * Root layout. Loads fonts via next/font (inlined, preloaded) and puts the
+ * theme classes on <html> from the `cm-theme` cookie — dark `cm` by default,
+ * `cm cm-light` for light — so SSR paints the right theme with no flash.
+ * Providers: session (useSession/signIn), theme (useTheme/ThemeToggle) and
+ * toasts (useToast).
  */
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const session = await auth().catch(() => null);
+  const [session, cookieStore] = await Promise.all([auth().catch(() => null), cookies()]);
+  const theme = parseTheme(cookieStore.get(THEME_COOKIE)?.value);
   return (
-    <html lang="en" className={`${inter.variable} ${jetbrains.variable}`}>
-      <body className="cm">
-        <SessionProvider session={session}>{children}</SessionProvider>
+    <html lang="en" className={`${fontVariables} ${themeClassName(theme)}`}>
+      <body>
+        <SessionProvider session={session}>
+          <ThemeProvider initialTheme={theme}>
+            <ToastProvider>{children}</ToastProvider>
+          </ThemeProvider>
+        </SessionProvider>
       </body>
     </html>
   );

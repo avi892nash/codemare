@@ -8,8 +8,21 @@ import { NextResponse, type NextFetchEvent, type NextRequest } from 'next/server
  */
 const PUBLIC_PREFIXES = ['/auth'];
 
+/**
+ * /dev/* (the /dev/system design-system sheet) is public outside production
+ * so it can be reviewed signed out. In production the prefix stays behind the
+ * wall AND the route itself 404s (app/dev/layout.tsx).
+ */
+const DEV_PREFIX = '/dev';
+
+const isUnder = (path: string, prefix: string) => path === prefix || path.startsWith(`${prefix}/`);
+
+function isDevPath(path: string): boolean {
+  return process.env.NODE_ENV !== 'production' && isUnder(path, DEV_PREFIX);
+}
+
 function isPublicPath(path: string): boolean {
-  return PUBLIC_PREFIXES.some((p) => path === p || path.startsWith(`${p}/`));
+  return PUBLIC_PREFIXES.some((p) => isUnder(path, p));
 }
 
 function redirectToAuth(req: NextRequest) {
@@ -21,6 +34,7 @@ function redirectToAuth(req: NextRequest) {
 
 const withAuth = auth((req) => {
   const path = req.nextUrl.pathname;
+  if (isDevPath(path)) return NextResponse.next();
   if (isPublicPath(path)) {
     // An already-signed-in user has no reason to see the sign-in form (and
     // /auth renders inside the workspace layout, so they'd see the full
@@ -50,7 +64,7 @@ export default async function middleware(req: NextRequest, event: NextFetchEvent
     // letting protected pages through. Public pages stay reachable so users
     // can still get to the login screen.
     console.error('[middleware] auth resolution failed, treating request as unauthenticated:', err);
-    if (isPublicPath(req.nextUrl.pathname)) return NextResponse.next();
+    if (isPublicPath(req.nextUrl.pathname) || isDevPath(req.nextUrl.pathname)) return NextResponse.next();
     return redirectToAuth(req);
   }
 }

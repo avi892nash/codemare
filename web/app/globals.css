@@ -6,9 +6,27 @@
  * Codemare design tokens — ported from the legacy Vite frontend.
  * Fonts are loaded via next/font in app/layout.tsx and exposed as
  * --font-sans / --font-mono CSS variables; the tokens below reference them.
+ *
+ * Theming: `.cm` is the dark default, `.cm-light` swaps the palette. The root
+ * layout puts `cm` (+ `cm-light`) on <html> from the `cm-theme` cookie, so SSR
+ * paints the right theme with no flash. To pin a subtree to one theme no
+ * matter what the user picked, use <ThemeScope> (components/ui/ThemeScope),
+ * which renders `class="cm" data-theme="dark"` or
+ * `class="cm cm-light" data-theme="light"`.
+ *
+ * Derived tokens (never new colors — every one is a var() or color-mix() of
+ * the palette above it):
+ *   --ok-fg / --warn-fg / --err-fg / --info-fg  tone colors safe for small
+ *       text (AA ≥ 4.5:1 on their own -bg tint and on bg-0..bg-3). Identical
+ *       to the tone in dark; mixed 30% toward --fg-0 in light, where the raw
+ *       tones only reach ~3.4–4.4:1.
+ *   --on-accent   text on an --accent fill (primary button).
+ *   --tk-*        syntax colors; light maps them onto AA-safe tokens.
  * ─────────────────────────────────────────────────────────────────────── */
 :root,
 .cm {
+  color-scheme: dark;
+
   --bg-0: #08080a;
   --bg-1: #0e0e11;
   --bg-2: #15151a;
@@ -51,9 +69,28 @@
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
   --shadow: 0 4px 16px rgba(0, 0, 0, 0.4), 0 0 0 1px var(--line-2);
   --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.55), 0 0 0 1px var(--line-2);
+
+  /* Derived (see header). */
+  --ok-fg: var(--ok);
+  --warn-fg: var(--warn);
+  --err-fg: var(--err);
+  --info-fg: var(--info);
+  --on-accent: var(--bg-1);
+
+  --tk-kw: oklch(0.78 0.14 320);
+  --tk-fn: oklch(0.80 0.14 220);
+  --tk-ty: oklch(0.84 0.14 80);
+  --tk-st: oklch(0.78 0.14 130);
+  --tk-nu: oklch(0.82 0.14 50);
 }
 
-.cm-light {
+/* The second selector keeps light mode intact inside legacy components that
+ * still put a bare `cm` class on their root (IdeView, CatalogList, …): a
+ * nested `.cm` follows the nearest light theme unless it is pinned dark. */
+.cm-light,
+.cm-light .cm:not([data-theme='dark'], [data-theme='dark'] .cm) {
+  color-scheme: light;
+
   --bg-0: #fafafa;
   --bg-1: #ffffff;
   --bg-2: #f4f4f5;
@@ -80,6 +117,29 @@
   --warn: oklch(0.62 0.16 70);
   --err: oklch(0.58 0.22 22);
   --info: oklch(0.58 0.12 230);
+
+  /* Same formulas as dark, re-declared so they resolve against the light
+   * palette even when `.cm-light` sits on a different element than `.cm`. */
+  --ok-bg: color-mix(in oklab, var(--ok) 14%, transparent);
+  --warn-bg: color-mix(in oklab, var(--warn) 14%, transparent);
+  --err-bg: color-mix(in oklab, var(--err) 14%, transparent);
+  --info-bg: color-mix(in oklab, var(--info) 12%, transparent);
+  --diff-add: color-mix(in oklab, var(--ok) 18%, transparent);
+  --diff-del: color-mix(in oklab, var(--err) 18%, transparent);
+  --shadow: 0 4px 16px rgba(0, 0, 0, 0.4), 0 0 0 1px var(--line-2);
+  --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.55), 0 0 0 1px var(--line-2);
+
+  --ok-fg: color-mix(in oklab, var(--ok) 70%, var(--fg-0));
+  --warn-fg: color-mix(in oklab, var(--warn) 70%, var(--fg-0));
+  --err-fg: color-mix(in oklab, var(--err) 70%, var(--fg-0));
+  --info-fg: color-mix(in oklab, var(--info) 70%, var(--fg-0));
+  --on-accent: var(--bg-1);
+
+  --tk-kw: var(--accent-hi);
+  --tk-fn: var(--info-fg);
+  --tk-ty: var(--warn-fg);
+  --tk-st: var(--ok-fg);
+  --tk-nu: var(--err-fg);
 }
 
 /* ─── Base ───────────────────────────────────────────────────────── */
@@ -106,6 +166,12 @@ body {
 .focus-ring:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--bg-0), 0 0 0 4px var(--accent);
+}
+/* Fallback so anything focusable without `.focus-ring` still shows focus.
+ * :where() keeps specificity at zero so `.focus-ring` (and components) win. */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .hr { height: 1px; background: var(--line-2); }
@@ -135,12 +201,13 @@ body {
   white-space: pre;
   overflow-x: auto;
 }
-.tk-kw { color: oklch(0.78 0.14 320); }
-.tk-fn { color: oklch(0.80 0.14 220); }
-.tk-ty { color: oklch(0.84 0.14 80); }
-.tk-st { color: oklch(0.78 0.14 130); }
-.tk-nu { color: oklch(0.82 0.14 50); }
-.tk-co { color: var(--fg-3); font-style: italic; }
+.tk-kw { color: var(--tk-kw); }
+.tk-fn { color: var(--tk-fn); }
+.tk-ty { color: var(--tk-ty); }
+.tk-st { color: var(--tk-st); }
+.tk-nu { color: var(--tk-nu); }
+/* Comments carry meaning in lesson code, so they use fg-2 (AA) not fg-3. */
+.tk-co { color: var(--fg-2); font-style: italic; }
 .tk-op { color: var(--fg-2); }
 .tk-pa { color: var(--fg-1); }
 .tk-mu { color: var(--fg-3); }
@@ -160,4 +227,22 @@ body {
 @media (max-width: 900px) {
   .auth-grid { grid-template-columns: 1fr; }
   .auth-panel { display: none !important; }
+}
+
+/* ─── Motion ─────────────────────────────────────────────────────── */
+@keyframes cm-spin { to { transform: rotate(360deg); } }
+@keyframes cm-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes cm-pop-in { from { opacity: 0; transform: translateY(4px) scale(0.98); } to { opacity: 1; transform: none; } }
+@keyframes cm-indeterminate { from { left: -35%; } to { left: 100%; } }
+
+/* Honor the OS setting everywhere: no animated or transitioned motion. JS-driven
+ * motion (VisualizationFrame autoplay) checks the same query via
+ * useReducedMotion(). */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

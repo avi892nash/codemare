@@ -1,0 +1,102 @@
+.root {
+  position: relative;
+  display: inline-flex;
+}
+
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  border-radius: var(--r);
+}
+
+.popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  z-index: 800;
+  min-width: 200px;
+  max-width: calc(100vw - 16px);
+  padding: 4px;
+  background: var(--bg-1);
+  color: var(--fg-0);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow);
+  animation: cm-pop-in 0.12s ease-out;
+}
+.end { right: 0; }
+.start { left: 0; }
+
+.header {
+  padding: 8px 8px 10px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--line-2);
+}
+
+.menu {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  outline: none;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  min-height: 30px;
+  padding: 0 8px;
+  margin: 0;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--fg-1);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+.item svg { color: var(--fg-2); }
+.item:hover,
+.item:focus-visible,
+.item:focus {
+  background: var(--bg-3);
+  color: var(--fg-0);
+  outline: none;
+  box-shadow: none;
+}
+.item:focus-visible { box-shadow: inset 0 0 0 1px var(--accent-line); }
+.item[aria-current='page'] { color: var(--fg-0); }
+.item[aria-current='page'] svg { color: var(--accent-hi); }
+.item[aria-disabled='true'] { opacity: 0.5; cursor: not-allowed; }
+.danger { color: var(--err-fg); }
+.danger svg { color: var(--err-fg); }
+.danger:hover,
+.danger:focus { color: var(--err-fg); background: var(--err-bg); }
+
+.itemText { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.itemDesc { font-size: 11.5px; font-weight: 400; color: var(--fg-2); }
+.itemMeta { margin-left: auto; font-size: 11px; color: var(--fg-2); }
+
+.separator {
+  height: 1px;
+  margin: 4px 2px;
+  background: var(--line-2);
+}
+.groupLabel {
+  padding: 8px 8px 4px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--fg-2);
+}
