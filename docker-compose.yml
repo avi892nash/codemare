@@ -55,8 +55,9 @@ services:
       - ./deploy/postgres/db-init.sql:/db-init.sql:ro
     command: ["psql", "--no-psqlrc", "-v", "ON_ERROR_STOP=1", "-f", "/db-init.sql"]
 
-  # prisma migrate deploy + the content seed (dev only: re-seeding resets
-  # seeded content, including recipes edited in Directus).
+  # prisma migrate deploy + the content seed. The seed defaults to
+  # insert-missing (new slugs only, staff edits kept); set SEED_MODE=upsert on
+  # this service to reset seeded content to web/prisma/seed/data.
   migrate:
     build:
       context: .

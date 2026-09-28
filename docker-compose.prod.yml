@@ -99,8 +99,9 @@ services:
     environment:
       DATABASE_URL: postgresql://codemare:${CODEMARE_DB_PASSWORD}@postgres:5432/${CODEMARE_DB:-codemare}
       MIGRATE_ON_START: "true"
-      # First deploy only (see deploy/README.md): re-seeding overwrites
-      # content edited in Directus.
+      # insert-missing seed (deploy/README.md): adds new slugs from
+      # web/prisma/seed/data and never modifies existing rows, so it is safe
+      # to leave on across deploys without reverting Directus edits.
       SEED_ON_START: ${SEED_ON_START:-false}
     command: ["true"]
     networks: [internal]
