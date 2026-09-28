@@ -13,5 +13,8 @@ module.exports = {
   },
   rules: {
     '@typescript-eslint/no-explicit-any': 'warn',
+    // `_`-prefixed params are intentional placeholders (e.g. Express needs the
+    // 4-arg signature to recognise an error handler).
+    '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
   },
 }
