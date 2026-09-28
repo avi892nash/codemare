@@ -77,8 +77,8 @@ function clip(s: string | undefined): string | undefined {
 export function toRunResult(res: IdeExecutionResponse): RunResult {
   const t = res.testResults[0];
   if (!t) return { status: 'XX', error: res.error || 'The code runner returned no result.' };
-  // Typed without WA (legacy shape), but the IDE mode does send it.
-  const raw = t.status as string | undefined;
+  // A snippet has no expected output, so a WA from IDE mode is a clean run.
+  const raw = t.status;
   const status: StatusCode = raw === 'WA' || (!raw && !t.error) ? 'OK' : raw && isVerdict(raw) ? raw : 'RE';
   const failed = status !== 'OK';
   return {

@@ -91,9 +91,9 @@
   --tk-nu: oklch(0.82 0.14 50);
 }
 
-/* The second selector keeps light mode intact inside legacy components that
- * still put a bare `cm` class on their root (IdeView, CatalogList, …): a
- * nested `.cm` follows the nearest light theme unless it is pinned dark. */
+/* The second selector keeps light mode intact inside nested theme roots (a
+ * `cm` class below <html>, e.g. a ThemeScope): a nested `.cm` follows the
+ * nearest light theme unless it is pinned dark. */
 .cm-light,
 .cm-light .cm:not([data-theme='dark'], [data-theme='dark'] .cm) {
   color-scheme: light;

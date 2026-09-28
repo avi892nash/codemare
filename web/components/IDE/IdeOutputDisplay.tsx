@@ -36,8 +36,7 @@ export function diffLines(expected: string, actual: string): DiffLine[] {
 
 /** A case's status: an unanswered expectation isn't a wrong answer. */
 function caseStatus(r: IdeTestResult, compared: boolean): StatusCode {
-  // The service also reports WA (a clean exit with different stdout); the legacy type predates it.
-  const status: string | undefined = r.status;
+  const status = r.status;
   if (status && isStatusCode(status)) {
     if (status === 'WA' && !compared) return 'OK';
     return status;

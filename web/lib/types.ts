@@ -181,7 +181,8 @@ export interface IdeTestResult {
   wallMs?: number;
   memoryKb?: number;
   compileMs?: number;
-  status?: SandboxStatus;
+  /** WA: a clean exit whose stdout differs from the case's expected output. */
+  status?: SandboxStatus | 'WA';
   error?: string;
 }
 
