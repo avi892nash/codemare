@@ -1,0 +1,41 @@
+# Codemare edge proxy (docker-compose.prod.yml -> caddy).
+#
+# Caddy obtains and renews Let's Encrypt certificates for both names on its
+# own (HTTP-01/TLS-ALPN-01 on :80/:443), redirects HTTP to HTTPS and serves
+# HTTP/3. Both DNS records must point at the VPS before the first start.
+# `*.localhost` names get certificates from Caddy's internal CA instead,
+# which is what the local verification run uses.
+
+{
+	email {$ACME_EMAIL}
+}
+
+(common) {
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+	log {
+		output stdout
+		format json
+	}
+}
+
+# The learner app. Server-sent events (judge progress) are streamed through:
+# reverse_proxy flushes text/event-stream responses immediately.
+{$APP_DOMAIN} {
+	import common
+	reverse_proxy web:3000
+}
+
+# Directus (content CMS + the recipe editor). Optional hardening: allow only
+# known addresses, e.g.
+#   @outside not remote_ip 203.0.113.0/24
+#   respond @outside 403
+{$ADMIN_DOMAIN} {
+	import common
+	reverse_proxy directus:8055
+}

@@ -1,0 +1,31 @@
+{
+  "name": "codemare-admin",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Directus admin for Codemare: the codemare extension bundle (recipe editor module, content hooks, supply endpoint) and the content-model apply script. Deliberately NOT a workspace of the root package.",
+  "scripts": {
+    "build": "npm run build:extension && npm run build:content-model",
+    "build:extension": "cd extensions/codemare && directus-extension build",
+    "dev:extension": "cd extensions/codemare && directus-extension build -w --no-minify",
+    "build:content-model": "esbuild content-model/apply.ts --bundle --platform=node --format=esm --target=node20 --loader:.prisma=text --outfile=dist/apply-content-model.mjs --log-level=warning",
+    "apply": "npm run build:content-model && node dist/apply-content-model.mjs",
+    "typecheck": "vue-tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@directus/errors": "2.5.2",
+    "@directus/extensions-sdk": "18.0.5",
+    "@rollup/plugin-alias": "6.0.0",
+    "@types/node": "20.19.43",
+    "esbuild": "0.28.1",
+    "typescript": "5.9.3",
+    "vitest": "4.1.11",
+    "vue": "3.5.24",
+    "vue-router": "4.6.4",
+    "vue-tsc": "3.3.11"
+  },
+  "engines": {
+    "node": ">=20.19"
+  }
+}

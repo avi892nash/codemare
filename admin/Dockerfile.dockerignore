@@ -1,0 +1,13 @@
+# Build context for admin/Dockerfile is the repo root. Allowlist: the admin
+# package plus the few web files it bundles (pure token rules, Prisma schema).
+*
+!admin
+!web/lib/types.ts
+!web/lib/server/errors.ts
+!web/lib/server/rules
+!web/prisma/schema.prisma
+**/node_modules
+admin/dist
+admin/extensions/codemare/dist
+web/lib/server/rules/*.test.ts
+**/.DS_Store

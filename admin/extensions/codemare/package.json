@@ -1,0 +1,35 @@
+{
+  "name": "directus-extension-codemare",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Codemare admin extensions: the recipe editor module (T4), content-integrity hooks and the recipe supply endpoint. Built from admin/ (npm run build:extension); its tooling lives in admin/package.json.",
+  "icon": "extension",
+  "keywords": ["directus", "directus-extension", "directus-extension-bundle"],
+  "files": ["dist"],
+  "directus:extension": {
+    "type": "bundle",
+    "path": {
+      "app": "dist/app.js",
+      "api": "dist/api.js"
+    },
+    "entries": [
+      {
+        "type": "module",
+        "name": "recipe-editor",
+        "source": "src/recipe-editor/index.ts"
+      },
+      {
+        "type": "hook",
+        "name": "content-integrity",
+        "source": "src/content-integrity/index.ts"
+      },
+      {
+        "type": "endpoint",
+        "name": "codemare",
+        "source": "src/codemare-api/index.ts"
+      }
+    ],
+    "host": "^12.0.0"
+  }
+}

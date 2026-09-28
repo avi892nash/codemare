@@ -1,0 +1,22 @@
+# Build context for web/Dockerfile is the repo root (the npm workspace
+# lockfile lives there). BuildKit reads this file instead of /.dockerignore
+# when building with `-f web/Dockerfile`. Allowlist: the web workspace, the
+# manifests npm ci needs, and the entrypoint — nothing else.
+*
+!package.json
+!package-lock.json
+!backend/package.json
+!web
+!deploy/web
+**/node_modules
+web/.next
+web/.env
+web/.env.*
+!web/.env.example
+web/e2e/.results
+web/playwright-report
+web/test-results
+web/prisma/seed/verify/__pycache__
+web/tsconfig.tsbuildinfo
+**/*.log
+**/.DS_Store

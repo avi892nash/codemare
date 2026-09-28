@@ -1,0 +1,295 @@
+# Codemare production stack: one Hetzner VPS, Docker Compose. Runbook:
+# deploy/README.md.
+#
+#   docker compose --env-file deploy/.env -f docker-compose.prod.yml up -d --build
+#
+# Topology: only caddy publishes ports (80/443, TLS via ACME). caddy proxies
+# APP_DOMAIN -> web and ADMIN_DOMAIN -> directus over the `edge` network.
+# postgres and backend sit only on `internal`, which has no route to the
+# internet; web, directus and backup are on both (OAuth, AI review, mail,
+# the storage box). Start-up order: postgres -> db-init (roles, schemas,
+# grants) -> migrate (prisma migrate deploy) -> web + directus ->
+# directus-config (applies admin/content-model). Long-running services
+# restart unless-stopped; one-shots never restart.
+#
+# Secrets come from deploy/.env (copy deploy/.env.example; never commit it).
+# Required values are enforced with ${VAR:?...}, so `config` without an env
+# file fails by design; validate with
+#   docker compose --env-file deploy/.env.example -f docker-compose.prod.yml config -q
+
+name: codemare
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "20m"
+    max-file: "5"
+
+x-db-env: &db-env
+  CODEMARE_DB: ${CODEMARE_DB:-codemare}
+
+services:
+  caddy:
+    image: caddy:2.11-alpine
+    restart: unless-stopped
+    depends_on:
+      web:
+        condition: service_started
+      directus:
+        condition: service_started
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+      - "${HTTPS_PORT:-443}:443/udp"
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:?set APP_DOMAIN in deploy/.env}
+      ADMIN_DOMAIN: ${ADMIN_DOMAIN:?set ADMIN_DOMAIN in deploy/.env}
+      ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL in deploy/.env}
+    volumes:
+      - ./deploy/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks: [edge]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:2019/config/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    logging: *logging
+
+  web:
+    build:
+      context: .
+      dockerfile: web/Dockerfile
+    image: codemare/web:${CODEMARE_VERSION:-latest}
+    restart: unless-stopped
+    init: true
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: postgresql://codemare:${CODEMARE_DB_PASSWORD:?set CODEMARE_DB_PASSWORD}@postgres:5432/${CODEMARE_DB:-codemare}
+      # The migrate one-shot already ran; skip the redundant (no-op) pass.
+      MIGRATE_ON_START: "false"
+      SEED_ON_START: "false"
+      AUTH_SECRET: ${AUTH_SECRET:?set AUTH_SECRET (openssl rand -base64 32)}
+      AUTH_URL: https://${APP_DOMAIN}
+      AUTH_GITHUB_ID: ${AUTH_GITHUB_ID:-}
+      AUTH_GITHUB_SECRET: ${AUTH_GITHUB_SECRET:-}
+      AUTH_GOOGLE_ID: ${AUTH_GOOGLE_ID:-}
+      AUTH_GOOGLE_SECRET: ${AUTH_GOOGLE_SECRET:-}
+      COMPILE_SERVICE_URL: http://backend:4000
+      INTERNAL_TOKEN: ${INTERNAL_TOKEN:?set INTERNAL_TOKEN (openssl rand -hex 32)}
+      FEATURE_LIBRARY_PUBLIC: ${FEATURE_LIBRARY_PUBLIC:-false}
+      FEATURE_AI_REVIEW: ${FEATURE_AI_REVIEW:-false}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+    networks: [edge, internal]
+    logging: *logging
+
+  # One-shot: `prisma migrate deploy` with the web image, before web and
+  # Directus start (Directus caches the schema it sees at boot).
+  migrate:
+    image: codemare/web:${CODEMARE_VERSION:-latest}
+    restart: "no"
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: postgresql://codemare:${CODEMARE_DB_PASSWORD}@postgres:5432/${CODEMARE_DB:-codemare}
+      MIGRATE_ON_START: "true"
+      # First deploy only (see deploy/README.md): re-seeding overwrites
+      # content edited in Directus.
+      SEED_ON_START: ${SEED_ON_START:-false}
+    command: ["true"]
+    networks: [internal]
+    logging: *logging
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    image: codemare/backend:${CODEMARE_VERSION:-latest}
+    restart: unless-stopped
+    init: true
+    # isolate needs namespaces, bind mounts and write access to its cgroup
+    # subtree; see backend/Dockerfile and deploy/README.md.
+    privileged: true
+    cgroup: private
+    deploy:
+      resources:
+        limits:
+          # Caps the server plus every sandbox box (boxes are child cgroups).
+          memory: ${BACKEND_MEMORY_LIMIT:-4g}
+          pids: 8192
+    environment:
+      NODE_ENV: production
+      SANDBOX_MODE: isolate
+      PORT: "4000"
+      INTERNAL_TOKEN: ${INTERNAL_TOKEN}
+      ISOLATE_CPU_PINNING: ${ISOLATE_CPU_PINNING:-round-robin}
+      ISOLATE_SYSCALL_FLAGS: ${ISOLATE_SYSCALL_FLAGS:-65531}
+      EXECUTION_RATE_LIMIT_MAX: ${EXECUTION_RATE_LIMIT_MAX:-6000}
+    # Internal only: no ports, no internet (internal network).
+    networks: [internal]
+    logging: *logging
+
+  postgres:
+    image: postgres:16-bookworm
+    restart: unless-stopped
+    shm_size: 256mb
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD (superuser)}
+      POSTGRES_DB: ${CODEMARE_DB:-codemare}
+      POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256 --data-checksums
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks: [internal]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    logging: *logging
+
+  # One-shot: roles (codemare, directus, codemare_backup), schemas and grants.
+  db-init:
+    image: postgres:16-bookworm
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      <<: *db-env
+      PGHOST: postgres
+      PGUSER: postgres
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: ${CODEMARE_DB:-codemare}
+      CODEMARE_DB_PASSWORD: ${CODEMARE_DB_PASSWORD}
+      DIRECTUS_DB_PASSWORD: ${DIRECTUS_DB_PASSWORD:?set DIRECTUS_DB_PASSWORD}
+      BACKUP_DB_PASSWORD: ${BACKUP_DB_PASSWORD:?set BACKUP_DB_PASSWORD}
+    volumes:
+      - ./deploy/postgres/db-init.sql:/db-init.sql:ro
+    command: ["psql", "--no-psqlrc", "-v", "ON_ERROR_STOP=1", "-f", "/db-init.sql"]
+    networks: [internal]
+    logging: *logging
+
+  directus:
+    build:
+      context: .
+      dockerfile: admin/Dockerfile
+    image: codemare/directus:${CODEMARE_VERSION:-latest}
+    restart: unless-stopped
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      PUBLIC_URL: https://${ADMIN_DOMAIN}
+      SECRET: ${DIRECTUS_SECRET:?set DIRECTUS_SECRET (openssl rand -hex 32)}
+      DB_CLIENT: pg
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_DATABASE: ${CODEMARE_DB:-codemare}
+      DB_USER: directus
+      DB_PASSWORD: ${DIRECTUS_DB_PASSWORD}
+      # Directus' own tables live in `directus`; content.* is introspected
+      # through the second entry. app.* is invisible (and ungranted).
+      DB_SEARCH_PATH: directus,content
+      # First boot only: creates this admin user. Change the password after.
+      ADMIN_EMAIL: ${DIRECTUS_ADMIN_EMAIL:?set DIRECTUS_ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${DIRECTUS_ADMIN_PASSWORD:?set DIRECTUS_ADMIN_PASSWORD}
+      TELEMETRY: "false"
+      WEBSOCKETS_ENABLED: "false"
+      CACHE_ENABLED: "false"
+      IP_TRUST_PROXY: "true"
+      EXTENSIONS_AUTO_RELOAD: "false"
+      MARKETPLACE_TRUST: sandbox
+      LOG_LEVEL: info
+      STORAGE_LOCATIONS: local
+      STORAGE_LOCAL_ROOT: /directus/uploads
+    volumes:
+      - directus_uploads:/directus/uploads
+    networks: [edge, internal]
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8055/server/ping').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      start_period: 60s
+      retries: 5
+    logging: *logging
+
+  # One-shot: applies admin/content-model.json (collections, fields,
+  # relations, the Content Editor role) through the Directus API — meta only,
+  # never DDL — and clears Directus' schema cache after migrations.
+  directus-config:
+    image: codemare/directus:${CODEMARE_VERSION:-latest}
+    restart: "no"
+    depends_on:
+      directus:
+        condition: service_healthy
+    environment:
+      DIRECTUS_URL: http://directus:8055
+      DIRECTUS_ADMIN_EMAIL: ${DIRECTUS_ADMIN_EMAIL}
+      DIRECTUS_ADMIN_PASSWORD: ${DIRECTUS_ADMIN_PASSWORD}
+    entrypoint: ["node", "/codemare/apply-content-model.mjs"]
+    command: []
+    networks: [internal]
+    logging: *logging
+
+  backup:
+    build:
+      context: ./deploy/backup
+    image: codemare/backup:${CODEMARE_VERSION:-latest}
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGHOST: postgres
+      PGUSER: codemare_backup
+      PGPASSWORD: ${BACKUP_DB_PASSWORD}
+      PGDATABASE: ${CODEMARE_DB:-codemare}
+      BACKUP_AT: ${BACKUP_AT:-03:15}
+      BACKUP_KEEP_DAILY: ${BACKUP_KEEP_DAILY:-14}
+      BACKUP_KEEP_WEEKLY: ${BACKUP_KEEP_WEEKLY:-8}
+      BACKUP_KEEP_MONTHLY: ${BACKUP_KEEP_MONTHLY:-6}
+      BACKUP_PING_URL: ${BACKUP_PING_URL:-}
+      BACKUP_SSH_HOST: ${BACKUP_SSH_HOST:?set BACKUP_SSH_HOST (the storage box)}
+      BACKUP_SSH_USER: ${BACKUP_SSH_USER:?set BACKUP_SSH_USER}
+      BACKUP_SSH_PORT: ${BACKUP_SSH_PORT:-23}
+      RESTIC_REPOSITORY: ${RESTIC_REPOSITORY:?set RESTIC_REPOSITORY}
+      RESTIC_PASSWORD: ${RESTIC_PASSWORD:?set RESTIC_PASSWORD (keep a copy off the server!)}
+    volumes:
+      - backups:/backups
+      - type: bind
+        source: ${BACKUP_SSH_KEY_FILE:-./deploy/secrets/storagebox_ed25519}
+        target: /run/secrets/backup_ssh_key
+        read_only: true
+        bind: { create_host_path: false }
+      - type: bind
+        source: ${BACKUP_KNOWN_HOSTS_FILE:-./deploy/secrets/storagebox_known_hosts}
+        target: /run/secrets/backup_known_hosts
+        read_only: true
+        bind: { create_host_path: false }
+    networks: [edge, internal]
+    healthcheck:
+      test: ["CMD", "codemare-backup-health"]
+      interval: 5m
+      timeout: 10s
+      start_period: 1m
+      retries: 1
+    logging: *logging
+
+networks:
+  edge: {}
+  internal:
+    internal: true
+
+volumes:
+  pgdata: {}
+  caddy_data: {}
+  caddy_config: {}
+  directus_uploads: {}
+  backups: {}

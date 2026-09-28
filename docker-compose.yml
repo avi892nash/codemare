@@ -1,0 +1,156 @@
+# Local development: Postgres + Directus with the production images and the
+# same bootstrap (db-init -> migrate + seed -> directus -> directus-config).
+# Every secret below is a throwaway dev default; production uses
+# docker-compose.prod.yml with deploy/.env.
+#
+#   docker compose up -d --build              # postgres 127.0.0.1:5433, directus http://localhost:8055
+#   docker compose --profile app up -d --build  # + web :3000 and backend :4100 in containers
+#
+# Point the host web app at this database with
+#   DATABASE_URL=postgresql://codemare:codemare-dev@localhost:5433/codemare
+# (npm run dev -w web), and sign in to Directus as admin@example.com /
+# codemare-admin-dev.
+#
+# Extension development: `npm --prefix admin ci && npm --prefix admin run dev:extension`
+# rebuilds admin/extensions/codemare/dist on change; uncomment the directus
+# volume and EXTENSIONS_AUTO_RELOAD below to load it live.
+
+name: codemare-dev
+
+x-db: &db
+  CODEMARE_DB: codemare
+
+services:
+  postgres:
+    image: postgres:16-bookworm
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DEV_POSTGRES_PASSWORD:-postgres-dev}
+      POSTGRES_DB: codemare
+    ports:
+      - "127.0.0.1:${DEV_POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d codemare"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  db-init:
+    image: postgres:16-bookworm
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      <<: *db
+      PGHOST: postgres
+      PGUSER: postgres
+      PGPASSWORD: ${DEV_POSTGRES_PASSWORD:-postgres-dev}
+      PGDATABASE: codemare
+      CODEMARE_DB_PASSWORD: codemare-dev
+      DIRECTUS_DB_PASSWORD: directus-dev
+      BACKUP_DB_PASSWORD: backup-dev
+    volumes:
+      - ./deploy/postgres/db-init.sql:/db-init.sql:ro
+    command: ["psql", "--no-psqlrc", "-v", "ON_ERROR_STOP=1", "-f", "/db-init.sql"]
+
+  # prisma migrate deploy + the content seed (dev only: re-seeding resets
+  # seeded content, including recipes edited in Directus).
+  migrate:
+    build:
+      context: .
+      dockerfile: web/Dockerfile
+    image: codemare/web:dev
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: postgresql://codemare:codemare-dev@postgres:5432/codemare
+      SEED_ON_START: ${DEV_SEED_ON_START:-true}
+    command: ["true"]
+
+  directus:
+    build:
+      context: .
+      dockerfile: admin/Dockerfile
+    image: codemare/directus:dev
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    ports:
+      - "127.0.0.1:${DEV_DIRECTUS_PORT:-8055}:8055"
+    environment:
+      PUBLIC_URL: http://localhost:${DEV_DIRECTUS_PORT:-8055}
+      SECRET: dev-only-directus-secret-0123456789abcdef
+      DB_CLIENT: pg
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_DATABASE: codemare
+      DB_USER: directus
+      DB_PASSWORD: directus-dev
+      DB_SEARCH_PATH: directus,content
+      ADMIN_EMAIL: admin@example.com
+      ADMIN_PASSWORD: codemare-admin-dev
+      TELEMETRY: "false"
+      WEBSOCKETS_ENABLED: "false"
+      CACHE_ENABLED: "false"
+      # EXTENSIONS_AUTO_RELOAD: "true"
+    # volumes:
+    #   - ./admin/extensions/codemare:/directus/extensions/directus-extension-codemare
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8055/server/ping').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      start_period: 60s
+      retries: 20
+
+  directus-config:
+    image: codemare/directus:dev
+    depends_on:
+      directus:
+        condition: service_healthy
+    environment:
+      DIRECTUS_URL: http://directus:8055
+      DIRECTUS_ADMIN_EMAIL: admin@example.com
+      DIRECTUS_ADMIN_PASSWORD: codemare-admin-dev
+    entrypoint: ["node", "/codemare/apply-content-model.mjs"]
+    command: []
+
+  web:
+    profiles: [app]
+    image: codemare/web:dev
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    ports:
+      - "127.0.0.1:${DEV_WEB_PORT:-3000}:3000"
+    environment:
+      DATABASE_URL: postgresql://codemare:codemare-dev@postgres:5432/codemare
+      MIGRATE_ON_START: "false"
+      AUTH_SECRET: dev-only-auth-secret-not-for-production
+      AUTH_URL: http://localhost:${DEV_WEB_PORT:-3000}
+      COMPILE_SERVICE_URL: http://backend:4000
+      INTERNAL_TOKEN: 6465762d6f6e6c792d696e7465726e616c2d746f6b656e2d6e6f742d7365637265
+      FEATURE_LIBRARY_PUBLIC: "false"
+
+  backend:
+    profiles: [app]
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    image: codemare/backend:dev
+    init: true
+    # isolate needs it (deploy/README.md). On hosts without cgroup v2
+    # delegation set SANDBOX_MODE=local and NODE_ENV=development instead.
+    privileged: true
+    cgroup: private
+    ports:
+      - "127.0.0.1:${DEV_BACKEND_PORT:-4100}:4000"
+    environment:
+      NODE_ENV: ${DEV_BACKEND_NODE_ENV:-production}
+      SANDBOX_MODE: ${DEV_SANDBOX_MODE:-isolate}
+      INTERNAL_TOKEN: 6465762d6f6e6c792d696e7465726e616c2d746f6b656e2d6e6f742d7365637265
+
+volumes:
+  pgdata: {}
