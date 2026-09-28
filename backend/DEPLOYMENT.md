@@ -47,9 +47,8 @@ deploy/release.sh user@your-vm
 
 ## Internal auth
 
-This service is **not** publicly addressable. Every request to `/v1/*` and
-the legacy `/api/*` aliases requires the header
-`X-Codemare-Token: <shared-secret>`. The secret lives in
+This service is **not** publicly addressable. Every request to `/v1/*`
+requires the header `X-Codemare-Token: <shared-secret>`. The secret lives in
 `/etc/codemare/env` (mode 0640, group `codemare`) and is loaded by the
 systemd unit via `EnvironmentFile=`.
 
