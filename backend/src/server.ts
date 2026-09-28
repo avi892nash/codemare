@@ -41,9 +41,12 @@ async function startServer() {
       console.log(`\nCodemare backend running on http://localhost:${PORT}`);
       console.log(`   Health check: http://localhost:${PORT}/health`);
       console.log(`   API Endpoints:`);
-      console.log(`     GET  /v1/problems`);
-      console.log(`     POST /v1/execute        (?wait=true for sync)`);
-      console.log(`     GET  /v1/execute/:token (poll async)\n`);
+      console.log(`     POST /v1/run            (pure executor, JSON)`);
+      console.log(`     POST /v1/run/stream     (pure executor, SSE)`);
+      console.log(`     POST /v1/ide/execute    (stdin/stdout programs)`);
+      console.log(`     GET  /v1/problems       (legacy catalog)`);
+      console.log(`     POST /v1/execute        (legacy; ?wait=true for sync)`);
+      console.log(`     GET  /v1/execute/:token (legacy; poll async)\n`);
     });
   } catch (error) {
     console.error('Failed to start server:', error);

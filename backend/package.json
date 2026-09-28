@@ -12,7 +12,7 @@
     "start:worker": "node dist/worker.js",
     "lint": "eslint . --ext .ts",
     "pretest": "tsx tests/setup/warmGoCache.ts",
-    "test": "SANDBOX_MODE=local tsx --test tests/sandbox/metaParser.test.ts tests/sandbox/boxPool.test.ts tests/sandbox/compileCache.test.ts tests/sandbox/localAdapter.test.ts tests/queue/queue.test.ts tests/validation/deepEqual.test.ts tests/wrapper/codeWrapper.test.ts tests/wrapper/goWrapper.test.ts tests/run/harnessProtocol.test.ts tests/run/sourceAssembly.test.ts tests/run/typescript.test.ts",
+    "test": "SANDBOX_MODE=local tsx --test tests/sandbox/metaParser.test.ts tests/sandbox/boxPool.test.ts tests/sandbox/compileCache.test.ts tests/sandbox/localAdapter.test.ts tests/queue/queue.test.ts tests/validation/deepEqual.test.ts tests/wrapper/codeWrapper.test.ts tests/wrapper/goWrapper.test.ts tests/run/harnessProtocol.test.ts tests/run/sourceAssembly.test.ts tests/run/runValidation.test.ts tests/run/typescript.test.ts tests/run/runEndpoint.test.ts tests/run/runStream.test.ts",
     "test:deployment": "./tests/deployment.test.sh"
   },
   "keywords": [
