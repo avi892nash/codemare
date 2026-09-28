@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useMounted } from '@/components/ui/hooks';
 import { requestPasswordReset } from '@/app/auth/actions';
 import { Button, ButtonLink } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -23,6 +24,8 @@ export function ForgotForm({ ttlMinutes, consoleTransport }: {
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Until hydrated, a click would native-submit (GET) and silently drop the input.
+  const mounted = useMounted();
   const [sentTo, setSentTo] = useState<string | null>(null);
   const emailRef = useRef<HTMLInputElement>(null);
   const headingRef = useRef<HTMLDivElement>(null);
@@ -119,7 +122,7 @@ export function ForgotForm({ ttlMinutes, consoleTransport }: {
           error={fieldError ?? undefined}
         />
         <div className={s.actions}>
-          <Button type="submit" variant="primary" size="lg" full icon="send" loading={busy}>
+          <Button type="submit" variant="primary" size="lg" full icon="send" loading={busy} disabled={!mounted}>
             Send reset link
           </Button>
         </div>

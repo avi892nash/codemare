@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useRef, useState, type FormEvent } from 'react';
+import { useMounted } from '@/components/ui/hooks';
 import { signIn } from 'next-auth/react';
 import { signUp, type AuthField } from '@/app/auth/actions';
 import { Button } from '@/components/ui/Button';
@@ -34,6 +35,8 @@ export function SignUpForm({ next, nextParam, providers }: { next: string; nextP
   const [errors, setErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Until hydrated, a click would native-submit (GET) and silently drop the input.
+  const mounted = useMounted();
   const refs = {
     handle: useRef<HTMLInputElement>(null),
     email: useRef<HTMLInputElement>(null),
@@ -148,7 +151,7 @@ export function SignUpForm({ next, nextParam, providers }: { next: string; nextP
         />
 
         <div className={s.actions}>
-          <Button type="submit" variant="primary" size="lg" full iconRight="arrow-right" loading={busy}>
+          <Button type="submit" variant="primary" size="lg" full iconRight="arrow-right" loading={busy} disabled={!mounted}>
             Create account
           </Button>
         </div>

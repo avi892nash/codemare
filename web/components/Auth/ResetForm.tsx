@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useRef, useState, type FormEvent } from 'react';
+import { useMounted } from '@/components/ui/hooks';
 import { signIn } from 'next-auth/react';
 import { resetPassword } from '@/app/auth/actions';
 import { Button, ButtonLink } from '@/components/ui/Button';
@@ -42,6 +43,8 @@ export function ResetForm({ token, email, ttlMinutes }: { token: string; email: 
   const [errors, setErrors] = useState<{ password?: string; confirm?: string }>({});
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Until hydrated, a click would native-submit (GET) and silently drop the input.
+  const mounted = useMounted();
   const [dead, setDead] = useState(false);
   const passwordRef = useRef<HTMLInputElement>(null);
   const confirmRef = useRef<HTMLInputElement>(null);
@@ -119,7 +122,7 @@ export function ResetForm({ token, email, ttlMinutes }: { token: string; email: 
           error={errors.confirm}
         />
         <div className={s.actions}>
-          <Button type="submit" variant="primary" size="lg" full iconRight="arrow-right" loading={busy}>
+          <Button type="submit" variant="primary" size="lg" full iconRight="arrow-right" loading={busy} disabled={!mounted}>
             Save password and sign in
           </Button>
         </div>
