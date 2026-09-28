@@ -1,0 +1,189 @@
+/* Auth screens (07a/b/c): form column on the left, value panel on the right
+ * (.auth-grid / .auth-panel in globals.css collapse it below 900 px). */
+
+.shell {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  overflow-y: auto;
+  background: var(--bg-0);
+  color: var(--fg-0);
+}
+
+.formCol {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  padding: 48px 40px;
+}
+
+.form {
+  width: 100%;
+  max-width: 380px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 32px;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+}
+
+.title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.4px;
+  line-height: 1.2;
+}
+
+.sub {
+  margin: 6px 0 26px;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--fg-2);
+}
+.sub strong {
+  color: var(--fg-0);
+  font-weight: 600;
+  word-break: break-all;
+}
+
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.oauth {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 18px 0;
+  font-size: 11.5px;
+  color: var(--fg-2);
+}
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--line-2);
+}
+
+/* Password field with a "Forgot password?" link aligned to its label row. */
+.withCorner {
+  position: relative;
+}
+.corner {
+  position: absolute;
+  top: 0;
+  right: 0;
+  font-size: 12px;
+  line-height: 17px;
+}
+
+.link {
+  color: var(--accent-hi);
+  font-weight: 500;
+  text-decoration: none;
+  border-radius: var(--r-sm);
+}
+.link:hover {
+  text-decoration: underline;
+}
+
+.alt {
+  margin: 22px 0 0;
+  font-size: 12.5px;
+  text-align: center;
+  color: var(--fg-2);
+}
+
+.legal {
+  margin: 28px 0 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  text-align: center;
+  color: var(--fg-2);
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+/* Inline notice above a form: errors, confirmations, dev hints. */
+.alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 9px 11px;
+  border: 1px solid;
+  border-radius: var(--r);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.alert svg {
+  flex: none;
+  margin-top: 2px;
+}
+.alert[data-tone='err'] {
+  color: var(--err-fg);
+  background: var(--err-bg);
+  border-color: color-mix(in oklab, var(--err) 30%, transparent);
+}
+.alert[data-tone='ok'] {
+  color: var(--ok-fg);
+  background: var(--ok-bg);
+  border-color: color-mix(in oklab, var(--ok) 30%, transparent);
+}
+.alert[data-tone='info'] {
+  color: var(--fg-1);
+  background: var(--info-bg);
+  border-color: color-mix(in oklab, var(--info) 30%, transparent);
+}
+.alert[data-tone='info'] svg {
+  color: var(--info-fg);
+}
+
+.mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin-bottom: 18px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line-2);
+  background: var(--bg-2);
+  color: var(--accent-hi);
+}
+.mark[data-tone='warn'] {
+  color: var(--warn-fg);
+}
+
+@media (max-width: 640px) {
+  .formCol {
+    align-items: flex-start;
+    padding: 32px 16px 40px;
+  }
+  .brand {
+    margin-bottom: 24px;
+  }
+  .title {
+    font-size: 23px;
+  }
+}
