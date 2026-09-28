@@ -74,7 +74,9 @@
   flex: 1;
   min-width: 0;
 }
-.toggle {
+/* `button.` outranks the Button's own `.btn { display }` whatever order the
+ * two stylesheets load in (dev and prod bundle CSS differently). */
+button.toggle {
   display: none;
 }
 .toggleCount {
@@ -346,7 +348,7 @@
     position: static;
     padding-top: 0;
   }
-  .toggle {
+  button.toggle {
     display: inline-flex;
   }
   .panel {
