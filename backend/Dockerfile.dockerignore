@@ -1,0 +1,14 @@
+# Build context for backend/Dockerfile is the repo root (the npm workspace
+# lockfile lives there). BuildKit reads this file instead of /.dockerignore
+# when building with `-f backend/Dockerfile`. Allowlist: only what the image
+# needs, so web/ edits, .env files and node_modules never reach the builder.
+*
+!package.json
+!package-lock.json
+!web/package.json
+!backend/package.json
+!backend/tsconfig.json
+!backend/src
+!deploy/backend
+**/node_modules
+**/.DS_Store
