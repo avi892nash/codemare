@@ -93,16 +93,17 @@ export function TrackCard({ item, index }: { item: TrackWithProgress; index: num
   );
 }
 
-/** "Continue where you left off" banner. */
+/** "Continue where you left off" banner — or "Up next" when it suggests a track not started yet. */
 export function ContinueCard({ track, step }: { track: TrackWithProgress; step: LearnStep }) {
   const isLesson = step.kind === 'lesson';
+  const fresh = !track.progress.started;
   return (
     <section className={s.continue} aria-labelledby="continue-title">
       <span className={s.continueIcon} aria-hidden="true">
         <Icon name={isLesson ? 'book-open' : 'target'} size={20} />
       </span>
       <div className={s.continueBody}>
-        <span className={s.eyebrow}>Continue where you left off</span>
+        <span className={s.eyebrow}>{fresh ? `Up next · ${track.track.title}` : 'Continue where you left off'}</span>
         <h2 className={s.continueTitle} id="continue-title">
           {step.title}
         </h2>
@@ -121,7 +122,7 @@ export function ContinueCard({ track, step }: { track: TrackWithProgress; step: 
         </div>
       </div>
       <ButtonLink href={stepHref(track.track.slug, step)} variant="primary" iconRight="arrow-right">
-        {isLesson ? 'Resume lesson' : 'Take the checkpoint'}
+        {isLesson ? (fresh ? 'Start lesson' : 'Resume lesson') : 'Take the checkpoint'}
       </ButtonLink>
     </section>
   );
