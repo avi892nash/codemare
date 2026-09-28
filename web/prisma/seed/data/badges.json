@@ -1,0 +1,155 @@
+[
+  {
+    "slug": "first-accept",
+    "name": "First Accept",
+    "description": "Get your first submission accepted.",
+    "icon": "check-circle",
+    "rarity": "common",
+    "criteria": {"kind": "first_accept"},
+    "ord": 0
+  },
+  {
+    "slug": "getting-warm",
+    "name": "Getting Warm",
+    "description": "Solve 10 different problems.",
+    "icon": "flame",
+    "rarity": "common",
+    "criteria": {"kind": "solves", "n": 10},
+    "ord": 1
+  },
+  {
+    "slug": "full-catalog",
+    "name": "Full Catalog",
+    "description": "Solve 30 different problems.",
+    "icon": "trophy",
+    "rarity": "legendary",
+    "criteria": {"kind": "solves", "n": 30},
+    "ord": 2
+  },
+  {
+    "slug": "hard-target",
+    "name": "Hard Target",
+    "description": "Solve your first Hard problem.",
+    "icon": "target",
+    "rarity": "rare",
+    "criteria": {"kind": "solves_difficulty", "difficulty": "Hard", "n": 1},
+    "ord": 3
+  },
+  {
+    "slug": "middleweight",
+    "name": "Middleweight",
+    "description": "Solve 5 Medium problems.",
+    "icon": "gauge",
+    "rarity": "rare",
+    "criteria": {"kind": "solves_difficulty", "difficulty": "Medium", "n": 5},
+    "ord": 4
+  },
+  {
+    "slug": "three-day-streak",
+    "name": "Three-Day Streak",
+    "description": "Get an accepted submission on 3 consecutive days.",
+    "icon": "bolt",
+    "rarity": "common",
+    "criteria": {"kind": "streak_days", "n": 3},
+    "ord": 5
+  },
+  {
+    "slug": "week-streak",
+    "name": "Week Streak",
+    "description": "Get an accepted submission on 7 consecutive days.",
+    "icon": "sun",
+    "rarity": "rare",
+    "criteria": {"kind": "streak_days", "n": 7},
+    "ord": 6
+  },
+  {
+    "slug": "unassisted",
+    "name": "Unassisted",
+    "description": "Solve 10 problems without revealing a single hint.",
+    "icon": "eye-off",
+    "rarity": "rare",
+    "criteria": {"kind": "no_hint_solves", "n": 10},
+    "ord": 7
+  },
+  {
+    "slug": "first-build",
+    "name": "First Build",
+    "description": "Pass the build step of your first library component.",
+    "icon": "puzzle",
+    "rarity": "common",
+    "criteria": {"kind": "components_built", "n": 1},
+    "ord": 8
+  },
+  {
+    "slug": "toolsmith",
+    "name": "Toolsmith",
+    "description": "Build 8 components for your library.",
+    "icon": "code",
+    "rarity": "epic",
+    "criteria": {"kind": "components_built", "n": 8},
+    "ord": 9
+  },
+  {
+    "slug": "cartographer",
+    "name": "Cartographer",
+    "description": "Unlock 7 topics with recipes.",
+    "icon": "map",
+    "rarity": "epic",
+    "criteria": {"kind": "topics_unlocked", "n": 7},
+    "ord": 10
+  },
+  {
+    "slug": "past-the-gate",
+    "name": "Past the Gate",
+    "description": "Open Core Techniques (tier 1).",
+    "icon": "lock-open",
+    "rarity": "rare",
+    "criteria": {"kind": "tier_open", "tier_ord": 1},
+    "ord": 11
+  },
+  {
+    "slug": "summit",
+    "name": "Summit",
+    "description": "Open Graphs & Optimization (tier 2).",
+    "icon": "award",
+    "rarity": "epic",
+    "criteria": {"kind": "tier_open", "tier_ord": 2},
+    "ord": 12
+  },
+  {
+    "slug": "clean-pass",
+    "name": "Clean Pass",
+    "description": "Pass a gate exam on your first attempt.",
+    "icon": "shield",
+    "rarity": "epic",
+    "criteria": {"kind": "gate_first_try"},
+    "ord": 13
+  },
+  {
+    "slug": "studious",
+    "name": "Studious",
+    "description": "Complete 5 lessons.",
+    "icon": "book-open",
+    "rarity": "common",
+    "criteria": {"kind": "lessons_completed", "n": 5},
+    "ord": 14
+  },
+  {
+    "slug": "graduate",
+    "name": "Graduate",
+    "description": "Complete every lesson in a learning track.",
+    "icon": "graduation",
+    "rarity": "rare",
+    "criteria": {"kind": "track_completed"},
+    "ord": 15
+  },
+  {
+    "slug": "quicksilver",
+    "name": "Quicksilver",
+    "description": "Get an accepted solution that beats 90% of runtimes in its language.",
+    "icon": "zap",
+    "rarity": "rare",
+    "criteria": {"kind": "fast_solve", "percentile": 90},
+    "ord": 16
+  }
+]

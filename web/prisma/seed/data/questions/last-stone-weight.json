@@ -1,0 +1,87 @@
+{
+  "slug": "last-stone-weight",
+  "title": "Last Stone Weight",
+  "difficulty": "Easy",
+  "statement_md": "You have a pile of stones with positive integer weights `stones`. Repeatedly take the **two heaviest** stones, with weights `x <= y`, and smash them together:\n\n- if `x == y`, both stones are destroyed;\n- otherwise the lighter stone is destroyed and the heavier one now weighs `y - x`.\n\nStop when at most one stone remains. Return its weight, or `0` if no stones are left.",
+  "examples": [
+    {
+      "input": "stones = [4,4]",
+      "output": "0",
+      "explanation": "The two stones weigh the same and destroy each other."
+    },
+    {
+      "input": "stones = [10,4,2,10]",
+      "output": "2",
+      "explanation": "The two 10s cancel, then 4 and 2 leave a stone of weight 2."
+    },
+    {
+      "input": "stones = [3,8,1]",
+      "output": "4",
+      "explanation": "8 and 3 leave a stone of weight 5; then 5 and 1 leave 4."
+    }
+  ],
+  "constraints": ["1 <= stones.length <= 1000", "1 <= stones[i] <= 1000"],
+  "function_name": "lastStoneWeight",
+  "signature": {"params": [{"name": "stones", "type": "int[]"}], "returns": "int"},
+  "compare_mode": "ordered",
+  "starter_code": {
+    "python": "def lastStoneWeight(stones):\n    # Write your code here\n    pass\n",
+    "javascript": "function lastStoneWeight(stones) {\n    // Write your code here\n}\n",
+    "typescript": "function lastStoneWeight(stones: number[]): number {\n    // Write your code here\n    return 0;\n}\n",
+    "cpp": "#include <vector>\nusing namespace std;\n\nint lastStoneWeight(vector<int>& stones) {\n    // Write your code here\n    return 0;\n}\n",
+    "java": "class Solution {\n    public static int lastStoneWeight(int[] stones) {\n        // Write your code here\n        return 0;\n    }\n}\n",
+    "go": "func lastStoneWeight(stones []int) int {\n\t// Write your code here\n\treturn 0\n}\n"
+  },
+  "tests": [
+    {"input":[[4,4]],"expected":0,"hidden":false,"explain_on_fail":"Two equal stones cancel out."},
+    {"input":[[10,4,2,10]],"expected":2,"hidden":false,"explain_on_fail":"The heaviest pair cancels first; the survivors keep smashing."},
+    {"input":[[3,8,1]],"expected":4,"hidden":false,"explain_on_fail":"A new stone created by a smash must rejoin the pile."},
+    {"input":[[1]],"expected":1,"hidden":false,"explain_on_fail":"A single stone is never smashed."},
+    {"input":[[5,5,5]],"expected":5,"hidden":true,"explain_on_fail":"Three equal stones: two cancel and one survives."},
+    {"input":[[1,1,1,1]],"expected":0,"hidden":true,"explain_on_fail":"An even number of equal stones."},
+    {"input":[[6,2,9,3]],"expected":2,"hidden":true,"explain_on_fail":"The two heaviest stones change after every smash."},
+    {"input":[[1000,1]],"expected":999,"hidden":true,"explain_on_fail":"A large difference between the two stones."},
+    {"input":[[504,386,477,489,607,109,253,165,60,251,943,524,166,984,879,282,619,929,880,392,184,63,661,170,815,728,623,214,584,894,938,187,621,218,657,800,959,804,921,179,244,306,612,697,836,230,732,996,791,118,924,648,511,184,525,268,414,747,733,204,701,241,733,909,297,685,189,860,301,351,173,8,827,702,506,842,487,506,4,758,491,885,731,624,370,495,249,301,566,788,981,623,488,253,465,687,693,810,219,805,999,670,191,299,391,804,74,740,666,309,712,238,84,864,172,255,410,415,989,4,938,330,777,736,749,381,971,734,595,899,887,104,844,27,169,19,453,389,854,619,841,257,278,258,873,52,936,793,467,339,684,446,789,243,941,977,155,311,254,609,481,405,967,962,635,568,819,750,519,624,764,819,184,446,168,909,550,47,384,282,20,331,437,956,50,274,35,302,667,820,330,69,58,238,477,374,699,997,938,594,358,394,681,141,369,704,617,70,120,676,377,79,219,606,120,476,196,268,205,334,920,255,750,996,932,850,328,157,893,189,957,17,529,36,66,385,759,657,137,294,685,655,624,99,777,54,961,908,655,399,415,158,546,359,807,423,163,835,859,351,388,269,797,170,924,272,172,116,110,552,538,530,441,633,70,231,372,662,583,295,585,25,503,508,25,562,229,594,594,266,582,60,908,297,767,815,361,495,119,858,952,329,45,792,117,630,516,306,546,863,543,594,642,432,75,227,75,2,812,214,679,788,85,419,823,796,973,249,889,749,319,410,969,511,263,535,878,721,793,399,387,7,150,392,67,25,410,287,586,659,115,453,70,884,480,436,142,460,912,775,518,389,652,33,667,516,73,871,606,965,564,438,5,181,311,897,574,806,267,321,309,479,744,508,804,222,641,447,782,614,865,73,311,735,260,469,105,799,635,68,21,191,192,373,583,116,964,421,445,382,269,526,226,420,442,294,348,275,977,198,348,851,76,153,432,590,3,142,143,909,231,454,784,557,438,151,385,677,424,226,823,915,38,464,727,39,892,943,534,286,1,399,160,590,905,813,986,25,140,187,188,76,622,774,964,589,526,39,414,532,483,876,249,113,450,528,857,424,1000,39,882,692,155,328,687,144,665,579,77,154,884,635,820,993,845,395,314,689,446,205]],"expected":1,"hidden":true,"explain_on_fail":"A pile of 500 random stones."},
+    {"input":[[430,198,291,178,972,132,63,410,365,18,815,583,980,711,619,259,339,127,359,920,862,858,444,292,149,107,979,559,742,261,125,969,6,741,139,215,819,131,717,685,511,646,639,209,554,431,154,337,214,401,599,61,6,642,335,586,355,585,202,142,683,954,309,605,446,628,274,993,905,409,517,655,440,42,765,592,845,871,630,292,288,501,415,486,446,1000,844,274,200,44,530,32,515,226,499,427,235,82,762,287,188,756,486,713,664,648,285,770,443,614,958,776,965,974,771,966,416,772,678,872,834,517,250,909,735,813,877,323,275,951,950,589,269,678,666,515,641,907,883,963,314,566,734,446,630,275,856,606,16,336,860,792,416,724,369,771,685,10,590,207,959,736,98,802,376,858,428,515,351,105,355,86,729,501,743,722,714,263,713,465,709,370,763,619,401,780,797,746,862,640,761,465,940,268,557,934,855,666,232,618,714,615,336,989,817,171,215,333,56,856,367,82,52,719,336,535,910,571,769,593,263,878,533,789,648,234,908,879,789,294,665,91,227,667,309,346,697,610,143,348,950,115,982,543,131,876,591,270,60,294,347,847,936,216,225,992,210,572,454,806,973,415,216,386,454,946,136,281,716,1000,399,257,419,122,892,186,400,834,528,743,497,104,719,663,944,209,805,788,947,184,672,55,261,628,907,738,424,927,798,777,505,776,363,348,367,357,368,178,961,902,399,607,28,273,883,349,693,298,495,161,786,294,111,810,695,483,981,623,898,323,158,125,680,313,78,178,253,791,70,251,233,665,29,9,346,411,521,785,915,393,940,873,97,732,878,731,518,137,462,906,687,41,139,400,395,505,973,936,310,405,685,523,390,484,924,824,459,950,749,676,724,961,334,227,139,28,942,981,279,982,190,333,885,98,965,765,306,995,799,658,280,343,494,516,307,288,11,649,243,181,164,367,570,35,46,21,647,372,318,584,436,789,895,640,788,125,630,967,816,390,897,335,490,165,242,483,690,991,374,567,487,293,479,468,115,711,255,651,678,863,737,186,850,858,898,677,513,772,630,87,580,118,293,516,263,15,110,890,348,654,948,425,526,966,174,323,318,271,70,201,939,978,712,482,414,110,709,306,406,396,436,436,583,803,978,834,351,796,633,101,949,372,7,9,967,629,535,559,155,141,483,961,262,572,507,473,589,140,369,413,267,282,581,174,225,237,525,309,975,977,872,940,264,566,972,234,158,106,876,390,768,549,92,321,635,555,10,471,44,867,494,373,56,694,826,605,258,292,372,711,895,58,918,161,91,661,275,786,627,417,675,409,101,810,879,739,701,98,379,697,133,442,534,349,366,958,630,576,58,93,313,279,387,69,363,410,316,600,692,528,465,61,304,974,119,797,222,276,978,477,815,585,724,793,177,629,569,332,765,703,281,165,340,244,961,823,942,749,837,690,245,52,302,162,956,554,287,609,139,267,446,444,315,16,222,249,758,684,786,568,46,399,286,167,642,571,820,646,208,149,344,874,735,78,858,629,230,696,764,574,9,671,717,713,892,835,913,129,311,271,848,180,448,110,129,70,640,838,687,827,536,208,685,518,804,409,717,368,886,375,294,188,30,610,336,347,447,786,5,512,583,892,51,880,165,699,256,425,996,705,807,464,574,578,519,641,716,553,778,655,527,44,178,17,551,163,839,380,63,284,11,404,156,318,232,118,373,735,887,731,213,922,408,252,270,986,332,718,735,233,19,700,1,721,458,871,806,555,663,565,233,742,94,148,773,362,667,549,66,229,453,326,437,883,598,98,631,318,384,59,791,688,843,757,598,777,244,13,666,337,958,480,570,632,371,460,437,705,595,931,247,323,718,579,261,223,17,716,659,963,101,77,523,139,143,822,520,627,140,616,112,657,15,789,959,893,49,137,819,607,552,872,103,922,891,861,859,66,74,868,806,152,573,540,251,523,467,224,651,892,340,641,193,232,450,687,649,455,840,660,718,235,817,765,922,887,448,934,757,803,711,314,354,667,378,675,140,509,227,308,918,77,274,859,460,166,625,643,840,655,338,144,233,312,592,464,1,323,140,111,733,400,734,4,531,192,635,809,625,152,602,784,930,913,317,181,130,867,814,831,77,767,569,766,649,598,781,206,776,137,609,783,66,595,30,220,497,739,189,491,210,867,627,17,274,900,726,67,788,997,944,787,717,25,982,679,945,293,290,76,47,98,361,791,868,1000,543,252,500,475,250,179,615,89,828,930,997,196,154,973,481,183,494,489,597,46,982,164,28,374]],"expected":0,"hidden":true,"explain_on_fail":"The largest pile — re-sorting after every smash is slow; a max-heap keeps each round cheap."}
+  ],
+  "reference_solutions": {
+    "python": "import heapq\n\ndef lastStoneWeight(stones):\n    heap = [-s for s in stones]  # heapq is a min-heap, so store negatives\n    heapq.heapify(heap)\n    while len(heap) > 1:\n        y = -heapq.heappop(heap)\n        x = -heapq.heappop(heap)\n        if y != x:\n            heapq.heappush(heap, -(y - x))\n    return -heap[0] if heap else 0\n",
+    "javascript": "function lastStoneWeight(stones) {\n  const pile = stones.slice();\n  while (pile.length > 1) {\n    pile.sort((a, b) => a - b);\n    const y = pile.pop();\n    const x = pile.pop();\n    if (y !== x) pile.push(y - x);\n  }\n  return pile.length ? pile[0] : 0;\n}\n"
+  },
+  "topics": [{"slug": "heaps-greedy", "weight": 1.0}],
+  "tags": ["array", "heap", "simulation"],
+  "companies": ["Amazon", "Google"],
+  "editorial_md": "### Intuition\nEach round needs the two largest stones of a changing collection — exactly what a max-heap provides in O(log n) per operation.\n\n### Algorithm\nPut every weight into a max-heap (in Python, a min-heap of negated weights). While at least two stones remain, pop the two largest; if they differ, push back their difference. Whatever remains is the answer.\n\n```python\nimport heapq\n\ndef lastStoneWeight(stones):\n    heap = [-s for s in stones]\n    heapq.heapify(heap)\n    while len(heap) > 1:\n        y = -heapq.heappop(heap)\n        x = -heapq.heappop(heap)\n        if y != x:\n            heapq.heappush(heap, -(y - x))\n    return -heap[0] if heap else 0\n```\n\n### Complexity\nO(n log n) time, O(n) space. Sorting the whole pile every round also works for 1000 stones, but costs O(n² log n).",
+  "hints": [
+    {
+      "level": "nudge",
+      "body_md": "Every round you need the two largest stones. Which data structure hands you the maximum quickly, even as items are added?",
+      "cost_kind": "score",
+      "cost_amount": 0
+    },
+    {
+      "level": "concept",
+      "body_md": "Use a max-heap: pop the two heaviest stones, and if they differ push their difference back. Repeat until at most one stone remains.",
+      "cost_kind": "score",
+      "cost_amount": 10
+    },
+    {
+      "level": "pseudo",
+      "body_md": "```\nheap = max-heap of stones\nwhile size > 1:\n    y = pop max; x = pop max\n    if y != x: push y - x\nreturn top if heap not empty else 0\n```",
+      "cost_kind": "score",
+      "cost_amount": 25
+    },
+    {
+      "level": "line",
+      "body_md": "Python only has a min-heap, so store negatives: `heap = [-s for s in stones]` and negate again when you pop.",
+      "cost_kind": "score",
+      "cost_amount": 40
+    },
+    {
+      "level": "solution",
+      "body_md": "```python\nimport heapq\n\ndef lastStoneWeight(stones):\n    heap = [-s for s in stones]\n    heapq.heapify(heap)\n    while len(heap) > 1:\n        y = -heapq.heappop(heap)\n        x = -heapq.heappop(heap)\n        if y != x:\n            heapq.heappush(heap, -(y - x))\n    return -heap[0] if heap else 0\n```",
+      "cost_kind": "score",
+      "cost_amount": 100
+    }
+  ]
+}

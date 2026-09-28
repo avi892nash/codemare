@@ -1,0 +1,82 @@
+{
+  "slug": "climbing-stairs",
+  "title": "Climbing Stairs",
+  "difficulty": "Easy",
+  "statement_md": "You are climbing a staircase. It takes `n` steps to reach the top.\n\nEach time you can either climb `1` or `2` steps. In how many distinct ways can you climb to the top?",
+  "examples": [
+    {
+      "input": "n = 2",
+      "output": "2",
+      "explanation": "There are two ways to climb to the top: 1 step + 1 step, or 2 steps."
+    },
+    {
+      "input": "n = 3",
+      "output": "3",
+      "explanation": "There are three ways: 1+1+1, 1+2, and 2+1."
+    },
+    {"input": "n = 5", "output": "8"}
+  ],
+  "constraints": ["1 <= n <= 45"],
+  "function_name": "climbStairs",
+  "signature": {"params": [{"name": "n", "type": "int"}], "returns": "int"},
+  "compare_mode": "ordered",
+  "starter_code": {
+    "python": "def climbStairs(n):\n    # Write your code here\n    pass\n",
+    "javascript": "function climbStairs(n) {\n    // Write your code here\n}\n",
+    "typescript": "function climbStairs(n: number): number {\n    // Write your code here\n    return 0;\n}\n",
+    "cpp": "using namespace std;\n\nint climbStairs(int n) {\n    // Write your code here\n    return 0;\n}\n",
+    "java": "class Solution {\n    public static int climbStairs(int n) {\n        // Write your code here\n        return 0;\n    }\n}\n",
+    "go": "func climbStairs(n int) int {\n\t// Write your code here\n\treturn 0\n}\n"
+  },
+  "tests": [
+    {"input":[2],"expected":2,"hidden":false,"explain_on_fail":"Two steps: two single steps, or one double step."},
+    {"input":[3],"expected":3,"hidden":false,"explain_on_fail":"Three steps."},
+    {"input":[5],"expected":8,"hidden":false,"explain_on_fail":"Five steps."},
+    {"input":[1],"expected":1,"hidden":true,"explain_on_fail":"A single step can only be climbed one way."},
+    {"input":[10],"expected":89,"hidden":true,"explain_on_fail":"Ten steps — the count grows quickly."},
+    {"input":[35],"expected":14930352,"hidden":true,"explain_on_fail":"35 steps: plain recursion without memoization repeats the same work exponentially often."},
+    {"input":[45],"expected":1836311903,"hidden":true,"explain_on_fail":"The largest input; the answer still fits in a 32-bit integer."},
+    {"input":[4],"expected":5,"hidden":true,"explain_on_fail":"Four steps."},
+    {"input":[20],"expected":10946,"hidden":true,"explain_on_fail":"Twenty steps."}
+  ],
+  "reference_solutions": {
+    "python": "def climbStairs(n):\n    prev, cur = 1, 1  # ways to reach steps i-1 and i\n    for _ in range(n - 1):\n        prev, cur = cur, prev + cur\n    return cur\n",
+    "javascript": "function climbStairs(n) {\n  const memo = new Map();\n  function ways(k) {\n    if (k <= 1) return 1;\n    if (memo.has(k)) return memo.get(k);\n    const w = ways(k - 1) + ways(k - 2);\n    memo.set(k, w);\n    return w;\n  }\n  return ways(n);\n}\n"
+  },
+  "topics": [{"slug": "dynamic-programming", "weight": 1.0}],
+  "tags": ["dynamic-programming", "math", "memoization"],
+  "companies": ["Amazon", "Adobe", "Apple"],
+  "editorial_md": "### Intuition\nYour last move onto step `n` was either a single step (from `n − 1`) or a double step (from `n − 2`). So `ways(n) = ways(n − 1) + ways(n − 2)`, with `ways(0) = ways(1) = 1` — the Fibonacci recurrence.\n\n### Algorithm\nOnly the last two values matter, so iterate with two variables.\n\n```python\ndef climbStairs(n):\n    prev, cur = 1, 1\n    for _ in range(n - 1):\n        prev, cur = cur, prev + cur\n    return cur\n```\n\n### Complexity\nO(n) time, O(1) space. The naive recursion recomputes the same subproblems and takes exponential time; memoizing it is also O(n).",
+  "hints": [
+    {
+      "level": "nudge",
+      "body_md": "Think about your *last* move onto step `n`. Where could you have been just before it?",
+      "cost_kind": "score",
+      "cost_amount": 0
+    },
+    {
+      "level": "concept",
+      "body_md": "You arrive at step `n` from step `n − 1` or step `n − 2`, so `ways(n) = ways(n − 1) + ways(n − 2)`. Build the answer bottom-up so each value is computed once.",
+      "cost_kind": "score",
+      "cost_amount": 10
+    },
+    {
+      "level": "pseudo",
+      "body_md": "```\nprev = 1, cur = 1        # ways(0), ways(1)\nrepeat n - 1 times:\n    prev, cur = cur, prev + cur\nreturn cur\n```",
+      "cost_kind": "score",
+      "cost_amount": 25
+    },
+    {
+      "level": "line",
+      "body_md": "The whole recurrence in one line: `prev, cur = cur, prev + cur`.",
+      "cost_kind": "score",
+      "cost_amount": 40
+    },
+    {
+      "level": "solution",
+      "body_md": "```python\ndef climbStairs(n):\n    prev, cur = 1, 1\n    for _ in range(n - 1):\n        prev, cur = cur, prev + cur\n    return cur\n```",
+      "cost_kind": "score",
+      "cost_amount": 100
+    }
+  ]
+}

@@ -1,0 +1,88 @@
+{
+  "slug": "number-of-islands",
+  "title": "Number of Islands",
+  "difficulty": "Medium",
+  "statement_md": "You're given a map `grid` of `1`s (land) and `0`s (water). Land cells that touch horizontally or vertically belong to the same island; touching only at a corner does not connect them. Everything outside the grid is water.\n\nReturn the number of islands.",
+  "examples": [
+    {
+      "input": "grid = [[1,1,0],[0,1,0],[0,0,1]]",
+      "output": "2",
+      "explanation": "The top-left three cells form one island. The bottom-right cell touches it only at a corner, so it is a second island."
+    },
+    {
+      "input": "grid = [[1,0,1,0,1]]",
+      "output": "3",
+      "explanation": "A single row with three separate land cells."
+    },
+    {
+      "input": "grid = [[0,0],[0,0]]",
+      "output": "0",
+      "explanation": "There is no land at all."
+    }
+  ],
+  "constraints": ["1 <= grid.length, grid[i].length <= 30", "grid[i][j] is 0 or 1"],
+  "function_name": "numIslands",
+  "signature": {"params": [{"name": "grid", "type": "int[][]"}], "returns": "int"},
+  "compare_mode": "ordered",
+  "starter_code": {
+    "python": "def numIslands(grid):\n    # Write your code here\n    pass\n",
+    "javascript": "function numIslands(grid) {\n    // Write your code here\n}\n",
+    "typescript": "function numIslands(grid: number[][]): number {\n    // Write your code here\n    return 0;\n}\n",
+    "cpp": "#include <vector>\nusing namespace std;\n\nint numIslands(vector<vector<int>>& grid) {\n    // Write your code here\n    return 0;\n}\n",
+    "java": "class Solution {\n    public static int numIslands(int[][] grid) {\n        // Write your code here\n        return 0;\n    }\n}\n",
+    "go": "func numIslands(grid [][]int) int {\n\t// Write your code here\n\treturn 0\n}\n"
+  },
+  "tests": [
+    {"input":[[[1,1,0],[0,1,0],[0,0,1]]],"expected":2,"hidden":false,"explain_on_fail":"Diagonal contact does not join two islands."},
+    {"input":[[[1,0,1,0,1]]],"expected":3,"hidden":false,"explain_on_fail":"A single row."},
+    {"input":[[[0,0],[0,0]]],"expected":0,"hidden":false,"explain_on_fail":"A map without land."},
+    {"input":[[[1]]],"expected":1,"hidden":false,"explain_on_fail":"A single land cell."},
+    {"input":[[[1,1,1,1,1],[1,1,1,1,1],[1,1,1,1,1],[1,1,1,1,1],[1,1,1,1,1]]],"expected":1,"hidden":true,"explain_on_fail":"The whole map is one island."},
+    {"input":[[[1,0,1,0],[0,1,0,1],[1,0,1,0],[0,1,0,1]]],"expected":8,"hidden":true,"explain_on_fail":"A checkerboard: every land cell is isolated because corners do not connect."},
+    {"input":[[[1,1,1,1,1],[1,0,0,0,1],[1,0,1,0,1],[1,0,0,0,1],[1,1,1,1,1]]],"expected":2,"hidden":true,"explain_on_fail":"A ring of land around a lake that contains its own islet."},
+    {"input":[[[1],[0],[1],[1]]],"expected":2,"hidden":true,"explain_on_fail":"A single column."},
+    {"input":[[[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],[1,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],[1,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],[1,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]]],"expected":1,"hidden":true,"explain_on_fail":"One long winding island — the whole snake must be counted once."},
+    {"input":[[[0,0,1,1,0,1,0,0,0,0,0,1,1,1,0,1,0,1,0,1,1,1,1,1,1,0,0,1,0,0],[0,0,1,0,1,1,1,0,1,0,1,0,0,1,0,1,1,1,1,1,1,0,1,0,0,1,1,0,1,1],[0,1,0,0,1,0,1,0,0,1,0,0,1,1,1,0,1,0,0,0,1,0,1,1,1,1,0,1,0,0],[0,1,0,1,0,0,0,1,1,1,1,0,1,1,1,1,1,0,0,1,1,1,0,1,0,1,0,1,1,1],[0,0,1,1,1,0,1,0,0,0,1,0,1,0,1,0,0,0,0,0,0,0,1,0,1,1,0,0,0,0],[1,1,1,1,1,1,1,1,0,0,1,0,0,1,1,1,0,0,0,0,0,1,0,0,1,1,1,0,1,1],[0,1,0,0,0,1,0,0,1,1,1,1,0,1,0,0,1,0,0,0,0,1,0,1,0,1,1,0,0,0],[0,1,0,0,1,1,0,1,0,0,1,1,0,0,0,0,0,1,1,1,1,0,1,0,0,0,1,0,0,1],[1,0,1,0,0,1,0,0,1,0,0,0,1,1,0,1,0,1,0,0,1,0,0,0,1,1,1,0,1,0],[1,0,1,1,1,1,0,0,0,1,0,1,0,1,0,0,1,0,1,1,0,1,0,0,0,0,1,1,0,1],[1,1,1,0,1,0,1,1,1,0,1,0,1,0,0,1,0,0,0,0,1,0,1,1,0,1,1,0,0,1],[0,0,0,0,1,1,0,1,1,1,1,0,0,0,1,1,0,0,1,0,1,1,0,1,0,0,0,0,1,1],[1,1,0,0,0,0,1,0,0,0,0,1,0,1,0,0,0,0,0,1,1,1,1,0,0,0,0,0,1,1],[0,0,1,1,0,0,0,0,0,1,0,1,1,1,1,0,1,1,0,1,1,0,1,1,1,1,1,1,1,0],[0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,1,1,0,1,0,1,1,0,1,1,0,0,0],[0,1,1,0,0,1,1,1,1,0,0,0,0,1,1,0,0,0,1,1,0,0,1,1,0,0,0,0,0,0],[1,1,1,1,1,0,0,0,0,0,0,0,1,0,0,1,0,1,0,0,1,0,0,0,1,0,1,1,0,1],[1,1,1,0,1,0,1,1,0,0,0,1,0,1,1,0,1,1,0,0,1,1,1,1,0,0,0,0,1,0],[1,0,0,0,1,0,1,1,0,1,1,0,0,0,1,1,0,1,0,0,1,0,0,1,0,0,1,0,0,1],[0,0,0,0,0,1,0,0,1,1,1,1,1,1,1,0,1,1,1,1,0,1,1,1,1,0,0,0,0,0],[1,0,1,1,0,1,0,0,0,0,1,0,0,1,0,0,1,0,0,1,1,1,0,0,1,1,1,1,1,0],[0,0,0,0,1,0,1,1,0,0,1,1,0,0,0,0,1,1,0,0,1,1,1,0,1,0,1,1,0,1],[1,0,1,0,1,1,1,1,0,0,0,1,0,1,1,0,0,1,0,1,1,0,1,0,0,0,0,0,1,0],[1,0,1,0,0,1,0,1,0,0,1,0,0,1,0,0,1,0,0,0,0,1,0,0,0,0,1,0,1,0],[0,0,0,0,1,0,0,0,0,1,0,1,0,1,0,1,0,0,0,0,1,0,1,0,0,0,1,1,1,0],[1,0,1,0,1,0,0,0,0,1,1,0,0,1,0,0,0,1,0,1,0,0,1,0,1,0,1,0,1,0],[1,1,1,0,0,0,0,0,1,1,0,1,0,0,0,1,0,1,0,0,0,1,1,0,0,0,0,1,1,1],[0,1,1,0,0,0,1,0,0,0,0,0,1,1,0,0,1,1,1,0,1,0,1,1,0,1,0,0,0,1],[0,1,1,1,1,0,1,1,0,1,1,0,1,1,0,1,0,1,0,1,0,0,0,0,1,1,1,1,0,1],[0,0,0,1,0,0,1,0,0,1,0,1,0,1,0,0,0,1,1,1,1,0,0,0,1,0,1,1,0,1]]],"expected":86,"hidden":true,"explain_on_fail":"A large random map."},
+    {"input":[[[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]]],"expected":1,"hidden":true,"explain_on_fail":"A 30 × 30 map of solid land — a traversal must visit each cell only once."}
+  ],
+  "reference_solutions": {
+    "python": "from collections import deque\n\ndef numIslands(grid):\n    rows, cols = len(grid), len(grid[0])\n    seen = [[False] * cols for _ in range(rows)]\n    count = 0\n    for r in range(rows):\n        for c in range(cols):\n            if grid[r][c] != 1 or seen[r][c]:\n                continue\n            count += 1\n            seen[r][c] = True\n            queue = deque([(r, c)])\n            while queue:\n                x, y = queue.popleft()\n                for nx, ny in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):\n                    if 0 <= nx < rows and 0 <= ny < cols and grid[nx][ny] == 1 and not seen[nx][ny]:\n                        seen[nx][ny] = True\n                        queue.append((nx, ny))\n    return count\n",
+    "javascript": "function numIslands(grid) {\n  // Union-find over land cells: every merge of two islands lowers the count.\n  const R = grid.length, C = grid[0].length;\n  const parent = new Array(R * C).fill(-1);\n  const find = (x) => {\n    while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; }\n    return x;\n  };\n  let count = 0;\n  for (let r = 0; r < R; r++)\n    for (let c = 0; c < C; c++)\n      if (grid[r][c] === 1) { parent[r * C + c] = r * C + c; count++; }\n  const union = (a, b) => {\n    const ra = find(a), rb = find(b);\n    if (ra !== rb) { parent[ra] = rb; count--; }\n  };\n  for (let r = 0; r < R; r++) {\n    for (let c = 0; c < C; c++) {\n      if (grid[r][c] !== 1) continue;\n      if (r + 1 < R && grid[r + 1][c] === 1) union(r * C + c, (r + 1) * C + c);\n      if (c + 1 < C && grid[r][c + 1] === 1) union(r * C + c, r * C + c + 1);\n    }\n  }\n  return count;\n}\n"
+  },
+  "topics": [{"slug": "graphs", "weight": 1.0}],
+  "tags": ["graph", "bfs", "dfs", "matrix", "union-find"],
+  "companies": ["Amazon", "Google", "Microsoft"],
+  "editorial_md": "### Intuition\nTreat each land cell as a node connected to its land neighbours above, below, left and right. An island is a connected component, so the answer is the number of components.\n\n### Algorithm\nScan every cell. When you find land you haven't visited, you've found a new island: count it and flood-fill it (BFS or DFS), marking every reachable land cell as visited so it is never counted again.\n\n```python\nfrom collections import deque\n\ndef numIslands(grid):\n    rows, cols = len(grid), len(grid[0])\n    seen = [[False] * cols for _ in range(rows)]\n    count = 0\n    for r in range(rows):\n        for c in range(cols):\n            if grid[r][c] != 1 or seen[r][c]:\n                continue\n            count += 1\n            seen[r][c] = True\n            queue = deque([(r, c)])\n            while queue:\n                x, y = queue.popleft()\n                for nx, ny in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):\n                    if 0 <= nx < rows and 0 <= ny < cols and grid[nx][ny] == 1 and not seen[nx][ny]:\n                        seen[nx][ny] = True\n                        queue.append((nx, ny))\n    return count\n```\n\n### Complexity\nO(rows × cols) time and space — each cell is enqueued at most once.\n\n### Alternative\nUnion-find: union every land cell with its land neighbours and count the remaining roots.",
+  "hints": [
+    {
+      "level": "nudge",
+      "body_md": "Think of each land cell as a node. Which cells are its neighbours, and what is an island in those terms?",
+      "cost_kind": "score",
+      "cost_amount": 0
+    },
+    {
+      "level": "concept",
+      "body_md": "An island is a connected component of land cells. Scan the grid; each unvisited land cell starts a new island — count it and flood-fill (BFS/DFS) everything connected to it so it is never counted again.",
+      "cost_kind": "score",
+      "cost_amount": 10
+    },
+    {
+      "level": "pseudo",
+      "body_md": "```\ncount = 0\nfor each cell (r, c):\n    if land and not seen:\n        count += 1\n        flood-fill from (r, c), marking every connected land cell seen\nreturn count\n```",
+      "cost_kind": "score",
+      "cost_amount": 25
+    },
+    {
+      "level": "line",
+      "body_md": "Mark cells when you *enqueue* them, not when you dequeue them: `seen[nx][ny] = True; queue.append((nx, ny))`.",
+      "cost_kind": "score",
+      "cost_amount": 40
+    },
+    {
+      "level": "solution",
+      "body_md": "```python\nfrom collections import deque\n\ndef numIslands(grid):\n    rows, cols = len(grid), len(grid[0])\n    seen = [[False] * cols for _ in range(rows)]\n    count = 0\n    for r in range(rows):\n        for c in range(cols):\n            if grid[r][c] != 1 or seen[r][c]:\n                continue\n            count += 1\n            seen[r][c] = True\n            queue = deque([(r, c)])\n            while queue:\n                x, y = queue.popleft()\n                for nx, ny in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):\n                    if 0 <= nx < rows and 0 <= ny < cols and grid[nx][ny] == 1 and not seen[nx][ny]:\n                        seen[nx][ny] = True\n                        queue.append((nx, ny))\n    return count\n```",
+      "cost_kind": "score",
+      "cost_amount": 100
+    }
+  ]
+}

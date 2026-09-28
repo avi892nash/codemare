@@ -1,0 +1,73 @@
+{
+  "slug": "reverse-string",
+  "title": "Reverse String",
+  "difficulty": "Easy",
+  "statement_md": "Write a function that reverses a string. The input string is given as an array of characters `s`.\n\nYou must do this by modifying the input array in-place with O(1) extra memory.\n\nReturn the modified array.",
+  "examples": [
+    {"input": "s = ['h','e','l','l','o']", "output": "['o','l','l','e','h']"},
+    {"input": "s = ['H','a','n','n','a','h']", "output": "['h','a','n','n','a','H']"}
+  ],
+  "constraints": ["1 <= s.length <= 10^5", "s[i] is a printable ascii character."],
+  "function_name": "reverseString",
+  "signature": {"params": [{"name": "s", "type": "char[]"}], "returns": "char[]"},
+  "compare_mode": "ordered",
+  "starter_code": {
+    "python": "def reverseString(s):\n    # Write your code here\n    pass\n",
+    "javascript": "function reverseString(s) {\n    // Write your code here\n}\n",
+    "typescript": "function reverseString(s: string[]): string[] {\n    // Write your code here\n    return [];\n}\n",
+    "cpp": "#include <vector>\nusing namespace std;\n\nvector<char> reverseString(vector<char>& s) {\n    // Write your code here\n    return {};\n}\n",
+    "java": "class Solution {\n    public static char[] reverseString(char[] s) {\n        // Write your code here\n        return new char[]{};\n    }\n}\n",
+    "go": "func reverseString(s []byte) []byte {\n\t// Write your code here\n\treturn nil\n}\n"
+  },
+  "tests": [
+    {"input":[["h","e","l","l","o"]],"expected":["o","l","l","e","h"],"hidden":false,"explain_on_fail":"Odd length: the middle character stays where it is."},
+    {"input":[["H","a","n","n","a","h"]],"expected":["h","a","n","n","a","H"],"hidden":false,"explain_on_fail":"Even length, and case matters — 'H' and 'h' are different characters."},
+    {"input":[["a"]],"expected":["a"],"hidden":false,"explain_on_fail":"A single character is its own reverse."},
+    {"input":[["a","b","c","d","e"]],"expected":["e","d","c","b","a"],"hidden":true,"explain_on_fail":"Every character except the middle one must move."},
+    {"input":[["a","b"]],"expected":["b","a"],"hidden":true,"explain_on_fail":"Two characters simply swap."},
+    {"input":[[" ","!","x","?"]],"expected":["?","x","!"," "],"hidden":true,"explain_on_fail":"Spaces and punctuation are ordinary characters too."},
+    {"input":[["r","a","c","e","c","a","r"]],"expected":["r","a","c","e","c","a","r"],"hidden":true,"explain_on_fail":"A palindrome reversed equals itself — make sure nothing gets lost or duplicated."},
+    {"input":[["c","p","V","m","f","K","8","N","q","K","H","z","k","A","E","Y","L","0","f","q","H","I","X","R","c","M","0","h","S","z","i","F","s","7","a","0","N","R","A","r","T","8","c","o","n","v","j","k","n","L","s","Y","g","S","p","0","T","S","H","P","6","q","H","9","p","Z","U","4","b","4","r","4","4","W","r","Z","S","O","i","Y","1","U","w","e","P","5","4","F","k","r","J","i","4","h","1","Q","U","6","P","Z","l","F","f","l","9","7","y","c","u","8","K","O","7","p","7","k","9","T","O","e","T","B","a","g","u","i","k","q","m","P","R","b","N","2","G","O","a","q","I","T","b","e","q","m","G","S","2","l","R","y","c","F","9","G","j","K","l","P","K","e","e","F","A","j","n","H","C","Q","w","G","A","3","v","c","E","6","Q","D","A","b","H","Y","s","4","z","B","e","m","D","6","G","V","k","5","u","I","J","3","F","I","O","f","q","R","0","j","j","Y","6","0","v","1","r","P","v","P","8","4","S","4","8","p","x","D","Z","Z","r","c","L","0","Z","q","o","v","Q","s","G","j","J","R","u","q","z","I","6","0","b","j","b","P","P","X","f","0","q","P","r","M","b","A","y","Y","m","3","2","c","t","k","5","r","2","H","l","z","u","h","k","Q","V","E","T","P","r","G","9","x","U","l","T","B","1","2","v","J","l","X","K","6","B","e","b","d","p","F","7","Y","v","T","y","W","J","U","J","o","C","X","0","e","D","t","W","t","i","z","V","W","D","D","G","4","i","5","3","Q","j","S","W","Y","H","p","a","T","9","3","V","g","F","l","h","7","h","D","x","K","Q","A","v","a","8","e","h","r","D","i","f","z","W","z","O","W","u","b","G","Q","q","p","C","O","F","v","P","e","N","U","b","e","4","0","h","u","j","h","Y","L","j","R","N","O","n","n","g","f","7","r","r","7","N","N","K","t","B","M","B","Z","Z","l","n","Y","w","E","y","W","5","O","2","i","C","z","x","N","w","m","W","u","U","s","w","D","k","4","n","8","G","P","x","R","w","7","0","3","y","K","s","c","w","7","r","4","N","I","z","O","i","L","P","A","b","E","4","4","Z","0","X","i","3","G","O","R","P","n","c","v","E","Y","g","8","W","T","7","B","i","R","t","5","7","f","U","e","l","M","R","8","G","7","d","o","8","w","n","W","s","z","g","k","M","E","G","M","e","s","5","U","l","K","7","D","3","r","Q","n","d","u","2","y","d","D","P","q","s","5","j","r","l","Z","d","J","Z","U","a","2","G","B","O","c","v","A","C","b","1","a","L","e","1","h","a","4","Q","W","F","q","q","f","f","b","n","B","J","C","0","5","l","y","G","J","L","M","Y","n","q","p","v","n","1","w","V","N","O","A","I","3","R","N","5","o","V","v","w","5","b","3","z","5","E","V","k","Q","X","X","8","d","t","x","y","H","q","s","S","Z","a","w","D","a","f","Z","S","J","L","f","J","v","S","4","j","K","7","Y","3","U","q","A","K","R","I","Q","6","5","O","G","F","n","m","G","s","2","H","E","a","U","w","0","w","0","Q","k","Q","M","f","Y","s","v","1","Z","d","Z","x","r","g","K","r","h","9","C","2","5","Z","e","T","N","2","H","Z","p","v","W","j","b","O","a","P","S","f","E","L","9","s","U","6","i","7","8","s","H","6","U","y","k","D","D","K","V","S","h","M","5","9","S","t","x","2","k","g","H","D","U","g","f","l","7","8","Z","m","E","5","d","Q","a","B","U","G","u","J","A","t","9","w","X","S","M","P","Y","i","r","v","f","H","t","2","C","h","0","U","U","1","J","7","f","a","p","p","X","q","O","4","j","8","K","R","w","D","Y","1","e","N","s","7","l","p","R","S","0","5","9","l","C","1","I","7","x","8","U","N","V","m","R","H","c","O","Y","Z","x","l","r","U","0","R","O","r","T","o","K","A","w","U","E","S","o","T","a","b","H","Q","R","Q","r","U","y","3","Y","j","B","0","y","w","t","c","K","l","N","p","Z","D","m","o","3","j","p","v","3","H","X","L","G","M","E","R","k","W","k","u","o","D","h","M","m","j","k","Z","n","E","k","Y","K","W","C","H","6","9","X","G","i","u","S","Z","k","t","v","B","Q","Q","5","K","F","l","s","o","9","9","Y","Q","k","6","v","b","1","f","n","S","3","X","u","0","X","n","p","5","K","j","Z","s","O","F","u","A","0","D","R","n","w","x","h","Q","a","Y","q","r","J","e","P","W","N","X","4","y","D","5","M","s","g","x","3","R","l","6","p","D","j","g","2","0","q","x","y","o","P","T","w","Q","S","J","t"]],"expected":["t","J","S","Q","w","T","P","o","y","x","q","0","2","g","j","D","p","6","l","R","3","x","g","s","M","5","D","y","4","X","N","W","P","e","J","r","q","Y","a","Q","h","x","w","n","R","D","0","A","u","F","O","s","Z","j","K","5","p","n","X","0","u","X","3","S","n","f","1","b","v","6","k","Q","Y","9","9","o","s","l","F","K","5","Q","Q","B","v","t","k","Z","S","u","i","G","X","9","6","H","C","W","K","Y","k","E","n","Z","k","j","m","M","h","D","o","u","k","W","k","R","E","M","G","L","X","H","3","v","p","j","3","o","m","D","Z","p","N","l","K","c","t","w","y","0","B","j","Y","3","y","U","r","Q","R","Q","H","b","a","T","o","S","E","U","w","A","K","o","T","r","O","R","0","U","r","l","x","Z","Y","O","c","H","R","m","V","N","U","8","x","7","I","1","C","l","9","5","0","S","R","p","l","7","s","N","e","1","Y","D","w","R","K","8","j","4","O","q","X","p","p","a","f","7","J","1","U","U","0","h","C","2","t","H","f","v","r","i","Y","P","M","S","X","w","9","t","A","J","u","G","U","B","a","Q","d","5","E","m","Z","8","7","l","f","g","U","D","H","g","k","2","x","t","S","9","5","M","h","S","V","K","D","D","k","y","U","6","H","s","8","7","i","6","U","s","9","L","E","f","S","P","a","O","b","j","W","v","p","Z","H","2","N","T","e","Z","5","2","C","9","h","r","K","g","r","x","Z","d","Z","1","v","s","Y","f","M","Q","k","Q","0","w","0","w","U","a","E","H","2","s","G","m","n","F","G","O","5","6","Q","I","R","K","A","q","U","3","Y","7","K","j","4","S","v","J","f","L","J","S","Z","f","a","D","w","a","Z","S","s","q","H","y","x","t","d","8","X","X","Q","k","V","E","5","z","3","b","5","w","v","V","o","5","N","R","3","I","A","O","N","V","w","1","n","v","p","q","n","Y","M","L","J","G","y","l","5","0","C","J","B","n","b","f","f","q","q","F","W","Q","4","a","h","1","e","L","a","1","b","C","A","v","c","O","B","G","2","a","U","Z","J","d","Z","l","r","j","5","s","q","P","D","d","y","2","u","d","n","Q","r","3","D","7","K","l","U","5","s","e","M","G","E","M","k","g","z","s","W","n","w","8","o","d","7","G","8","R","M","l","e","U","f","7","5","t","R","i","B","7","T","W","8","g","Y","E","v","c","n","P","R","O","G","3","i","X","0","Z","4","4","E","b","A","P","L","i","O","z","I","N","4","r","7","w","c","s","K","y","3","0","7","w","R","x","P","G","8","n","4","k","D","w","s","U","u","W","m","w","N","x","z","C","i","2","O","5","W","y","E","w","Y","n","l","Z","Z","B","M","B","t","K","N","N","7","r","r","7","f","g","n","n","O","N","R","j","L","Y","h","j","u","h","0","4","e","b","U","N","e","P","v","F","O","C","p","q","Q","G","b","u","W","O","z","W","z","f","i","D","r","h","e","8","a","v","A","Q","K","x","D","h","7","h","l","F","g","V","3","9","T","a","p","H","Y","W","S","j","Q","3","5","i","4","G","D","D","W","V","z","i","t","W","t","D","e","0","X","C","o","J","U","J","W","y","T","v","Y","7","F","p","d","b","e","B","6","K","X","l","J","v","2","1","B","T","l","U","x","9","G","r","P","T","E","V","Q","k","h","u","z","l","H","2","r","5","k","t","c","2","3","m","Y","y","A","b","M","r","P","q","0","f","X","P","P","b","j","b","0","6","I","z","q","u","R","J","j","G","s","Q","v","o","q","Z","0","L","c","r","Z","Z","D","x","p","8","4","S","4","8","P","v","P","r","1","v","0","6","Y","j","j","0","R","q","f","O","I","F","3","J","I","u","5","k","V","G","6","D","m","e","B","z","4","s","Y","H","b","A","D","Q","6","E","c","v","3","A","G","w","Q","C","H","n","j","A","F","e","e","K","P","l","K","j","G","9","F","c","y","R","l","2","S","G","m","q","e","b","T","I","q","a","O","G","2","N","b","R","P","m","q","k","i","u","g","a","B","T","e","O","T","9","k","7","p","7","O","K","8","u","c","y","7","9","l","f","F","l","Z","P","6","U","Q","1","h","4","i","J","r","k","F","4","5","P","e","w","U","1","Y","i","O","S","Z","r","W","4","4","r","4","b","4","U","Z","p","9","H","q","6","P","H","S","T","0","p","S","g","Y","s","L","n","k","j","v","n","o","c","8","T","r","A","R","N","0","a","7","s","F","i","z","S","h","0","M","c","R","X","I","H","q","f","0","L","Y","E","A","k","z","H","K","q","N","8","K","f","m","V","p","c"],"hidden":true,"explain_on_fail":"A long array (1000 characters): swap pairs from both ends toward the middle."},
+    {"input":[["1","2","3","4","5","6"]],"expected":["6","5","4","3","2","1"],"hidden":false,"explain_on_fail":"Even length with no middle character."}
+  ],
+  "reference_solutions": {
+    "python": "def reverseString(s):\n    i, j = 0, len(s) - 1\n    while i < j:\n        s[i], s[j] = s[j], s[i]\n        i += 1\n        j -= 1\n    return s\n",
+    "javascript": "function reverseString(s) {\n  for (let i = 0, j = s.length - 1; i < j; i++, j--) {\n    const tmp = s[i];\n    s[i] = s[j];\n    s[j] = tmp;\n  }\n  return s;\n}\n"
+  },
+  "topics": [{"slug": "two-pointers", "weight": 1.0}],
+  "tags": ["string", "two-pointers"],
+  "companies": ["Apple", "Microsoft"],
+  "editorial_md": "### Intuition\nReversing swaps the first character with the last, the second with the second-to-last, and so on until the two ends meet.\n\n### Algorithm\nKeep two indices, `i` at the start and `j` at the end. While `i < j`, swap `s[i]` and `s[j]`, then move both inward.\n\n```python\ndef reverseString(s):\n    i, j = 0, len(s) - 1\n    while i < j:\n        s[i], s[j] = s[j], s[i]\n        i += 1\n        j -= 1\n    return s\n```\n\n### Complexity\nO(n) time and O(1) extra space — each pair is swapped exactly once, in place.",
+  "hints": [
+    {
+      "level": "nudge",
+      "body_md": "Which character ends up in position 0? Which one ends up in the last position?",
+      "cost_kind": "score",
+      "cost_amount": 0
+    },
+    {
+      "level": "concept",
+      "body_md": "Use two pointers: one at each end. Swap the characters they point at, then move both toward the middle until they meet.",
+      "cost_kind": "score",
+      "cost_amount": 10
+    },
+    {
+      "level": "pseudo",
+      "body_md": "```\ni = 0, j = n - 1\nwhile i < j:\n    swap s[i], s[j]\n    i += 1; j -= 1\nreturn s\n```",
+      "cost_kind": "score",
+      "cost_amount": 25
+    },
+    {
+      "level": "line",
+      "body_md": "The swap itself: `s[i], s[j] = s[j], s[i]` — then step both indices inward.",
+      "cost_kind": "score",
+      "cost_amount": 40
+    },
+    {
+      "level": "solution",
+      "body_md": "```python\ndef reverseString(s):\n    i, j = 0, len(s) - 1\n    while i < j:\n        s[i], s[j] = s[j], s[i]\n        i += 1\n        j -= 1\n    return s\n```",
+      "cost_kind": "score",
+      "cost_amount": 100
+    }
+  ]
+}
