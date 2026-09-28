@@ -1,6 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
+import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/states/EmptyState';
@@ -101,6 +102,7 @@ export function SolveWorkspace(props: SolveWorkspaceProps) {
   const [cases, setCases] = useState<CustomCase[]>([]);
   const [selectedCase, setSelectedCase] = useState('s0');
   const [casesError, setCasesError] = useState<string | null>(null);
+  const router = useRouter();
   const [solved, setSolved] = useState(!!props.solved);
   const [best, setBest] = useState(props.bestPercentile ?? null);
   const [submissions, setSubmissions] = useState<SubmissionSummary[]>(props.submissions ?? []);
@@ -196,9 +198,16 @@ export function SolveWorkspace(props: SolveWorkspaceProps) {
         });
         if (mode === 'gate' && currentSlug) setGateSolved((prev) => new Set(prev).add(currentSlug));
       }
-      if (verdict.status === 'OK' && kind === 'build' && verdict.tokensAwarded?.length) {
-        toast({ tone: 'ok', title: 'Build passed', description: verdict.tokensAwarded.map((t) => `+${t.amount} ${t.title}`).join(' · ') });
+      if (verdict.status === 'OK' && kind === 'build') {
+        setSolved(true);
+        if (verdict.tokensAwarded?.length) {
+          toast({ tone: 'ok', title: 'Build passed', description: verdict.tokensAwarded.map((t) => `+${t.amount} ${t.title}`).join(' · ') });
+        }
       }
+      // Layouts don't re-render on their own: refresh so the navbar's token
+      // total reflects what was just awarded (editor state is client-side and
+      // survives the refresh).
+      if (verdict.tokensAwarded?.length) router.refresh();
       for (const b of verdict.badgesAwarded ?? []) {
         toast({ tone: 'info', title: `Badge earned: ${b.name}`, description: b.description, duration: 8000 });
       }
@@ -220,7 +229,7 @@ export function SolveWorkspace(props: SolveWorkspaceProps) {
       props.onVerdict?.(verdict, kind);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [run.busy, run.start, code, language, cases, mode, problem.id, problem.signature, gate, gateOver, currentSlug, toast, props.onVerdict]
+    [run.busy, run.start, code, language, cases, mode, problem.id, problem.signature, gate, gateOver, currentSlug, toast, props.onVerdict, router]
   );
 
   const executeRef = useRef(execute);
@@ -374,6 +383,7 @@ export function SolveWorkspace(props: SolveWorkspaceProps) {
                       setCasesError(null);
                     }}
                     allowCustom={mode !== 'build' && !!problem.customInputs}
+                    canSubmit={canSubmit}
                     language={language}
                     selected={selectedCase}
                     onSelect={setSelectedCase}

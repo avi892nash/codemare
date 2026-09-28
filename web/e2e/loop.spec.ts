@@ -61,7 +61,7 @@ async function setCode(page: Page, code: string): Promise<void> {
   }, code);
 }
 
-const tokenChip = (page: Page) => page.getByRole('link', { name: /tokens — open the tier map$/ });
+const tokenChip = (page: Page) => page.getByRole('link', { name: /tokens? — open the tier map$/ });
 const verdict = (page: Page) => page.getByTestId('verdict-title');
 
 async function solve(page: Page, path: string, code: string): Promise<void> {

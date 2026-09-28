@@ -88,7 +88,7 @@ export default async function ProblemPage({ params, searchParams }: { params: Pa
           title: view.gate.title,
           passThreshold: view.gate.passThreshold,
           questions: view.questions.map((x) => ({ slug: x.slug, title: x.title, solved: x.solved })),
-          backHref: '/map',
+          backHref: `/map/gates/${view.attempt.id}`,
         };
       }
     } catch (e) {

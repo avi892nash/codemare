@@ -113,7 +113,7 @@ export function Navbar({ user, tokenTotal, libraryVisible = false }: NavbarProps
               <Link
                 href="/map"
                 className={`${s.tokens} focus-ring mono`}
-                aria-label={`${tokenTotal.toLocaleString('en-US')} tokens — open the tier map`}
+                aria-label={`${tokenTotal.toLocaleString('en-US')} ${tokenTotal === 1 ? 'token' : 'tokens'} — open the tier map`}
               >
                 <Icon name="coin" size={13} />
                 {formatTokens(tokenTotal)}

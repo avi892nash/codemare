@@ -49,6 +49,8 @@ interface CasesPanelProps {
   onCasesChange: (next: CustomCase[]) => void;
   /** Custom inputs can be judged (a reference solution exists). */
   allowCustom: boolean;
+  /** False in build mode: a build run checks every test and there is no Submit. */
+  canSubmit: boolean;
   language: SupportedLanguage;
   selected: string;
   onSelect: (key: string) => void;
@@ -60,7 +62,7 @@ interface CasesPanelProps {
  * the signature as they type. Expected values for custom cases come from
  * the reference solution when the run happens.
  */
-export function CasesPanel({ signature, samples, cases, onCasesChange, allowCustom, language, selected, onSelect }: CasesPanelProps) {
+export function CasesPanel({ signature, samples, cases, onCasesChange, allowCustom, canSubmit, language, selected, onSelect }: CasesPanelProps) {
   const tabsId = useId();
   const [touched, setTouched] = useState<ReadonlySet<string>>(new Set());
   const tabs = [
@@ -166,7 +168,7 @@ export function CasesPanel({ signature, samples, cases, onCasesChange, allowCust
         )}
         {!allowCustom && sample && (
           <p className={s.caseHint}>
-            <Icon name="info" size={12} /> Runs check the samples; Submit checks the hidden tests too.
+            <Icon name="info" size={12} /> {canSubmit ? 'Runs check the samples; Submit checks the hidden tests too.' : 'A build run checks every test, hidden ones included.'}
           </p>
         )}
       </div>
