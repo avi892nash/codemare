@@ -6,6 +6,8 @@ import type {
   IdeExecutionResponse,
   Problem,
   ProblemListItem,
+  Signature,
+  SupportedLanguage,
 } from './types';
 
 /**
@@ -110,7 +112,133 @@ async function resolveSubmission<T>(
   }
 }
 
+// ─── Pure-executor contract: backend POST /v1/run and /v1/run/stream ────────
+// (docs/spec/architecture.md §5). The caller supplies everything the harness
+// needs; the compile service keeps no state about questions.
+
+export interface RunTestSpec {
+  input: unknown[];
+  expected: unknown;
+  hidden?: boolean;
+}
+
+export interface RunRequest {
+  language: SupportedLanguage;
+  code: string;
+  /** Dependency sources placed before `code` (same language; never Java). */
+  prelude?: string[];
+  functionName: string;
+  /** Required for cpp, java and go. */
+  signature?: Signature;
+  compareMode?: 'ordered' | 'unordered';
+  tests: RunTestSpec[];
+  limits?: { timeMs?: number; memoryMb?: number };
+}
+
+export type RunStatus = 'OK' | 'WA' | 'TLE' | 'MLE' | 'RE' | 'CE' | 'XX';
+
+export interface RunTestResult {
+  idx: number;
+  hidden: boolean;
+  passed: boolean;
+  /** CPU time of the call in µs. */
+  runUs: number;
+  /** Wall time of the call in µs — diagnostic only. */
+  wallUs: number;
+  memoryKb: number;
+  actual: unknown;
+  error?: string;
+}
+
+export interface RunVerdict {
+  status: RunStatus;
+  totalPassed: number;
+  totalTests: number;
+  /** Sum of per-test runUs. */
+  runUs: number;
+  /** Max per-test memoryKb. */
+  memoryKb: number;
+  compileMs?: number;
+  error?: string;
+}
+
+export interface RunResponse extends RunVerdict {
+  tests: RunTestResult[];
+}
+
+export type RunStreamEvent =
+  | { event: 'queued'; data: Record<string, unknown> }
+  | { event: 'compiling'; data: Record<string, unknown> }
+  | { event: 'running'; data: Record<string, unknown> }
+  | { event: 'test'; data: RunTestResult }
+  | { event: 'verdict'; data: RunVerdict }
+  | { event: 'error'; data: { message: string } };
+
+/**
+ * Parse a text/event-stream body into events. Handles multi-line `data:`,
+ * CRLF, and `:` heartbeat comments; ignores events with unparseable JSON.
+ */
+export async function* parseSse(body: ReadableStream<Uint8Array>): AsyncGenerator<RunStreamEvent> {
+  const reader = body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  try {
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true }).replace(/\r\n/g, '\n');
+      let boundary: number;
+      while ((boundary = buffer.indexOf('\n\n')) !== -1) {
+        const block = buffer.slice(0, boundary);
+        buffer = buffer.slice(boundary + 2);
+        let event = 'message';
+        const data: string[] = [];
+        for (const line of block.split('\n')) {
+          if (line.startsWith(':')) continue;
+          if (line.startsWith('event:')) event = line.slice(6).trim();
+          else if (line.startsWith('data:')) data.push(line.slice(5).replace(/^ /, ''));
+        }
+        if (data.length === 0) continue;
+        try {
+          yield { event, data: JSON.parse(data.join('\n')) } as RunStreamEvent;
+        } catch {
+          // Malformed frame — skip it rather than abort the whole stream.
+        }
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
+}
+
 export const compile = {
+  /** Judge code against caller-supplied tests; resolves with the full result. */
+  run(request: RunRequest): Promise<RunResponse> {
+    return call<RunResponse>('/v1/run', { method: 'POST', body: JSON.stringify(request) });
+  },
+
+  /**
+   * Same as run(), streamed: queued → compiling → running → test… → verdict.
+   * Pass an AbortSignal to cancel (the service aborts the sandbox run when the
+   * connection drops).
+   */
+  async *runStream(request: RunRequest, signal?: AbortSignal): AsyncGenerator<RunStreamEvent> {
+    const headers = new Headers({ 'Content-Type': 'application/json', Accept: 'text/event-stream' });
+    if (TOKEN) headers.set('X-Codemare-Token', TOKEN);
+    const res = await fetch(`${BASE}/v1/run/stream`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(request),
+      cache: 'no-store',
+      signal,
+    });
+    if (!res.ok || !res.body) {
+      const body = await res.text().catch(() => '');
+      throw new CompileServiceError(res.status, body || res.statusText);
+    }
+    yield* parseSse(res.body);
+  },
+
   /** List all problems in the catalog. Cheap, cacheable per-request. */
   listProblems(): Promise<ProblemListItem[]> {
     return call<{ problems: ProblemListItem[] }>('/v1/problems').then((r) => r.problems);
