@@ -14,6 +14,12 @@
 #      ISOLATE_CPU_PINNING=off, one CPU per box (box N -> Nth CPU modulo the
 #      CPUs this container may use). isolate pins through per-box cpusets in
 #      its config file; it has no command-line flag for it.
+#      syscall_flags (ISOLATE_SYSCALL_FLAGS, default 65531) keeps isolate's
+#      seccomp restrictions except flag 4, file locks: `go build` takes
+#      flock()s on its build cache and exits 1 without them. The cost is a
+#      lock-based side channel between boxes running at the same moment.
+#      Set 65535 once the compile service passes --syscalls to Go compile
+#      boxes only (isolate >= 2.7 supports that per run).
 #   3. A smoke test (init, run, cleanup of one box as the service user), so a
 #      host that cannot sandbox fails here, loudly, not at the first submission.
 #
@@ -27,6 +33,7 @@ CONF=/usr/local/etc/isolate
 RUN_AS="${RUN_AS:-codemare}"
 PINNING="${ISOLATE_CPU_PINNING:-round-robin}"
 NUM_BOXES="${ISOLATE_NUM_BOXES:-1000}"
+SYSCALL_FLAGS="${ISOLATE_SYSCALL_FLAGS:-65531}"
 MODE=$(printf '%s' "${SANDBOX_MODE:-isolate}" | tr '[:upper:]' '[:lower:]')
 
 log() { echo "codemare-backend: $*" >&2; }
@@ -68,6 +75,7 @@ setup_cgroups() {
 }
 
 write_config() {
+  case "$SYSCALL_FLAGS" in '' | *[!0-9]*) die "ISOLATE_SYSCALL_FLAGS must be a number (isolate man page), got '$SYSCALL_FLAGS'" ;; esac
   {
     echo "# Written by codemare-backend-entrypoint on every start; edits are lost."
     echo "box_root = /var/local/lib/isolate"
@@ -76,6 +84,7 @@ write_config() {
     echo "first_uid = 60000"
     echo "first_gid = 60000"
     echo "num_boxes = $NUM_BOXES"
+    echo "syscall_flags = $SYSCALL_FLAGS"
     if [ "$PINNING" != off ]; then
       cpus=$(expand_cpus "$(cat "$CG/cpuset.cpus.effective")")
       [ -n "$cpus" ] || die "empty $CG/cpuset.cpus.effective"
@@ -102,7 +111,7 @@ smoke_test() {
   fi
   as_user isolate --cg --box-id="$box" --cleanup >/dev/null
   cpus=$(cat "$CG/cpuset.cpus.effective" 2>/dev/null || echo '?')
-  log "isolate $(isolate --version | head -n1 | awk '{print $NF}') ready: cg_root=$ISOLATE_CG, $NUM_BOXES boxes, cpu pinning=$PINNING over cpus $cpus"
+  log "isolate $(isolate --version | head -n1 | awk '{print $NF}') ready: cg_root=$ISOLATE_CG, $NUM_BOXES boxes, cpu pinning=$PINNING over cpus $cpus, syscall_flags=$SYSCALL_FLAGS"
 }
 
 if [ "$(id -u)" != 0 ]; then

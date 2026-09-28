@@ -84,7 +84,7 @@ services:
       FEATURE_AI_REVIEW: ${FEATURE_AI_REVIEW:-false}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       MAIL_FROM: ${MAIL_FROM:-}
-      SMTP_URL: ${SMTP_URL:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
     networks: [edge, internal]
     logging: *logging
 
@@ -129,6 +129,7 @@ services:
       PORT: "4000"
       INTERNAL_TOKEN: ${INTERNAL_TOKEN}
       ISOLATE_CPU_PINNING: ${ISOLATE_CPU_PINNING:-round-robin}
+      ISOLATE_SYSCALL_FLAGS: ${ISOLATE_SYSCALL_FLAGS:-65531}
       EXECUTION_RATE_LIMIT_MAX: ${EXECUTION_RATE_LIMIT_MAX:-6000}
     # Internal only: no ports, no internet (internal network).
     networks: [internal]

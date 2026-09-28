@@ -79,29 +79,22 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/*
 
 # Toolchains, each reachable from the sandbox's default search path.
+# (The server warms its own shared Go build cache at startup; see
+# backend/src/services/sandbox/goToolchain.ts.)
 COPY --from=go /usr/local/go /usr/local/go
 COPY --from=jdk /opt/java/openjdk /usr/local/lib/jvm/temurin-21
+COPY deploy/backend/gxx-wrapper.sh /usr/local/lib/codemare/g++
 RUN set -eux; \
     ln -sf /usr/local/bin/node /usr/bin/node; \
     for b in go gofmt; do ln -sf "/usr/local/go/bin/$b" "/usr/bin/$b"; done; \
     for b in java javac jar jshell; do ln -sf "/usr/local/lib/jvm/temurin-21/bin/$b" "/usr/bin/$b"; done; \
-    # Go in a box: no network and no toolchain downloads, pure-Go static
-    # binaries (no cgo, so no gcc/ld per compile), no VCS stamping.
-    printf '\nGOTOOLCHAIN=local\nGOPROXY=off\nGOFLAGS=-buildvcs=false\nCGO_ENABLED=0\n' >> /usr/local/go/go.env; \
-    node --version; python3 --version; g++ --version | head -n1; java -version; go version
-
-# Pre-built Go build cache for the standard packages a generated harness
-# imports. Since Go 1.20 the std library ships uncompiled, so a compile box
-# with an empty GOCACHE rebuilds fmt/json/... from source on every submission
-# (~6 s pinned to one core). Copying this read-only seed into the compile box
-# as its GOCACHE makes a cold `go build` take ~0.1 s. Built with the same
-# go.env defaults the sandbox uses, so the cache keys match.
-ENV CODEMARE_GO_CACHE_SEED=/usr/local/share/codemare/go-cache
-RUN HOME=/tmp GOCACHE="$CODEMARE_GO_CACHE_SEED" go build \
-      bufio bytes container/heap container/list encoding/json errors fmt maps math math/bits \
-      os slices sort strconv strings sync time unicode unicode/utf8 \
- && chmod -R a+rX "$CODEMARE_GO_CACHE_SEED" \
- && du -sh "$CODEMARE_GO_CACHE_SEED"
+    # g++ in an environment-less box: see deploy/backend/gxx-wrapper.sh.
+    test "$(readlink /usr/bin/g++)" = g++-12; \
+    chmod 0755 /usr/local/lib/codemare/g++; \
+    ln -sf /usr/local/lib/codemare/g++ /usr/bin/g++; \
+    # Never download toolchains or modules from inside the container.
+    printf '\nGOTOOLCHAIN=local\nGOPROXY=off\n' >> /usr/local/go/go.env; \
+    node --version; python3 --version; env -i /usr/bin/env g++ --version | head -n1; java -version; go version
 
 COPY --from=isolate /src/isolate/isolate /usr/local/bin/isolate
 COPY --from=isolate /src/isolate/isolate-check-environment /usr/local/sbin/isolate-check-environment
