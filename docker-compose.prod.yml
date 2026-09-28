@@ -129,7 +129,6 @@ services:
       PORT: "4000"
       INTERNAL_TOKEN: ${INTERNAL_TOKEN}
       ISOLATE_CPU_PINNING: ${ISOLATE_CPU_PINNING:-round-robin}
-      ISOLATE_SYSCALL_FLAGS: ${ISOLATE_SYSCALL_FLAGS:-65531}
       EXECUTION_RATE_LIMIT_MAX: ${EXECUTION_RATE_LIMIT_MAX:-6000}
     # Internal only: no ports, no internet (internal network).
     networks: [internal]
