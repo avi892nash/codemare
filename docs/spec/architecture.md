@@ -382,6 +382,13 @@ Old routes `/p/[id]`, `/auth`, `/profile` redirect to their new homes.
 - **Perf**: RSC by default; client components only for editor, visualizations,
   filters, interactive widgets. Monaco and visualizations are dynamically
   imported. LCP < 2 s on `/problems` and `/problems/[slug]`.
+- **No route-level `loading.tsx` on routes that navigate by query string**
+  (`/problems`, `/submissions`, …). In production builds Next 15.5's router
+  never commits a same-path, query-only navigation under a route-level loading
+  boundary — filters and pagination silently do nothing (dev mode doesn't
+  prefetch, so it only shows up in `next start`). Use in-page `<Suspense>`
+  for skeletons instead. `/problems/[slug]` keeps its `loading.tsx` because
+  nothing navigates within it by query.
 
 ---
 
