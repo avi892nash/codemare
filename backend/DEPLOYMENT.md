@@ -87,13 +87,32 @@ Sandbox: isolate
 
 ## Security model
 
-- `isolate` runs each submission in its own Linux namespaces (mount/pid/ipc/uts/net/user).
+The exact command line of every box is built in
+[src/services/sandbox/isolateCommand.ts](src/services/sandbox/isolateCommand.ts)
+and pinned by `tests/sandbox/isolateCommand.test.ts`; requires isolate ≥ 2.7.
+
+- `isolate` runs each submission in its own mount, PID, IPC and network
+  namespaces, as a per-box uid, with a chroot of read-only `/usr`, `/bin`,
+  `/lib*`, `/dev`, its own `/proc` (only the box's processes) and a writable
+  `/box` and `/tmp`.
 - `--cg --cg-mem=N` enforces memory caps via cgroups v2 (plain `--mem` is an
   address-space rlimit that Go, the JVM and V8 cannot even start under).
 - `--processes=N`, `--time`, `--wall-time` cap fork count, CPU and wall time.
-- `--no-default-dirs` (default) means the box filesystem is empty except for
-  what the adapter writes in.
-- Network is private (a fresh `netns` per box).
+- `--fsize` caps every file a program writes, stdout and stderr included
+  (16 MB run, 64 MB compile): past it the verdict is RE "Output limit
+  exceeded". The service reads box files with O_NOFOLLOW and within a budget.
+- `--core=0`: no core files. `--syscalls=65535`: isolate's full syscall
+  filter, except that Go compile boxes may take file locks (`go build`
+  needs them).
+- Environment: only `PATH=/usr/local/bin:/usr/bin:/bin`, `HOME=/box`,
+  `LANG=C.UTF-8` and the language's own variables. isolate itself is started
+  with `PATH` only, so `INTERNAL_TOKEN` reaches no sandbox process.
+- CPU pinning (`ISOLATE_CPU_PINNING=round-robin|off`,
+  [src/services/sandbox/cpuPinning.ts](src/services/sandbox/cpuPinning.ts)):
+  one CPU per run box via `taskset`; binding only where isolate's config
+  gives each box a cpuset (the Docker image's entrypoint writes them). The
+  startup log says `enforced` or `ADVISORY ONLY`.
+- Network is private (a fresh `netns` per box with only `lo`).
 - The setuid bit on `isolate` is required so the unprivileged `codemare` user
   can request namespace creation. The systemd unit has
   `NoNewPrivileges=false` for that reason; the backend itself never elevates.
