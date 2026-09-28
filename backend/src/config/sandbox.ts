@@ -58,6 +58,11 @@ export const SANDBOX_CONFIG = {
     // entries are evicted oldest-first and their artifact dirs removed.
     enabled: true,
     maxEntries: 256,
+    // …and by bytes: artifacts live in the service's tmp dir (in the
+    // container, the host's disk), and one binary may reach the 64 MB
+    // compile file cap. COMPILE_CACHE_MAX_MB, default 1024, at least 64 —
+    // keep it well above a few of the largest binaries.
+    maxBytes: Math.max(64, Number(process.env.COMPILE_CACHE_MAX_MB) || 1024) * 1024 * 1024,
   },
   go: {
     // Shared Go build cache, warmed at startup (see sandbox/goToolchain.ts).

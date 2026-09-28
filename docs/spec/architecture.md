@@ -438,4 +438,5 @@ Old routes `/p/[id]`, `/auth`, `/profile` redirect to their new homes.
 | `FEATURE_LIBRARY_PUBLIC` | web | default `false` |
 | `FEATURE_AI_REVIEW`, `ANTHROPIC_API_KEY` | web | default off |
 | `RESEND_API_KEY`, `MAIL_FROM` | web | password-reset mail over Resend's HTTP API (`lib/mailer.ts`, plain fetch); either unset → the reset link is logged to the server console. Links use `AUTH_URL`'s origin when set (set it in production), else the request host |
+| `SANDBOX_MODE`, `ISOLATE_CPU_PINNING`, `EXECUTION_RATE_LIMIT_MAX`, `COMPILE_CACHE_MAX_MB` | backend | `isolate` (production) or `local`; one CPU per run box (`round-robin`) or `off`; the circuit breaker per minute per process (6000); what the compile cache may hold on disk and in memory, in MB (1024, at least 64) |
 | `DIRECTUS_*` | directus | see `deploy/` |

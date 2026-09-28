@@ -134,3 +134,62 @@ test('clear empties the cache', async () => {
   await cache.clear();
   assert.equal(cache.size(), 0);
 });
+
+/** Mock compile thunk whose artifact is exactly `size` bytes. */
+function sizedCompiler(size: number) {
+  return async (): Promise<FreshCompileOutcome> => {
+    const dir = await mkdtemp(path.join(os.tmpdir(), 'cc-test-'));
+    await writeFile(path.join(dir, 'a.out'), 'x'.repeat(size));
+    return { kind: 'ok', dir, artifacts: ['a.out'], compileMs: 100 };
+  };
+}
+
+test('the byte budget evicts least-recently-used entries until the total fits', async () => {
+  const cache = new CompileCache(16, 25);
+  const r1 = await cache.getOrCompile('k1', sizedCompiler(10));
+  await cache.getOrCompile('k2', sizedCompiler(10));
+  assert.equal(cache.bytes(), 20);
+  // 30 bytes > 25 → the LRU entry (k1) goes, and its dir with it.
+  await cache.getOrCompile('k3', sizedCompiler(10));
+  assert.equal(cache.size(), 2);
+  assert.equal(cache.bytes(), 20);
+  assert.equal(cache.has('k1'), false);
+  assert.equal(cache.has('k2'), true);
+  assert.equal(cache.has('k3'), true);
+  if (r1.kind === 'ok') {
+    // Removal is best-effort and asynchronous; give it a moment.
+    for (let i = 0; i < 50 && (await exists(r1.dir)); i++) await new Promise((r) => setTimeout(r, 10));
+    assert.equal(await exists(r1.dir), false);
+  }
+  await cache.clear();
+  assert.equal(cache.bytes(), 0);
+});
+
+test('an entry larger than the budget is kept until the next store', async () => {
+  const cache = new CompileCache(16, 5);
+  // Its caller copies from the dir right after getOrCompile resolves, so the
+  // newest entry is never evicted by its own store.
+  const big = await cache.getOrCompile('big', sizedCompiler(10));
+  assert.equal(big.kind, 'ok');
+  assert.equal(cache.has('big'), true);
+  if (big.kind === 'ok') assert.equal(await exists(path.join(big.dir, 'a.out')), true);
+  await cache.getOrCompile('next', sizedCompiler(1));
+  assert.equal(cache.has('big'), false);
+  assert.equal(cache.has('next'), true);
+  assert.equal(cache.bytes(), 1);
+  await cache.clear();
+});
+
+test('cached compile failures count their output against the budget', async () => {
+  const cache = new CompileCache(16, 100);
+  const failing = (error: string) => async (): Promise<FreshCompileOutcome> => ({
+    kind: 'fail',
+    result: { output: '', error, status: 'CE', runMs: 0, wallMs: 5, memoryKb: 0, compileMs: 5 },
+  });
+  await cache.getOrCompile('e1', failing('e'.repeat(60)));
+  assert.equal(cache.bytes(), 60);
+  await cache.getOrCompile('e2', failing('e'.repeat(60)));
+  assert.equal(cache.has('e1'), false, 'the older failure is evicted');
+  assert.equal(cache.bytes(), 60);
+  await cache.clear();
+});

@@ -128,6 +128,12 @@ and pinned by `tests/sandbox/isolateCommand.test.ts`; requires isolate ≥ 2.7.
   PIDs (callers of `/v1/run` pass their own `limits`, capped at 10 s /
   512 MB). Compile phase uses `compileLimits` — 15 s, 512 MB, 16 PIDs (64
   for javac and `go build`).
+- **Compile cache**: compiled artifacts are cached by (language, compiler
+  argv, source) in the service's tmp dir, an LRU bounded at 256 entries and
+  by `COMPILE_CACHE_MAX_MB` (default 1024, at least 64) — artifacts on disk
+  plus cached compiler output. One binary can reach the 64 MB compile file
+  cap, so keep the budget well above a few of those. See
+  [src/services/sandbox/compileCache.ts](src/services/sandbox/compileCache.ts).
 - **Go build cache**: warmed at startup into `GO_BUILD_CACHE_DIR` (default
   `$TMPDIR/codemare-gocache`, i.e. the unit's private `/tmp`) and bound
   **read-only** into compile boxes, so untrusted builds reuse the compiled
@@ -140,8 +146,13 @@ and pinned by `tests/sandbox/isolateCommand.test.ts`; requires isolate ≥ 2.7.
 
 ## What's NOT in this repo anymore
 
-- No Dockerfile, no `docker-compose`, no `backend/docker/*-executor/`.
+- No per-language executor images (`backend/docker/*-executor/`) and no
+  Docker-in-Docker: every run is an isolate box.
 - No Kubernetes manifests (the DinD sidecar was retired).
+
+The service's own image (`backend/Dockerfile`) and the Compose stack
+(`docker-compose.prod.yml`, runbook in `deploy/README.md`) are the current
+deploy path; the systemd setup in this document is the older alternative.
 
 For local dev on macOS/Windows, the backend falls back to an unsandboxed
 `localAdapter` (loud warning on boot) so `npm run dev` works without isolate.

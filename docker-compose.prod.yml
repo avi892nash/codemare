@@ -131,6 +131,7 @@ services:
       INTERNAL_TOKEN: ${INTERNAL_TOKEN}
       ISOLATE_CPU_PINNING: ${ISOLATE_CPU_PINNING:-round-robin}
       EXECUTION_RATE_LIMIT_MAX: ${EXECUTION_RATE_LIMIT_MAX:-6000}
+      COMPILE_CACHE_MAX_MB: ${COMPILE_CACHE_MAX_MB:-1024}
     # Internal only: no ports, no internet (internal network).
     networks: [internal]
     logging: *logging

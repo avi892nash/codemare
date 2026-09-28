@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
-import { rm } from 'node:fs/promises';
+import { rm, stat } from 'node:fs/promises';
+import path from 'node:path';
 import { SandboxLanguage } from '../../models/ExecutionResult.js';
 import { SANDBOX_CONFIG } from '../../config/sandbox.js';
 import { SandboxResult } from './types.js';
@@ -25,7 +26,11 @@ import { SandboxResult } from './types.js';
  *   3. In-flight — concurrent callers with the same key (e.g. a parallel IDE
  *                  batch) collapse onto a single compile via single-flight.
  *
- * Bounded LRU: oldest entry evicted on overflow, its artifact dir removed.
+ * Bounded LRU, by entry count and by bytes: least-recently-used entries are
+ * evicted (their artifact dirs removed) until both bounds hold. The byte
+ * budget counts artifacts on disk plus cached compiler output in memory — a
+ * single C++ or Go binary may reach the 64 MB compile file cap, so the entry
+ * cap alone would let 256 entries pin ~16 GB of the host's disk.
  */
 
 /** What the adapter's compile thunk returns. On success it owns a standalone
@@ -40,16 +45,22 @@ export type CompileOutcome =
   | { kind: 'ok'; dir: string; artifacts: string[]; compileMs: number; cached: boolean }
   | { kind: 'fail'; result: SandboxResult; cached: boolean };
 
+/** `bytes`: what the entry holds — artifact bytes on disk, or the cached
+ *  compiler output of a failure (UTF-8, approximate). */
 type StoredEntry =
-  | { kind: 'ok'; dir: string; artifacts: string[]; compileMs: number }
-  | { kind: 'fail'; result: SandboxResult };
+  | { kind: 'ok'; dir: string; artifacts: string[]; compileMs: number; bytes: number }
+  | { kind: 'fail'; result: SandboxResult; bytes: number };
 
 export class CompileCache {
   /** Insertion-ordered → front is least-recently-used. */
   private readonly entries = new Map<string, StoredEntry>();
   private readonly inflight = new Map<string, Promise<StoredEntry>>();
+  private totalBytes = 0;
 
-  constructor(private readonly maxEntries: number) {}
+  constructor(
+    private readonly maxEntries: number,
+    private readonly maxBytes: number = Number.POSITIVE_INFINITY
+  ) {}
 
   key(language: SandboxLanguage, compileArgv: string[], code: string): string {
     return createHash('sha256')
@@ -89,8 +100,14 @@ export class CompileCache {
       const fresh = await compile();
       const entry: StoredEntry =
         fresh.kind === 'ok'
-          ? { kind: 'ok', dir: fresh.dir, artifacts: fresh.artifacts, compileMs: fresh.compileMs }
-          : { kind: 'fail', result: fresh.result };
+          ? {
+              kind: 'ok',
+              dir: fresh.dir,
+              artifacts: fresh.artifacts,
+              compileMs: fresh.compileMs,
+              bytes: await artifactBytes(fresh.dir, fresh.artifacts),
+            }
+          : { kind: 'fail', result: fresh.result, bytes: failureBytes(fresh.result) };
       this.store(key, entry);
       return entry;
     })();
@@ -102,16 +119,30 @@ export class CompileCache {
   }
 
   private store(key: string, entry: StoredEntry): void {
+    if (this.entries.has(key)) this.evict(key);
     this.entries.set(key, entry);
-    while (this.entries.size > this.maxEntries) {
+    this.totalBytes += entry.bytes;
+    // Never the entry just stored (the back of the map): its caller is about
+    // to copy from its dir. An entry bigger than the whole budget therefore
+    // stays until the next store evicts it.
+    while (
+      this.entries.size > 1 &&
+      (this.entries.size > this.maxEntries || this.totalBytes > this.maxBytes)
+    ) {
       const oldestKey = this.entries.keys().next().value as string | undefined;
       if (oldestKey === undefined) break;
-      const evicted = this.entries.get(oldestKey);
-      this.entries.delete(oldestKey);
-      if (evicted?.kind === 'ok') {
-        // Best-effort; the dir is no longer referenced.
-        void rm(evicted.dir, { recursive: true, force: true }).catch(() => undefined);
-      }
+      this.evict(oldestKey);
+    }
+  }
+
+  private evict(key: string): void {
+    const evicted = this.entries.get(key);
+    if (!evicted) return;
+    this.entries.delete(key);
+    this.totalBytes -= evicted.bytes;
+    if (evicted.kind === 'ok') {
+      // Best-effort; the dir is no longer referenced.
+      void rm(evicted.dir, { recursive: true, force: true }).catch(() => undefined);
     }
   }
 
@@ -126,6 +157,11 @@ export class CompileCache {
     return this.entries.size;
   }
 
+  /** Bytes held by stored entries (artifacts on disk + cached failures). */
+  bytes(): number {
+    return this.totalBytes;
+  }
+
   /** Test helper: drop everything and remove artifact dirs. */
   async clear(): Promise<void> {
     const dirs = [...this.entries.values()]
@@ -133,8 +169,26 @@ export class CompileCache {
       .map((e) => e.dir);
     this.entries.clear();
     this.inflight.clear();
+    this.totalBytes = 0;
     await Promise.all(dirs.map((d) => rm(d, { recursive: true, force: true }).catch(() => undefined)));
   }
+}
+
+/** Total size of an artifact set; a file that can't be stat'ed counts as 0. */
+async function artifactBytes(dir: string, artifacts: string[]): Promise<number> {
+  const sizes = await Promise.all(
+    artifacts.map((name) =>
+      stat(path.join(dir, name)).then(
+        (st) => st.size,
+        () => 0
+      )
+    )
+  );
+  return sizes.reduce((a, b) => a + b, 0);
+}
+
+function failureBytes(result: SandboxResult): number {
+  return Buffer.byteLength(result.error ?? '') + Buffer.byteLength(result.output ?? '');
 }
 
 function toOutcome(entry: StoredEntry, cached: boolean): CompileOutcome {
@@ -148,4 +202,7 @@ function toOutcome(entry: StoredEntry, cached: boolean): CompileOutcome {
  * (chosen at startup), so a single shared cache is correct and lets both the
  * isolate and local adapters reuse the same instance.
  */
-export const compileCache = new CompileCache(SANDBOX_CONFIG.compileCache.maxEntries);
+export const compileCache = new CompileCache(
+  SANDBOX_CONFIG.compileCache.maxEntries,
+  SANDBOX_CONFIG.compileCache.maxBytes
+);
