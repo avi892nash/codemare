@@ -70,3 +70,12 @@ test('go runs with GOMAXPROCS=1 and a GOMEMLIMIT under the memory limit', async 
   assert.equal(r.status, 'OK', r.error);
   assert.equal(r.output.trim(), '1 235929KiB');
 });
+
+test('output past the cap stops the program with the same verdict isolate gives', async () => {
+  const r = await executeLocal('python', 'import sys\nwhile True:\n    sys.stdout.write("x" * 65536)\n', '', {
+    timeoutMs: 10_000,
+  });
+  assert.equal(r.status, 'RE');
+  assert.equal(r.error, 'Output limit exceeded (16 MB)');
+  assert.ok(r.output.length <= 16 * 1024 * 1024, 'no more than the cap is kept');
+});

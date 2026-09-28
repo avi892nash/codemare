@@ -1,21 +1,32 @@
 import { spawn } from 'node:child_process';
+import { accessSync, constants as fsConstants } from 'node:fs';
 import { cp, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { SandboxLanguage } from '../../models/ExecutionResult.js';
 import { SANDBOX_CONFIG } from '../../config/sandbox.js';
 import { BoxPool } from './boxPool.js';
+import { BoxFileRead, readBoxFile, readBoxFileHeadTail, runBoxResult } from './boxOutput.js';
 import { compileCache, type FreshCompileOutcome } from './compileCache.js';
+import { CpuPlan, describePlan, planCpus, readAllowedCpus } from './cpuPinning.js';
+import {
+  BoxSpec,
+  Command,
+  compileBoxSpec,
+  isolateCommand,
+  resolveRunLimits,
+  runBoxSpec,
+} from './isolateCommand.js';
 import { getLanguageSpec, resolveArtifactNames } from './languageSpec.js';
-import { mapMetaToStatus, parseIsolateMeta } from './metaParser.js';
+import { IsolateMeta, mapMetaToStatus, parseIsolateMeta } from './metaParser.js';
 import { LanguageSpec, RunOptions, SandboxAdapter, SandboxResult } from './types.js';
 
 /**
  * Production adapter on Linux. Drives the `isolate` binary
- * (https://github.com/ioi/isolate) with cgroups v2 + namespaces. Each request
- * gets one (or two, for compiled languages) fresh boxes and reads the meta
- * file isolate writes to extract microsecond-precision timing and peak
- * memory.
+ * (https://github.com/ioi/isolate, >= 2.7) with cgroups v2 + namespaces.
+ * Each request gets one (or two, for compiled languages) fresh boxes and
+ * reads the meta file isolate writes to extract microsecond-precision timing
+ * and peak memory.
  *
  * Two-phase flow for C++ / Java / Go:
  *   1. compile box: looser limits, separate meta -> compileMs.
@@ -24,6 +35,11 @@ import { LanguageSpec, RunOptions, SandboxAdapter, SandboxResult } from './types
  *
  * The compile cost is therefore *not* charged against the user's run-time
  * budget, which is the core fix for the "timing dominated by setup" bug.
+ *
+ * Every box gets an explicit command line (isolateCommand.ts): a minimal
+ * environment, the strictest syscall filter (only Go's compile box may take
+ * file locks), no core dumps, a file-size cap, and — unless
+ * ISOLATE_CPU_PINNING=off — a CPU mask from cpuPinning.ts.
  *
  * Box pools: a request holds its run box while it compiles, so compile boxes
  * come from a separate pool. With one shared pool, N concurrent compiled-
@@ -36,39 +52,68 @@ const pool = new BoxPool(SANDBOX_CONFIG.isolate.maxBoxes);
 const compilePool = new BoxPool(SANDBOX_CONFIG.isolate.compileBoxes, SANDBOX_CONFIG.isolate.maxBoxes);
 const META_DIR = '/tmp';
 
+// ── CPU pinning ─────────────────────────────────────────────────────────────
+
+interface Pinning {
+  /** null: pinning is off. */
+  plan: CpuPlan | null;
+  taskset: string;
+}
+
+let pinning: Pinning | undefined;
+
+function findExecutable(name: string): string | null {
+  for (const dir of (process.env.PATH ?? '/usr/bin:/bin').split(path.delimiter)) {
+    if (!dir) continue;
+    const file = path.join(dir, name);
+    try {
+      accessSync(file, fsConstants.X_OK);
+      return file;
+    } catch {
+      // not here
+    }
+  }
+  return null;
+}
+
 /**
- * Host cores, resolved once. NB: the value is passed as isolate `--core=N`,
- * which is RLIMIT_CORE (max core-dump size in KB) — isolate has no CPU
- * affinity option, so this does not pin the run to a core. Kept as-is
- * (harmless) pending a decision on real pinning (e.g. taskset in the box).
+ * The CPU plan every box is started with, resolved on first use. Throws when
+ * pinning is on but cannot be applied; the startup readiness probe calls it
+ * first, so a misconfigured host fails at boot instead of running boxes
+ * unpinned.
  */
-const HOST_CORES = Math.max(1, os.availableParallelism?.() ?? os.cpus().length);
-
-interface IsolateRunSpec {
-  argv: string[];
-  timeoutMs: number;
-  memoryKb: number;
-  pidsLimit: number;
-  /** See HOST_CORES: forwarded as `--core=N` (RLIMIT_CORE), not pinning. */
-  cpuCore?: number;
-  stdinFile?: string;
-  /** Environment for the program (-E var=value); the box env is otherwise empty. */
-  env?: Record<string, string>;
-  /** Extra directory rules (`--dir=in=out[:opts]`). */
-  dirs?: string[];
+export function cpuPinning(): Pinning {
+  if (pinning) return pinning;
+  if (SANDBOX_CONFIG.isolate.cpuPinning === 'off') {
+    pinning = { plan: null, taskset: 'taskset' };
+    return pinning;
+  }
+  const cpus = readAllowedCpus();
+  if (!cpus) {
+    throw new Error(
+      'ISOLATE_CPU_PINNING=round-robin, but the CPUs available to this process are unknown ' +
+        '(no Cpus_allowed_list in /proc/self/status). Set ISOLATE_CPU_PINNING=off to run boxes unpinned.'
+    );
+  }
+  const taskset = findExecutable('taskset');
+  if (!taskset) {
+    throw new Error(
+      'ISOLATE_CPU_PINNING=round-robin needs taskset (util-linux) on PATH. ' +
+        'Install it, or set ISOLATE_CPU_PINNING=off to run boxes unpinned.'
+    );
+  }
+  pinning = { plan: planCpus(cpus), taskset };
+  return pinning;
 }
 
-interface IsolateRunResult {
-  metaText: string;
-  stdout: string;
-  stderr: string;
-}
+// ── isolate plumbing ────────────────────────────────────────────────────────
 
-function runIsolate(args: string[]): Promise<{ stdout: string; stderr: string; exitCode: number }> {
+function runIsolate(command: Command): Promise<{ stdout: string; stderr: string; exitCode: number }> {
   return new Promise((resolve, reject) => {
-    const child = spawn(SANDBOX_CONFIG.isolate.binary, args, { stdio: ['ignore', 'pipe', 'pipe'] });
+    const child = spawn(command.file, command.args, { stdio: ['ignore', 'pipe', 'pipe'] });
     let stdout = '';
     let stderr = '';
+    // isolate's own output (the box path, fatal errors) — never the program's.
     child.stdout.on('data', (c) => (stdout += c.toString()));
     child.stderr.on('data', (c) => (stderr += c.toString()));
     child.on('error', reject);
@@ -77,7 +122,10 @@ function runIsolate(args: string[]): Promise<{ stdout: string; stderr: string; e
 }
 
 async function initBox(boxId: number): Promise<string> {
-  const result = await runIsolate(['--cg', `--box-id=${boxId}`, '--init']);
+  const result = await runIsolate({
+    file: SANDBOX_CONFIG.isolate.binary,
+    args: ['--cg', `--box-id=${boxId}`, '--init'],
+  });
   if (result.exitCode !== 0) {
     throw new Error(`isolate --init failed for box ${boxId}: ${result.stderr.trim()}`);
   }
@@ -85,55 +133,51 @@ async function initBox(boxId: number): Promise<string> {
 }
 
 async function cleanupBox(boxId: number): Promise<void> {
-  await runIsolate(['--cg', `--box-id=${boxId}`, '--cleanup']).catch(() => undefined);
+  await runIsolate({
+    file: SANDBOX_CONFIG.isolate.binary,
+    args: ['--cg', `--box-id=${boxId}`, '--cleanup'],
+  }).catch(() => undefined);
 }
 
-async function runInBox(boxId: number, spec: IsolateRunSpec): Promise<IsolateRunResult> {
-  const metaPath = path.join(META_DIR, `isolate-${boxId}-${Date.now()}.meta`);
-  const stdoutFile = `stdout-${boxId}.txt`;
-  const stderrFile = `stderr-${boxId}.txt`;
+interface BoxRun {
+  meta: IsolateMeta;
+  /**
+   * Set when isolate itself failed (exit >= 2, or no meta file — e.g. taskset
+   * or an unknown option), as opposed to the program failing (exit 1).
+   */
+  sandboxError?: string;
+  stdout: BoxFileRead;
+  stderr: BoxFileRead;
+}
 
-  const args = [
-    '--cg',
-    `--box-id=${boxId}`,
-    `--time=${(spec.timeoutMs / 1000).toFixed(3)}`,
-    `--wall-time=${((spec.timeoutMs * 2) / 1000).toFixed(3)}`,
-    // --cg-mem caps the control group's real memory use (and is what makes
-    // cg-oom-killed → MLE work). Plain --mem would be RLIMIT_AS — an
-    // address-space cap that Go (~600 MB of reservations at startup), the
-    // JVM and V8 cannot even start under at 256 MB.
-    `--cg-mem=${spec.memoryKb}`,
-    `--processes=${spec.pidsLimit}`,
-    `--meta=${metaPath}`,
-    `--stdout=${stdoutFile}`,
-    `--stderr=${stderrFile}`,
-    '--silent',
-  ];
-  if (spec.cpuCore !== undefined) {
-    args.push(`--core=${spec.cpuCore}`);
-  }
-  if (spec.stdinFile) {
-    args.push(`--stdin=${spec.stdinFile}`);
-  }
-  for (const [name, value] of Object.entries(spec.env ?? {})) {
-    args.push(`--env=${name}=${value}`);
-  }
-  for (const rule of spec.dirs ?? []) {
-    args.push(`--dir=${rule}`);
-  }
-  args.push('--run', '--', ...spec.argv);
+async function runInBox(boxId: number, boxDir: string, box: BoxSpec): Promise<BoxRun> {
+  const files = {
+    metaPath: path.join(META_DIR, `isolate-${boxId}-${Date.now()}.meta`),
+    stdoutFile: `stdout-${boxId}.txt`,
+    stderrFile: `stderr-${boxId}.txt`,
+  };
+  const result = await runIsolate(
+    isolateCommand(box, boxId, files, {
+      isolate: SANDBOX_CONFIG.isolate.binary,
+      taskset: cpuPinning().taskset,
+    })
+  );
 
-  await runIsolate(args);
-
-  const boxDir = path.join('/var/local/lib/isolate', String(boxId), 'box');
+  const tailBudget = SANDBOX_CONFIG.isolate.stderrReadBytes;
   const [metaText, stdout, stderr] = await Promise.all([
-    readFile(metaPath, 'utf8').catch(() => ''),
-    readFile(path.join(boxDir, stdoutFile), 'utf8').catch(() => ''),
-    readFile(path.join(boxDir, stderrFile), 'utf8').catch(() => ''),
+    readFile(files.metaPath, 'utf8').catch(() => ''),
+    box.phase === 'run'
+      ? readBoxFile(path.join(boxDir, files.stdoutFile), SANDBOX_CONFIG.limits.outputKb * 1024)
+      : readBoxFileHeadTail(path.join(boxDir, files.stdoutFile), tailBudget),
+    readBoxFileHeadTail(path.join(boxDir, files.stderrFile), tailBudget),
   ]);
-  await rm(metaPath, { force: true }).catch(() => undefined);
+  await rm(files.metaPath, { force: true }).catch(() => undefined);
 
-  return { metaText, stdout, stderr };
+  const sandboxError =
+    result.exitCode >= 2 || result.exitCode < 0 || metaText.trim() === ''
+      ? `isolate failed (exit ${result.exitCode}): ${result.stderr.trim() || 'no meta file written'}`
+      : undefined;
+  return { meta: parseIsolateMeta(metaText), sandboxError, stdout, stderr };
 }
 
 /**
@@ -141,7 +185,7 @@ async function runInBox(boxId: number, spec: IsolateRunSpec): Promise<IsolateRun
  * standalone temp dir that outlives the box. This is the compile-cache thunk:
  * it owns the compile box's whole lifecycle (acquire → init → compile →
  * cleanup → release) and hands back a dir the cache adopts. The cache removes
- * that dir on eviction.
+ * that dir on eviction. A sandbox failure throws (never a cached CE).
  */
 async function compileToArtifactDir(
   spec: LanguageSpec,
@@ -154,15 +198,9 @@ async function compileToArtifactDir(
     const boxDir = await initBox(boxId);
     await writeFile(path.join(boxDir, mainFile), code);
 
-    const result = await runInBox(boxId, {
-      argv: spec.compileArgv!(mainFile),
-      timeoutMs: SANDBOX_CONFIG.compileLimits.timeoutMs,
-      memoryKb: SANDBOX_CONFIG.compileLimits.memoryKb,
-      pidsLimit: spec.compilePidsLimit ?? SANDBOX_CONFIG.compileLimits.pidsLimit,
-      env: spec.compileEnv?.('isolate'),
-      dirs: spec.compileDirs?.(),
-    });
-    const meta = parseIsolateMeta(result.metaText);
+    const run = await runInBox(boxId, boxDir, compileBoxSpec(spec, mainFile, cpuPinning().plan, boxId));
+    if (run.sandboxError) throw new Error(run.sandboxError);
+    const { meta } = run;
     const compileMs = (meta.timeWall ?? meta.time ?? 0) * 1000;
 
     if (mapMetaToStatus(meta) !== 'OK') {
@@ -171,7 +209,7 @@ async function compileToArtifactDir(
         result: {
           output: '',
           // Compilers report on stderr; stdout is only a fallback.
-          error: result.stderr.trim() || result.stdout.trim() || meta.message || 'Compilation failed',
+          error: run.stderr.text.trim() || run.stdout.text.trim() || meta.message || 'Compilation failed',
           status: 'CE',
           runMs: 0,
           wallMs: compileMs,
@@ -209,13 +247,7 @@ async function execute(
   options?: RunOptions
 ): Promise<SandboxResult> {
   const spec = getLanguageSpec(language);
-  const limits = SANDBOX_CONFIG.limits;
-  const timeoutMs = options?.timeoutMs ?? limits.timeoutMs;
-  const memoryKb = options?.memoryKb ?? limits.memoryKb;
-  // Per-language cap takes precedence over the global default so each
-  // runtime gets exactly what it needs to boot and no more. RunOptions still
-  // wins if the caller explicitly overrides.
-  const pidsLimit = options?.pidsLimit ?? spec.pidsLimit ?? limits.pidsLimit;
+  const limits = resolveRunLimits(spec, options);
   const mainFile = spec.mainFileName(code);
   const signal = options?.signal;
   if (signal?.aborted) return cancelled();
@@ -277,39 +309,23 @@ async function execute(
     // limits, and cleanupBox below tears the box down either way.
     if (signal?.aborted) return cancelled(compileMs);
     options?.onPhase?.('running');
-    const runResult = await runInBox(runBoxId, {
-      argv: spec.runArgv(mainFile),
-      timeoutMs,
-      memoryKb,
-      pidsLimit,
-      cpuCore: runBoxId % HOST_CORES,
-      stdinFile: 'stdin.txt',
-      env: spec.runEnv?.('isolate', { memoryKb }),
-    });
-
-    const meta = parseIsolateMeta(runResult.metaText);
-    const status = mapMetaToStatus(meta);
-    const runMs = (meta.time ?? 0) * 1000;
-    const wallMs = (meta.timeWall ?? meta.time ?? 0) * 1000;
-    const memoryUsedKb = meta.cgMem ?? meta.maxRss ?? 0;
-
-    return {
-      output: runResult.stdout,
-      error:
-        status === 'OK'
-          ? undefined
-          : status === 'TLE'
-            ? `Time limit exceeded (${timeoutMs} ms)`
-            : status === 'MLE'
-              ? `Memory limit exceeded (${Math.round(memoryKb / 1024)} MB)`
-              : runResult.stderr.trim() || meta.message,
-      status,
-      runMs,
-      wallMs,
-      memoryKb: memoryUsedKb,
+    const run = await runInBox(
+      runBoxId,
+      runBoxDir,
+      runBoxSpec(spec, mainFile, limits, cpuPinning().plan, runBoxId)
+    );
+    if (run.sandboxError) {
+      return { output: '', error: run.sandboxError, status: 'XX', runMs: 0, wallMs: 0, memoryKb: 0, compileMs };
+    }
+    return runBoxResult({
+      meta: run.meta,
+      stdout: run.stdout,
+      stderr: run.stderr,
+      timeoutMs: limits.timeoutMs,
+      memoryKb: limits.memoryKb,
+      outputCapBytes: SANDBOX_CONFIG.limits.outputKb * 1024,
       compileMs,
-      exitCode: meta.exitcode,
-    };
+    });
   } finally {
     await cleanupBox(runBoxId);
     pool.release(runBoxId);
@@ -320,3 +336,68 @@ export const isolateAdapter: SandboxAdapter = {
   name: 'isolate',
   execute,
 };
+
+// ── startup check: is the pinning binding? ──────────────────────────────────
+
+/**
+ * Runs in an ordinary run box: reads the box's CPU mask, then tries to widen
+ * it to every CPU, as a program that wanted to run threads in parallel would.
+ */
+const PINNING_PROBE = [
+  'import json, os',
+  'before = sorted(os.sched_getaffinity(0))',
+  'try:',
+  '    os.sched_setaffinity(0, range(1024))',
+  'except OSError:',
+  '    pass',
+  'print(json.dumps([before, sorted(os.sched_getaffinity(0))]))',
+].join('\n');
+
+export interface PinningCheck {
+  /**
+   *   off         ISOLATE_CPU_PINNING=off
+   *   enforced    one CPU, and widening it had no effect (cgroup cpuset)
+   *   advisory    one CPU, but the program could widen its mask (taskset only)
+   *   not-applied the box saw several CPUs
+   *   unverified  the probe could not run
+   */
+  state: 'off' | 'enforced' | 'advisory' | 'not-applied' | 'unverified';
+  message: string;
+}
+
+export async function checkCpuPinning(): Promise<PinningCheck> {
+  const { plan } = cpuPinning();
+  if (!plan) return { state: 'off', message: 'off (ISOLATE_CPU_PINNING=off): boxes may use every CPU' };
+  const summary = describePlan(plan);
+  const res = await execute('python', PINNING_PROBE, '');
+  let before: number[];
+  let after: number[];
+  try {
+    if (res.status !== 'OK') throw new Error(res.error ?? res.status);
+    [before, after] = JSON.parse(res.output.trim()) as [number[], number[]];
+  } catch (err) {
+    return {
+      state: 'unverified',
+      message: `${summary}; could not verify it (${err instanceof Error ? err.message : String(err)})`,
+    };
+  }
+  if (before.length !== 1) {
+    return {
+      state: 'not-applied',
+      message: `${summary}, but a run box saw CPUs ${before.join(',')}: pinning is NOT applied`,
+    };
+  }
+  if (after.length > before.length) {
+    return {
+      state: 'advisory',
+      message:
+        `${summary}; ADVISORY ONLY: boxes start pinned (taskset), but a program widened its own ` +
+        `mask to ${after.length} CPUs with sched_setaffinity. Give each box a cpuset in the isolate ` +
+        'config (box<N>.cpus; the container entrypoint writes them) to make it binding.',
+    };
+  }
+  return {
+    state: 'enforced',
+    message: `${summary}; enforced by per-box cpusets (sched_setaffinity cannot widen a box)`,
+  };
+}

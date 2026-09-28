@@ -65,10 +65,8 @@ export function detectJavaClassName(code: string): string {
  * 64 instead of the default compile cap of 16 (enough for g++).
  *
  * The pid caps (isolate --processes = RLIMIT_NPROC) are defence-in-depth and
- * a fork-bomb stop. NB: isolate has no CPU-affinity option — the adapter's
- * `--core=N` is RLIMIT_CORE (core-dump size), not pinning — so these caps and
- * per-thread CPU clocks (process-wide for Go, with GOMAXPROCS=1) are what keep
- * parallelism from buying a better time.
+ * a fork-bomb stop. Parallelism itself is stopped by CPU pinning: every run
+ * box gets exactly one CPU (cpuPinning.ts), so threads time-share it.
  */
 const SPECS: Record<SandboxLanguage, LanguageSpec> = {
   python: {
@@ -137,6 +135,9 @@ const SPECS: Record<SandboxLanguage, LanguageSpec> = {
     artifacts: () => ['main'],
     pidsLimit: 16,
     compilePidsLimit: 64,
+    // `go build` flock()s its build cache (trim.txt, cache entries) and exits
+    // 1 when locking is blocked ("function not implemented").
+    compileNeedsFileLocks: true,
     compileEnv: (backend) => goCompileEnv(backend),
     compileDirs: () => goCompileDirs(),
     runEnv: (_backend, { memoryKb }) => goRunEnv(memoryKb),

@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import { Language, SandboxLanguage } from '../models/ExecutionResult.js';
 import { SANDBOX_CONFIG } from '../config/sandbox.js';
-import { isolateAdapter } from './sandbox/isolateAdapter.js';
+import { checkCpuPinning, cpuPinning, isolateAdapter, PinningCheck } from './sandbox/isolateAdapter.js';
 import { executeLocal } from './sandbox/localAdapter.js';
 import { disableSharedGoCache, sharedGoCacheEnabled } from './sandbox/goToolchain.js';
 import { RunOptions, SandboxResult } from './sandbox/types.js';
@@ -105,12 +105,20 @@ async function probeLanguage(lang: Language, code: string, expect: string): Prom
  * Go under isolate compiles against the read-only shared build cache; if that
  * probe fails, the shared cache is switched off and Go is probed again with a
  * private per-box cache, so a surprise there costs speed, not the language.
+ *
+ * Under isolate it also checks CPU pinning (decision 03) from inside a run
+ * box. Pinning that is on but cannot be applied at all (no taskset, unknown
+ * CPUs) throws: the service refuses to start rather than run boxes unpinned.
  */
 export async function sandboxReadinessProbe(): Promise<{
   backend: BackendName;
   available: Language[];
   unavailable: Array<{ language: Language; reason: string }>;
+  pinning: PinningCheck;
 }> {
+  // Before any box starts, so a pinning misconfiguration fails the boot.
+  if (SANDBOX_BACKEND === 'isolate') cpuPinning();
+
   const goProgram = (tag: string) =>
     `package main\n\nimport "fmt"\n\n// probe ${tag}\nfunc main() { fmt.Println("ok") }\n`;
   const probes: Array<{ lang: Language; code: string }> = [
@@ -140,11 +148,17 @@ export async function sandboxReadinessProbe(): Promise<{
     go.reason = retry;
   }
 
+  const pinning: PinningCheck =
+    SANDBOX_BACKEND === 'isolate'
+      ? await checkCpuPinning()
+      : { state: 'off', message: 'not applied (local adapter: no sandbox)' };
+
   return {
     backend: SANDBOX_BACKEND,
     available: results.filter((r) => r.reason === undefined).map((r) => r.lang),
     unavailable: results
       .filter((r): r is { lang: Language; reason: string } => r.reason !== undefined)
       .map((r) => ({ language: r.lang, reason: r.reason })),
+    pinning,
   };
 }

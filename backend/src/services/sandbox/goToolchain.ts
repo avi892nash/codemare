@@ -50,8 +50,9 @@ function isExecutable(file: string): boolean {
  * Absolute path of the `go` binary: GO_BIN, else the first `go` on PATH, else
  * the usual tarball / distro locations. null when Go isn't installed. The
  * absolute path is used directly in the compile argv, so the isolate box
- * (which has no PATH by default) doesn't need to search for it; GOROOT is
- * derived by `go` itself from its (symlink-resolved) location under /usr.
+ * (whose minimal PATH need not include GO_BIN's directory) doesn't need to
+ * search for it; GOROOT is derived by `go` itself from its
+ * (symlink-resolved) location under /usr.
  */
 export function resolveGoBinary(): string | null {
   if (resolvedGoBinary !== undefined) return resolvedGoBinary;
