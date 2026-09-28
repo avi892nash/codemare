@@ -1,0 +1,276 @@
+{
+  "slug": "graphs-and-optimization",
+  "title": "Graphs & Optimization",
+  "summary": "Traverse graphs breadth- and depth-first, turn exponential recursion into dynamic programming, and make greedy choices with heaps.",
+  "level": "advanced",
+  "tier": "graphs-optimization",
+  "est_hours": 8,
+  "ord": 2,
+  "modules": [
+    {
+      "slug": "graph-traversal",
+      "title": "Graph Traversal",
+      "summary": "Adjacency lists, breadth-first search in layers, and depth-first search for components and cycles.",
+      "lessons": [
+        {
+          "slug": "representing-graphs",
+          "title": "Representing graphs",
+          "est_minutes": 8,
+          "topic": "graphs",
+          "related_question_slugs": [
+            "course-schedule"
+          ],
+          "body_md": "A graph is a set of **nodes** joined by **edges**: cities and roads, courses and prerequisites, pixels and their neighbours. Edges can be *directed* (a prerequisite points one way) or *undirected* (a road runs both ways), and they can carry weights.\n\n## Adjacency lists\n\nProblems usually hand you an edge list. The first step is almost always to turn it into an **adjacency list** — for every node, the nodes it connects to:\n\n```python run\nfrom collections import defaultdict\n\ndef build(edges, directed=False):\n    adj = defaultdict(list)\n    for u, v in edges:\n        adj[u].append(v)\n        if not directed:\n            adj[v].append(u)\n    return adj\n\nroads = [(\"A\", \"B\"), (\"A\", \"C\"), (\"B\", \"D\"), (\"C\", \"D\"), (\"D\", \"E\")]\nadj = build(roads)\nfor node in sorted(adj):\n    print(node, \"->\", adj[node])\n\nprereqs = [(0, 1), (1, 2), (0, 2)]   # 0 comes before 1, 1 before 2, 0 before 2\nprint(dict(build(prereqs, directed=True)))\n```\n\n## Lists or a matrix?\n\nAn adjacency **matrix** is a V × V table of 0s and 1s. It answers \"is there an edge u–v?\" in O(1) but always spends V² memory, even when almost every entry is 0. Adjacency lists spend memory only on what exists:\n\n$$\n\\text{matrix: } O(V^2) \\qquad \\text{lists: } O(V + E)\n$$\n\n:::callout{kind=note title=\"Grids are graphs\"}\nA grid never needs an explicit graph. Cell `(r, c)` is a node, and its neighbours are whichever of `(r ± 1, c)` and `(r, c ± 1)` are inside the grid — generate them on the fly from a list of four offsets.\n:::\n\n```python run\nDIRS = [(1, 0), (-1, 0), (0, 1), (0, -1)]\n\ndef neighbours(grid, r, c):\n    for dr, dc in DIRS:\n        nr, nc = r + dr, c + dc\n        if 0 <= nr < len(grid) and 0 <= nc < len(grid[0]):\n            yield nr, nc\n\ngrid = [\"..#\", \"...\", \"#..\"]\nprint(list(neighbours(grid, 0, 0)))  # a corner has two neighbours\nprint(list(neighbours(grid, 1, 1)))  # the centre has four\n```\n\n:::callout{kind=complexity}\nTraversals over adjacency lists run in O(V + E): every node is visited once and every edge is looked at once (twice when it is undirected).\n:::\n\n:::question{slug=course-schedule}\n"
+        },
+        {
+          "slug": "breadth-first-search",
+          "title": "Breadth-first search in layers",
+          "est_minutes": 11,
+          "topic": "graphs",
+          "related_question_slugs": [
+            "number-of-islands",
+            "network-delay-time"
+          ],
+          "body_md": "Breadth-first search explores a graph in rings: first the start node, then everything one edge away, then everything two edges away, and so on. Because it reaches nodes in order of distance, the first time BFS sees a node it has found a *shortest* path to it, counted in edges.\n\n## A queue keeps the rings in order\n\nDiscovered nodes wait in a first-in, first-out queue. Take from the front, add undiscovered neighbours to the back — so every node at distance d leaves the queue before any node at distance d + 1:\n\n:::viz{id=bfs-layers}\n\n```python run\nfrom collections import deque\n\ndef bfs(adj, start):\n    dist = {start: 0}\n    queue = deque([start])\n    while queue:\n        u = queue.popleft()\n        for v in adj[u]:\n            if v not in dist:          # first discovery = shortest distance\n                dist[v] = dist[u] + 1\n                queue.append(v)\n    return dist\n\nadj = {\n    \"A\": [\"B\", \"C\"], \"B\": [\"A\", \"D\", \"E\"], \"C\": [\"A\", \"E\", \"F\"],\n    \"D\": [\"B\", \"H\"], \"E\": [\"B\", \"C\", \"G\"], \"F\": [\"C\", \"G\"],\n    \"G\": [\"E\", \"F\"], \"H\": [\"D\"],\n}\nprint(bfs(adj, \"A\"))\n```\n\n:::callout{kind=pitfall title=\"Mark a node when it enters the queue\"}\nRecord a node as seen when you enqueue it, not when you dequeue it. Otherwise a node reachable from several queued nodes is added several times — the distances stay right, but the queue and the running time can blow up.\n:::\n\n:::callout{kind=complexity time=\"O(V + E)\" space=\"O(V)\"}\nEvery node is enqueued once, and every edge is examined once from each end.\n:::\n\n## Grids and many starting points\n\nOn a grid, BFS from one cell counts the steps to every other cell. Start from *several* cells at once — put them all in the queue at distance 0 — and BFS computes every cell's distance to its nearest source: the idea behind problems like rotting oranges or flooding from many drains. When edges carry different weights BFS is no longer enough; that is Dijkstra's algorithm, in the heaps module.\n\n:::question{slug=number-of-islands}\n"
+        },
+        {
+          "slug": "depth-first-search",
+          "title": "Depth-first search, components and cycles",
+          "est_minutes": 12,
+          "topic": "graphs",
+          "related_question_slugs": [
+            "number-of-islands",
+            "course-schedule"
+          ],
+          "body_md": "Depth-first search follows one path as far as it can before backing up to try the next branch. It does not find shortest paths, but it is the natural tool for questions about *structure*: which nodes belong together, whether a cycle exists, in what order tasks can run.\n\n## Counting islands\n\nCount the groups of connected land cells (`1`s) in a grid. Scan every cell; each time you meet land nobody has visited, you have found a new island — flood it with DFS so its other cells are never counted again:\n\n```python run\ndef count_islands(grid):\n    grid = [list(row) for row in grid]\n    rows, cols = len(grid), len(grid[0])\n\n    def sink(r, c):                      # iterative DFS with an explicit stack\n        stack = [(r, c)]\n        grid[r][c] = \"0\"\n        while stack:\n            r, c = stack.pop()\n            for nr, nc in ((r + 1, c), (r - 1, c), (r, c + 1), (r, c - 1)):\n                if 0 <= nr < rows and 0 <= nc < cols and grid[nr][nc] == \"1\":\n                    grid[nr][nc] = \"0\"   # mark on push, like BFS\n                    stack.append((nr, nc))\n\n    islands = 0\n    for r in range(rows):\n        for c in range(cols):\n            if grid[r][c] == \"1\":\n                islands += 1\n                sink(r, c)\n    return islands\n\nprint(count_islands([\"11000\", \"11000\", \"00100\", \"00011\"]))  # 3\n```\n\n:::callout{kind=pitfall title=\"Recursion depth\"}\nA recursive DFS over a 1000 × 1000 grid of land can go a million calls deep, far past Python's default limit of about 1,000 frames. An explicit stack, as above, has no such limit.\n:::\n\n## Cycles and ordering in directed graphs\n\nCan you take every course if some require others first? Only if the prerequisite graph has no cycle. DFS with three colours finds one: *white* (unvisited), *grey* (on the current path), *black* (finished). Meeting a grey node again means the path has walked in a circle:\n\n```python run\ndef can_finish(n, prereqs):\n    adj = [[] for _ in range(n)]\n    for course, before in prereqs:\n        adj[before].append(course)\n    color = [0] * n                 # 0 white, 1 grey, 2 black\n    order = []\n\n    def visit(u):\n        color[u] = 1\n        for v in adj[u]:\n            if color[v] == 1:       # back on the current path: a cycle\n                return False\n            if color[v] == 0 and not visit(v):\n                return False\n        color[u] = 2\n        order.append(u)             # finished: everything u unlocks is done\n        return True\n\n    ok = all(color[u] == 2 or visit(u) for u in range(n))\n    return ok, (order[::-1] if ok else None)\n\nprint(can_finish(4, [(1, 0), (2, 1), (3, 1)]))  # possible, with one valid order\nprint(can_finish(2, [(0, 1), (1, 0)]))          # a cycle\n```\n\nReversing the finish order gives a **topological order**: every course appears after all of its prerequisites.\n\n:::callout{kind=complexity time=\"O(V + E)\" space=\"O(V)\"}\nLike BFS, DFS visits each node once and follows each edge once.\n:::\n\n:::question{slug=course-schedule}\n\n:::question{slug=number-of-islands}\n"
+        }
+      ],
+      "checkpoint": [
+        {
+          "kind": "mcq",
+          "prompt_md": "How much memory does an adjacency list use for a graph with V nodes and E edges?",
+          "choices": [
+            "O(V)",
+            "O(E)",
+            "O(V + E)",
+            "O(V²)"
+          ],
+          "answer": 2,
+          "explanation_md": "One list per node plus one entry per edge (two if undirected). A matrix would always use V²."
+        },
+        {
+          "kind": "mcq",
+          "prompt_md": "Why does BFS find shortest paths in an unweighted graph?",
+          "choices": [
+            "It uses recursion",
+            "It reaches nodes in order of their distance from the start",
+            "It tries every path",
+            "It sorts the edges first"
+          ],
+          "answer": 1,
+          "explanation_md": "The queue releases every node at distance d before any at d + 1, so a node's first discovery is along a shortest path."
+        },
+        {
+          "kind": "mcq",
+          "prompt_md": "In three-colour DFS on a directed graph, reaching a *grey* node means…",
+          "choices": [
+            "the graph is disconnected",
+            "there is a cycle",
+            "the node is finished",
+            "the node has no outgoing edges"
+          ],
+          "answer": 1,
+          "explanation_md": "Grey nodes are on the current path. Reaching one again means the path loops back on itself."
+        },
+        {
+          "kind": "short",
+          "prompt_md": "Which data structure holds the frontier in breadth-first search?",
+          "answer": [
+            "queue",
+            "a queue",
+            "deque",
+            "fifo queue",
+            "fifo"
+          ],
+          "explanation_md": "A first-in, first-out queue — nodes leave in the order they were discovered, which is distance order."
+        }
+      ]
+    },
+    {
+      "slug": "dynamic-programming",
+      "title": "Dynamic Programming",
+      "summary": "Cache overlapping subproblems, fill tables bottom-up, and choose states that compose.",
+      "lessons": [
+        {
+          "slug": "memoization",
+          "title": "From recursion to memoization",
+          "est_minutes": 10,
+          "topic": "dynamic-programming",
+          "related_question_slugs": [
+            "climbing-stairs"
+          ],
+          "body_md": "How many ways are there to climb n stairs taking one or two steps at a time? The last move was either one step (from n − 1) or two (from n − 2), so:\n\n$$\n\\text{ways}(n) = \\text{ways}(n-1) + \\text{ways}(n-2), \\quad \\text{ways}(0) = \\text{ways}(1) = 1\n$$\n\nThat recursion is correct — and hopelessly slow. Count the calls:\n\n```python run\ncalls = 0\n\ndef ways(n):\n    global calls\n    calls += 1\n    if n <= 1:\n        return 1\n    return ways(n - 1) + ways(n - 2)\n\nfor n in [10, 20, 25]:\n    calls = 0\n    print(n, ways(n), \"calls:\", calls)\n```\n\nThe call tree branches twice at every level and keeps re-solving the same subproblems: `ways(n - 2)` is computed directly and again inside `ways(n - 1)`. The number of calls grows like φⁿ, with φ ≈ 1.618.\n\n## Memoization: solve each subproblem once\n\nCache each answer the first time it is computed and look it up afterwards. There are only n + 1 distinct subproblems, so the work collapses to linear:\n\n```python run\nfrom functools import lru_cache\n\ncalls = 0\n\n@lru_cache(maxsize=None)\ndef ways(n):\n    global calls\n    calls += 1\n    if n <= 1:\n        return 1\n    return ways(n - 1) + ways(n - 2)\n\nprint(ways(25), \"calls:\", calls)\nprint(ways(90))\n```\n\n:::callout{kind=note title=\"The two ingredients\"}\nDynamic programming applies when a problem has **optimal substructure** (its answer is built from answers to smaller subproblems) and **overlapping subproblems** (the same smaller subproblem is needed again and again). Memoization removes the overlap; the recurrence captures the structure.\n:::\n\n:::callout{kind=complexity time=\"O(n)\" space=\"O(n)\"}\nn + 1 subproblems, each O(1) once its inputs are cached. The recursion is also n calls deep, which is one reason the next lesson fills the table bottom-up instead.\n:::\n\n:::question{slug=climbing-stairs}\n"
+        },
+        {
+          "slug": "tabulation",
+          "title": "Tabulation: filling the table",
+          "est_minutes": 12,
+          "topic": "dynamic-programming",
+          "related_question_slugs": [
+            "coin-change",
+            "maximum-subarray"
+          ],
+          "body_md": "Memoization computes subproblems on demand, top-down. **Tabulation** fills a table bottom-up, in an order where everything a cell needs is already there. It needs no recursion, and it makes the memory easy to see — and often easy to shrink.\n\nEvery DP answers four questions:\n\n1. **State** — what does one cell mean? (`dp[x]` = the fewest coins that make amount x)\n2. **Transition** — how is a cell built from smaller ones?\n3. **Base case** — which cells are known outright? (`dp[0] = 0`)\n4. **Order** — which way do you fill so dependencies come first? (x = 1, 2, 3, …)\n\n## Coin change\n\nGiven coin values and an amount, what is the fewest coins that add up to it? The last coin used is some c ≤ x, which leaves x − c to make as cheaply as possible:\n\n$$\n\\text{dp}[x] = \\min_{c \\in \\text{coins}} \\left(\\text{dp}[x - c] + 1\\right)\n$$\n\n:::viz{id=dp-table}\n\n```python run\ndef coin_change(coins, amount):\n    INF = float(\"inf\")\n    dp = [0] + [INF] * amount           # dp[x] = fewest coins that make x\n    for x in range(1, amount + 1):\n        for c in coins:\n            if c <= x and dp[x - c] + 1 < dp[x]:\n                dp[x] = dp[x - c] + 1\n    return dp[amount] if dp[amount] != INF else -1\n\nprint(coin_change([1, 3, 4], 6))        # 2: 3 + 3\nprint(coin_change([2], 3))              # -1: impossible\nprint(coin_change([1, 5, 10, 25], 63))  # 6: 25 + 25 + 10 + 1 + 1 + 1\n```\n\n:::callout{kind=pitfall title=\"Greedy is not enough\"}\nTaking the largest coin first gives 4 + 1 + 1 — three coins — for 6 with coins {1, 3, 4}; the table finds 3 + 3. Greedy happens to work for some coin systems (like 1, 5, 10, 25) but not in general, which is exactly why this is a DP problem.\n:::\n\n:::callout{kind=complexity time=\"O(amount · coins)\" space=\"O(amount)\"}\nOne cell per amount, one check per coin.\n:::\n\n## Keep only what you need: maximum subarray\n\nWhen a cell depends only on the one before it, the table collapses to a single variable. For the largest-sum contiguous subarray, let `best_here` be the best sum of a subarray *ending at* the current index: either extend the previous one or start over.\n\n```python run\ndef max_subarray(nums):\n    best_here = best = nums[0]\n    for x in nums[1:]:\n        best_here = max(x, best_here + x)  # extend, or start fresh at x\n        best = max(best, best_here)\n    return best\n\nprint(max_subarray([-2, 1, -3, 4, -1, 2, 1, -5, 4]))  # 6: [4, -1, 2, 1]\nprint(max_subarray([-3, -1, -2]))                     # -1\n```\n\nThis is Kadane's algorithm: O(n) time and O(1) space.\n\n:::question{slug=coin-change}\n\n:::question{slug=maximum-subarray}\n"
+        },
+        {
+          "slug": "choosing-the-state",
+          "title": "Choosing the state: increasing subsequences",
+          "est_minutes": 11,
+          "topic": "dynamic-programming",
+          "related_question_slugs": [
+            "longest-increasing-subsequence"
+          ],
+          "body_md": "The hardest part of dynamic programming is choosing what a cell means. For the longest strictly increasing subsequence (its elements need not be adjacent), \"the answer for the first i elements\" does not compose — to extend a subsequence you need to know where it *ends*. So define the state by its last element:\n\n$$\n\\text{dp}[i] = 1 + \\max_{j < i,\\; a_j < a_i} \\text{dp}[j]\n$$\n\n(or 1 when no earlier element is smaller).\n\n```python run\ndef lis_quadratic(a):\n    dp = [1] * len(a)          # dp[i]: longest increasing run ending at a[i]\n    for i in range(len(a)):\n        for j in range(i):\n            if a[j] < a[i]:\n                dp[i] = max(dp[i], dp[j] + 1)\n    return max(dp, default=0)\n\nprint(lis_quadratic([10, 9, 2, 5, 3, 7, 101, 18]))  # 4: 2, 3, 7, 18\n```\n\nThat is O(n²). A sharper state gives O(n log n): let `tails[k]` be the *smallest possible last element* of an increasing subsequence of length k + 1. `tails` is always sorted, so each new element finds its place by binary search — the lower bound from the Search & Order track:\n\n```python run\nfrom bisect import bisect_left\n\ndef lis(a):\n    tails = []\n    for x in a:\n        k = bisect_left(tails, x)  # the first tail >= x\n        if k == len(tails):\n            tails.append(x)        # x extends the longest subsequence so far\n        else:\n            tails[k] = x           # x is a smaller ending for length k + 1\n    return len(tails)\n\nprint(lis([10, 9, 2, 5, 3, 7, 101, 18]))  # 4\nprint(lis(list(range(1000, 0, -1))))       # 1: strictly decreasing\n```\n\n:::callout{kind=pitfall title=\"tails is not the subsequence\"}\n`tails` has the right *length* but is usually not an actual increasing subsequence of the input — it mixes endings of different candidates. Reconstructing the sequence itself needs parent pointers.\n:::\n\n:::callout{kind=complexity time=\"O(n log n)\" space=\"O(n)\"}\nn binary searches over a sorted list of at most n tails.\n:::\n\n:::question{slug=longest-increasing-subsequence}\n"
+        }
+      ],
+      "checkpoint": [
+        {
+          "kind": "mcq",
+          "prompt_md": "Plain recursive `ways(n)` makes an exponential number of calls because…",
+          "choices": [
+            "Python function calls are slow",
+            "the same subproblems are solved over and over",
+            "the base case is wrong",
+            "it uses addition"
+          ],
+          "answer": 1,
+          "explanation_md": "`ways(n - 2)` is computed directly and again inside `ways(n - 1)`, and the duplication compounds at every level."
+        },
+        {
+          "kind": "mcq",
+          "prompt_md": "With coins {1, 3, 4}, what is the fewest number of coins that make 6?",
+          "choices": [
+            "1",
+            "2",
+            "3",
+            "4"
+          ],
+          "answer": 1,
+          "explanation_md": "3 + 3. Greedy's 4 + 1 + 1 uses three coins, which is why the table is needed."
+        },
+        {
+          "kind": "mcq",
+          "prompt_md": "In Kadane's algorithm, `best_here` is the best sum of a subarray that…",
+          "choices": [
+            "starts at index 0",
+            "ends at the current index",
+            "has length at least 2",
+            "contains the maximum element"
+          ],
+          "answer": 1,
+          "explanation_md": "Fixing the end makes the choice local: extend the best subarray ending one step earlier, or start fresh at the current element."
+        },
+        {
+          "kind": "short",
+          "prompt_md": "Caching each subproblem's answer the first time a top-down recursion computes it is called ___.",
+          "answer": [
+            "memoization",
+            "memoisation",
+            "memoizing",
+            "memoising"
+          ],
+          "explanation_md": "Memoization — top-down DP. Filling a table bottom-up instead is called tabulation."
+        }
+      ]
+    },
+    {
+      "slug": "heaps-greedy",
+      "title": "Heaps & Greedy",
+      "summary": "Heaps for the smallest item on demand, provably safe greedy choices, and Dijkstra's shortest paths.",
+      "lessons": [
+        {
+          "slug": "heaps",
+          "title": "Heaps: the smallest item, fast",
+          "est_minutes": 10,
+          "topic": "heaps-greedy",
+          "related_question_slugs": [
+            "last-stone-weight",
+            "smallest-range-covering-k-lists"
+          ],
+          "body_md": "A **heap** answers one question fast: what is the smallest (or largest) item *right now* — while items keep arriving and leaving? A sorted list answers it too, but inserting into a sorted list costs O(n); a heap does both in O(log n).\n\n## A tree stored in an array\n\nA binary heap is a complete binary tree kept in an array: the children of index i live at 2i + 1 and 2i + 2. The one rule — the **heap property** — is that every parent is ≤ its children, so the minimum is always `h[0]`.\n\n$$\n\\text{parent}(i) = \\left\\lfloor \\frac{i-1}{2} \\right\\rfloor \\qquad \\text{children}(i) = 2i+1,\\; 2i+2\n$$\n\n- **push**: append at the end, then *sift up* — swap with the parent while smaller.\n- **pop**: take `h[0]`, move the last item to the root, then *sift down* — swap with the smaller child while larger.\n\n:::viz{id=heap}\n\n## heapq in Python\n\n```python run\nimport heapq\n\nh = []\nfor x in [7, 4, 9, 2, 5, 1]:\n    heapq.heappush(h, x)\nprint(\"heap array:\", h)\nprint(\"smallest three:\", [heapq.heappop(h) for _ in range(3)])\n\nnums = [5, 1, 8, 3, 9, 2]\nheapq.heapify(nums)              # O(n), faster than n pushes\nprint(\"heapified:\", nums)\n```\n\n:::callout{kind=pitfall title=\"heapq is a min-heap\"}\nPython has no max-heap. Push `-x` and negate what you pop — or push `(-priority, item)` tuples.\n:::\n\n## Last stone weight\n\nSmash the two heaviest stones together; if they differ, the remainder goes back in. A max-heap (negated values) makes each round O(log n):\n\n```python run\nimport heapq\n\ndef last_stone(stones):\n    h = [-s for s in stones]\n    heapq.heapify(h)\n    while len(h) > 1:\n        a = -heapq.heappop(h)      # heaviest\n        b = -heapq.heappop(h)      # second heaviest\n        if a != b:\n            heapq.heappush(h, -(a - b))\n    return -h[0] if h else 0\n\nprint(last_stone([2, 7, 4, 1, 8, 1]))  # 1\n```\n\n:::callout{kind=complexity time=\"O(log n) push/pop, O(n) heapify\" space=\"O(n)\"}\nPush and pop each walk one root-to-leaf path of a tree whose height is log₂ n.\n:::\n\n:::question{slug=last-stone-weight}\n"
+        },
+        {
+          "slug": "greedy-choices",
+          "title": "Greedy choices and exchange arguments",
+          "est_minutes": 9,
+          "topic": "heaps-greedy",
+          "related_question_slugs": [
+            "meeting-rooms",
+            "merge-intervals"
+          ],
+          "body_md": "A greedy algorithm builds its answer one irrevocable choice at a time, always taking whatever looks best right now. When it works it is simple and fast; the hard part is knowing *when* it works. The standard tool is an **exchange argument**: show that any optimal answer can be changed, step by step, into the greedy one without getting worse.\n\n## Scheduling the most meetings\n\nGiven meetings with start and end times, attend as many as possible without overlaps. The greedy rule: **take the meeting that ends first**, then repeat among the meetings that start after it ends.\n\n```python run\ndef max_meetings(meetings):\n    free_at = float(\"-inf\")\n    chosen = []\n    for start, end in sorted(meetings, key=lambda m: m[1]):  # by end time\n        if start >= free_at:\n            chosen.append((start, end))\n            free_at = end\n    return len(chosen), chosen\n\nprint(max_meetings([(1, 4), (3, 5), (0, 6), (5, 7), (3, 9), (5, 9),\n                    (6, 10), (8, 11), (8, 12), (2, 14), (12, 16)]))\n```\n\nWhy the earliest end? Take any optimal schedule and look at its first meeting. Swapping it for the meeting that ends earliest cannot create a conflict — the swapped-in meeting ends no later — and the count stays the same. Repeat the argument on the rest of the schedule, and greedy is optimal.\n\n:::callout{kind=pitfall title=\"Plausible rules that fail\"}\n\"Shortest meeting first\" and \"earliest start first\" both sound reasonable, and both lose: one long early meeting can block several short ones, and a short meeting can straddle two compatible long ones. Test a greedy rule on small counterexamples before trusting it.\n:::\n\n## When greedy fails\n\nCoin change is the classic trap. With coins {1, 3, 4} and amount 6, taking the largest coin first gives 4 + 1 + 1, but 3 + 3 uses fewer. No exchange argument holds for arbitrary coin systems, which is why that problem needs the DP table instead.\n\n:::callout{kind=complexity time=\"O(n log n)\" space=\"O(n)\"}\nThe sort dominates; the selection itself is one linear pass.\n:::\n\n:::question{slug=meeting-rooms}\n"
+        },
+        {
+          "slug": "dijkstra",
+          "title": "Dijkstra: greedy with a heap",
+          "est_minutes": 12,
+          "topic": "heaps-greedy",
+          "related_question_slugs": [
+            "network-delay-time"
+          ],
+          "body_md": "BFS finds shortest paths when every edge costs 1. With weights, the node that is nearest by *edge count* may not be nearest by *cost*. Dijkstra's algorithm fixes that with a greedy rule and a heap: repeatedly settle the unsettled node with the smallest known distance, then try to improve its neighbours through it.\n\n## The algorithm\n\n```python run\nimport heapq\n\ndef dijkstra(adj, source):\n    dist = {source: 0}\n    heap = [(0, source)]                 # (distance so far, node)\n    while heap:\n        d, u = heapq.heappop(heap)\n        if d > dist[u]:\n            continue                     # stale entry: u was settled more cheaply\n        for v, w in adj.get(u, []):\n            nd = d + w\n            if nd < dist.get(v, float(\"inf\")):\n                dist[v] = nd             # relax the edge u -> v\n                heapq.heappush(heap, (nd, v))\n    return dist\n\nadj = {\n    \"S\": [(\"A\", 4), (\"B\", 1)],\n    \"B\": [(\"A\", 2), (\"C\", 5)],\n    \"A\": [(\"C\", 1)],\n    \"C\": [(\"D\", 3)],\n}\nprint(dijkstra(adj, \"S\"))  # A is cheaper through B: 1 + 2 = 3\n```\n\nRelaxing an edge u → v with weight w applies:\n\n$$\n\\text{dist}(v) \\leftarrow \\min\\left(\\text{dist}(v),\\; \\text{dist}(u) + w(u, v)\\right)\n$$\n\nWhy is a popped distance final? Every weight is ≥ 0, so any other route to u would leave the heap at a distance at least as large, and could only add cost after that. That is the greedy choice — and exactly what breaks when weights can be negative.\n\n:::callout{kind=pitfall title=\"Stale heap entries\"}\nPython's heap cannot lower an existing key, so one node may sit in the heap several times with different distances. Skip any entry whose distance is worse than the best known (`d > dist[u]`) instead of processing it again.\n:::\n\n:::callout{kind=complexity time=\"O((V + E) log V)\" space=\"O(V + E)\"}\nEach edge can push one heap entry, and every push or pop costs O(log V).\n:::\n\n:::callout{kind=note title=\"Negative weights\"}\nWith a negative edge, a node settled early might later become cheaper, and Dijkstra never revisits it. Use Bellman–Ford, in O(V · E), when weights can be negative.\n:::\n\n:::question{slug=network-delay-time}\n"
+        }
+      ],
+      "checkpoint": [
+        {
+          "kind": "mcq",
+          "prompt_md": "In a binary heap stored in an array, where is the parent of index 9?",
+          "choices": [
+            "3",
+            "4",
+            "5",
+            "8"
+          ],
+          "answer": 1,
+          "explanation_md": "⌊(9 − 1) / 2⌋ = 4. Check: the children of 4 are 9 and 10."
+        },
+        {
+          "kind": "mcq",
+          "prompt_md": "How do you get max-heap behaviour from Python's `heapq`?",
+          "choices": [
+            "Call `heapq.maxheap()`",
+            "Push negated values and negate them when popping",
+            "Sort the list in reverse first",
+            "Pass `reverse=True` to `heappush`"
+          ],
+          "answer": 1,
+          "explanation_md": "`heapq` is always a min-heap; negating keys turns the largest value into the smallest."
+        },
+        {
+          "kind": "mcq",
+          "prompt_md": "Which greedy rule is guaranteed to schedule the most non-overlapping meetings?",
+          "choices": [
+            "Shortest meeting first",
+            "Earliest start first",
+            "Earliest end first",
+            "Fewest overlaps first"
+          ],
+          "answer": 2,
+          "explanation_md": "The meeting that ends first leaves the most room for the rest; an exchange argument proves it optimal."
+        },
+        {
+          "kind": "short",
+          "prompt_md": "Dijkstra's algorithm can give wrong answers when some edge weights are ___.",
+          "answer": [
+            "negative",
+            "negative weights",
+            "below zero",
+            "less than zero",
+            "< 0"
+          ],
+          "explanation_md": "It assumes a settled distance can never improve, which only holds when every weight is ≥ 0. Use Bellman–Ford instead."
+        }
+      ]
+    }
+  ]
+}
