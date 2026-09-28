@@ -115,15 +115,18 @@ function ToastViewport({ items, onDismiss }: { items: ToastRecord[]; onDismiss: 
           pointerEvents: items.length ? 'auto' : 'none',
         }}
       >
-        <ol
+        {/* A log, not a list: each toast carries its own status/alert role,
+            which a list item may not. */}
+        <div
+          role="log"
           aria-live="polite"
           aria-relevant="additions text"
-          style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 8 }}
+          style={{ display: 'flex', flexDirection: 'column', gap: 8 }}
         >
           {items.map((t) => (
             <ToastItem key={t.id} item={t} paused={paused} onDismiss={() => onDismiss(t.id)} />
           ))}
-        </ol>
+        </div>
       </section>
     </Portal>
   );
@@ -153,7 +156,7 @@ function ToastItem({ item, paused, onDismiss }: { item: ToastRecord; paused: boo
   }, [paused, duration, item.title, item.description]);
 
   return (
-    <li
+    <div
       role={tone === 'err' ? 'alert' : 'status'}
       aria-atomic="true"
       data-theme={item.theme ?? undefined}
@@ -198,6 +201,6 @@ function ToastItem({ item, paused, onDismiss }: { item: ToastRecord; paused: boo
         )}
       </div>
       <Button variant="ghost" size="xs" icon="x" aria-label="Dismiss notification" onClick={onDismiss} />
-    </li>
+    </div>
   );
 }

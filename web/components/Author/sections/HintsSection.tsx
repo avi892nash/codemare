@@ -62,7 +62,6 @@ export function HintsSection({ draft, update, checks }: SectionProps) {
                   rows={level === 'solution' || level === 'pseudo' ? 6 : 3}
                   value={h.bodyMd}
                   onChange={(bodyMd) => set(level, { bodyMd })}
-                  headingOffset={3}
                 />
                 <div className={s.hintCost}>
                   <Select

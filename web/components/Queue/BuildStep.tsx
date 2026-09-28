@@ -61,7 +61,7 @@ export function BuildStep(props: BuildStepProps) {
   );
 
   return (
-    <div className={s.buildRoot}>
+    <main className={s.buildRoot}>
       <div className={s.bar} data-passed={passed || undefined} role="region" aria-label="Queue" data-testid="queue-bar">
         <span className={s.barCrumb}>
           <Icon name="layers" size={14} />
@@ -139,6 +139,6 @@ export function BuildStep(props: BuildStepProps) {
       <Modal open={listOpen} onClose={() => setListOpen(false)} title="Your queue" description="Steps in dependency order — a component waits until what it calls is built." size="md">
         <QueueList queue={queue} focusId={problem.id} idPrefix="qm" />
       </Modal>
-    </div>
+    </main>
   );
 }

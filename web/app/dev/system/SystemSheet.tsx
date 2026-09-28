@@ -34,7 +34,8 @@ import s from './system.module.css';
 
 function Section({ theme, id, title, note, children }: { theme: Theme; id: SectionKey; title: string; note?: string; children: ReactNode }) {
   return (
-    <section id={`${theme}-${id}`} className={s.section} aria-labelledby={`${theme}-${id}-h`}>
+    // Named "<title> <theme>" (the column heading) so the dark and light copies are distinct landmarks.
+    <section id={`${theme}-${id}`} className={s.section} aria-labelledby={`${theme}-${id}-h col-${theme}`}>
       <div className={s.sectionHead}>
         <h3 id={`${theme}-${id}-h`}>{title}</h3>
         {note && <span>{note}</span>}
@@ -514,14 +515,14 @@ function Progress() {
   );
 }
 
-function KbdAndBreadcrumb() {
+function KbdAndBreadcrumb({ theme }: { theme: Theme }) {
   return (
     <div className={s.stack}>
       <div className={s.row} style={{ fontSize: 13, color: 'var(--fg-1)' }}>
         <Kbd bare>⌘K</Kbd> jump · <Kbd bare>⌘↵</Kbd> run · <Kbd bare>Esc</Kbd> close · <Kbd bare>Shift</Kbd>+<Kbd bare>Tab</Kbd> back
       </div>
-      <Breadcrumb items={[{ label: 'Learn', href: '/learn', icon: 'graduation' }, { label: 'Arrays & Hashing', href: '/learn/arrays' }, { label: 'Two pointers on sorted input' }]} />
-      <Breadcrumb items={[{ label: 'Problems', href: '/problems' }, { label: 'Longest Substring Without Repeating Characters, a much longer title' }]} />
+      <Breadcrumb label={`Breadcrumb example 1 (${theme})`} items={[{ label: 'Learn', href: '/learn', icon: 'graduation' }, { label: 'Arrays & Hashing', href: '/learn/arrays' }, { label: 'Two pointers on sorted input' }]} />
+      <Breadcrumb label={`Breadcrumb example 2 (${theme})`} items={[{ label: 'Problems', href: '/problems' }, { label: 'Longest Substring Without Repeating Characters, a much longer title' }]} />
     </div>
   );
 }
@@ -624,6 +625,7 @@ function States() {
       <div className={s.stateBox}>
         <EmptyState
           icon="search"
+          headingLevel={4}
           title="No problems match these filters"
           description="Try removing a tag or switching the status filter to All."
           action={<Button size="sm" icon="refresh">Clear filters</Button>}
@@ -634,9 +636,9 @@ function States() {
       <Sub>LoadingState · editor</Sub>
       <div className={`${s.stateBox} ${s.stateScroll}`}><EditorSkeleton /></div>
       <Sub>NotFound (404)</Sub>
-      <div className={s.stateBox}><NotFound /></div>
+      <div className={s.stateBox}><NotFound embedded /></div>
       <Sub>ServerError (500)</Sub>
-      <div className={s.stateBox}><ServerError digest="3481920557" onRetry={() => undefined} /></div>
+      <div className={s.stateBox}><ServerError embedded digest="3481920557" onRetry={() => undefined} /></div>
     </div>
   );
 }
@@ -657,7 +659,7 @@ export function SystemSheet({ theme }: { theme: Theme }) {
       <Section theme={theme} id="tabs" title="Tabs & toggle"><TabsAndToggle theme={theme} /></Section>
       <Section theme={theme} id="overlays" title="Tooltip · modal · toast"><Overlays /></Section>
       <Section theme={theme} id="progress" title="Skeleton & progress"><Progress /></Section>
-      <Section theme={theme} id="kbd" title="Kbd & breadcrumb"><KbdAndBreadcrumb /></Section>
+      <Section theme={theme} id="kbd" title="Kbd & breadcrumb"><KbdAndBreadcrumb theme={theme} /></Section>
       <Section theme={theme} id="code" title="Code blocks"><Code /></Section>
       <Section theme={theme} id="callouts" title="Callouts & formula"><Callouts /></Section>
       <Section theme={theme} id="viz" title="VisualizationFrame" note="binary search"><BinarySearchViz /></Section>

@@ -65,7 +65,7 @@ function BlockerBody({ b }: { b: LockedTopicBlocker }) {
  */
 export function LockedQuestion({ title, difficulty, blockers }: { title: string; difficulty: Difficulty; blockers: LockedTopicBlocker[] }) {
   return (
-    <div className={s.locked}>
+    <main className={s.locked}>
       <section className={s.lockedCard} aria-labelledby="locked-title" data-testid="locked-question">
         <span className={s.lockedIcon} aria-hidden="true">
           <Icon name="lock" size={20} />
@@ -101,6 +101,6 @@ export function LockedQuestion({ title, difficulty, blockers }: { title: string;
           </ButtonLink>
         </div>
       </section>
-    </div>
+    </main>
   );
 }

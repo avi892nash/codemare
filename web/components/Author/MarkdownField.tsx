@@ -17,8 +17,29 @@ export interface MarkdownFieldProps {
   required?: boolean;
   /** split: editor and live preview side by side · tabs: Write / Preview. */
   layout?: 'split' | 'tabs';
-  /** Heading offset for the preview (matches where the text renders for learners). */
-  headingOffset?: number;
+  /**
+   * Level the preview's top heading renders at (default h3: fields sit under
+   * an h2 section title). Authors start at `#` or at `###` alike, so the
+   * offset is taken from the smallest heading actually in the text — the
+   * outline never skips a level.
+   */
+  headingLevel?: number;
+}
+
+/** Smallest ATX heading level in the source, ignoring fenced code; null if none. */
+function topHeadingLevel(md: string): number | null {
+  let min: number | null = null;
+  let fenced = false;
+  for (const line of md.split('\n')) {
+    if (/^\s{0,3}(```|~~~)/.test(line)) {
+      fenced = !fenced;
+      continue;
+    }
+    if (fenced) continue;
+    const m = /^\s{0,3}(#{1,6})(\s|$)/.exec(line);
+    if (m && (min === null || m[1].length < min)) min = m[1].length;
+  }
+  return min;
 }
 
 /**
@@ -29,9 +50,10 @@ export interface MarkdownFieldProps {
  * unsaved work.
  */
 export function MarkdownField({
-  label, value, onChange, hint, error, placeholder, rows = 10, required, layout = 'split', headingOffset = 1,
+  label, value, onChange, hint, error, placeholder, rows = 10, required, layout = 'split', headingLevel = 3,
 }: MarkdownFieldProps) {
   const deferred = useDeferredValue(value);
+  const headingOffset = headingLevel - (topHeadingLevel(deferred) ?? 1);
   const [tab, setTab] = useState<'write' | 'preview'>('write');
   const tabsId = useId();
   const previewId = useId();

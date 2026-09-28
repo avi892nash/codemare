@@ -17,6 +17,24 @@ const Monaco = dynamic(() => import('@monaco-editor/react'), {
   loading: () => <EditorPlaceholder />,
 });
 
+const TABBABLE =
+  'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+/**
+ * Move focus to the next (or previous) tabbable element outside `root`, in
+ * document order — how the editor lets go of the keyboard after Esc.
+ */
+function focusOutside(root: HTMLElement, direction: 1 | -1) {
+  const all = Array.from(document.querySelectorAll<HTMLElement>(TABBABLE)).filter(
+    (el) => !root.contains(el) && el.getClientRects().length > 0 && !el.closest('[inert], [aria-hidden="true"]'),
+  );
+  const target =
+    direction === 1
+      ? all.find((el) => root.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING)
+      : [...all].reverse().find((el) => root.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_PRECEDING);
+  target?.focus();
+}
+
 /** Imperative handle for the pane around the editor. */
 export interface CodeEditorHandle {
   focus(): void;
@@ -118,6 +136,27 @@ export function CodeEditor({
     applyTheme(monaco);
     instance.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => runRef.current?.());
     instance.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.Enter, () => submitRef.current?.());
+    // Tab indents inside the editor, so it would be a keyboard trap (WCAG
+    // 2.1.2). Esc arms an exit: the next Tab / Shift+Tab leaves the editor
+    // for the next / previous control. Esc still closes Monaco's widgets.
+    let exitArmed = false;
+    instance.onKeyDown((e) => {
+      if (e.keyCode === monaco.KeyCode.Escape) {
+        exitArmed = true;
+        return;
+      }
+      if (exitArmed && e.keyCode === monaco.KeyCode.Tab && !e.ctrlKey && !e.altKey && !e.metaKey) {
+        e.preventDefault();
+        e.stopPropagation();
+        exitArmed = false;
+        if (wrapRef.current) focusOutside(wrapRef.current, e.shiftKey ? -1 : 1);
+        return;
+      }
+      exitArmed = false;
+    });
+    instance.onDidBlurEditorText(() => {
+      exitArmed = false;
+    });
     // next/font exposes the family through a CSS variable; Monaco measures
     // glyphs itself, so hand it the resolved family and re-measure once loaded.
     const mono = getComputedStyle(document.documentElement).getPropertyValue('--font-mono').trim();
@@ -154,7 +193,7 @@ export function CodeEditor({
         theme={themeName(theme)}
         loading={<EditorPlaceholder />}
         options={{
-          ariaLabel,
+          ariaLabel: `${ariaLabel}. Press Escape, then Tab, to move out of the editor.`,
           readOnly,
           fontSize: 13,
           lineHeight: 20,

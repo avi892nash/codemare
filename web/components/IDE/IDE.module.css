@@ -68,15 +68,28 @@
 .caseHead {
   display: flex;
   align-items: center;
+  gap: 4px;
+  padding-right: 10px;
+}
+.caseToggle {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
   gap: 8px;
-  padding: 8px 10px 8px 14px;
+  padding: 8px 0 8px 14px;
+  margin: 0;
+  border: 0;
+  background: none;
+  font: inherit;
   font-size: 12.5px;
   font-weight: 500;
   color: var(--fg-0);
+  text-align: left;
   cursor: pointer;
   border-radius: 0;
 }
-.caseHead > svg { color: var(--fg-3); flex: none; }
+.caseToggle > svg { color: var(--fg-3); flex: none; }
 .case[data-expanded] .caseHead { background: var(--bg-2); }
 .caseHead:hover { background: var(--bg-2); }
 .caseName { flex: none; }

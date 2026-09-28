@@ -121,6 +121,13 @@
   letter-spacing: -0.2px;
   border-radius: var(--r);
 }
+.inlineMain {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  overflow-y: auto;
+  background: var(--bg-0);
+}
 .errorBody {
   flex: 1;
   display: flex;
