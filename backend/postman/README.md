@@ -1,630 +1,162 @@
-# Codemare API Postman Collection
+# Codemare compile service: Postman collection
 
-Complete Postman collection for testing the Codemare Backend API with working code examples for Python, JavaScript, C++, and Java.
+Requests for the compile service in `backend/`, the stateless executor the web
+app calls to judge code. Every request has a test script, so running the whole
+collection doubles as a smoke test of a running service.
 
-## Table of Contents
-- [Overview](#overview)
-- [Prerequisites](#prerequisites)
-- [Installation](#installation)
-- [Collection Structure](#collection-structure)
-- [Usage](#usage)
-- [Code Examples](#code-examples)
-- [Expected Results](#expected-results)
-- [Troubleshooting](#troubleshooting)
-- [API Reference](#api-reference)
+| File | What |
+|---|---|
+| `Codemare_API.postman_collection.json` | 24 requests in five folders |
+| `Codemare_Environment.postman_environment.json` | `baseUrl` and `internalToken` |
 
-## Overview
+## Setup
 
-This Postman collection provides:
-- **24 comprehensive requests** covering all API endpoints
-- **8 working solutions** (4 languages × 2 problems)
-- **8 error cases** for testing validation
-- **100+ automated test scripts** for validation
-- **Environment variables** for easy configuration
+1. **Start the service.** From the repo root, `npm run dev:backend` (or
+   `npm run dev`, which starts the web app too) serves it on
+   http://localhost:4000. Without isolate (e.g. on macOS) it runs code with
+   the unsandboxed local adapter; to judge every language the host needs
+   Python 3, Node, g++, a JDK and Go 1.22+. The startup log lists which
+   languages passed its probe (`Available:` / `Unavailable:`).
+2. **Import** both files into Postman and select the **Codemare Environment**.
+3. **Variables:**
 
-## Prerequisites
+   | Variable | Default | Meaning |
+   |---|---|---|
+   | `baseUrl` | `http://localhost:4000` | Where the service listens. 4000 is its default port (also in the Docker image); the systemd unit in `deploy/` sets 3000. |
+   | `internalToken` | empty | Sent as `X-Codemare-Token` on every `/v1` request. Leave it empty for a local service started without `INTERNAL_TOKEN`; otherwise paste that value (the service requires it in production). Keep it in the environment, never in the collection. |
 
-1. **Postman** - Desktop app or web version ([Download](https://www.postman.com/downloads/))
-2. **Codemare backend** - Running on port 3000
-3. **Docker** - Required for code execution
-4. **Docker containers** - All executor images built (python, javascript, cpp, java)
+   The collection keeps one variable of its own, `ideToken`: "Submit without
+   wait" sets it and "Poll a queued run" reads it.
 
-### Starting the Backend
-
-```bash
-# Navigate to backend directory
-cd /Users/avinashverma/Github/codemare/backend
-
-# Build Docker executor images
-docker-compose build
-
-# Start the backend server
-npm run dev
-# OR
-npm start
-```
-
-Verify the backend is running:
-```bash
-curl http://localhost:3000/health
-# Expected: {"status":"ok","timestamp":"..."}
-```
-
-## Installation
-
-### 1. Import Collection
-
-1. Open Postman
-2. Click **"Import"** button (top-left)
-3. Select `Codemare_API.postman_collection.json`
-4. Collection appears in your workspace
-
-### 2. Import Environment
-
-1. Click the gear icon (⚙️) **"Manage Environments"** (top-right)
-2. Click **"Import"**
-3. Select `Codemare_Environment.postman_environment.json`
-4. Close the environment manager
-
-### 3. Select Environment
-
-1. Click the environment dropdown (top-right)
-2. Select **"Codemare Environment"**
-3. Verify variables are loaded:
-   - `baseUrl`: http://localhost:3000
-   - `problemId_twoSum`: two-sum
-   - `problemId_reverseString`: reverse-string
-
-## Collection Structure
+## What's in it
 
 ```
-Codemare Backend API (24 requests)
-├── 01 - Health Check (1 request)
-│   └── GET Health Status
-├── 02 - Problems (3 requests)
-│   ├── GET All Problems
-│   ├── GET Two Sum Problem
-│   └── GET Reverse String Problem
-├── 03 - Execute Python (4 requests)
-│   ├── Two Sum - Valid Solution
-│   ├── Two Sum - Invalid Solution
-│   ├── Reverse String - Valid Solution
-│   └── Reverse String - Syntax Error
-├── 04 - Execute JavaScript (4 requests)
-│   ├── Two Sum - Valid Solution
-│   ├── Two Sum - Runtime Error
-│   ├── Reverse String - Valid Solution
-│   └── Reverse String - Wrong Answer
-├── 05 - Execute C++ (4 requests)
-│   ├── Two Sum - Valid Solution
-│   ├── Two Sum - Compilation Error
-│   ├── Reverse String - Valid Solution
-│   └── Reverse String - Invalid Solution
-├── 06 - Execute Java (4 requests)
-│   ├── Two Sum - Valid Solution
-│   ├── Two Sum - Compilation Error
-│   ├── Reverse String - Valid Solution
-│   └── Reverse String - Runtime Error
-└── 07 - Error Cases (4 requests)
-    ├── Execute - Invalid Language
-    ├── Execute - Code Too Large
-    ├── Execute - Problem Not Found
-    └── Execute - Missing Fields
+01 - Health
+    GET /health                                   open; {status: "ok", timestamp}
+02 - Run (POST /v1/run)
+    Two Sum - Python / JavaScript / TypeScript / C++ / Java / Go (OK)
+    Wrong answer - Python (WA)
+    Syntax error - Python (CE)
+    Compile error - C++ (CE)
+    Runtime error - Python (RE)
+    Time limit - Python (TLE)                     limits.timeMs = 1000
+    Prelude - Python helper (OK)
+    Validation - C++ without a signature (400)
+03 - Run stream (POST /v1/run/stream)
+    Two Sum - C++ (SSE)
+04 - IDE (POST /v1/ide/execute)
+    Python - sum of two numbers (wait)
+    Java - Scanner input (wait)
+    Go - word count (wait)
+    Wrong output - Python (WA case)
+    Submit without wait (202 token when queued)
+    Poll a queued run                             GET /v1/ide/execute/{{ideToken}}
+    Validation - too many test cases (400)
+    Validation - unknown language (400)
+05 - Queue
+    GET /v1/queue/stats
 ```
 
-## Usage
+Run the folders in order: the poll request uses the token from the submit
+before it.
 
-### Running Individual Requests
+## The API in brief
 
-1. Expand collection folders in left sidebar
-2. Select any request
-3. Click **"Send"** button
-4. View response in bottom panel
-5. Check **"Test Results"** tab for automated validation
+The full contract is `docs/spec/architecture.md` §5; request validation lives
+in `backend/src/services/runValidation.ts`.
 
-### Running Full Test Suite
+### `POST /v1/run` and `POST /v1/run/stream`
 
-1. Click three dots (⋯) next to collection name
-2. Select **"Run collection"**
-3. Configure Collection Runner:
-   - **Environment**: Codemare Environment
-   - **Delay**: 500ms (recommended)
-   - **Iterations**: 1
-4. Click **"Run Codemare Backend API"**
-5. View results summary
+The caller sends the code and the tests; the service keeps no state about
+questions.
 
-**Expected Results**:
-- 24 requests executed
-- 100+ tests passed
-- 0 failures for valid solutions
-- Expected failures for error cases
-
-## Code Examples
-
-### Two Sum Problem
-
-#### Python
-```python
-def twoSum(nums, target):
-    seen = {}
-    for i, num in enumerate(nums):
-        complement = target - num
-        if complement in seen:
-            return [seen[complement], i]
-        seen[num] = i
-    return []
-```
-
-#### JavaScript
-```javascript
-function twoSum(nums, target) {
-    const seen = {};
-    for (let i = 0; i < nums.length; i++) {
-        const complement = target - nums[i];
-        if (complement in seen) {
-            return [seen[complement], i];
-        }
-        seen[nums[i]] = i;
-    }
-    return [];
-}
-```
-
-#### C++
-```cpp
-#include <vector>
-#include <unordered_map>
-using namespace std;
-
-vector<int> twoSum(vector<int>& nums, int target) {
-    unordered_map<int, int> seen;
-    for (int i = 0; i < nums.size(); i++) {
-        int complement = target - nums[i];
-        if (seen.find(complement) != seen.end()) {
-            return {seen[complement], i};
-        }
-        seen[nums[i]] = i;
-    }
-    return {};
-}
-```
-
-#### Java
-```java
-class Solution {
-    public int[] twoSum(int[] nums, int target) {
-        java.util.HashMap<Integer, Integer> seen = new java.util.HashMap<>();
-        for (int i = 0; i < nums.length; i++) {
-            int complement = target - nums[i];
-            if (seen.containsKey(complement)) {
-                return new int[]{seen.get(complement), i};
-            }
-            seen.put(nums[i], i);
-        }
-        return new int[]{};
-    }
-}
-```
-
-### Reverse String Problem
-
-#### Python
-```python
-def reverseString(s):
-    left, right = 0, len(s) - 1
-    while left < right:
-        s[left], s[right] = s[right], s[left]
-        left += 1
-        right -= 1
-    return s
-```
-
-#### JavaScript
-```javascript
-function reverseString(s) {
-    let left = 0;
-    let right = s.length - 1;
-    while (left < right) {
-        const temp = s[left];
-        s[left] = s[right];
-        s[right] = temp;
-        left++;
-        right--;
-    }
-    return s;
-}
-```
-
-#### C++
-```cpp
-#include <vector>
-using namespace std;
-
-vector<char> reverseString(vector<char>& s) {
-    int left = 0;
-    int right = s.size() - 1;
-    while (left < right) {
-        char temp = s[left];
-        s[left] = s[right];
-        s[right] = temp;
-        left++;
-        right--;
-    }
-    return s;
-}
-```
-
-#### Java
-```java
-class Solution {
-    public char[] reverseString(char[] s) {
-        int left = 0;
-        int right = s.length - 1;
-        while (left < right) {
-            char temp = s[left];
-            s[left] = s[right];
-            s[right] = temp;
-            left++;
-            right--;
-        }
-        return s;
-    }
-}
-```
-
-## Expected Results
-
-### Valid Solutions
-
-All valid solution requests should return:
-
-```json
+```jsonc
 {
-  "success": true,
-  "testResults": [
-    {
-      "input": [[2, 7, 11, 15], 9],
-      "expectedOutput": [0, 1],
-      "actualOutput": [0, 1],
-      "passed": true,
-      "executionTime": 2.5
-    }
+  "language": "cpp",                  // python | javascript | typescript | cpp | java | go
+  "code": "std::vector<int> twoSum(std::vector<int>& nums, int target) { ... }",
+  "functionName": "twoSum",
+  "signature": {                      // required for cpp, java and go
+    "params": [{ "name": "nums", "type": "int[]" }, { "name": "target", "type": "int" }],
+    "returns": "int[]"                // int | long | double | bool | string | char, plus [] or [][]
+  },
+  "compareMode": "unordered",         // optional; "ordered" (default) or "unordered"
+  "tests": [                          // 1-200; input is the argument list
+    { "input": [[2, 7, 11, 15], 9], "expected": [0, 1] },
+    { "input": [[3, 3], 6], "expected": [0, 1], "hidden": true }
   ],
-  "totalPassed": 5,
-  "totalTests": 5,
-  "executionTime": 156,
-  "memoryUsed": 0
+  "prelude": [],                      // optional sources placed before code (not Java)
+  "limits": { "timeMs": 5000, "memoryMb": 256 }   // optional; 100-10000 ms, 32-512 MB
 }
 ```
 
-**Key Fields**:
-- `success`: true when all tests pass
-- `totalPassed`: Number of passing tests
-- `totalTests`: Total number of tests (visible + hidden)
-- `testResults`: Array of individual test results
-- `executionTime`: Total execution time in milliseconds
+Java code is a `class Solution` with a `public static` method; C++ and Go code
+is the function itself (the harness supplies `main`).
 
-### Invalid Solutions
+`/v1/run` answers with the verdict and one result per test:
 
-Invalid solutions should return:
+```jsonc
+{
+  "status": "OK",                     // OK | WA | TLE | MLE | RE | CE | XX
+  "totalPassed": 2, "totalTests": 2,
+  "runUs": 7, "memoryKb": 1,          // CPU µs summed over tests; peak memory
+  "compileMs": 812,                   // compiled languages and TypeScript
+  "tests": [
+    { "idx": 0, "hidden": false, "passed": true, "runUs": 4, "wallUs": 5, "memoryKb": 1, "actual": [0, 1] }
+  ]
+}
+```
+
+A syntax or compile error is a `CE` verdict with `error` and no tests, not an
+HTTP error; a malformed request is a 400 `{error, details}`.
+
+`/v1/run/stream` (send `Accept: text/event-stream`) is the same run as
+Server-Sent Events: `queued` (only while waiting for a sandbox box),
+`compiling` (TypeScript, and compiled languages on a compile-cache miss),
+`running`, one `test` per test in order, then `verdict` (the JSON result
+without `tests`), or `error` if the run itself failed. Comment lines
+(`: keep-alive`) arrive every 15 s.
+
+Both always run inline in the API process, never through the queue.
+
+### `POST /v1/ide/execute` and `GET /v1/ide/execute/:token`
+
+Whole programs reading stdin and writing stdout:
 
 ```json
 {
-  "success": false,
-  "totalPassed": 0,
-  "totalTests": 5,
-  "testResults": [...],
-  "error": "error message"
+  "language": "python",
+  "code": "a, b = map(int, input().split())\nprint(a + b)\n",
+  "testCases": [{ "input": "2 3", "expectedOutput": "5" }]
 }
 ```
 
-### Compilation/Syntax Errors
+1-10 cases, compared on stdout with trailing whitespace ignored. The answer
+is `{success, testResults: [{input, expectedOutput, actualOutput, passed,
+status, runMs, memoryKb, error?, ...}], totalPassed, totalTests,
+totalExecutionTime}`.
 
-```json
-{
-  "error": "Compilation Error: main.cpp:5:1: error: expected ';' after return statement"
-}
-```
+With `?wait=true`, or when the service has no `REDIS_URL`, the result comes
+back directly. Otherwise the run is queued: 202 `{token, status: "PND"}`, and
+`GET /v1/ide/execute/:token` answers `{status: "PND"}` until the result is
+ready (kept for `QUEUE_RESULT_TTL_SEC`, default 3600 s). An unknown or expired
+token is a 404.
+
+### `GET /v1/queue/stats`
+
+`{enabled: false}` without `REDIS_URL`; otherwise the queue's name, worker
+concurrency, result TTL and job counts.
 
 ## Troubleshooting
 
-### Issue: "Could not get response"
-
-**Symptom**: Requests fail with connection error
-
-**Solutions**:
-1. Verify backend is running:
-   ```bash
-   curl http://localhost:3000/health
-   ```
-2. Check environment variable `baseUrl` is set correctly
-3. Ensure no firewall blocking localhost:3000
-4. Verify backend logs for errors:
-   ```bash
-   npm run dev
-   # Check console output
-   ```
-
-### Issue: "Docker containers not running"
-
-**Symptom**: Code execution requests timeout or fail
-
-**Solutions**:
-1. Build Docker images:
-   ```bash
-   cd backend
-   docker-compose build
-   ```
-2. Verify Docker is running:
-   ```bash
-   docker ps
-   ```
-3. Check Docker service status:
-   ```bash
-   docker info
-   ```
-
-### Issue: "All tests failing"
-
-**Symptom**: Test scripts fail validation
-
-**Solutions**:
-1. Verify environment is selected (top-right dropdown)
-2. Check `baseUrl` in environment matches your server
-3. Update environment if using different port:
-   - Click gear icon
-   - Select "Codemare Environment"
-   - Edit `baseUrl` value
-   - Save
-
-### Issue: "Execution timeout"
-
-**Symptom**: Requests take too long or timeout
-
-**Solutions**:
-1. Increase Postman timeout:
-   - File > Settings > General
-   - Request timeout: 30000 (30 seconds)
-2. Check Docker container performance:
-   ```bash
-   docker stats
-   ```
-3. Restart Docker containers:
-   ```bash
-   docker-compose restart
-   ```
-
-### Issue: "Wrong test results"
-
-**Symptom**: Valid code returns failures
-
-**Solutions**:
-1. Review exact function signature in problem definition
-2. Check return type matches expected output
-3. Verify test case inputs in GET problem endpoint
-4. Ensure code handles all edge cases
-
-### Issue: "Environment variables not working"
-
-**Symptom**: URLs show {{baseUrl}} instead of actual value
-
-**Solutions**:
-1. Select environment from dropdown (top-right)
-2. Verify environment is active (green checkmark)
-3. Re-import environment file if needed
-4. Restart Postman
-
-## API Reference
-
-### Base URL
-```
-http://localhost:3000
-```
-
-### Endpoints
-
-#### 1. GET /health
-
-Health check endpoint.
-
-**Response**:
-```json
-{
-  "status": "ok",
-  "timestamp": "2025-11-27T00:00:00.000Z"
-}
-```
-
----
-
-#### 2. GET /api/problems
-
-Get all available problems.
-
-**Response**:
-```json
-[
-  {
-    "id": "two-sum",
-    "title": "Two Sum",
-    "difficulty": "Easy"
-  },
-  {
-    "id": "reverse-string",
-    "title": "Reverse String",
-    "difficulty": "Easy"
-  }
-]
-```
-
----
-
-#### 3. GET /api/problems/:id
-
-Get specific problem details.
-
-**Parameters**:
-- `id` (path): Problem identifier (e.g., "two-sum")
-
-**Response**:
-```json
-{
-  "id": "two-sum",
-  "title": "Two Sum",
-  "difficulty": "Easy",
-  "description": "Given an array of integers...",
-  "examples": [...],
-  "constraints": [...],
-  "starterCode": {
-    "python": "def twoSum(nums, target):\n    pass",
-    "javascript": "function twoSum(nums, target) {}",
-    "cpp": "vector<int> twoSum(vector<int>& nums, int target) {}",
-    "java": "public int[] twoSum(int[] nums, int target) {}"
-  },
-  "functionName": "twoSum",
-  "testCases": [...]
-}
-```
-
-**Note**: Hidden test cases have input/output fields set to null for security.
-
----
-
-#### 4. POST /api/execute
-
-Execute user code against test cases.
-
-**Request Body**:
-```json
-{
-  "problemId": "two-sum",
-  "language": "python|javascript|cpp|java",
-  "code": "def twoSum(nums, target):\n    ..."
-}
-```
-
-**Validations**:
-- `problemId`: Required, must exist in system
-- `language`: Required, must be python|javascript|cpp|java
-- `code`: Required, non-empty, max 10KB (10,000 characters)
-
-**Response** (Success):
-```json
-{
-  "success": true,
-  "testResults": [
-    {
-      "input": [[2, 7, 11, 15], 9],
-      "expectedOutput": [0, 1],
-      "actualOutput": [0, 1],
-      "passed": true,
-      "executionTime": 2.5,
-      "hidden": false
-    }
-  ],
-  "totalPassed": 5,
-  "totalTests": 5,
-  "executionTime": 156,
-  "memoryUsed": 0
-}
-```
-
-**Response** (Error):
-```json
-{
-  "success": false,
-  "error": "Compilation Error: ...",
-  "totalPassed": 0,
-  "totalTests": 5,
-  "testResults": [...]
-}
-```
-
-**Error Types**:
-- `Compilation Error`: C++/Java compilation failed
-- `Syntax Error`: Python/JavaScript syntax error
-- `Runtime Error`: Code crashed during execution
-- `Time Limit Exceeded`: Execution timeout (10 seconds)
-- `Invalid language`: Unsupported language specified
-- `Problem not found`: Invalid problem ID
-- `Code too large`: Code exceeds 10KB limit
-
----
-
-## Testing Strategy
-
-### Manual Testing
-1. Import collection and environment
-2. Select environment
-3. Run health check first
-4. Run problem endpoints
-5. Test valid solutions (should all pass)
-6. Test error cases (should fail appropriately)
-
-### Automated Testing
-Use Collection Runner for full test suite:
-1. 24 requests executed sequentially
-2. 100+ tests validated
-3. Average 2-3 seconds per execution
-4. Total runtime: ~60 seconds
-
-### Continuous Integration
-For CI/CD pipelines, use Newman (Postman CLI):
-
-```bash
-# Install Newman
-npm install -g newman
-
-# Run collection
-newman run Codemare_API.postman_collection.json \
-  -e Codemare_Environment.postman_environment.json \
-  --reporters cli,json
-
-# With timeout and delay
-newman run Codemare_API.postman_collection.json \
-  -e Codemare_Environment.postman_environment.json \
-  --timeout-request 30000 \
-  --delay-request 500
-```
-
-## Adding New Tests
-
-To extend the collection:
-
-1. **Add New Problem**:
-   - Create request in "02 - Problems" folder
-   - Add GET endpoint for new problem
-   - Include test scripts
-
-2. **Add Language Support**:
-   - Create folder "0X - Execute [Language]"
-   - Add valid/invalid solution requests
-   - Include compilation/runtime error examples
-   - Update test scripts
-
-3. **Add Error Cases**:
-   - Add request to "07 - Error Cases" folder
-   - Include appropriate test scripts
-   - Document expected behavior
-
-## Support
-
-For issues or questions:
-- Check [Troubleshooting](#troubleshooting) section
-- Review API documentation above
-- Check backend server logs
-- Verify Docker containers are running
-- Ensure all prerequisites are met
-
-## Version History
-
-- **v1.0.0** (2025-11-27): Initial release
-  - 24 requests covering all endpoints
-  - 4 languages supported (Python, JS, C++, Java)
-  - 2 problems included (Two Sum, Reverse String)
-  - Comprehensive test coverage with 100+ automated tests
-  - Complete documentation and examples
-
-## License
-
-This Postman collection is part of the Codemare project.
+- **401 `Missing X-Codemare-Token header` / 403 `Invalid X-Codemare-Token`:**
+  the service has `INTERNAL_TOKEN` set; put the same value in `internalToken`.
+- **404 `{"error":"Not found"}`:** a path the service doesn't have. The
+  pre-`/v1/run` endpoints (`/v1/problems`, `/v1/execute`) and the `/api/*`
+  aliases were removed.
+- **"Poll a queued run" answers 404:** expected when the service runs without
+  `REDIS_URL`; nothing was queued.
+- **One language fails every run:** check the service's startup log; a
+  language listed under `Unavailable:` has no working toolchain on that host.
+- **429 `Too many code execution requests`:** the circuit breaker shared by
+  the execution routes (`EXECUTION_RATE_LIMIT_MAX`, default 6000 requests per
+  minute per process).
