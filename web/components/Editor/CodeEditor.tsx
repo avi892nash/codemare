@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import { useCallback, useEffect, useRef, type MutableRefObject } from 'react';
-import type { Monaco, OnMount } from '@monaco-editor/react';
+import type { BeforeMount, Monaco, OnMount } from '@monaco-editor/react';
 import type { editor } from 'monaco-editor';
 import { useTheme } from '@/components/ui/ThemeProvider';
 import { LANGUAGE_META } from '@/lib/client/languages';
@@ -102,6 +102,16 @@ export function CodeEditor({
     );
   }, [markers, value]);
 
+  // The judge only transpiles TypeScript (a syntax error is a CE; a type
+  // error never fails a run), so squiggle syntax, not types — no false
+  // alarms like "Cannot find module 'fs'" in the playground.
+  const beforeMount: BeforeMount = (monaco) => {
+    const ts = (monaco as Monaco & { typescript?: typeof monaco.typescript }).typescript;
+    for (const defaults of [ts?.typescriptDefaults, ts?.javascriptDefaults]) {
+      defaults?.setDiagnosticsOptions({ noSemanticValidation: true, noSyntaxValidation: false });
+    }
+  };
+
   const onMount: OnMount = (instance, monaco) => {
     editorRef.current = instance;
     monacoRef.current = monaco;
@@ -139,6 +149,7 @@ export function CodeEditor({
         language={LANGUAGE_META[language as SupportedLanguage]?.monaco ?? language}
         value={value}
         onChange={(v) => onChange(v ?? '')}
+        beforeMount={beforeMount}
         onMount={onMount}
         theme={themeName(theme)}
         loading={<EditorPlaceholder />}
