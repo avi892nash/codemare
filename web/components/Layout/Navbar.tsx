@@ -2,140 +2,141 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Avatar, Input, Logomark } from '@/components/ui/primitives';
-import { Icon, type IconName } from '@/components/ui/Icon';
+import { ButtonLink } from '@/components/ui/Button';
+import { Icon } from '@/components/ui/Icon';
+import { Logomark } from '@/components/ui/Logomark';
+import { DropdownMenu } from '@/components/ui/Menu';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
+import { JumpInput } from './JumpInput';
+import { ProfileMenu } from './ProfileMenu';
+import { NAV_SECTIONS, activeSection, formatTokens, isSectionActive, parseRole, type NavUser } from './nav-model';
+import s from './Navbar.module.css';
+
+/** What the navbar needs to know about the viewer. `role` is parsed leniently. */
+export interface NavbarUser {
+  name: string;
+  handle?: string | null;
+  image?: string | null;
+  role?: string | null;
+}
+
+export interface NavbarProps {
+  user?: NavbarUser | null;
+  /** Total token balance; the chip is hidden while undefined. */
+  tokenTotal?: number;
+  /** Show the hidden Library in the profile menu (FEATURE_LIBRARY_PUBLIC). */
+  libraryVisible?: boolean;
+}
+
+function normalize(u: NavbarUser): NavUser {
+  return { name: u.name, handle: u.handle ?? null, image: u.image ?? null, role: parseRole(u.role) };
+}
 
 /**
- * Top navigation bar. Active tab is derived from the current pathname so
- * Next.js routing drives state — no separate Mode union to keep in sync.
- *
- * The avatar / sign-in CTA on the right is split: showing the avatar means
- * the visitor is signed in, the Button means they aren't. Once Auth.js lands
- * we'll read the session in a server component and pass `user` as a prop.
+ * App shell top bar (L8). Section tabs are links with aria-current, active
+ * by path prefix (legacy `/` and `/p/*` count as Problems). Below 768 px the
+ * tabs collapse into a section menu. Right side: jump-to-problem (⌘K),
+ * token balance, theme toggle, profile menu. Signed out: logo, theme, Sign in.
  */
-interface NavItem {
-  name: string;
-  href: string | null;
-  icon: IconName;
-  match?: (pathname: string) => boolean;
-}
-
-const NAV_ITEMS: NavItem[] = [
-  { name: 'Problems',      href: '/',              icon: 'list',       match: (p) => p === '/' || p.startsWith('/p/') },
-  { name: 'Learn',         href: null,             icon: 'graduation' },
-  { name: 'IDE',           href: '/ide',           icon: 'terminal' },
-  { name: 'Submissions',   href: '/submissions',   icon: 'history' },
-];
-
-interface NavbarProps {
-  user?: { name: string } | null;
-}
-
-export function Navbar({ user }: NavbarProps) {
-  const pathname = usePathname();
+export function Navbar({ user, tokenTotal, libraryVisible = false }: NavbarProps) {
+  const pathname = usePathname() ?? '/';
+  const viewer = user ? normalize(user) : null;
+  const current = activeSection(pathname);
+  const onAuthPage = pathname === '/auth' || pathname.startsWith('/signin');
 
   return (
-    <header
-      style={{
-        height: 48,
-        padding: '0 18px',
-        flex: 'none',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 18,
-        borderBottom: '1px solid var(--line-2)',
-        background: 'var(--bg-1)',
-      }}
-    >
-      <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none', color: 'var(--fg-0)' }}>
+    <header className={s.bar}>
+      <a href="#main" className={s.skip}>Skip to content</a>
+
+      <Link href="/" className={`${s.brand} focus-ring`} aria-label="Codemare home">
         <Logomark />
-        <span style={{ fontWeight: 600, letterSpacing: -0.2 }}>codemare</span>
+        <span className={s.wordmark} aria-hidden="true">codemare</span>
       </Link>
 
-      {user && (
-      <nav style={{ display: 'flex', gap: 2, marginLeft: 8 }}>
-        {NAV_ITEMS.map((it) => {
-          const active = it.href != null && (it.match ? it.match(pathname) : pathname === it.href);
-          const disabled = it.href === null;
-          const labelStyle = {
-            padding: '6px 10px',
-            fontSize: 13,
-            fontWeight: 500,
-            background: active ? 'var(--bg-3)' : 'transparent',
-            color: disabled ? 'var(--fg-4)' : active ? 'var(--fg-0)' : 'var(--fg-2)',
-            border: 'none',
-            borderRadius: 6,
-            cursor: disabled ? 'not-allowed' : 'pointer',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 6,
-            opacity: disabled ? 0.6 : 1,
-            textDecoration: 'none',
-          };
+      {viewer && (
+        <>
+          <nav aria-label="Primary" className={s.tabs}>
+            {NAV_SECTIONS.map((sec) => (
+              <Link
+                key={sec.key}
+                href={sec.href}
+                className={`${s.tab} focus-ring`}
+                aria-current={isSectionActive(sec, pathname) ? 'page' : undefined}
+              >
+                <Icon name={sec.icon} size={13} />
+                {sec.label}
+              </Link>
+            ))}
+          </nav>
 
-          if (disabled || !it.href) {
-            return (
-              <button key={it.name} disabled title="Coming soon" style={labelStyle}>
-                <Icon name={it.icon} size={13} />
-                {it.name}
-              </button>
-            );
-          }
-          return (
-            <Link key={it.name} href={it.href} style={labelStyle}>
-              <Icon name={it.icon} size={13} />
-              {it.name}
-            </Link>
-          );
-        })}
-      </nav>
+          <div className={s.sectionMenu}>
+            <DropdownMenu
+              align="start"
+              width={210}
+              label={current ? `Sections, current: ${current.label}` : 'Sections'}
+              triggerStyle={{
+                height: 30,
+                padding: '0 8px',
+                gap: 6,
+                fontSize: 13,
+                fontWeight: 500,
+                color: 'var(--fg-0)',
+                background: 'var(--bg-2)',
+                border: '1px solid var(--line-2)',
+              }}
+              trigger={
+                <>
+                  <Icon name={current?.icon ?? 'grid'} size={13} style={{ color: 'var(--accent-hi)' }} />
+                  {current?.label ?? 'Menu'}
+                  <Icon name="chev-down" size={12} style={{ color: 'var(--fg-2)' }} />
+                </>
+              }
+              items={NAV_SECTIONS.map((sec) => ({
+                kind: 'link' as const,
+                label: sec.label,
+                href: sec.href,
+                icon: sec.icon,
+                current: isSectionActive(sec, pathname),
+              }))}
+            />
+          </div>
+        </>
       )}
 
-      <span style={{ flex: 1 }} />
+      <span className={s.spacer} />
 
-      {user && <Input icon="search" placeholder="Jump to problem…" kbd="⌘K" size="sm" />}
-
-      <a
-        href="https://github.com/avi892nash/codemare"
-        target="_blank"
-        rel="noopener noreferrer"
-        title="GitHub"
-        style={{
-          width: 28, height: 28, borderRadius: 6,
-          color: 'var(--fg-2)', display: 'inline-flex',
-          alignItems: 'center', justifyContent: 'center',
-          textDecoration: 'none',
-        }}
-      >
-        <Icon name="github" size={15} />
-      </a>
-
-      {user ? (
-        <Link href="/profile" title={user.name}>
-          <Avatar name={user.name} size={26} />
-        </Link>
-      ) : (
-        <Link
-          href="/auth"
-          style={{
-            padding: '0 10px',
-            height: 28,
-            fontSize: 12,
-            fontWeight: 500,
-            background: pathname === '/auth' ? 'var(--accent-bg)' : 'var(--bg-2)',
-            color: pathname === '/auth' ? 'var(--accent-hi)' : 'var(--fg-0)',
-            border: `1px solid ${pathname === '/auth' ? 'var(--accent-line)' : 'var(--line-2)'}`,
-            borderRadius: 'var(--r)',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 6,
-            textDecoration: 'none',
-          }}
-        >
-          <Icon name="user" size={13} />
-          Sign in
-        </Link>
-      )}
+      <div className={s.right}>
+        {viewer ? (
+          <>
+            <JumpInput />
+            {tokenTotal != null && (
+              <Link
+                href="/map"
+                className={`${s.tokens} focus-ring mono`}
+                aria-label={`${tokenTotal.toLocaleString('en-US')} tokens — open the tier map`}
+              >
+                <Icon name="coin" size={13} />
+                {formatTokens(tokenTotal)}
+              </Link>
+            )}
+            <ThemeToggle />
+            <ProfileMenu user={viewer} libraryVisible={libraryVisible} />
+          </>
+        ) : (
+          <>
+            <ThemeToggle />
+            <ButtonLink
+              href="/signin"
+              size="sm"
+              variant={onAuthPage ? 'accent' : 'default'}
+              icon="user"
+              className={s.signIn}
+            >
+              Sign in
+            </ButtonLink>
+          </>
+        )}
+      </div>
     </header>
   );
 }
