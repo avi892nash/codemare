@@ -1,0 +1,268 @@
+{
+  "slug": "search-and-order",
+  "title": "Search & Order",
+  "summary": "Binary search on arrays and on answers, sliding windows, sorting as a tool, and recursion that explores every choice.",
+  "level": "intermediate",
+  "tier": "core-techniques",
+  "est_hours": 6,
+  "ord": 1,
+  "modules": [
+    {
+      "slug": "binary-search",
+      "title": "Binary Search",
+      "summary": "Halve the search range every step, then generalize to the first index where a condition holds.",
+      "lessons": [
+        {
+          "slug": "halving-the-range",
+          "title": "Halving the search range",
+          "est_minutes": 10,
+          "topic": "binary-search",
+          "related_question_slugs": [
+            "binary-search"
+          ],
+          "body_md": "Binary search finds a value in a sorted array by repeatedly halving the part that could still contain it. Each probe looks at the middle element and throws away the half that cannot hold the answer, so a million elements need about twenty probes.\n\n## The invariant\n\nKeep two indices, `lo` and `hi`, with one promise: *if the target is anywhere, it is in `a[lo..hi]`*. Probe `mid`. If `a[mid]` is too small the target can only be to its right, so `lo = mid + 1`; if it is too big, `hi = mid - 1`. When `lo` passes `hi` the range is empty and the target is absent.\n\n:::viz{id=binary-search}\n\n```python run\ndef binary_search(a, target):\n    lo, hi = 0, len(a) - 1\n    probes = 0\n    while lo <= hi:\n        mid = lo + (hi - lo) // 2\n        probes += 1\n        if a[mid] == target:\n            return mid, probes\n        if a[mid] < target:\n            lo = mid + 1\n        else:\n            hi = mid - 1\n    return -1, probes\n\na = list(range(0, 2_000_000, 2))   # one million sorted even numbers\nprint(binary_search(a, 1_234_566))  # (index, probes)\nprint(binary_search(a, 7))          # odd, so absent\n```\n\nEach probe halves the range, so an array of n elements needs at most this many probes — 20 for a million, 30 for a billion:\n\n$$\n\\lceil \\log_2 (n + 1) \\rceil\n$$\n\n:::callout{kind=complexity time=\"O(log n)\" space=\"O(1)\"}\nLogarithmic time needs two things: random access (an array, not a linked list) and sorted data.\n:::\n\n:::callout{kind=pitfall title=\"Computing mid\"}\n`(lo + hi) / 2` can overflow a 32-bit integer in C++ or Java when both indices are large. `lo + (hi - lo) / 2` never does. Python integers cannot overflow, but the habit pays off in every other language.\n:::\n\n## The same search in C++\n\n```cpp run title=search.cpp\n#include <iostream>\n#include <vector>\nusing namespace std;\n\nint search(const vector<int>& a, int target) {\n    int lo = 0, hi = (int)a.size() - 1;\n    while (lo <= hi) {\n        int mid = lo + (hi - lo) / 2;\n        if (a[mid] == target) return mid;\n        if (a[mid] < target) lo = mid + 1;\n        else hi = mid - 1;\n    }\n    return -1;\n}\n\nint main() {\n    vector<int> a = {3, 9, 14, 20, 27, 31, 38, 45, 52, 60, 71, 88};\n    cout << search(a, 52) << \" \" << search(a, 50) << \"\\n\";  // 8 -1\n}\n```\n\n:::question{slug=binary-search}\n"
+        },
+        {
+          "slug": "lower-bound",
+          "title": "Boundaries: the first index that works",
+          "est_minutes": 11,
+          "topic": "binary-search",
+          "related_question_slugs": [
+            "search-insert-position",
+            "find-minimum-in-rotated-sorted-array"
+          ],
+          "body_md": "Plain binary search answers \"is it here?\". The more useful form answers \"where does it start?\" — the first index whose value is at least `target`. That one question covers insert positions, counting occurrences, and searching over answers that are not stored in any array.\n\n## A predicate that flips once\n\nPicture a yes/no question about each index that reads *no, no, …, no, yes, …, yes* — it flips exactly once. For \"the first index with `a[i] >= target`\" the question is `a[i] >= target`. Binary search finds where it flips:\n\n```python run\ndef lower_bound(a, target):\n    lo, hi = 0, len(a)          # the answer is in [lo, hi]; len(a) means \"none\"\n    while lo < hi:\n        mid = (lo + hi) // 2\n        if a[mid] >= target:\n            hi = mid            # mid qualifies; the first one may be further left\n        else:\n            lo = mid + 1        # mid fails; the first one is to its right\n    return lo\n\na = [1, 3, 3, 3, 8, 12]\nprint(lower_bound(a, 3))                      # 1: the first 3\nprint(lower_bound(a, 4))                      # 4: where 4 would be inserted\nprint(lower_bound(a, 20))                     # 6: past the end\nprint(lower_bound(a, 4) - lower_bound(a, 3))  # 3: how many 3s\n```\n\nThe template cannot lose the answer: `hi` only ever moves onto an index that qualifies, `lo` only ever moves past one that does not, and the loop stops when they meet.\n\n:::callout{kind=note title=\"Half-open ranges\"}\nHere `hi` starts at `len(a)`, one past the last index, and the loop runs while `lo < hi`. Mixing this with the `lo <= hi` / `hi = mid - 1` style from the previous lesson is how infinite loops happen — pick one template per function and stick to it.\n:::\n\n## A rotated array\n\nA sorted array rotated at an unknown point, like `[4, 5, 6, 7, 0, 1, 2]`, still has a predicate that flips once: \"is `a[i]` at most the last element?\" is false along the upper run and true from the minimum onward. So the minimum is simply the first index where it holds:\n\n```javascript run\nfunction findMin(a) {\n  let lo = 0, hi = a.length - 1;\n  while (lo < hi) {\n    const mid = (lo + hi) >> 1;\n    if (a[mid] <= a[a.length - 1]) hi = mid; // mid is in the lower run\n    else lo = mid + 1;                        // mid is in the upper run\n  }\n  return a[lo];\n}\n\nconsole.log(findMin([4, 5, 6, 7, 0, 1, 2])); // 0\nconsole.log(findMin([11, 13, 15, 17]));      // 11 (not rotated)\n```\n\n:::callout{kind=pitfall title=\"Read the result carefully\"}\nWhen the loop ends, `lo` is either an index that satisfies the predicate or `len(a)` when none does. Check for the second case before reading `a[lo]`.\n:::\n\n:::question{slug=search-insert-position}\n\n:::question{slug=find-minimum-in-rotated-sorted-array}\n"
+        }
+      ],
+      "checkpoint": [
+        {
+          "kind": "mcq",
+          "prompt_md": "About how many probes does binary search need on 1,000,000 sorted elements?",
+          "choices": [
+            "20",
+            "1,000",
+            "500,000",
+            "1,000,000"
+          ],
+          "answer": 0,
+          "explanation_md": "⌈log₂(1,000,001)⌉ = 20: each probe halves the range."
+        },
+        {
+          "kind": "mcq",
+          "prompt_md": "Why write `mid = lo + (hi - lo) / 2` instead of `(lo + hi) / 2` in Java or C++?",
+          "choices": [
+            "It rounds differently",
+            "It avoids integer overflow",
+            "It is faster",
+            "It handles negative numbers"
+          ],
+          "answer": 1,
+          "explanation_md": "`lo + hi` can exceed the largest 32-bit integer when both are large; `hi - lo` never does."
+        },
+        {
+          "kind": "mcq",
+          "prompt_md": "What does `lower_bound([2, 4, 4, 9], 5)` return — the first index whose value is at least 5?",
+          "choices": [
+            "1",
+            "2",
+            "3",
+            "4"
+          ],
+          "answer": 2,
+          "explanation_md": "`a[3] = 9` is the first value ≥ 5, so the answer is index 3 — also where 5 would be inserted."
+        },
+        {
+          "kind": "short",
+          "prompt_md": "Binary search only works if the data is ___ (one word).",
+          "answer": [
+            "sorted",
+            "ordered",
+            "monotonic",
+            "monotone"
+          ],
+          "explanation_md": "Discarding half the range is only safe when the order tells you which half cannot contain the target."
+        }
+      ]
+    },
+    {
+      "slug": "sliding-window",
+      "title": "Sliding Window",
+      "summary": "Slide fixed windows in O(1) per step; grow and shrink variable windows in one linear pass.",
+      "lessons": [
+        {
+          "slug": "fixed-windows",
+          "title": "Fixed-size windows",
+          "est_minutes": 8,
+          "topic": "sliding-window",
+          "related_question_slugs": [
+            "best-time-to-buy-sell-stock"
+          ],
+          "body_md": "A window is a contiguous stretch `a[l..r]` of an array or string. Many problems ask about every window: the largest sum of k consecutive values, the most distinct letters in any five characters. Recomputing each window from scratch costs O(k) per window; *sliding* it costs O(1).\n\n## Slide, don't recompute\n\nMoving a window of size k one step to the right drops `a[i]` and takes in `a[i + k]`, so its sum updates in constant time:\n\n$$\nS_{i+1} = S_i - a_i + a_{i+k}\n$$\n\n```python run\ndef max_window_sum(a, k):\n    window = sum(a[:k])            # the first window, summed once\n    best = window\n    for i in range(k, len(a)):\n        window += a[i] - a[i - k]  # take in the new element, drop the old one\n        best = max(best, window)\n    return best\n\nreadings = [3, -1, 4, 1, 5, 9, -2, 6, 5, 3]\nprint(max_window_sum(readings, 3))  # 15 = 1 + 5 + 9\n```\n\n:::callout{kind=complexity time=\"O(n)\" space=\"O(1)\"}\nn − k slides of constant work each, instead of (n − k + 1) · k additions.\n:::\n\n## A window with a memory: buy low, sell high\n\n\"Buy on one day, sell on a later day, maximize the profit\" needs only one number from the past: the cheapest price seen so far. Scan once and keep it:\n\n```python run\ndef max_profit(prices):\n    cheapest = float(\"inf\")\n    best = 0\n    for p in prices:\n        cheapest = min(cheapest, p)     # the best day to have bought, so far\n        best = max(best, p - cheapest)  # what if we sell today?\n    return best\n\nprint(max_profit([7, 1, 5, 3, 6, 4]))  # 5: buy at 1, sell at 6\nprint(max_profit([7, 6, 4, 3, 1]))     # 0: never sell at a loss\n```\n\n:::callout{kind=pitfall title=\"The day order matters\"}\n`max(prices) - min(prices)` is wrong: the highest price may come *before* the lowest. The running minimum only ever pairs today's price with an earlier purchase.\n:::\n\n:::question{slug=best-time-to-buy-sell-stock}\n"
+        },
+        {
+          "slug": "variable-windows",
+          "title": "Growing and shrinking windows",
+          "est_minutes": 12,
+          "topic": "sliding-window",
+          "related_question_slugs": [
+            "longest-substring-without-repeating-characters",
+            "minimum-window-substring"
+          ],
+          "body_md": "When the window's size is not fixed — \"the longest substring with no repeated character\", \"the shortest stretch that contains every letter of a word\" — let it breathe: extend the right edge one step at a time, and whenever the window breaks the rule, shrink it from the left until it is valid again.\n\n## Longest substring without repeats\n\n:::viz{id=sliding-window}\n\n```python run\ndef longest_unique(s):\n    window = set()\n    best = l = 0\n    for r, ch in enumerate(s):\n        while ch in window:     # the new character clashes: shrink from the left\n            window.remove(s[l])\n            l += 1\n        window.add(ch)\n        best = max(best, r - l + 1)\n    return best\n\nfor s in [\"abcbdeab\", \"bbbb\", \"pwwkew\", \"\"]:\n    print(repr(s), longest_unique(s))\n```\n\nThe `while` inside the `for` looks quadratic, but `l` only ever moves right. Each index enters the window once and leaves it at most once:\n\n$$\n\\text{adds} + \\text{removals} \\le n + n = 2n\n$$\n\n:::callout{kind=complexity time=\"O(n)\" space=\"O(k)\"}\nLinear time; the set never holds more than k characters, where k is the size of the alphabet.\n:::\n\n## Windows that must contain something\n\nFor \"the smallest window of `s` that contains every character of `t`\", the roles flip: grow until the window is *valid* (it covers `t`), then shrink while it stays valid, recording the smallest. Counting how many characters are still missing keeps each check O(1):\n\n```python run\nfrom collections import Counter\n\ndef min_window(s, t):\n    need = Counter(t)\n    missing = len(t)\n    best = (float(\"inf\"), 0, 0)\n    l = 0\n    for r, ch in enumerate(s):\n        if need[ch] > 0:\n            missing -= 1\n        need[ch] -= 1\n        while missing == 0:              # valid: try to shrink it\n            if r - l + 1 < best[0]:\n                best = (r - l + 1, l, r + 1)\n            need[s[l]] += 1\n            if need[s[l]] > 0:\n                missing += 1             # we just gave up a needed character\n            l += 1\n    return s[best[1]:best[2]] if best[0] != float(\"inf\") else \"\"\n\nprint(min_window(\"ADOBECODEBANC\", \"ABC\"))  # BANC\n```\n\n:::callout{kind=pitfall title=\"Shrink with while, not if\"}\nOne new character can make several characters on the left removable at once. An `if` shrinks by a single step and leaves the window too wide.\n:::\n\n:::question{slug=longest-substring-without-repeating-characters}\n\n:::question{slug=minimum-window-substring}\n"
+        }
+      ],
+      "checkpoint": [
+        {
+          "kind": "mcq",
+          "prompt_md": "A window of size k slides one step to the right. How much work updates its sum?",
+          "choices": [
+            "O(1)",
+            "O(log k)",
+            "O(k)",
+            "O(n)"
+          ],
+          "answer": 0,
+          "explanation_md": "Subtract the element that left and add the one that arrived: two operations, whatever k is."
+        },
+        {
+          "kind": "mcq",
+          "prompt_md": "In the longest-substring scan, why is the inner `while` loop not quadratic overall?",
+          "choices": [
+            "The alphabet is small",
+            "`l` only moves right, so each index is removed at most once",
+            "Set operations are O(1)",
+            "It exits after one step"
+          ],
+          "answer": 1,
+          "explanation_md": "Across the whole run there are at most n additions and n removals, so the total work is O(n)."
+        },
+        {
+          "kind": "mcq",
+          "prompt_md": "Best time to buy and sell: why is `max(prices) - min(prices)` wrong?",
+          "choices": [
+            "It is too slow",
+            "The highest price may come before the lowest",
+            "Prices can be negative",
+            "It skips the first day"
+          ],
+          "answer": 1,
+          "explanation_md": "You must buy before you sell. The running minimum pairs each day only with earlier purchase days."
+        },
+        {
+          "kind": "short",
+          "prompt_md": "What is the time complexity of the grow-and-shrink window scan over a string of length n, in Big-O?",
+          "answer": [
+            "O(n)",
+            "linear",
+            "O(N)",
+            "n"
+          ],
+          "explanation_md": "Each character enters the window once and leaves it at most once."
+        }
+      ]
+    },
+    {
+      "slug": "sorting-recursion",
+      "title": "Sorting & Recursion",
+      "summary": "How sorting works and when to lean on it; recursion and backtracking to explore every choice.",
+      "lessons": [
+        {
+          "slug": "insertion-sort",
+          "title": "Sorting by insertion",
+          "est_minutes": 9,
+          "topic": "sorting",
+          "related_question_slugs": [
+            "meeting-rooms"
+          ],
+          "body_md": "Insertion sort is how many people sort a hand of cards: take the next card and slide it left past every larger card until it fits. It is rarely the fastest choice, but its invariant — *the left part is always sorted* — is the model for reasoning about every sorting algorithm.\n\n## Watch the sorted prefix grow\n\n:::viz{id=insertion-sort}\n\n```python run\ndef insertion_sort(a):\n    shifts = 0\n    for i in range(1, len(a)):\n        key = a[i]\n        j = i - 1\n        while j >= 0 and a[j] > key:   # shift larger elements one place right\n            a[j + 1] = a[j]\n            j -= 1\n            shifts += 1\n        a[j + 1] = key                 # drop the key into the gap\n    return a, shifts\n\nprint(insertion_sort([5, 2, 8, 4, 7, 1, 6]))\nprint(insertion_sort([1, 2, 3, 4, 5, 6, 7]))  # sorted already: no shifts\nprint(insertion_sort([7, 6, 5, 4, 3, 2, 1]))  # reversed: every pair shifts\n```\n\nEach shift repairs exactly one pair that was out of order (an *inversion*), so the work equals the number of inversions: none for sorted input, every pair for reversed input.\n\n$$\n0 \\le \\text{shifts} \\le \\frac{n(n-1)}{2}\n$$\n\n:::callout{kind=complexity time=\"O(n²) worst, O(n) nearly sorted\" space=\"O(1)\"}\nIn place, and fast on data that is almost sorted — which is why production sorts such as Timsort and introsort switch to insertion sort for short runs.\n:::\n\n:::callout{kind=note title=\"Stability\"}\nInsertion sort is **stable**: equal elements keep their original order, because a key never moves past an equal value (the test is `a[j] > key`, not `>=`). Stability matters when you sort records by one field and then by another.\n:::\n\n:::question{slug=meeting-rooms}\n"
+        },
+        {
+          "slug": "sorting-as-a-tool",
+          "title": "Sorting as a tool",
+          "est_minutes": 10,
+          "topic": "sorting",
+          "related_question_slugs": [
+            "merge-intervals",
+            "meeting-rooms",
+            "three-sum"
+          ],
+          "body_md": "You will rarely write a sort by hand, and you will constantly *use* one. Sorting costs O(n log n) and buys structure: equal items become neighbours, overlapping ranges become adjacent, and the smallest and largest items move to the ends where two pointers can reach them.\n\n## How fast can sorting be?\n\nA comparison sort learns about the order only by comparing pairs, and each comparison has two outcomes. Telling all n! possible orders apart takes at least log₂(n!) comparisons, and\n\n$$\n\\log_2 (n!) \\approx n \\log_2 n - 1.44\\,n\n$$\n\nso no comparison sort beats O(n log n) in the worst case. Merge sort and heapsort reach that bound, and so does Timsort, the algorithm behind Python's `sorted`.\n\n## Sort by a key\n\nSort records by one field with a key function, and by several fields with a tuple:\n\n```python run\npeople = [(\"ada\", 36), (\"alan\", 41), (\"grace\", 36), (\"edsger\", 72)]\n\nprint(sorted(people, key=lambda p: p[1]))           # by age; ties keep input order\nprint(sorted(people, key=lambda p: (-p[1], p[0])))  # oldest first, then by name\n```\n\n:::callout{kind=pitfall title=\"JavaScript sorts numbers as strings\"}\nWithout a comparator, `Array.prototype.sort` compares elements as strings, so `10` sorts before `9`:\n\n```javascript run\nconsole.log([10, 9, 1, 100].sort());                // [ 1, 10, 100, 9 ]\nconsole.log([10, 9, 1, 100].sort((a, b) => a - b)); // [ 1, 9, 10, 100 ]\n```\n:::\n\n## Merging intervals\n\nOverlaps are hard to find among intervals in arbitrary order and trivial once they are sorted by start: an interval overlaps the merged block before it exactly when it starts before that block ends.\n\n```python run\ndef merge(intervals):\n    merged = []\n    for start, end in sorted(intervals):          # by start time\n        if merged and start <= merged[-1][1]:     # overlaps the last block\n            merged[-1][1] = max(merged[-1][1], end)\n        else:\n            merged.append([start, end])\n    return merged\n\nprint(merge([[8, 10], [1, 3], [2, 6], [15, 18], [17, 20]]))\n# [[1, 6], [8, 10], [15, 20]]\n```\n\n\"Can one person attend every meeting?\" is the same scan asking a yes/no question: after sorting by start time, any meeting that starts before the previous one ends is a conflict.\n\n:::callout{kind=complexity time=\"O(n log n)\" space=\"O(n)\"}\nThe sort dominates; the merge itself is one linear pass.\n:::\n\n:::question{slug=merge-intervals}\n\n:::question{slug=three-sum}\n"
+        },
+        {
+          "slug": "recursion-and-backtracking",
+          "title": "Recursion and backtracking",
+          "est_minutes": 12,
+          "topic": "recursion",
+          "related_question_slugs": [
+            "subsets",
+            "generate-parentheses",
+            "n-queens-count"
+          ],
+          "body_md": "A recursive function solves a problem by solving a smaller copy of it. Two parts are non-negotiable: a **base case** that answers directly, and a **recursive case** that moves strictly toward it. Everything else — including backtracking, the technique behind subsets, permutations and puzzles — builds on those two.\n\n## Every subset: include or exclude\n\nEach element is either in a subset or not. Deciding element by element makes a binary tree of choices with one leaf per subset:\n\n$$\n\\text{subsets of } n \\text{ elements} = 2^n\n$$\n\n```python run\ndef subsets(nums):\n    out, path = [], []\n\n    def go(i):\n        if i == len(nums):       # base case: every element decided\n            out.append(path[:])  # record a *copy* of the current choices\n            return\n        go(i + 1)                # leave nums[i] out\n        path.append(nums[i])     # choose it...\n        go(i + 1)                # ...explore...\n        path.pop()               # ...and un-choose it (backtrack)\n\n    go(0)\n    return out\n\nprint(subsets([1, 2, 3]))\nprint(len(subsets(list(range(10)))))  # 1024\n```\n\n## Choose, explore, un-choose\n\nThat last pattern is **backtracking**: make a choice, recurse, then undo the choice so the next branch starts clean. *Pruning* — refusing a choice that can never lead to a valid answer — is what makes it fast in practice. Generating balanced parentheses only adds a `)` when the prefix would stay balanced:\n\n```python run\ndef parens(n):\n    out = []\n\n    def go(s, opened, closed):\n        if len(s) == 2 * n:\n            out.append(s)\n            return\n        if opened < n:\n            go(s + \"(\", opened + 1, closed)\n        if closed < opened:        # prune: never close more than we opened\n            go(s + \")\", opened, closed + 1)\n\n    go(\"\", 0, 0)\n    return out\n\nprint(parens(3))\n```\n\n:::callout{kind=pitfall title=\"Record a copy\"}\n`out.append(path)` stores a reference to the single list that backtracking keeps changing, so every recorded subset ends up empty. Append `path[:]` (or `list(path)`).\n:::\n\n:::callout{kind=complexity time=\"O(n · 2ⁿ)\" space=\"O(n)\"}\n2ⁿ subsets, each copied in O(n). The recursion is only n calls deep.\n:::\n\n:::question{slug=subsets}\n\n:::question{slug=generate-parentheses}\n"
+        }
+      ],
+      "checkpoint": [
+        {
+          "kind": "mcq",
+          "prompt_md": "How long does insertion sort take on an array of n elements that is already sorted?",
+          "choices": [
+            "O(1)",
+            "O(n)",
+            "O(n log n)",
+            "O(n²)"
+          ],
+          "answer": 1,
+          "explanation_md": "Each key is compared once with its left neighbour and never shifts: n − 1 comparisons."
+        },
+        {
+          "kind": "mcq",
+          "prompt_md": "A sorting algorithm is *stable* when…",
+          "choices": [
+            "it never uses extra memory",
+            "equal elements keep their original relative order",
+            "its worst case equals its best case",
+            "it works on linked lists"
+          ],
+          "answer": 1,
+          "explanation_md": "Stability lets you sort by a secondary field first and a primary field second without losing the secondary order."
+        },
+        {
+          "kind": "mcq",
+          "prompt_md": "What does `[10, 9, 1, 100].sort()` return in JavaScript?",
+          "choices": [
+            "`[1, 9, 10, 100]`",
+            "`[1, 10, 100, 9]`",
+            "`[100, 10, 9, 1]`",
+            "It throws an error"
+          ],
+          "answer": 1,
+          "explanation_md": "Without a comparator the elements are compared as strings: \"1\" < \"10\" < \"100\" < \"9\". Pass `(a, b) => a - b`."
+        },
+        {
+          "kind": "mcq",
+          "prompt_md": "Why does the subset generator record `path[:]` rather than `path`?",
+          "choices": [
+            "Copies are faster",
+            "`path` keeps changing after it is recorded",
+            "Lists cannot contain lists",
+            "To keep subsets sorted"
+          ],
+          "answer": 1,
+          "explanation_md": "Backtracking mutates one shared list. Without a copy, every recorded subset is the same list, which ends up empty."
+        },
+        {
+          "kind": "short",
+          "prompt_md": "How many subsets does a set of 5 elements have (including the empty set)?",
+          "answer": [
+            "32",
+            "2^5",
+            "2**5",
+            "thirty-two",
+            "thirty two"
+          ],
+          "explanation_md": "Each of the 5 elements is independently in or out: 2⁵ = 32."
+        }
+      ]
+    }
+  ]
+}

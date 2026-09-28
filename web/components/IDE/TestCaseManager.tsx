@@ -2,8 +2,10 @@
 
 import { useState } from 'react';
 import type { IdeTestCase } from '@/lib/types';
-import { Button } from '@/components/ui/primitives';
+import { Button } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
+import { Textarea } from '@/components/ui/Input';
+import s from './IDE.module.css';
 
 interface TestCaseManagerProps {
   testCases: IdeTestCase[];
@@ -11,11 +13,13 @@ interface TestCaseManagerProps {
   maxTestCases?: number;
 }
 
-export function TestCaseManager({
-  testCases,
-  onTestCasesChange,
-  maxTestCases = 10,
-}: TestCaseManagerProps) {
+/**
+ * The IDE's stdin cases: an accordion of cases, each with stdin and an
+ * optional expected stdout. The row header is a div with role=button (not a
+ * <button>) so the remove button beside the label is valid HTML — a
+ * button can't contain a button — while staying keyboard operable.
+ */
+export function TestCaseManager({ testCases, onTestCasesChange, maxTestCases = 10 }: TestCaseManagerProps) {
   const [expandedIndex, setExpandedIndex] = useState<number | null>(0);
 
   const addTest = () => {
@@ -26,130 +30,92 @@ export function TestCaseManager({
 
   const removeTest = (index: number) => {
     if (testCases.length <= 1) return;
-    const next = testCases.filter((_, i) => i !== index);
-    onTestCasesChange(next);
+    onTestCasesChange(testCases.filter((_, i) => i !== index));
     if (expandedIndex === index) setExpandedIndex(0);
     else if (expandedIndex !== null && expandedIndex > index) setExpandedIndex(expandedIndex - 1);
   };
 
   const updateTest = (index: number, field: 'input' | 'expectedOutput', value: string) => {
-    const next = [...testCases];
-    next[index] = { ...next[index], [field]: value };
-    onTestCasesChange(next);
+    onTestCasesChange(testCases.map((tc, i) => (i === index ? { ...tc, [field]: value } : tc)));
   };
 
   return (
-    <div className="cm scroll" style={{ height: '100%', display: 'flex', flexDirection: 'column', background: 'var(--bg-1)', minHeight: 0 }}>
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '12px 14px', borderBottom: '1px solid var(--line-2)', flex: 'none',
-      }}>
+    <div className={s.manager} data-testid="ide-cases">
+      <div className={s.managerHead}>
         <div>
-          <h3 style={{ margin: 0, fontSize: 13, fontWeight: 600, color: 'var(--fg-0)', letterSpacing: -0.1 }}>Test cases</h3>
-          <span className="mono" style={{ fontSize: 11, color: 'var(--fg-3)' }}>{testCases.length} / {maxTestCases}</span>
+          <h2 className={s.managerTitle}>Test cases</h2>
+          <span className={`${s.managerCount} mono`}>
+            {testCases.length} / {maxTestCases}
+          </span>
         </div>
-        <Button size="sm" variant="default" icon="plus" onClick={addTest} disabled={testCases.length >= maxTestCases}>
+        <Button size="sm" icon="plus" onClick={addTest} disabled={testCases.length >= maxTestCases}>
           Add
         </Button>
       </div>
 
-      <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }} className="scroll">
+      <div className={`${s.managerList} scroll`}>
         {testCases.map((tc, i) => {
           const expanded = expandedIndex === i;
+          const toggle = () => setExpandedIndex(expanded ? null : i);
           return (
-            <div key={i} style={{ borderBottom: '1px solid var(--line-1)' }}>
+            <div key={i} className={s.case} data-expanded={expanded || undefined}>
               <div
                 role="button"
                 tabIndex={0}
                 aria-expanded={expanded}
-                onClick={() => setExpandedIndex(expanded ? null : i)}
+                onClick={toggle}
                 onKeyDown={(e) => {
+                  if (e.target !== e.currentTarget) return;
                   if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
-                    setExpandedIndex(expanded ? null : i);
+                    toggle();
                   }
                 }}
-                className="focus-ring"
-                style={{
-                  width: '100%', textAlign: 'left',
-                  display: 'flex', alignItems: 'center', gap: 8,
-                  padding: '10px 14px',
-                  background: expanded ? 'var(--bg-2)' : 'transparent',
-                  border: 'none', cursor: 'pointer',
-                  color: 'var(--fg-0)', fontSize: 12.5, fontWeight: 500,
-                }}
+                className={`${s.caseHead} focus-ring`}
               >
-                <Icon name={expanded ? 'chev-down' : 'chev-right'} size={12} style={{ color: 'var(--fg-3)' }} />
-                <span style={{ flex: 1 }}>Test case {i + 1}</span>
-                <button
-                  onClick={(e) => { e.stopPropagation(); removeTest(i); }}
+                <Icon name={expanded ? 'chev-down' : 'chev-right'} size={12} />
+                <span className={s.caseName}>Case {i + 1}</span>
+                {!expanded && tc.input && <span className={`${s.casePeek} mono`}>{tc.input.replace(/\n/g, ' ⏎ ')}</span>}
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  icon="x"
+                  aria-label={`Remove case ${i + 1}`}
                   disabled={testCases.length <= 1}
-                  title="Remove"
-                  style={{
-                    width: 22, height: 22, borderRadius: 4,
-                    background: 'transparent', border: 'none',
-                    color: testCases.length <= 1 ? 'var(--fg-4)' : 'var(--fg-2)',
-                    cursor: testCases.length <= 1 ? 'not-allowed' : 'pointer',
-                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removeTest(i);
                   }}
-                >
-                  <Icon name="x" size={12} />
-                </button>
+                />
               </div>
 
               {expanded && (
-                <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  <Field label="Input (stdin)" hint="Data to be sent to stdin">
-                    <textarea
-                      value={tc.input}
-                      onChange={(e) => updateTest(i, 'input', e.target.value)}
-                      placeholder="2&#10;3"
-                      rows={3}
-                      className="mono"
-                      style={ taStyle }
-                    />
-                  </Field>
-                  <Field label="Expected output (stdout)" hint="Exact match">
-                    <textarea
-                      value={tc.expectedOutput}
-                      onChange={(e) => updateTest(i, 'expectedOutput', e.target.value)}
-                      placeholder="5"
-                      rows={3}
-                      className="mono"
-                      style={ taStyle }
-                    />
-                  </Field>
+                <div className={s.caseBody}>
+                  <Textarea
+                    label="Input (stdin)"
+                    value={tc.input}
+                    onChange={(e) => updateTest(i, 'input', e.target.value)}
+                    placeholder={'2\n3'}
+                    rows={3}
+                    mono
+                    data-testid={`ide-stdin-${i}`}
+                  />
+                  <Textarea
+                    label="Expected output"
+                    hint="Optional · compared line by line, trailing whitespace ignored"
+                    value={tc.expectedOutput}
+                    onChange={(e) => updateTest(i, 'expectedOutput', e.target.value)}
+                    placeholder="5"
+                    rows={2}
+                    mono
+                    data-testid={`ide-expected-${i}`}
+                  />
                 </div>
               )}
             </div>
           );
         })}
       </div>
-    </div>
-  );
-}
-
-const taStyle: React.CSSProperties = {
-  width: '100%',
-  background: 'var(--bg-2)',
-  border: '1px solid var(--line-2)',
-  borderRadius: 'var(--r)',
-  padding: '8px 10px',
-  fontSize: 12,
-  color: 'var(--fg-0)',
-  fontFamily: 'var(--font-mono)',
-  outline: 'none',
-  resize: 'vertical',
-};
-
-function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <div style={{ fontSize: 11, color: 'var(--fg-3)', marginBottom: 4, letterSpacing: 0.4, textTransform: 'uppercase', fontWeight: 500 }}>
-        {label}
-      </div>
-      {children}
-      {hint && <div style={{ fontSize: 11, color: 'var(--fg-4)', marginTop: 3 }}>{hint}</div>}
     </div>
   );
 }

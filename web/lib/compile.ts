@@ -9,6 +9,7 @@ import type {
   Signature,
   SupportedLanguage,
 } from './types';
+import { readSseEvents } from './sse';
 
 /**
  * Server-only HTTP client for the compile service.
@@ -177,44 +178,28 @@ export type RunStreamEvent =
 /**
  * Parse a text/event-stream body into events. Handles multi-line `data:`,
  * CRLF, and `:` heartbeat comments; ignores events with unparseable JSON.
+ * (The frame parser is shared with the browser: lib/sse.ts.)
  */
-export async function* parseSse(body: ReadableStream<Uint8Array>): AsyncGenerator<RunStreamEvent> {
-  const reader = body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = '';
-  try {
-    while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true }).replace(/\r\n/g, '\n');
-      let boundary: number;
-      while ((boundary = buffer.indexOf('\n\n')) !== -1) {
-        const block = buffer.slice(0, boundary);
-        buffer = buffer.slice(boundary + 2);
-        let event = 'message';
-        const data: string[] = [];
-        for (const line of block.split('\n')) {
-          if (line.startsWith(':')) continue;
-          if (line.startsWith('event:')) event = line.slice(6).trim();
-          else if (line.startsWith('data:')) data.push(line.slice(5).replace(/^ /, ''));
-        }
-        if (data.length === 0) continue;
-        try {
-          yield { event, data: JSON.parse(data.join('\n')) } as RunStreamEvent;
-        } catch {
-          // Malformed frame — skip it rather than abort the whole stream.
-        }
-      }
-    }
-  } finally {
-    reader.releaseLock();
-  }
+export function parseSse(body: ReadableStream<Uint8Array>): AsyncGenerator<RunStreamEvent> {
+  return readSseEvents<RunStreamEvent>(body);
+}
+
+/** An IDE request in any of the six languages (the legacy type knows four). */
+export type IdeRunRequest = Omit<IdeExecutionRequest, 'language'> & { language: SupportedLanguage };
+
+/**
+ * What the runner needs from the compile service — the `compile` object
+ * below satisfies it; unit tests pass a fake.
+ */
+export interface CompileClient {
+  run(request: RunRequest, signal?: AbortSignal): Promise<RunResponse>;
+  runStream(request: RunRequest, signal?: AbortSignal): AsyncGenerator<RunStreamEvent>;
 }
 
 export const compile = {
   /** Judge code against caller-supplied tests; resolves with the full result. */
-  run(request: RunRequest): Promise<RunResponse> {
-    return call<RunResponse>('/v1/run', { method: 'POST', body: JSON.stringify(request) });
+  run(request: RunRequest, signal?: AbortSignal): Promise<RunResponse> {
+    return call<RunResponse>('/v1/run', { method: 'POST', body: JSON.stringify(request), signal });
   },
 
   /**
@@ -261,7 +246,7 @@ export const compile = {
   },
 
   /** Run an IDE-mode submission (raw stdin/stdout, multiple custom testcases). */
-  executeIde(request: IdeExecutionRequest): Promise<IdeExecutionResponse> {
+  executeIde(request: IdeExecutionRequest | IdeRunRequest): Promise<IdeExecutionResponse> {
     return resolveSubmission<IdeExecutionResponse>(
       '/v1/ide/execute',
       (token) => `/v1/ide/execute/${token}`,

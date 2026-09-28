@@ -37,13 +37,24 @@ class RateLimited extends CredentialsSignin {
  * Providers:
  *   · Credentials — real email/password. authorize() looks the user up by
  *     email and verifies the bcrypt hash. Accounts are created by the
- *     sign-up server action (app/auth/actions.ts), not here. Works in dev
- *     and prod, no OAuth app required.
+ *     sign-up server action (app/auth/actions.ts), not here; passwords are
+ *     reset through /forgot → /reset (lib/server/passwordReset.ts). Works in
+ *     dev and prod, no OAuth app required.
  *   · GitHub / Google — only when their env vars are set. New OAuth users get
  *     a generated handle (GitHub login, else name, else email).
  *
  * AUTH_SECRET is mandatory in production.
  */
+/**
+ * Which OAuth providers are configured. The auth pages read this on the
+ * server to decide which "Continue with …" buttons to render, so a button is
+ * never shown for a provider that would fail.
+ */
+export const oauthProviders = {
+  github: Boolean(process.env.AUTH_GITHUB_ID && process.env.AUTH_GITHUB_SECRET),
+  google: Boolean(process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET),
+} as const;
+
 const providers: NextAuthConfig['providers'] = [
   Credentials({
     name: 'Email',
@@ -76,7 +87,7 @@ const providers: NextAuthConfig['providers'] = [
   }),
 ];
 
-if (process.env.AUTH_GITHUB_ID && process.env.AUTH_GITHUB_SECRET) {
+if (oauthProviders.github) {
   providers.push(
     GitHub({
       clientId: process.env.AUTH_GITHUB_ID,
@@ -94,7 +105,7 @@ if (process.env.AUTH_GITHUB_ID && process.env.AUTH_GITHUB_SECRET) {
     })
   );
 }
-if (process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET) {
+if (oauthProviders.google) {
   providers.push(
     Google({
       clientId: process.env.AUTH_GOOGLE_ID,
@@ -135,7 +146,10 @@ export const { handlers, auth, signIn, signOut, unstable_update } = NextAuth({
   trustHost: true,
   session: { strategy: 'jwt' },
   pages: {
-    signIn: '/auth',
+    signIn: '/signin',
+    // Auth.js errors (OAuth failures, AccessDenied, Configuration …) land on
+    // the sign-in page as ?error=<code>, which it turns into a message.
+    error: '/signin',
   },
   callbacks: {
     // Carry the DB user id, role and handle through the JWT so server code

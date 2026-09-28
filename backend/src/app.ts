@@ -4,6 +4,7 @@ import problemRoutes from './routes/problemRoutes.js';
 import executionRoutes from './routes/executionRoutes.js';
 import ideRoutes from './routes/ideRoutes.js';
 import queueRoutes from './routes/queueRoutes.js';
+import runRoutes from './routes/runRoutes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { requireInternalToken } from './middleware/internalAuth.js';
 
@@ -29,7 +30,11 @@ app.use(
     allowedHeaders: ['Content-Type', 'X-Codemare-Token'],
   })
 );
-app.use(express.json({ limit: '1mb' }));
+// The run routes parse their own (larger) JSON bodies after the token check
+// — see routes/runRoutes.ts — so the default 1 MB parser skips them.
+const defaultJson = express.json({ limit: '1mb' });
+const RUN_PATH = /^\/(?:v1|api)\/run(?:\/|$)/;
+app.use((req, res, next) => (RUN_PATH.test(req.path) ? next() : defaultJson(req, res, next)));
 app.use(express.urlencoded({ extended: true }));
 
 // Request logging
@@ -47,6 +52,7 @@ authed.use('/problems', problemRoutes);
 authed.use('/execute', executionRoutes);
 authed.use('/ide', ideRoutes);
 authed.use('/queue', queueRoutes);
+authed.use('/run', runRoutes);
 
 app.use('/v1', authed);
 app.use('/api', authed);

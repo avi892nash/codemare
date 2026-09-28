@@ -1,0 +1,267 @@
+{
+  "slug": "foundations",
+  "title": "Foundations",
+  "summary": "Arrays, hash maps, two pointers and stacks: the everyday moves every harder technique is built from.",
+  "level": "beginner",
+  "tier": "foundations",
+  "est_hours": 4,
+  "ord": 0,
+  "modules": [
+    {
+      "slug": "arrays-hashing",
+      "title": "Arrays & Hashing",
+      "summary": "What array operations cost, and how hash maps trade memory for one-pass solutions.",
+      "lessons": [
+        {
+          "slug": "arrays-and-cost",
+          "title": "Arrays and what operations cost",
+          "est_minutes": 8,
+          "topic": "arrays-hashing",
+          "related_question_slugs": [
+            "contains-duplicate"
+          ],
+          "body_md": "An array stores its elements side by side in memory. That one fact explains most of what arrays are good and bad at: the address of element `i` is `start + i × size`, so reading `a[i]` takes the same time whether the array holds ten elements or ten million.\n\n## Four costs to keep in your head\n\n| Operation | Cost | Why |\n|---|---|---|\n| Read or write `a[i]` | O(1) | one address calculation |\n| Scan every element | O(n) | each element is touched once |\n| Insert or delete at the front | O(n) | everything after it shifts by one |\n| Append at the end (dynamic array) | O(1) amortized | an occasional resize copies, averaged out |\n\nMost array problems are about turning a solution that re-scans the array many times into one that scans it once.\n\n## Counting the work in a brute force\n\nThe most direct way to find a duplicate is to compare every pair. Run it and watch the number of comparisons as the input doubles:\n\n```python run\ndef has_duplicate(nums):\n    comparisons = 0\n    for i in range(len(nums)):\n        for j in range(i + 1, len(nums)):\n            comparisons += 1\n            if nums[i] == nums[j]:\n                return True, comparisons\n    return False, comparisons\n\nfor n in [10, 20, 40, 80]:\n    found, work = has_duplicate(list(range(n)))  # no duplicates: the worst case\n    print(f\"n = {n:3}  comparisons = {work}\")\n```\n\nDoubling `n` roughly quadruples the work. With nothing repeated, the pair loop makes exactly this many comparisons, which grows like n²:\n\n$$\n\\binom{n}{2} = \\frac{n(n-1)}{2}\n$$\n\n:::callout{kind=complexity time=\"O(n²)\" space=\"O(1)\"}\nThe pair-by-pair check needs no extra memory, but its running time is quadratic: 100,000 elements means about five billion comparisons.\n:::\n\n## Sort first, then scan once\n\nIf equal values sat next to each other, one pass would be enough to spot them. Sorting puts them there:\n\n```python run\ndef has_duplicate_sorted(nums):\n    nums = sorted(nums)            # O(n log n), returns a new list\n    for i in range(1, len(nums)):  # O(n)\n        if nums[i] == nums[i - 1]:\n            return True\n    return False\n\nprint(has_duplicate_sorted([3, 1, 4, 1, 5]))  # True\nprint(has_duplicate_sorted([2, 7, 1, 8]))     # False\n```\n\nThat brings the cost down to O(n log n). The next lesson gets it to O(n) by remembering what has already been seen.\n\n:::callout{kind=pitfall title=\"sorted() versus .sort()\"}\n`sorted(nums)` returns a new list; `nums.sort()` reorders the caller's list in place. Quietly mutating an input you were handed is a classic source of bugs in larger programs.\n:::\n\n:::question{slug=contains-duplicate}\n"
+        },
+        {
+          "slug": "hash-maps",
+          "title": "Hash maps: remember what you have seen",
+          "est_minutes": 10,
+          "topic": "arrays-hashing",
+          "related_question_slugs": [
+            "two-sum",
+            "contains-duplicate"
+          ],
+          "body_md": "A hash map — `dict` in Python, `Map` in JavaScript, `unordered_map` in C++ — stores key → value pairs and finds a key in O(1) time on average. It turns the key into a number (its *hash*) and uses that number to jump straight to a bucket instead of searching.\n\nThat turns \"have I seen this before?\" from a scan into a single lookup, and it is the most common way to take an O(n²) array solution down to O(n).\n\n## The seen-set pattern\n\nWalk the array once. Before handling an element, ask a set whether it has appeared; afterwards, add it:\n\n```python run\ndef has_duplicate(nums):\n    seen = set()\n    for x in nums:\n        if x in seen:      # O(1) on average\n            return True\n        seen.add(x)\n    return False\n\nprint(has_duplicate([3, 1, 4, 1, 5]))  # True\nprint(has_duplicate([2, 7, 1, 8]))     # False\n```\n\n## Two sum: look up the partner\n\nTo find two indices whose values add up to `target`, notice that each element `x` needs exactly one partner value:\n\n$$\n\\text{need} = \\text{target} - x\n$$\n\nSo instead of pairing `x` with every other element, look `need` up in a map of values already seen (value → index). Step through it:\n\n:::viz{id=hash-map}\n\n```javascript run\nfunction twoSum(nums, target) {\n  const seen = new Map(); // value -> index\n  for (let i = 0; i < nums.length; i++) {\n    const need = target - nums[i];\n    if (seen.has(need)) return [seen.get(need), i];\n    seen.set(nums[i], i);\n  }\n  return [];\n}\n\nconsole.log(twoSum([4, 9, 1, 12, 6, 3], 9)); // [ 4, 5 ]\nconsole.log(twoSum([3, 3], 6));              // [ 0, 1 ]\n```\n\n:::callout{kind=pitfall title=\"Look up before you insert\"}\nCheck for the partner *before* storing the current element. Store first and `x` can pair with itself: with target 6, a single 3 would \"find\" its own index.\n:::\n\n:::callout{kind=complexity time=\"O(n)\" space=\"O(n)\"}\nOne pass with an O(1) average lookup per element. The price is memory: the map may end up holding every element. Lookups only degrade toward O(n) when many keys collide, which a good hash function makes very unlikely.\n:::\n\n:::question{slug=two-sum}\n"
+        },
+        {
+          "slug": "counting-and-grouping",
+          "title": "Counting and precomputing",
+          "est_minutes": 9,
+          "topic": "arrays-hashing",
+          "related_question_slugs": [
+            "valid-anagram",
+            "product-of-array-except-self"
+          ],
+          "body_md": "Plenty of problems reduce to \"how many of each?\". A frequency map — value → count — answers that in one pass, and two frequency maps can be compared in O(n).\n\n## Counting\n\n```python run\nfrom collections import Counter\n\nword = \"mississippi\"\ncounts = Counter(word)\nprint(counts.most_common(2))  # the two most frequent letters\n\n# The same thing without the library:\nmanual = {}\nfor ch in word:\n    manual[ch] = manual.get(ch, 0) + 1\nprint(manual)\n```\n\n## Anagrams have equal counts\n\nTwo strings are anagrams exactly when every character appears the same number of times in both. Count one string up and the other down; they are anagrams if every count ends at zero:\n\n```python run\ndef is_anagram(s, t):\n    if len(s) != len(t):\n        return False\n    counts = {}\n    for a, b in zip(s, t):\n        counts[a] = counts.get(a, 0) + 1\n        counts[b] = counts.get(b, 0) - 1\n    return all(v == 0 for v in counts.values())\n\nprint(is_anagram(\"listen\", \"silent\"))  # True\nprint(is_anagram(\"rat\", \"car\"))        # False\n```\n\n:::callout{kind=note}\nSorting both strings and comparing them also works, in O(n log n). Counting is O(n), and with a fixed alphabet (say 26 lowercase letters) the map never grows past 26 entries, so its extra space is O(1).\n:::\n\n## Precomputing from both sides\n\nCounting is one kind of precomputation; prefix and suffix products are another. To get, for every index, the product of all the *other* elements without dividing, combine what lies to its left with what lies to its right:\n\n$$\n\\text{answer}_i = \\left(\\prod_{j < i} a_j\\right) \\cdot \\left(\\prod_{j > i} a_j\\right)\n$$\n\n```python run\ndef product_except_self(nums):\n    n = len(nums)\n    out = [1] * n\n    left = 1\n    for i in range(n):              # out[i] = product of everything left of i\n        out[i] = left\n        left *= nums[i]\n    right = 1\n    for i in range(n - 1, -1, -1):  # multiply in everything right of i\n        out[i] *= right\n        right *= nums[i]\n    return out\n\nprint(product_except_self([1, 2, 3, 4]))  # [24, 12, 8, 6]\nprint(product_except_self([2, 0, 5]))     # [0, 10, 0]\n```\n\n:::callout{kind=pitfall title=\"Why not divide?\"}\nDividing the total product by `a[i]` breaks as soon as the array contains a zero. Two passes of prefix and suffix products never divide.\n:::\n\n:::question{slug=valid-anagram}\n\n:::question{slug=product-of-array-except-self}\n"
+        }
+      ],
+      "checkpoint": [
+        {
+          "kind": "mcq",
+          "prompt_md": "On average, how long does `x in seen` take when `seen` is a Python `set`?",
+          "choices": [
+            "O(1)",
+            "O(log n)",
+            "O(n)",
+            "O(n log n)"
+          ],
+          "answer": 0,
+          "explanation_md": "A set hashes `x` and jumps straight to its bucket. Only heavy collisions — rare with a good hash function — make a lookup slower."
+        },
+        {
+          "kind": "mcq",
+          "prompt_md": "In one-pass Two Sum, why do you look up `target - x` **before** storing `x`?",
+          "choices": [
+            "It is faster",
+            "So an element never pairs with itself",
+            "So the map stays sorted",
+            "It uses less memory"
+          ],
+          "answer": 1,
+          "explanation_md": "With target 6 and a single 3, storing first would let the 3 find itself. Looking up first only ever pairs `x` with earlier elements."
+        },
+        {
+          "kind": "mcq",
+          "prompt_md": "How many comparisons does the brute-force pair check make on 100 distinct elements?",
+          "choices": [
+            "100",
+            "4,950",
+            "9,900",
+            "10,000"
+          ],
+          "answer": 1,
+          "explanation_md": "Every unordered pair once: n(n − 1) / 2 = 100 · 99 / 2 = 4,950."
+        },
+        {
+          "kind": "short",
+          "prompt_md": "Which class from Python's `collections` module builds a frequency map (value → count) in one call?",
+          "answer": [
+            "Counter",
+            "collections.Counter",
+            "Counter()"
+          ],
+          "explanation_md": "`Counter(iterable)` counts every element in one pass; `most_common(k)` then lists the k most frequent."
+        }
+      ]
+    },
+    {
+      "slug": "two-pointers",
+      "title": "Two Pointers",
+      "summary": "Walk inward from both ends of a sorted array, or run a read and a write pointer through one.",
+      "lessons": [
+        {
+          "slug": "pointers-from-both-ends",
+          "title": "Pointers from both ends",
+          "est_minutes": 10,
+          "topic": "two-pointers",
+          "related_question_slugs": [
+            "valid-palindrome",
+            "reverse-string"
+          ],
+          "body_md": "When an array is sorted, its two ends hold the smallest and largest values. Two indices — one at each end, moving toward each other — can then search pairs in a single pass, because every comparison tells you which end can be thrown away for good.\n\n## Pair sum on a sorted array\n\nTo find two values that add up to `target`, start with `l` at the first index and `r` at the last:\n\n- if `a[l] + a[r]` is **too big**, `a[r]` is too big even with the smallest partner still available, so move `r` left;\n- if it is **too small**, `a[l]` is too small even with the largest partner still available, so move `l` right;\n- if it **matches**, you are done.\n\n:::viz{id=two-pointers}\n\n```python run\ndef pair_sum(a, target):\n    l, r = 0, len(a) - 1\n    while l < r:\n        s = a[l] + a[r]\n        if s == target:\n            return l, r\n        if s > target:\n            r -= 1   # a[r] cannot pair with anything left\n        else:\n            l += 1   # a[l] cannot pair with anything left\n    return None\n\nprint(pair_sum([1, 3, 4, 6, 8, 11, 15], 10))   # (2, 3)\nprint(pair_sum([1, 3, 4, 6, 8, 11, 15], 100))  # None\n```\n\nEach step discards one element, so the loop runs at most n − 1 times.\n\n:::callout{kind=complexity time=\"O(n)\" space=\"O(1)\"}\nLinear time and no extra memory — the hash-map approach needs O(n) memory. The catch: the input must be sorted, and sorting first costs O(n log n).\n:::\n\n## Palindromes\n\nA string is a palindrome if it reads the same both ways. Compare the outermost pair, then move both pointers inward, skipping anything that is not a letter or digit:\n\n```python run\ndef is_palindrome(s):\n    l, r = 0, len(s) - 1\n    while l < r:\n        if not s[l].isalnum():\n            l += 1\n        elif not s[r].isalnum():\n            r -= 1\n        elif s[l].lower() != s[r].lower():\n            return False\n        else:\n            l, r = l + 1, r - 1\n    return True\n\nprint(is_palindrome(\"Never odd or even\"))  # True\nprint(is_palindrome(\"two pointers\"))       # False\n```\n\n:::callout{kind=pitfall title=\"< not <=\"}\nLoop while `l < r`. When the pointers meet, one element is left and it cannot pair with itself — in pair sum, `l <= r` would happily count `a[i] + a[i]`.\n:::\n\n:::question{slug=valid-palindrome}\n\n:::question{slug=reverse-string}\n"
+        },
+        {
+          "slug": "read-write-pointers",
+          "title": "Read and write pointers",
+          "est_minutes": 11,
+          "topic": "two-pointers",
+          "related_question_slugs": [
+            "three-sum",
+            "trapping-rain-water"
+          ],
+          "body_md": "The second two-pointer shape moves both pointers in the *same* direction. A fast **read** pointer visits every element; a slow **write** pointer marks where the next kept element goes. Everything before `write` is the finished answer, so the array is filtered in place with no extra memory.\n\n## Filtering in place\n\nRemove every zero while keeping the other elements in order:\n\n```python run\ndef remove_zeros(a):\n    write = 0\n    for read in range(len(a)):\n        if a[read] != 0:\n            a[write] = a[read]\n            write += 1\n    return a[:write]\n\nprint(remove_zeros([0, 1, 0, 3, 12]))  # [1, 3, 12]\n```\n\nThe same shape removes duplicates from a sorted array: keep an element only when it differs from the last one kept.\n\n```javascript run\nfunction dedupeSorted(a) {\n  let write = 0;\n  for (let read = 0; read < a.length; read++) {\n    if (write === 0 || a[read] !== a[write - 1]) a[write++] = a[read];\n  }\n  return a.slice(0, write);\n}\n\nconsole.log(dedupeSorted([1, 1, 2, 3, 3, 3, 7])); // [ 1, 2, 3, 7 ]\n```\n\n## Three sum: fix one, then two pointers\n\nTo list every triple that sums to zero, sort, fix the first element `nums[i]`, and run the pair search on the rest looking for `-nums[i]`. Sorting also makes duplicates adjacent, so repeated triples are easy to skip:\n\n```python run\ndef three_sum(nums):\n    nums = sorted(nums)\n    out = []\n    for i in range(len(nums) - 2):\n        if i > 0 and nums[i] == nums[i - 1]:\n            continue                      # same first element, same triples\n        l, r = i + 1, len(nums) - 1\n        while l < r:\n            s = nums[i] + nums[l] + nums[r]\n            if s < 0:\n                l += 1\n            elif s > 0:\n                r -= 1\n            else:\n                out.append([nums[i], nums[l], nums[r]])\n                l += 1\n                while l < r and nums[l] == nums[l - 1]:\n                    l += 1                # skip repeated second elements\n    return out\n\nprint(three_sum([-1, 0, 1, 2, -1, -4]))  # [[-1, -1, 2], [-1, 0, 1]]\n```\n\nFixing each element costs one linear pair search, so the sort is not the bottleneck:\n\n$$\nT(n) = O(n \\log n) + \\sum_{i=0}^{n-3} O(n - i) = O(n^2)\n$$\n\n:::callout{kind=pitfall title=\"Duplicates\"}\nWithout the two skip rules, `[-1, 0, 1, 2, -1, -4]` reports `[-1, 0, 1]` twice. Skip a repeated first element, and after each hit skip repeated second elements.\n:::\n\n:::callout{kind=note title=\"Challenge: trapping rain water\"}\nTwo pointers also solve *trapping rain water*: keep the tallest bar seen from each side, and always advance the side whose tallest bar is lower — the water above that bar is limited by that side alone.\n:::\n\n:::question{slug=three-sum}\n\n:::question{slug=trapping-rain-water}\n"
+        }
+      ],
+      "checkpoint": [
+        {
+          "kind": "mcq",
+          "prompt_md": "Pair sum on a sorted array: `a[l] + a[r]` is larger than the target. What is safe to do?",
+          "choices": [
+            "Move `l` right",
+            "Move `r` left",
+            "Move both pointers inward",
+            "Restart from the ends"
+          ],
+          "answer": 1,
+          "explanation_md": "`a[r]` is too big even with the smallest partner left (`a[l]`), so no remaining pair can use it. Dropping it is safe."
+        },
+        {
+          "kind": "mcq",
+          "prompt_md": "How much extra memory does the sorted two-pointer pair search use?",
+          "choices": [
+            "O(1)",
+            "O(log n)",
+            "O(n)",
+            "O(n²)"
+          ],
+          "answer": 0,
+          "explanation_md": "Just two indices and a sum — constant space. The hash-map version needs O(n)."
+        },
+        {
+          "kind": "mcq",
+          "prompt_md": "In the read/write filter, what does everything before the `write` index hold?",
+          "choices": [
+            "Elements not read yet",
+            "The kept elements, in their original order",
+            "The removed elements",
+            "Unspecified leftovers"
+          ],
+          "answer": 1,
+          "explanation_md": "`write` only advances after copying a kept element, so `a[0..write)` is always the finished, in-order answer."
+        },
+        {
+          "kind": "short",
+          "prompt_md": "Three sum sorts the input, then runs a pair search for each fixed element. What is its overall time complexity, in Big-O?",
+          "answer": [
+            "O(n^2)",
+            "O(n²)",
+            "O(n*n)",
+            "O(n2)",
+            "n^2",
+            "n²",
+            "quadratic"
+          ],
+          "explanation_md": "Sorting is O(n log n); then n fixed elements each run a linear pair search, O(n²) in total, which dominates."
+        }
+      ]
+    },
+    {
+      "slug": "stacks",
+      "title": "Stacks",
+      "summary": "Last in, first out: matching brackets, and the monotonic stack for nearest-bigger questions.",
+      "lessons": [
+        {
+          "slug": "last-in-first-out",
+          "title": "Last in, first out",
+          "est_minutes": 7,
+          "topic": "stack",
+          "related_question_slugs": [
+            "valid-parentheses"
+          ],
+          "body_md": "A stack only lets you touch its top: `push` puts an item on top, `pop` takes the top item off. The last thing in is the first thing out. A Python list is a stack (`append` and `pop` at the end are O(1)), so is a JavaScript array; in C++ use `std::stack` or a `std::vector`.\n\nStacks model anything that must be undone in reverse order: nested brackets, function calls (the call stack), the back button, an undo history.\n\n## Matching brackets\n\nEvery closing bracket must match the most recent opening bracket that is still unmatched — which is exactly the top of a stack. Step through a string that goes wrong at the very end:\n\n:::viz{id=bracket-stack}\n\n```python run\nPAIRS = {\")\": \"(\", \"]\": \"[\", \"}\": \"{\"}\n\ndef is_valid(s):\n    stack = []\n    for ch in s:\n        if ch in PAIRS:                  # a closer\n            if not stack or stack.pop() != PAIRS[ch]:\n                return False\n        else:                            # an opener\n            stack.append(ch)\n    return not stack                     # leftovers were never closed\n\nfor s in [\"{[()()]}\", \"([)]\", \"((\", \"{[()()]}(]\"]:\n    print(f\"{s:12} {is_valid(s)}\")\n```\n\n:::callout{kind=pitfall title=\"Two ways to fail\"}\nA string is invalid if a closer meets the wrong opener (or an empty stack) — and *also* if openers are left over at the end: `\"((\"` never hits a mismatch. Forgetting the final `not stack` check is the most common bug here.\n:::\n\n:::callout{kind=complexity time=\"O(n)\" space=\"O(n)\"}\nEvery character is pushed or popped once. The stack can hold up to n openers.\n:::\n\n:::question{slug=valid-parentheses}\n"
+        },
+        {
+          "slug": "monotonic-stack",
+          "title": "The monotonic stack",
+          "est_minutes": 12,
+          "topic": "stack",
+          "related_question_slugs": [
+            "largest-rectangle-in-histogram",
+            "trapping-rain-water"
+          ],
+          "body_md": "Some questions ask, for every element, about the *nearest* element to one side that is bigger or smaller: the next warmer day, the next taller building, how far a bar can stretch in a histogram. Checking every later element costs O(n²). A **monotonic stack** answers all of them in one pass.\n\n## Next greater element\n\nKeep a stack of indices whose answer is still unknown. Their values decrease from bottom to top — each is waiting for something bigger. When a new value arrives it is the answer for every waiting index with a smaller value, so pop those and record it:\n\n```python run\ndef next_greater(nums):\n    answer = [-1] * len(nums)\n    stack = []                        # waiting indices; their values decrease\n    for i, x in enumerate(nums):\n        while stack and nums[stack[-1]] < x:\n            answer[stack.pop()] = x   # x is the first bigger value to the right\n        stack.append(i)\n    return answer\n\nprint(next_greater([2, 1, 5, 3, 4, 6, 1]))  # [5, 5, 6, 4, 6, -1, -1]\n```\n\n## Why it is linear\n\nThe inner `while` can pop many items at once, which looks quadratic. But each index is pushed exactly once and popped at most once, so over the whole run:\n\n$$\n\\text{pushes} + \\text{pops} \\le 2n\n$$\n\n:::callout{kind=complexity time=\"O(n)\" space=\"O(n)\"}\nAmortized O(1) per element: the occasional expensive step (many pops) is paid for by the cheap pushes that came before it.\n:::\n\n## Largest rectangle in a histogram\n\nThe same idea finds, for each bar, the widest rectangle of its height. That rectangle stops at the nearest *shorter* bar on each side. Keep the stack increasing; when a shorter bar arrives, every taller bar popped has just found its right boundary, and the bar beneath it on the stack is its left boundary:\n\n```python run\ndef largest_rectangle(heights):\n    bars = heights + [0]            # a final 0 pops whatever is left\n    stack = []                      # indices, heights increasing\n    best = 0\n    for i, h in enumerate(bars):\n        while stack and bars[stack[-1]] > h:\n            top = stack.pop()\n            left = stack[-1] if stack else -1   # nearest shorter bar on the left\n            best = max(best, bars[top] * (i - left - 1))\n        stack.append(i)\n    return best\n\nprint(largest_rectangle([2, 1, 5, 6, 2, 3]))  # 10: height 5, width 2\n```\n\n:::callout{kind=note title=\"Rule of thumb\"}\n\"Nearest bigger or smaller element to the left or right\" means a monotonic stack. Keep it decreasing to find the next *greater* element, increasing to find the next *smaller*.\n:::\n\n:::question{slug=largest-rectangle-in-histogram}\n"
+        }
+      ],
+      "checkpoint": [
+        {
+          "kind": "mcq",
+          "prompt_md": "Which string does the bracket checker reject *only* because of its final `not stack` check?",
+          "choices": [
+            "`([)]`",
+            "`((`",
+            "`)(`",
+            "`{[]}`"
+          ],
+          "answer": 1,
+          "explanation_md": "`((` never meets a wrong closer; it fails because two openers are still on the stack when the input ends."
+        },
+        {
+          "kind": "mcq",
+          "prompt_md": "Using a Python list as a stack, which pair of operations are both O(1)?",
+          "choices": [
+            "`insert(0, x)` and `pop(0)`",
+            "`append(x)` and `pop()`",
+            "`append(x)` and `pop(0)`",
+            "`remove(x)` and `pop()`"
+          ],
+          "answer": 1,
+          "explanation_md": "Working at the end of a dynamic array is O(1) (amortized for `append`). Anything at the front shifts every element."
+        },
+        {
+          "kind": "mcq",
+          "prompt_md": "In the next-greater-element pass, the values of the indices on the stack, read from bottom to top, are…",
+          "choices": [
+            "increasing",
+            "decreasing (non-increasing)",
+            "in any order",
+            "all equal"
+          ],
+          "answer": 1,
+          "explanation_md": "Anything smaller than the incoming value is popped before it is pushed, so what stays below is at least as big: the stack decreases toward the top."
+        },
+        {
+          "kind": "mcq",
+          "prompt_md": "What is the total running time of the monotonic-stack pass over n elements?",
+          "choices": [
+            "O(n)",
+            "O(n log n)",
+            "O(n²)",
+            "It depends on the values"
+          ],
+          "answer": 0,
+          "explanation_md": "Each index is pushed once and popped at most once — at most 2n stack operations in total."
+        },
+        {
+          "kind": "short",
+          "prompt_md": "Which data structure remembers the most recent unmatched opening bracket?",
+          "answer": [
+            "stack",
+            "a stack",
+            "the stack"
+          ],
+          "explanation_md": "The newest unmatched opener is exactly the top of a stack, which is what the next closer must match."
+        }
+      ]
+    }
+  ]
+}

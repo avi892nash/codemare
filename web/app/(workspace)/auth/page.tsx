@@ -1,9 +1,10 @@
-import { AuthPage } from '@/components/Auth/AuthPage';
+import { redirect } from 'next/navigation';
+import { firstParam } from '@/components/Auth/messages';
+import { signInHref } from '@/components/Auth/routes';
 
-export const metadata = {
-  title: 'Sign in · Codemare',
-};
+type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
-export default function AuthRoute() {
-  return <AuthPage />;
+/** Legacy /auth → /signin, keeping a safe `next`. */
+export default async function LegacyAuthPage({ searchParams }: { searchParams: SearchParams }) {
+  redirect(signInHref(firstParam((await searchParams).next)));
 }

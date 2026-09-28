@@ -1,0 +1,55 @@
+{
+  "slug": "graphs",
+  "title": "Graphs",
+  "summary": "Shortest paths and orderings on vertices and edges — the shape of routing and scheduling problems.",
+  "icon": "network",
+  "ord": 2,
+  "chapters": [
+    {
+      "slug": "shortest-paths",
+      "title": "Shortest paths",
+      "articles": [
+        {
+          "slug": "dijkstra",
+          "title": "Dijkstra's shortest paths",
+          "summary": "Single-source shortest paths with non-negative edge weights, settling vertices in order of distance.",
+          "difficulty": "Medium",
+          "reading_minutes": 9,
+          "idea_md": "Breadth-first search finds shortest paths when every edge costs the same. With weights, the vertex reached in the fewest steps is not necessarily the closest one. Dijkstra's algorithm keeps BFS's spirit — settle the nearest unsettled vertex next — and uses a priority queue to know which one that is.\n\nMaintain a tentative distance `d[v]` for every vertex: `0` for the source, `∞` for the rest. Repeat:\n\n1. Take the unsettled vertex `u` with the smallest `d[u]`. Its distance is now final.\n2. **Relax** every edge `u → v` with weight `w`: if `d[u] + w < d[v]`, a shorter route to `v` was found, so lower `d[v]` and remember `u` as its predecessor.\n\nWhy is the smallest tentative distance final? Any other route to `u` would have to leave the settled region through some vertex that is at least as far away as `u` already is, and with **non-negative weights** the remaining edges cannot make that route shorter. That argument is exactly what breaks when an edge weight is negative.\n\nWith a binary heap the running time is `O((V + E) log V)`. The heap may hold several entries for the same vertex — one per improvement — so the loop skips entries whose distance is stale instead of trying to update keys in place.\n",
+          "formula": "d[v] \\gets \\min\\left(d[v],\\ d[u] + w(u, v)\\right) \\quad \\text{for every edge } (u, v)",
+          "code_cpp": "#include <climits>\n#include <functional>\n#include <iostream>\n#include <queue>\n#include <string>\n#include <utility>\n#include <vector>\nusing namespace std;\n\nusing Edge = pair<int, int>;  // (to, weight)\n\n// Shortest distances from src when every weight is non-negative.\nvector<long long> dijkstra(const vector<vector<Edge>>& adj, int src, vector<int>& prev) {\n    const long long INF = LLONG_MAX;\n    vector<long long> dist(adj.size(), INF);\n    prev.assign(adj.size(), -1);\n    // Min-heap of (distance, vertex).\n    priority_queue<pair<long long, int>, vector<pair<long long, int>>, greater<>> pq;\n    dist[src] = 0;\n    pq.push({0, src});\n    while (!pq.empty()) {\n        auto [d, u] = pq.top();\n        pq.pop();\n        if (d != dist[u]) continue;  // stale entry: u was settled via a shorter path\n        for (auto [v, w] : adj[u]) {\n            if (dist[u] + w < dist[v]) {\n                dist[v] = dist[u] + w;\n                prev[v] = u;\n                pq.push({dist[v], v});\n            }\n        }\n    }\n    return dist;\n}\n\nint main() {\n    const char* name = \"ABCDEF\";\n    vector<vector<Edge>> adj(6);\n    auto road = [&](int u, int v, int w) {\n        adj[u].push_back({v, w});\n        adj[v].push_back({u, w});\n    };\n    road(0, 1, 4); road(0, 2, 1); road(2, 1, 2); road(1, 3, 5); road(2, 3, 8);\n    road(2, 4, 10); road(3, 4, 2); road(3, 5, 6); road(4, 5, 3);\n\n    vector<int> prev;\n    vector<long long> dist = dijkstra(adj, 0, prev);\n    for (int v = 0; v < 6; ++v) {\n        string path;\n        for (int x = v; x != -1; x = prev[x]) path = string(1, name[x]) + (path.empty() ? \"\" : \" -> \") + path;\n        cout << \"A -> \" << name[v] << \": \" << dist[v] << \"  via \" << path << \"\\n\";\n    }\n    return 0;\n}\n",
+          "viz_id": "dijkstra",
+          "applications_md": "- **Routing and navigation**: road networks, network latency (\"how long until every node hears the signal?\").\n- **Cheapest-cost searches** on implicit graphs: states of a puzzle, grid cells with entry costs.\n- **As a building block**: A* is Dijkstra plus a heuristic; Johnson's algorithm reweights a graph so Dijkstra can run from every vertex.\n",
+          "pitfall_md": "- **Negative edges break it** — use Bellman–Ford (or SPFA with care) instead.\n- Forgetting the stale-entry check does not make the result wrong, but it can blow the running time up on dense graphs.\n- Distances can exceed `int`: sum of weights along a path of `10^5` edges of weight `10^9` needs 64-bit.\n- `priority_queue` is a max-heap by default; without `greater<>` it pops the *farthest* vertex first.\n",
+          "practice_question_slugs": [
+            "network-delay-time"
+          ],
+          "status": "published"
+        }
+      ]
+    },
+    {
+      "slug": "orderings",
+      "title": "Orderings",
+      "articles": [
+        {
+          "slug": "topological-sort",
+          "title": "Topological sort",
+          "summary": "Order the vertices of a directed acyclic graph so every edge points forward — or prove a cycle exists.",
+          "difficulty": "Medium",
+          "reading_minutes": 7,
+          "idea_md": "Dependencies form a directed graph: an edge `a → b` says *`a` must come before `b`*. A topological order lists every vertex so that all edges point forward. It exists exactly when the graph has no directed cycle, and there are often many valid orders.\n\n**Kahn's algorithm** builds one greedily. A vertex with no incoming edges (in-degree `0`) has no unmet prerequisites, so it can go first:\n\n1. Put every vertex with in-degree `0` into a queue.\n2. Pop a vertex, append it to the order, and delete its outgoing edges: decrement the in-degree of each neighbour. A neighbour whose in-degree drops to `0` joins the queue.\n3. Repeat until the queue is empty.\n\nIf the order contains every vertex, it is valid. If some vertices are missing, each of them still has an incoming edge from another missing vertex — following those edges backwards must eventually repeat a vertex, so the leftovers contain a **cycle**. Kahn's algorithm therefore doubles as a cycle detector. It runs in `O(V + E)`.\n\nUsing a min-heap instead of a queue produces the lexicographically smallest order; a depth-first search that records vertices as they finish (then reverses the list) is the other classic construction.\n",
+          "formula": "\\forall (u, v) \\in E: \\quad \\operatorname{pos}(u) < \\operatorname{pos}(v)",
+          "code_cpp": "#include <iostream>\n#include <queue>\n#include <string>\n#include <utility>\n#include <vector>\nusing namespace std;\n\n// Kahn's algorithm. Returns a topological order, or an empty vector if there is a cycle.\nvector<int> topologicalOrder(int n, const vector<pair<int, int>>& edges) {\n    vector<vector<int>> out(n);\n    vector<int> indegree(n, 0);\n    for (const auto& [from, to] : edges) {\n        out[from].push_back(to);\n        ++indegree[to];\n    }\n    queue<int> ready;\n    for (int v = 0; v < n; ++v)\n        if (indegree[v] == 0) ready.push(v);\n\n    vector<int> order;\n    while (!ready.empty()) {\n        int u = ready.front();\n        ready.pop();\n        order.push_back(u);\n        for (int v : out[u])\n            if (--indegree[v] == 0) ready.push(v);\n    }\n    if ((int)order.size() < n) return {};  // the leftovers all sit on or behind a cycle\n    return order;\n}\n\nint main() {\n    vector<string> task = {\"fetch\", \"parse\", \"lint\", \"typecheck\", \"bundle\", \"test\", \"deploy\"};\n    // (a, b): a must happen before b\n    vector<pair<int, int>> deps = {{0, 1}, {1, 2}, {1, 3}, {3, 4}, {2, 5}, {3, 5}, {4, 6}, {5, 6}};\n\n    vector<int> order = topologicalOrder((int)task.size(), deps);\n    cout << \"build order:\";\n    for (int v : order) cout << ' ' << task[v];\n    cout << \"\\n\";\n\n    deps.push_back({6, 1});  // \"deploy before parse\" creates a cycle\n    cout << (topologicalOrder((int)task.size(), deps).empty() ? \"cycle detected\" : \"no cycle\") << \"\\n\";\n    return 0;\n}\n",
+          "viz_id": "topological-sort",
+          "applications_md": "- **Scheduling with prerequisites**: courses, build steps, task pipelines, spreadsheet recalculation.\n- **Deadlock and cycle detection** in dependency graphs.\n- **Dynamic programming on DAGs**: longest path, number of paths, earliest start times — process vertices in topological order so every predecessor is final first.\n",
+          "pitfall_md": "- Build in-degrees from **all** edges, including duplicates, or decrement consistently — a duplicate edge counted once but removed twice corrupts the counts.\n- An order that is shorter than `n` means a cycle; forgetting that check silently returns a partial schedule.\n- Edge direction matters: \"`b` depends on `a`\" is the edge `a → b`, not `b → a`.\n",
+          "practice_question_slugs": [
+            "course-schedule"
+          ],
+          "status": "published"
+        }
+      ]
+    }
+  ]
+}

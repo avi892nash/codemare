@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { rm } from 'node:fs/promises';
-import { Language } from '../../models/ExecutionResult.js';
+import { SandboxLanguage } from '../../models/ExecutionResult.js';
 import { SANDBOX_CONFIG } from '../../config/sandbox.js';
 import { SandboxResult } from './types.js';
 
@@ -10,7 +10,7 @@ import { SandboxResult } from './types.js';
  * The key is sha256(language + compiler argv + source). Two properties make
  * this safe and worthwhile:
  *
- *   · Deterministic — g++/javac with fixed flags produce the same artifact for
+ *   · Deterministic — g++/javac/go with fixed flags produce the same artifact for
  *     the same source, so a hit is always correct for the lifetime of the
  *     process (a new process gets a fresh cache, so a compiler upgrade after a
  *     restart never serves a stale binary).
@@ -51,7 +51,7 @@ export class CompileCache {
 
   constructor(private readonly maxEntries: number) {}
 
-  key(language: Language, compileArgv: string[], code: string): string {
+  key(language: SandboxLanguage, compileArgv: string[], code: string): string {
     return createHash('sha256')
       .update(language)
       .update('\0')
@@ -113,6 +113,13 @@ export class CompileCache {
         void rm(evicted.dir, { recursive: true, force: true }).catch(() => undefined);
       }
     }
+  }
+
+  /** True when `key` is compiled and stored (a getOrCompile would be a pure
+   *  hit). An in-flight compile is not "has" — callers waiting on it are
+   *  still compiling from the user's point of view. */
+  has(key: string): boolean {
+    return this.entries.has(key);
   }
 
   size(): number {

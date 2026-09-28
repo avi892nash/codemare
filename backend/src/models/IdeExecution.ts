@@ -13,7 +13,7 @@ export interface IdeTestCase {
  */
 export interface IdeExecutionRequest {
   code: string;            // Complete user code
-  language: Language;      // python | javascript | cpp | java
+  language: Language;      // python | javascript | typescript | cpp | java | go
   testCases: IdeTestCase[]; // 1-10 test cases
 }
 

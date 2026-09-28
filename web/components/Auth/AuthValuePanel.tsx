@@ -2,32 +2,33 @@ import { Icon, type IconName } from '../ui/Icon';
 import { Pill } from '../ui/Pill';
 
 /**
- * Right-hand value panel on the auth screen. On-message for what Codemare is:
- * a place to practice DSA / competitive programming and to author and share
- * problem sets — not the old µs-timing pitch. Hidden on narrow viewports
- * (see .auth-panel in globals.css).
+ * Right-hand value panel on the auth screens: what Codemare is — a DSA
+ * practice ground with µs-timed judging and a learning loop (earn tokens,
+ * unlock topics, open tiers). Hidden on narrow viewports (see .auth-panel in
+ * globals.css). Server-safe.
  */
 const FEATURES: Array<{ icon: IconName; title: string; body: string }> = [
   {
-    icon: 'graduation',
-    title: 'Learn by doing',
-    body: 'Solve curated DSA and competitive-programming problems with instant, sandboxed judging in Python, JavaScript, C++ and Java.',
+    icon: 'bolt',
+    title: 'Judged to the microsecond',
+    body: 'Run and submit in Python, JavaScript, TypeScript, C++, Java or Go. Every test runs sandboxed and is timed in CPU microseconds.',
   },
   {
-    icon: 'book',
-    title: 'Author your own',
-    body: 'Build books of lessons and problems, set test cases, and share them with everyone who’s learning.',
+    icon: 'map',
+    title: 'Unlock as you go',
+    body: 'Solves earn topic tokens. Spend them to open new topics, and pass a gate to open the next tier.',
   },
   {
-    icon: 'trend',
+    icon: 'history',
     title: 'Track every run',
-    body: 'Submissions are saved with per-problem runtime and memory, so you can see yourself improve.',
+    body: 'Each submission keeps its code, runtime, memory and per-test results, so you can see yourself improve.',
   },
 ];
 
 export function AuthValuePanel() {
   return (
-    <div
+    <aside
+      aria-label="About Codemare"
       className="auth-panel"
       style={{
         position: 'relative',
@@ -56,15 +57,15 @@ export function AuthValuePanel() {
 
       <div style={{ position: 'relative', maxWidth: 440 }}>
         <Pill tone="accent" size="md" icon="graduation" style={{ marginBottom: 18 }}>
-          Practice · Author · Share
+          Practice · Learn · Unlock
         </Pill>
         <h2 style={{ margin: 0, fontSize: 30, fontWeight: 600, letterSpacing: -0.5, lineHeight: 1.15 }}>
           Train on real problems.{' '}
-          <span style={{ color: 'var(--accent-hi)' }}>Build your own.</span>
+          <span style={{ color: 'var(--accent-hi)' }}>Earn what&apos;s next.</span>
         </h2>
         <p style={{ margin: '12px 0 0', fontSize: 14, color: 'var(--fg-2)', lineHeight: 1.6 }}>
-          Codemare is where you practice algorithms by writing and running code —
-          and where anyone can author lessons and problem sets to teach what they know.
+          Codemare is where you practice algorithms by writing and running real code,
+          then turn what you solve into access to harder topics.
         </p>
       </div>
 
@@ -94,6 +95,6 @@ export function AuthValuePanel() {
           </div>
         ))}
       </div>
-    </div>
+    </aside>
   );
 }

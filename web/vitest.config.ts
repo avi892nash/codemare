@@ -11,6 +11,8 @@ import { testDatabaseUrl } from './lib/server/test/database-url';
 const root = fileURLToPath(new URL('.', import.meta.url));
 
 export default defineConfig({
+  // Match Next's automatic JSX runtime so tests can import .tsx directly.
+  esbuild: { jsx: 'automatic' },
   resolve: {
     alias: {
       '@/': root,

@@ -394,5 +394,5 @@ Old routes `/p/[id]`, `/auth`, `/profile` redirect to their new homes.
 | `COMPILE_SERVICE_URL`, `INTERNAL_TOKEN` | web + backend | shared secret |
 | `FEATURE_LIBRARY_PUBLIC` | web | default `false` |
 | `FEATURE_AI_REVIEW`, `ANTHROPIC_API_KEY` | web | default off |
-| `MAIL_FROM`, `SMTP_URL` | web | unset → reset links logged to server console |
+| `RESEND_API_KEY`, `MAIL_FROM` | web | password-reset mail over Resend's HTTP API (`lib/mailer.ts`, plain fetch); either unset → the reset link is logged to the server console. Links use `AUTH_URL`'s origin when set (set it in production), else the request host |
 | `DIRECTUS_*` | directus | see `deploy/` |

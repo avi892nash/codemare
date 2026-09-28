@@ -1,9 +1,11 @@
 import { spawnSync } from 'node:child_process';
-import { Language } from '../models/ExecutionResult.js';
+import { Language, SandboxLanguage } from '../models/ExecutionResult.js';
 import { SANDBOX_CONFIG } from '../config/sandbox.js';
 import { isolateAdapter } from './sandbox/isolateAdapter.js';
 import { executeLocal } from './sandbox/localAdapter.js';
+import { disableSharedGoCache, sharedGoCacheEnabled } from './sandbox/goToolchain.js';
 import { RunOptions, SandboxResult } from './sandbox/types.js';
+import { transpileTypeScript } from './typescript.js';
 
 /**
  * Selects the execution backend exactly once at module load.
@@ -60,9 +62,10 @@ export const SANDBOX_BACKEND: BackendName = pickBackend();
  * Single entry point for executing user code. Dispatches to the backend that
  * was selected at module load. The selection is logged once at startup
  * (see server.ts) so the operator always knows which adapter is live.
+ * TypeScript never gets here — callers transpile it and pass 'javascript'.
  */
 export async function executeSandboxed(
-  language: Language,
+  language: SandboxLanguage,
   code: string,
   input: string,
   options?: RunOptions
@@ -72,46 +75,76 @@ export async function executeSandboxed(
     : executeLocal(language, code, input, options);
 }
 
+/** Run one probe program; resolves to an error message, or undefined when it works. */
+async function probeLanguage(lang: Language, code: string, expect: string): Promise<string | undefined> {
+  try {
+    let runLang: SandboxLanguage;
+    let runCode = code;
+    if (lang === 'typescript') {
+      const ts = await transpileTypeScript(code);
+      if (!ts.ok) return ts.error;
+      runLang = 'javascript';
+      runCode = ts.js;
+    } else {
+      runLang = lang;
+    }
+    const res = await executeSandboxed(runLang, runCode, '');
+    if (res.status === 'OK' && res.output.trim() === expect) return undefined;
+    return res.error ?? `unexpected output ${JSON.stringify(res.output)}`;
+  } catch (err) {
+    return err instanceof Error ? err.message : String(err);
+  }
+}
+
 /**
  * Probe the runtime stack at startup: run a trivial program for each language.
  * Failures are reported per-language and do NOT block startup — a missing JDK
- * should disable Java rather than take the service down.
+ * should disable Java rather than take the service down. The TypeScript probe
+ * also loads the compiler, so the first real TS request doesn't pay for it.
+ *
+ * Go under isolate compiles against the read-only shared build cache; if that
+ * probe fails, the shared cache is switched off and Go is probed again with a
+ * private per-box cache, so a surprise there costs speed, not the language.
  */
 export async function sandboxReadinessProbe(): Promise<{
   backend: BackendName;
   available: Language[];
   unavailable: Array<{ language: Language; reason: string }>;
 }> {
-  const probes: Array<{ lang: Language; code: string; expect: string; input: string }> = [
-    { lang: 'python',     code: 'print("ok")',                                                                            expect: 'ok', input: '' },
-    { lang: 'javascript', code: 'console.log("ok")',                                                                      expect: 'ok', input: '' },
-    { lang: 'cpp',        code: '#include<iostream>\nint main(){std::cout<<"ok";return 0;}',                              expect: 'ok', input: '' },
-    { lang: 'java',       code: 'public class Main { public static void main(String[] a){ System.out.println("ok"); } }', expect: 'ok', input: '' },
+  const goProgram = (tag: string) =>
+    `package main\n\nimport "fmt"\n\n// probe ${tag}\nfunc main() { fmt.Println("ok") }\n`;
+  const probes: Array<{ lang: Language; code: string }> = [
+    { lang: 'python',     code: 'print("ok")' },
+    { lang: 'javascript', code: 'console.log("ok")' },
+    { lang: 'typescript', code: 'const s: string = "ok";\nconsole.log(s);' },
+    { lang: 'cpp',        code: '#include<iostream>\nint main(){std::cout<<"ok";return 0;}' },
+    { lang: 'java',       code: 'public class Main { public static void main(String[] a){ System.out.println("ok"); } }' },
+    { lang: 'go',         code: goProgram('shared-cache') },
   ];
 
-  const available: Language[] = [];
-  const unavailable: Array<{ language: Language; reason: string }> = [];
-
-  await Promise.all(
-    probes.map(async ({ lang, code, expect, input }) => {
-      try {
-        const res = await executeSandboxed(lang, code, input);
-        if (res.status === 'OK' && res.output.trim() === expect) {
-          available.push(lang);
-        } else {
-          unavailable.push({
-            language: lang,
-            reason: res.error ?? `unexpected output ${JSON.stringify(res.output)}`,
-          });
-        }
-      } catch (err) {
-        unavailable.push({
-          language: lang,
-          reason: err instanceof Error ? err.message : String(err),
-        });
-      }
-    })
+  const results = await Promise.all(
+    probes.map(async ({ lang, code }) => ({ lang, reason: await probeLanguage(lang, code, 'ok') }))
   );
 
-  return { backend: SANDBOX_BACKEND, available, unavailable };
+  const go = results.find((r) => r.lang === 'go')!;
+  if (go.reason !== undefined && SANDBOX_BACKEND === 'isolate' && sharedGoCacheEnabled()) {
+    disableSharedGoCache();
+    // A different source, or the compile cache would replay the failure.
+    const retry = await probeLanguage('go', goProgram('private-cache'), 'ok');
+    if (retry === undefined) {
+      console.warn(
+        `  Go: build against the shared cache failed (${go.reason.split('\n')[0]}); ` +
+          'using a private per-box cache instead (correct, but every compile is cold)'
+      );
+    }
+    go.reason = retry;
+  }
+
+  return {
+    backend: SANDBOX_BACKEND,
+    available: results.filter((r) => r.reason === undefined).map((r) => r.lang),
+    unavailable: results
+      .filter((r): r is { lang: Language; reason: string } => r.reason !== undefined)
+      .map((r) => ({ language: r.lang, reason: r.reason })),
+  };
 }

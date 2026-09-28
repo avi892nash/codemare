@@ -1,0 +1,45 @@
+{
+  "slug": "strings",
+  "title": "Strings",
+  "summary": "Linear-time pattern matching by letting a string describe its own structure.",
+  "icon": "code",
+  "ord": 3,
+  "chapters": [
+    {
+      "slug": "pattern-matching",
+      "title": "Pattern matching",
+      "articles": [
+        {
+          "slug": "prefix-function",
+          "title": "Prefix function and KMP",
+          "summary": "For every prefix, the longest border that is both a proper prefix and a suffix — the engine behind linear-time matching.",
+          "difficulty": "Hard",
+          "reading_minutes": 10,
+          "idea_md": "A **border** of a string is a proper prefix that is also a suffix: `ab` is a border of `abcab`. The prefix function records, for every position `i`, the length of the longest border of `s[0..i]`:\n\n| `i` | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 |\n|---|---|---|---|---|---|---|---|---|\n| `s[i]` | a | b | a | c | a | b | a | b |\n| `π[i]` | 0 | 0 | 1 | 0 | 1 | 2 | 3 | 2 |\n\nComputing it naively compares every prefix with every suffix. The linear algorithm reuses what it already knows. To get `π[i]`, try to extend the previous border `k = π[i−1]`: if `s[i] == s[k]`, the answer is `k + 1`. If not, the next candidate is not `k − 1` but the **border of that border**, `π[k−1]` — the longest shorter string that is still both a prefix and a suffix. Keep falling back until the characters match or `k` reaches `0`.\n\nEach step of `i` raises `k` by at most one, and every fallback lowers it, so the total work is `O(n)`.\n\n**Pattern matching (Knuth–Morris–Pratt).** Compute the prefix function of `pattern + sep + text`, where `sep` occurs in neither string. Wherever `π` equals the pattern's length, a full copy of the pattern ends there. Finding every occurrence costs `O(|pattern| + |text|)`, with no backtracking in the text.\n",
+          "formula": "\\pi[i] = \\max \\left\\{ k \\le i : s_{0 \\ldots k-1} = s_{i-k+1 \\ldots i} \\right\\}",
+          "code_cpp": "#include <iostream>\n#include <string>\n#include <vector>\nusing namespace std;\n\n// pi[i] = length of the longest proper prefix of s[0..i] that is also its suffix.\nvector<int> prefixFunction(const string& s) {\n    int n = (int)s.size();\n    vector<int> pi(n, 0);\n    for (int i = 1; i < n; ++i) {\n        int k = pi[i - 1];                            // the border we try to extend\n        while (k > 0 && s[i] != s[k]) k = pi[k - 1];  // fall back to the next shorter border\n        if (s[i] == s[k]) ++k;\n        pi[i] = k;\n    }\n    return pi;\n}\n\n// Start of every occurrence of pattern in text, in O(|pattern| + |text|).\nvector<int> findAll(const string& pattern, const string& text) {\n    string s = pattern + '\\0' + text;  // a separator that occurs in neither string\n    vector<int> pi = prefixFunction(s);\n    vector<int> hits;\n    int m = (int)pattern.size();\n    for (int i = m + 1; i < (int)s.size(); ++i)\n        if (pi[i] == m) hits.push_back(i - 2 * m);\n    return hits;\n}\n\nint main() {\n    string s = \"abacabab\";\n    cout << \"s  = \" << s << \"\\npi =\";\n    for (int v : prefixFunction(s)) cout << ' ' << v;\n    cout << \"\\n\";\n\n    string pattern = \"ababc\", text = \"abababcabababcab\";\n    cout << pattern << \" occurs in \" << text << \" at:\";\n    for (int i : findAll(pattern, text)) cout << ' ' << i;\n    cout << \"\\n\";\n\n    // The shortest period of r is n - pi[n-1] when that length divides n.\n    string r = \"abcabcabcabc\";\n    int p = (int)r.size() - prefixFunction(r).back();\n    cout << r << \" is \" << r.substr(0, p) << \" repeated \" << (int)r.size() / p << \" times\\n\";\n    return 0;\n}\n",
+          "viz_id": "prefix-function",
+          "applications_md": "- **Exact pattern matching** in linear time, including streaming text where you cannot look back.\n- **Periods and repetitions**: the shortest period of a string is `n − π[n−1]` when it divides `n`.\n- **Counting prefix occurrences**, building a string-matching automaton, and the shortest palindrome made by adding characters in front of `s` (the longest palindromic prefix is the last value of the prefix function of `s + sep + reverse(s)`).\n",
+          "pitfall_md": "- The separator must not occur in the pattern or the text; otherwise a match can straddle it.\n- Falling back with `k = k − 1` instead of `k = π[k−1]` is wrong, not just slow: on `ababb` it reports `π[4] = 2`, although `ab` is not a suffix of `ababb` (the right answer is `0`).\n- `π[i]` is the length of a **proper** border: `π[0]` is always `0`, never `1`.\n",
+          "practice_question_slugs": [],
+          "status": "published"
+        },
+        {
+          "slug": "z-function",
+          "title": "Z-function",
+          "summary": "For every position, how long the string starting there agrees with the string’s own beginning.",
+          "difficulty": "Medium",
+          "reading_minutes": 8,
+          "idea_md": "`z[i]` is the length of the longest common prefix of `s` and the suffix that starts at `i`. For `s = aabcaabxaaz`, `z[4] = 3` because `aab` starts both the string and position `4`, and the next characters (`c` and `x`) differ. By convention `z[0]` is left `0`.\n\nComparing every suffix with the whole string would be quadratic. The linear algorithm remembers the **Z-box**: the window `[l, r)` that reaches furthest right among the matches found so far. Everything inside it is a copy of `s[0 .. r−l)`.\n\nFor a new position `i`:\n\n- If `i` lies inside the box, the character run at `i` mirrors the one at `i − l`, so `z[i]` is at least `min(r − i, z[i − l])` — no comparisons needed for that part.\n- Then extend by comparing characters directly, and if the match now reaches beyond `r`, move the box to `[i, i + z[i])`.\n\nEvery successful direct comparison pushes `r` to the right, and `r` never moves left, so the whole array costs `O(n)`.\n\nFor **pattern matching**, compute the Z-function of `pattern + sep + text`: a position in the text part whose value is at least `|pattern|` starts an occurrence.\n",
+          "formula": "z[i] = \\max \\left\\{ k : s_{0 \\ldots k-1} = s_{i \\ldots i+k-1} \\right\\}",
+          "code_cpp": "#include <algorithm>\n#include <iostream>\n#include <string>\n#include <vector>\nusing namespace std;\n\n// z[i] = length of the longest common prefix of s and s[i..]; z[0] stays 0.\nvector<int> zFunction(const string& s) {\n    int n = (int)s.size();\n    vector<int> z(n, 0);\n    int l = 0, r = 0;  // [l, r) is the match window that reaches furthest right\n    for (int i = 1; i < n; ++i) {\n        if (i < r) z[i] = min(r - i, z[i - l]);  // reuse what the window already tells us\n        while (i + z[i] < n && s[z[i]] == s[i + z[i]]) ++z[i];\n        if (i + z[i] > r) {\n            l = i;\n            r = i + z[i];\n        }\n    }\n    return z;\n}\n\nint main() {\n    string s = \"aabcaabxaaz\";\n    cout << \"s = \" << s << \"\\nz =\";\n    for (int v : zFunction(s)) cout << ' ' << v;\n    cout << \"\\n\";\n\n    string pattern = \"aab\", text = \"baabaaabaab\";\n    string joined = pattern + '$' + text;  // '$' occurs in neither string\n    vector<int> z = zFunction(joined);\n    int m = (int)pattern.size();\n    cout << pattern << \" occurs in \" << text << \" at:\";\n    for (int i = m + 1; i < (int)joined.size(); ++i)\n        if (z[i] >= m) cout << ' ' << i - m - 1;\n    cout << \"\\n\";\n    return 0;\n}\n",
+          "viz_id": "z-function",
+          "applications_md": "- **Pattern matching** in `O(|pattern| + |text|)`, an alternative to KMP that many find easier to reason about.\n- **Counting distinct substrings** incrementally, or finding the shortest period (the first `i` with `i + z[i] = n` and `n` divisible by `i`).\n- **String compression and repetition checks**, and comparing a string with its own shifts.\n",
+          "pitfall_md": "- The copy step must take `min(r − i, z[i − l])`: copying `z[i − l]` alone can run past the window, where nothing is known.\n- Forgetting to move the window after a longer match keeps the algorithm correct but quadratic.\n- As with KMP, the separator in `pattern + sep + text` must not appear in either string.\n",
+          "practice_question_slugs": [],
+          "status": "published"
+        }
+      ]
+    }
+  ]
+}

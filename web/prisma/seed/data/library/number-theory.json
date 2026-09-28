@@ -1,0 +1,83 @@
+{
+  "slug": "number-theory",
+  "title": "Number theory",
+  "summary": "Primes, divisibility and modular arithmetic — the integer toolkit behind hashing, counting and cryptography.",
+  "icon": "hash",
+  "ord": 0,
+  "chapters": [
+    {
+      "slug": "primes",
+      "title": "Primes",
+      "articles": [
+        {
+          "slug": "sieve-of-eratosthenes",
+          "title": "Sieve of Eratosthenes",
+          "summary": "List every prime up to n by crossing out multiples instead of testing numbers one at a time.",
+          "difficulty": "Easy",
+          "reading_minutes": 6,
+          "idea_md": "Testing numbers one at a time repeats work: trial division tries `2`, `3`, `5`, `7`, … against every candidate, over and over, even though each of those primes only ever rules out its own multiples. The sieve turns the question around. Instead of asking *\"is this number prime?\"* for every candidate, it asks *\"which numbers does this prime rule out?\"* and answers it once per prime.\n\nStart with a table that marks every number from `2` to `n` as a candidate. Walk upward. The first unmarked number you meet is prime — nothing smaller divides it, or it would have been crossed out already. Cross out all of its multiples, then move on to the next unmarked number.\n\nTwo observations make it fast:\n\n- **Start at `p * p`.** A multiple `k * p` with `k < p` has a smaller prime factor, so an earlier pass already removed it.\n- **Stop at `√n`.** Once `p * p > n` there is nothing left to cross out; every number still unmarked is prime.\n\nEach prime `p` touches about `n / p` cells, and summing that over the primes gives `O(n log log n)` — in practice a sieve up to ten million finishes in well under a second. Memory is one flag per number, which is why the table is usually a `vector<bool>` (bit-packed) or a byte array.\n",
+          "formula": "\\sum_{p \\le n} \\frac{n}{p} = n \\, \\ln \\ln n + O(n)",
+          "code_cpp": "#include <iostream>\n#include <vector>\nusing namespace std;\n\n// is_prime[i] is true exactly when i is prime, for 0 <= i <= n.\nvector<bool> sieve(int n) {\n    vector<bool> is_prime(n + 1, true);\n    is_prime[0] = false;\n    if (n >= 1) is_prime[1] = false;\n    for (long long p = 2; p * p <= n; ++p) {\n        if (!is_prime[p]) continue;\n        // Smaller multiples of p were crossed out by smaller primes already.\n        for (long long m = p * p; m <= n; m += p) is_prime[m] = false;\n    }\n    return is_prime;\n}\n\nint main() {\n    const int n = 50;\n    vector<bool> is_prime = sieve(n);\n    int count = 0;\n    cout << \"primes up to \" << n << \":\";\n    for (int i = 2; i <= n; ++i) {\n        if (is_prime[i]) {\n            cout << ' ' << i;\n            ++count;\n        }\n    }\n    cout << \"\\n\" << count << \" primes\\n\";\n\n    vector<bool> big = sieve(1000000);\n    int total = 0;\n    for (bool b : big) total += b;\n    cout << \"primes up to one million: \" << total << \"\\n\";\n    return 0;\n}\n",
+          "viz_id": "sieve",
+          "applications_md": "- **Precomputing primes** for many queries: primality checks become a table lookup.\n- **Counting and summing primes** in a range, or building prefix counts of primes.\n- **Seeding other sieves**: the same crossing-out loop computes smallest prime factors, Euler's totient or the number of divisors for every number up to `n`.\n- **Segmented sieving**: sieve `[L, R]` for huge `L` using only the primes up to `√R`.\n",
+          "pitfall_md": "- Using `int` for `p * p` overflows once `n` approaches `2^31`; keep the loop variable 64-bit or compare `p <= n / p`.\n- Allocate `n + 1` entries: the table is indexed by the numbers themselves, so `n` needs slot `n` — one short and the last write runs off the end.\n- Crossing out from `2 * p` instead of `p * p` is still correct, just slower — but starting at `p` would mark `p` itself composite.\n- A sieve up to `10^9` needs 125 MB even bit-packed, more than most judges allow; switch to a segmented sieve or a primality test.\n",
+          "practice_question_slugs": [],
+          "status": "published"
+        },
+        {
+          "slug": "smallest-prime-factor",
+          "title": "Smallest prime factor table",
+          "summary": "A sieve variant that factorizes any number up to n in O(log n) by following its smallest prime factor.",
+          "difficulty": "Easy",
+          "reading_minutes": 6,
+          "idea_md": "The plain sieve answers *whether* a number is prime. Record a little more — for every number, the **smallest prime that divides it** — and the same pass lets you factorize any number in the table almost instantly.\n\nBuild the table like a sieve: walk `i` upward; if `spf[i]` is still empty, `i` is prime, so claim every multiple of `i` whose entry is still empty. Because primes are processed in increasing order, the first prime to claim a number is its smallest prime factor.\n\nFactorizing `x` is then a short walk: `spf[x]` is one prime factor; divide it out and repeat on `x / spf[x]` until you reach `1`.\n\n```\nspf[360] = 2  →  180 → 90 → 45\nspf[45]  = 3  →  15 → 5\nspf[5]   = 5  →  1          360 = 2·2·2·3·3·5\n```\n\nEvery step divides `x` by at least `2`, so a factorization takes at most `log₂ x` steps. The table costs one integer per number, which is the trade: `O(n)` memory for `O(log x)` factorizations instead of `O(√x)` trial division each time.\n",
+          "formula": "n = p_1^{e_1} \\, p_2^{e_2} \\cdots p_k^{e_k}, \\qquad k \\le \\log_2 n",
+          "code_cpp": "#include <iostream>\n#include <vector>\nusing namespace std;\n\n// spf[i] = the smallest prime dividing i, for 2 <= i <= n.\nvector<int> smallestPrimeFactors(int n) {\n    vector<int> spf(n + 1, 0);\n    for (int i = 2; i <= n; ++i) {\n        if (spf[i] != 0) continue;  // i already has a smaller prime factor\n        for (long long m = i; m <= n; m += i)\n            if (spf[m] == 0) spf[m] = i;  // i is prime: claim its unclaimed multiples\n    }\n    return spf;\n}\n\n// Prime factors of x with multiplicity, smallest first, in O(log x).\nvector<int> factorize(int x, const vector<int>& spf) {\n    vector<int> factors;\n    while (x > 1) {\n        factors.push_back(spf[x]);\n        x /= spf[x];\n    }\n    return factors;\n}\n\nint main() {\n    const int n = 1000000;\n    vector<int> spf = smallestPrimeFactors(n);\n    for (int x : {360, 97, 1024, 123456, 999983}) {\n        vector<int> f = factorize(x, spf);\n        cout << x << \" =\";\n        for (size_t i = 0; i < f.size(); ++i) cout << (i ? \" * \" : \" \") << f[i];\n        cout << \"  (\" << f.size() << \" prime factor\" << (f.size() == 1 ? \"\" : \"s\") << \")\\n\";\n    }\n    return 0;\n}\n",
+          "viz_id": null,
+          "applications_md": "- **Many factorizations**: counting divisors, summing divisors or computing Euler's totient for thousands of numbers.\n- **Distinct prime factors** of every array element, e.g. to group numbers that share a factor.\n- **Radicals and square-free checks**: a repeated factor shows up as the same `spf` twice in a row.\n",
+          "pitfall_md": "- The table only covers numbers up to `n`; factorizing something larger needs trial division by the primes up to its square root.\n- `spf` of `0` and `1` is undefined — guard the loop with `x > 1`.\n- One `int` per number is 4 MB per million entries; for `10^8` that is 400 MB, too much for most judges.\n",
+          "practice_question_slugs": [],
+          "status": "published"
+        }
+      ]
+    },
+    {
+      "slug": "modular-arithmetic",
+      "title": "Modular arithmetic",
+      "articles": [
+        {
+          "slug": "binary-exponentiation",
+          "title": "Binary exponentiation",
+          "summary": "Raise a number to the n-th power with O(log n) multiplications by squaring along the bits of n.",
+          "difficulty": "Easy",
+          "reading_minutes": 7,
+          "idea_md": "Multiplying `a` by itself `n` times takes `n − 1` multiplications. Squaring is the shortcut: `a²` squared is `a⁴`, squared again is `a⁸`, so `k` squarings reach `a^(2^k)`. Any exponent is a sum of powers of two — its binary digits — so `a^n` is the product of the squares that correspond to the set bits of `n`.\n\n`13 = 1101₂ = 8 + 4 + 1`, so `a^13 = a^8 · a^4 · a^1`.\n\nWalk the bits of `n` from the lowest one up while keeping `base = a^(2^k)`:\n\n1. If the current bit is set, multiply the result by `base`.\n2. Square `base` and shift `n` right by one.\n\nThat is at most two multiplications per bit, `O(log n)` in total. Under a modulus, reduce after every multiplication so the numbers never outgrow the machine word.\n\nThe idea is not about numbers specifically — it works for anything with an associative multiplication. Raising the matrix `[[1, 1], [1, 0]]` to the `n`-th power yields Fibonacci numbers in `O(log n)`, and composing a permutation with itself `n` times works the same way.\n",
+          "formula": "a^{n} = \\begin{cases} 1 & n = 0 \\\\ \\left(a^{n/2}\\right)^{2} & n \\text{ even} \\\\ a \\cdot a^{n-1} & n \\text{ odd} \\end{cases}",
+          "code_cpp": "#include <cstdint>\n#include <iostream>\nusing namespace std;\n\n// a^e mod m with O(log e) multiplications (m < 2^32, so products fit in 64 bits).\nuint64_t powMod(uint64_t a, uint64_t e, uint64_t m) {\n    uint64_t result = 1 % m;\n    a %= m;\n    while (e > 0) {\n        if (e & 1) result = result * a % m;  // this bit of e is set: use the current square\n        a = a * a % m;                        // a^(2^k) -> a^(2^(k+1))\n        e >>= 1;\n    }\n    return result;\n}\n\n// The same loop on 2x2 matrices: [[1,1],[1,0]]^n = [[F(n+1), F(n)], [F(n), F(n-1)]].\nstruct Mat { uint64_t a, b, c, d; };\n\nMat mul(const Mat& x, const Mat& y, uint64_t m) {\n    return {(x.a * y.a + x.b * y.c) % m, (x.a * y.b + x.b * y.d) % m,\n            (x.c * y.a + x.d * y.c) % m, (x.c * y.b + x.d * y.d) % m};\n}\n\nuint64_t fibonacci(uint64_t n, uint64_t m) {\n    Mat result{1, 0, 0, 1}, base{1, 1, 1, 0};\n    while (n > 0) {\n        if (n & 1) result = mul(result, base, m);\n        base = mul(base, base, m);\n        n >>= 1;\n    }\n    return result.b;\n}\n\nint main() {\n    const uint64_t MOD = 1000000007;\n    cout << \"3^13 mod 1e9+7    = \" << powMod(3, 13, MOD) << \"\\n\";\n    cout << \"2^62 mod 1e9+7    = \" << powMod(2, 62, MOD) << \"\\n\";\n    cout << \"7^(10^18) mod 1e9+7 = \" << powMod(7, 1000000000000000000ULL, MOD) << \"\\n\";\n    cout << \"F(10)             = \" << fibonacci(10, MOD) << \"\\n\";\n    cout << \"F(10^18) mod 1e9+7 = \" << fibonacci(1000000000000000000ULL, MOD) << \"\\n\";\n    // Ways to climb 45 stairs taking 1 or 2 at a time = F(46) < 2^32, so reducing\n    // modulo 2^32 keeps it exact (and every product stays below 2^64).\n    cout << \"ways to climb 45 stairs = \" << fibonacci(46, 1ULL << 32) << \"\\n\";\n    return 0;\n}\n",
+          "viz_id": "binary-exponentiation",
+          "applications_md": "- **Modular powers** in hashing, combinatorics (`n!` inverses via Fermat's little theorem) and primality tests.\n- **Linear recurrences** such as Fibonacci or tiling counts: raise the recurrence's matrix to the `n`-th power.\n- **Repeated application** of any associative step: composing a permutation, doubling in a graph (\"where am I after `2^k` moves?\").\n",
+          "pitfall_md": "- Multiplying two residues below `m` needs `2·log₂ m` bits: with `m ≈ 10^9` use 64-bit products; with `m ≈ 10^18` use 128-bit arithmetic or a multiply-and-reduce routine.\n- Start the result at `1 % m`, not `1`: when `m = 1` every power is `0`.\n- Negative bases: reduce with `((a % m) + m) % m` first; `%` keeps the sign in C++.\n",
+          "practice_question_slugs": [
+            "climbing-stairs"
+          ],
+          "status": "published"
+        },
+        {
+          "slug": "extended-euclid",
+          "title": "Extended Euclidean algorithm",
+          "summary": "Find gcd(a, b) together with coefficients x, y such that ax + by = gcd(a, b) — and with them, modular inverses.",
+          "difficulty": "Medium",
+          "reading_minutes": 8,
+          "idea_md": "Euclid's algorithm rests on one fact: a number divides both `a` and `b` exactly when it divides both `b` and `a mod b`. So `gcd(a, b) = gcd(b, a mod b)`, and the pair shrinks until the second number is `0`, at which point the first one is the answer.\n\nThe extended version also answers *how* the gcd is built from `a` and `b`. Suppose the recursive call already found `x'` and `y'` with\n\n`b·x' + (a mod b)·y' = g`.\n\nSince `a mod b = a − ⌊a / b⌋·b`, substituting and regrouping gives\n\n`a·y' + b·(x' − ⌊a / b⌋·y') = g`,\n\nso `x = y'` and `y = x' − ⌊a / b⌋·y'` work for the original pair. The base case `gcd(a, 0) = a` uses `x = 1, y = 0`.\n\nThe payoff is the **modular inverse**. When `gcd(a, m) = 1`, the identity reads `a·x + m·y = 1`, and taking it modulo `m` leaves `a·x ≡ 1`: `x` is the inverse of `a`. The same coefficients solve linear congruences `a·x ≡ c (mod m)` whenever `gcd(a, m)` divides `c`. Both run in `O(log min(a, b))` steps.\n",
+          "formula": "a x + b y = \\gcd(a, b), \\qquad x = y^{\\prime}, \\quad y = x^{\\prime} - \\left\\lfloor \\frac{a}{b} \\right\\rfloor y^{\\prime}",
+          "code_cpp": "#include <iostream>\nusing namespace std;\n\n// Returns g = gcd(a, b) and sets x, y so that a*x + b*y = g (a, b >= 0).\nlong long extendedGcd(long long a, long long b, long long& x, long long& y) {\n    if (b == 0) {\n        x = 1;\n        y = 0;\n        return a;\n    }\n    long long x1, y1;\n    long long g = extendedGcd(b, a % b, x1, y1);\n    x = y1;\n    y = x1 - (a / b) * y1;\n    return g;\n}\n\n// The inverse of a modulo m, or -1 when gcd(a, m) != 1 (no inverse exists).\nlong long modInverse(long long a, long long m) {\n    long long x, y;\n    long long g = extendedGcd(((a % m) + m) % m, m, x, y);\n    if (g != 1) return -1;\n    return ((x % m) + m) % m;\n}\n\nint main() {\n    long long x, y;\n    long long g = extendedGcd(240, 46, x, y);\n    cout << \"gcd(240, 46) = \" << g << \" = 240*(\" << x << \") + 46*(\" << y << \")\\n\";\n\n    cout << \"inverse of 3 mod 11  = \" << modInverse(3, 11) << \"\\n\";\n    cout << \"inverse of 10 mod 17 = \" << modInverse(10, 17) << \"\\n\";\n    cout << \"inverse of 6 mod 9   = \" << modInverse(6, 9) << \"  (gcd is 3: none)\\n\";\n\n    // 14x = 30 (mod 100): gcd(14, 100) = 2 divides 30, so solve 7x = 15 (mod 50).\n    long long inv = modInverse(7, 50);\n    cout << \"14x = 30 (mod 100)  ->  x = \" << (15 * inv) % 50 << \" (mod 50)\\n\";\n    return 0;\n}\n",
+          "viz_id": null,
+          "applications_md": "- **Modular inverses** when the modulus is not prime (Fermat's shortcut `a^(m−2)` needs a prime `m`).\n- **Linear congruences and Diophantine equations** `a·x + b·y = c`: solvable exactly when `gcd(a, b)` divides `c`.\n- **Chinese remainder theorem**: merging `x ≡ r₁ (mod m₁)` and `x ≡ r₂ (mod m₂)` needs an inverse of `m₁` modulo `m₂`.\n",
+          "pitfall_md": "- C++ `%` can be negative for negative operands; normalize with `((a % m) + m) % m` before and after.\n- The coefficients can be negative (and large); reduce `x` modulo `m` before using it as an inverse.\n- An inverse only exists when `gcd(a, m) = 1` — return a sentinel instead of a wrong number.\n- The recursion depth is only `O(log n)`, but an iterative version avoids it entirely if the stack is tight.\n",
+          "practice_question_slugs": [],
+          "status": "published"
+        }
+      ]
+    }
+  ]
+}

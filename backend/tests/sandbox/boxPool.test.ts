@@ -45,3 +45,22 @@ test('throws on invalid capacity', () => {
   assert.throws(() => new BoxPool(0));
   assert.throws(() => new BoxPool(-1));
 });
+
+test('onWait fires only when the caller has to queue (drives the SSE queued event)', async () => {
+  const pool = new BoxPool(1);
+  let waits = 0;
+  const first = await pool.acquire(() => waits++);
+  assert.equal(waits, 0, 'a free box is not a wait');
+  const second = pool.acquire(() => waits++);
+  assert.equal(waits, 1, 'onWait runs synchronously when queuing');
+  pool.release(first);
+  assert.equal(await second, first);
+});
+
+test('firstId offsets the id range so two pools never share a box', async () => {
+  const runPool = new BoxPool(2);
+  const compilePool = new BoxPool(2, 100);
+  const ids = [await runPool.acquire(), await runPool.acquire(), await compilePool.acquire(), await compilePool.acquire()];
+  assert.deepEqual(ids.slice(0, 2).sort(), [0, 1]);
+  assert.deepEqual(ids.slice(2).sort(), [100, 101]);
+});
