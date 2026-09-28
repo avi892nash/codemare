@@ -19,6 +19,8 @@ async function startServer() {
         console.warn(`  Unavailable: ${u.language} (${u.reason})`);
       }
     }
+    const pinningOk = probe.pinning.state === 'enforced' || probe.pinning.state === 'off';
+    (pinningOk ? console.log : console.warn)(`  CPU pinning: ${probe.pinning.message}`);
 
     // Queue mode: with REDIS_URL set, submissions can be enqueued and polled.
     // Without it, the API runs every submission synchronously (unchanged).

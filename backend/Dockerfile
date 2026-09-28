@@ -13,18 +13,22 @@
 #     mounted read-only and lacks CAP_SYS_ADMIN, so isolate cannot run there.
 #   · cgroup v2 on the host and a private cgroup namespace (Docker's default
 #     on cgroup v2). deploy/backend/docker-entrypoint.sh moves the container's
-#     processes into a leaf cgroup and delegates cpuset/memory/pids to
-#     /sys/fs/cgroup/isolate, which it configures as isolate's cg_root.
+#     processes into a leaf cgroup, delegates cpuset/memory/pids to
+#     /sys/fs/cgroup/isolate (isolate's cg_root), mounts a tmpfs as the box
+#     root and writes the service's CPU plan as per-box cpusets.
 #   · The server runs as the unprivileged `codemare` user; only the setuid
 #     isolate binary gains root, exactly as on the old systemd host.
 #
 # Toolchain layout matters inside the sandbox: a box sees only /bin, /lib*,
-# /usr, /dev, /proc and a private /tmp, with an empty environment (no PATH,
-# no HOME), so `/usr/bin/env <tool>` searches the default /bin:/usr/bin.
-# Every toolchain therefore lives under /usr and is linked into /usr/bin
-# directly (never via /etc/alternatives, which a box cannot see). That is also
-# why the JDK is Temurin's self-contained tree rather than Debian's openjdk,
-# whose conf/ and lib/jvm.cfg are symlinks into /etc.
+# /usr, /dev, /proc and a private /tmp, and gets only the environment the
+# compile service passes (PATH=/usr/local/bin:/usr/bin:/bin, HOME=/box,
+# LANG=C.UTF-8, plus per-language variables; see
+# backend/src/services/sandbox/isolateCommand.ts). Every toolchain therefore
+# lives under /usr and is linked into /usr/bin directly (never via
+# /etc/alternatives, which a box cannot see). That is also why the JDK is
+# Temurin's self-contained tree rather than Debian's openjdk, whose conf/ and
+# lib/jvm.cfg are symlinks into /etc. `taskset` (util-linux, in the base
+# image) pins each box to its CPU.
 
 ARG NODE_IMAGE=node:20.20.2-bookworm-slim
 ARG GO_IMAGE=golang:1.27.1-bookworm
@@ -83,18 +87,14 @@ RUN apt-get update \
 # backend/src/services/sandbox/goToolchain.ts.)
 COPY --from=go /usr/local/go /usr/local/go
 COPY --from=jdk /opt/java/openjdk /usr/local/lib/jvm/temurin-21
-COPY deploy/backend/gxx-wrapper.sh /usr/local/lib/codemare/g++
 RUN set -eux; \
     ln -sf /usr/local/bin/node /usr/bin/node; \
     for b in go gofmt; do ln -sf "/usr/local/go/bin/$b" "/usr/bin/$b"; done; \
     for b in java javac jar jshell; do ln -sf "/usr/local/lib/jvm/temurin-21/bin/$b" "/usr/bin/$b"; done; \
-    # g++ in an environment-less box: see deploy/backend/gxx-wrapper.sh.
-    test "$(readlink /usr/bin/g++)" = g++-12; \
-    chmod 0755 /usr/local/lib/codemare/g++; \
-    ln -sf /usr/local/lib/codemare/g++ /usr/bin/g++; \
     # Never download toolchains or modules from inside the container.
     printf '\nGOTOOLCHAIN=local\nGOPROXY=off\n' >> /usr/local/go/go.env; \
-    node --version; python3 --version; env -i /usr/bin/env g++ --version | head -n1; java -version; go version
+    node --version; python3 --version; g++ --version | head -n1; java -version; go version; \
+    taskset --version
 
 COPY --from=isolate /src/isolate/isolate /usr/local/bin/isolate
 COPY --from=isolate /src/isolate/isolate-check-environment /usr/local/sbin/isolate-check-environment

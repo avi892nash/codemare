@@ -449,8 +449,10 @@
           <div class="eyebrow">Decision 03</div>
           <h3>Fairness: one core, tight PID caps</h3>
           <dl class="drg">
-            <dt>Situation</dt><dd><p>With accurate timing, the next question is whether a user can cheat it by parallelizing.</p></dd>
-            <dt>Choice</dt><dd><p>Every run box is pinned to a single host core (<code>--core=N</code>, round-robin), so threads cannot win a timing comparison. PID caps are defense-in-depth and a fork-bomb stop, set per language to what the runtime itself needs (<code>languageSpec.ts</code>):</p>
+            <dt>Situation</dt><dd><p>With accurate timing, the next question is whether a user can cheat it by parallelizing — and whether one learner's threads can take CPU from everyone else's boxes.</p></dd>
+            <dt>Choice</dt><dd><p>Every run box gets exactly one CPU. The compile service plans it (<code>cpuPinning.ts</code>): run box <em>N</em> goes to CPU <em>N</em> mod <em>k</em>, round-robin over the CPUs the service may use, and with four or more CPUs the first one is kept free of boxes for the API. Compile boxes run trusted compilers, not learner code, and may use every box CPU. <code>ISOLATE_CPU_PINNING=off</code> switches pinning off.</p>
+              <p>An affinity mask alone is only advice — a program can widen its own with <code>sched_setaffinity(2)</code>, one <code>RawSyscall</code> in Go — so pinning is applied twice. The adapter starts every isolate run under <code>taskset -c</code>, and the container entrypoint writes the same plan into isolate's config as per-box cgroup cpusets (<code>box&lt;N&gt;.cpus</code>), which a program cannot leave. At startup the service tries to widen a box's mask from inside it and logs whether pinning is <em>enforced</em> (cpuset), only <em>advisory</em> (taskset without cpusets, e.g. a host whose isolate config has none) or missing. CI's isolate smoke runs four spinning threads in Java and four goroutines in Go (after a widening attempt) and requires CPU time ≈ wall time.</p>
+              <p>PID caps are defense-in-depth and a fork-bomb stop, set per language to what the runtime itself needs (<code>languageSpec.ts</code>):</p>
               <div class="table-wrap"><table>
                 <thead><tr><th>Language</th><th>PID cap</th><th>Why</th></tr></thead>
                 <tbody>
@@ -458,8 +460,11 @@
                   <tr><td>Python</td><td>1</td><td>GIL anyway; blocks <code>multiprocessing</code></td></tr>
                   <tr><td>JavaScript</td><td>16</td><td>Node needs ~7 threads just to boot (libuv pool, V8 GC)</td></tr>
                   <tr><td>Java</td><td>64</td><td>The JVM spawns ~25 internal threads (GC, JIT, finalizer…)</td></tr>
+                  <tr><td>Go</td><td>16</td><td>The runtime needs a few threads (sysmon, GC); <code>GOMAXPROCS=1</code> by default</td></tr>
                 </tbody>
               </table></div></dd>
+            <dt>Consequences</dt><dd><p>Parallelism buys neither wall time nor other learners' CPU: measured under isolate, four busy threads burn 1.00× CPU per wall second pinned and 3.95–4.00× unpinned, and the CPU-time limit counts every thread. Pinning does not change what a timing <em>measures</em>, though: the Java harness reads the calling thread's CPU clock, so work handed to another thread is missing from its <code>runUs</code>, pinned or not.</p></dd>
+            <dt>Lesson</dt><dd><p>This decision was first implemented as isolate's <code>--core=N</code> — the core-dump size limit, not a core. Boxes got up to <em>N</em> KB of core file and no pinning at all, until the image started pinning boxes on its own. Every box now runs with <code>--core=0</code>. A sandbox guarantee has to be checked from inside the sandbox, not read off a flag name.</p></dd>
           </dl>
         </article>
 

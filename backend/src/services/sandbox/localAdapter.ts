@@ -5,6 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { SandboxLanguage } from '../../models/ExecutionResult.js';
 import { SANDBOX_CONFIG } from '../../config/sandbox.js';
+import { outputLimitMessage } from './boxOutput.js';
 import { compileCache, type FreshCompileOutcome } from './compileCache.js';
 import { getLanguageSpec, resolveArtifactNames } from './languageSpec.js';
 import { LanguageSpec, RunOptions, SandboxResult, SandboxStatus } from './types.js';
@@ -45,8 +46,9 @@ function warnOnce(): void {
 }
 
 /** Output beyond this (UTF-16 units, ~bytes) is not collected; the process
- *  is killed (RE). */
-const MAX_OUTPUT_BYTES = 32 * 1024 * 1024;
+ *  is killed (RE, "Output limit exceeded") — the same cap isolate enforces
+ *  with --fsize. */
+const MAX_OUTPUT_BYTES = SANDBOX_CONFIG.limits.outputKb * 1024;
 
 interface SpawnOutcome {
   stdout: string;
@@ -310,7 +312,7 @@ export async function executeLocal(
           : status === 'TLE'
             ? `Time limit exceeded (${timeoutMs} ms)`
             : runResult.outputExceeded
-              ? `Output limit exceeded (${MAX_OUTPUT_BYTES / (1024 * 1024)} MB)`
+              ? outputLimitMessage(MAX_OUTPUT_BYTES)
               : runResult.stderr ||
                 (runResult.signal
                   ? `Process killed by ${runResult.signal}`

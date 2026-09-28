@@ -94,13 +94,22 @@ export interface LanguageSpec {
    */
   compilePidsLimit?: number;
   /**
-   * Extra environment for the compile phase. isolate passes it with -E (the
-   * box environment is otherwise empty); the local adapter layers it over
-   * process.env.
+   * Extra environment for the compile phase. isolate layers it over the
+   * minimal box environment (isolateCommand.BOX_BASE_ENV — the service's own
+   * environment never enters a box); the local adapter layers it over its
+   * child base environment.
    */
   compileEnv?(backend: SandboxBackendName): Record<string, string>;
   /** Extra isolate directory rules (`--dir=` values) for the compile box. */
   compileDirs?(): string[];
+  /**
+   * The compiler needs file locks (fcntl/flock), which isolate's syscall
+   * filter blocks by default because locks on a shared inode are a side
+   * channel between boxes. Only `go build` (it locks its build cache) sets
+   * this; it relaxes that one restriction for the compile box only — every
+   * run box, and every other compiler, keeps the full filter.
+   */
+  compileNeedsFileLocks?: boolean;
   /** Extra environment for the run phase (same layering as compileEnv). */
   runEnv?(backend: SandboxBackendName, options: { memoryKb: number }): Record<string, string>;
 }

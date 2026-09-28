@@ -32,7 +32,7 @@ one-shots that exit 0.
 | `deploy/deploy.sh` | build, pre-deploy backup, roll out, health-wait; `rollback <tag>` |
 | `deploy/caddy/Caddyfile` | TLS + reverse proxy |
 | `deploy/postgres/db-init.sql` | roles, schemas, grants (idempotent) |
-| `deploy/backend/` | compile-service entrypoint (cgroups, isolate config), g++ shim |
+| `deploy/backend/` | compile-service entrypoint (cgroups, box tmpfs, isolate config) |
 | `deploy/web/docker-entrypoint.sh` | migrate (+ optional seed), then the server |
 | `deploy/backup/` | backup image: nightly pg_dump → restic, restore tooling |
 | `admin/` | Directus image, content model, the codemare extension (recipe editor) |
@@ -361,10 +361,15 @@ The compile service runs untrusted code in [isolate](https://github.com/ioi/isol
 
 **Host requirements:** cgroup v2 (`stat -fc %T /sys/fs/cgroup` = `cgroup2fs`),
 Linux ≥ 5.19 (memory peak reporting), Docker with private cgroup namespaces
-(the default on cgroup v2; the compose file sets `cgroup: private`).
+(the default on cgroup v2; the compose file sets `cgroup: private`), and a
+plain `kernel.core_pattern` (`cat /proc/sys/kernel/core_pattern` must not
+start with `|`): boxes run with core dumps off, but a pipe handler such as
+apport or systemd-coredump is invoked for every crashing learner program
+regardless of that limit. On Ubuntu: `systemctl disable --now apport` (or
+`sysctl -w kernel.core_pattern=core`, persisted in `/etc/sysctl.d/`).
 
-**Why `privileged: true`:** for every box isolate creates mount, PID, network,
-IPC and UTS namespaces, bind-mounts the toolchain directories read-only, and
+**Why `privileged: true`:** for every box isolate creates mount, PID, network
+and IPC namespaces, bind-mounts the toolchain directories read-only, and
 writes the box's cgroup (`memory.max`, `cpuset.cpus`, `cgroup.kill`). A
 default container has `/sys/fs/cgroup` read-only and lacks `CAP_SYS_ADMIN`
 and the other capabilities that needs; granting them piecemeal (plus a custom
@@ -378,28 +383,88 @@ keep the host dedicated to Codemare.
 **What the entrypoint does** (`deploy/backend/docker-entrypoint.sh`), each start:
 
 1. Moves the container's processes into `/sys/fs/cgroup/init` (cgroup v2 lets
-   only an empty cgroup delegate controllers), enables `cpuset memory pids`, and
-   creates `/sys/fs/cgroup/isolate` as isolate's `cg_root` — the job
-   `isolate.service` does on a systemd host.
-2. Writes `/usr/local/etc/isolate`: box root, uid range 60000+, 1000 boxes,
-   `syscall_flags`, and one CPU per box (`box N → CPU N mod ncpu`).
-   isolate pins only through per-box cpusets in its config; it has no flag for
-   it (its `--core` is the core-dump size). `ISOLATE_CPU_PINNING=off` disables it.
-3. Initialises, runs and cleans up one box as the service user; if the host
+   only an empty cgroup delegate controllers), enables `memory pids` (plus
+   `cpuset` unless pinning is off), and creates `/sys/fs/cgroup/isolate` as
+   isolate's `cg_root` — the job `isolate.service` does on a systemd host.
+2. Mounts a tmpfs on the box root `/var/local/lib/isolate`, which holds every
+   box's `/box` and `/tmp` (see "Output" below).
+3. Writes `/usr/local/etc/isolate`: box root, uid range 60000+, 1000 boxes,
+   `syscall_flags = 65535`, and the compile service's CPU plan as per-box
+   cpusets — printed by the service's own code
+   (`node dist/services/sandbox/cpuPinningCli.js`), not decided here.
+4. Initialises, runs and cleans up one box as the service user; if the host
    cannot sandbox, the container exits here with the reason.
 
-**`ISOLATE_SYSCALL_FLAGS` (default 65531).** isolate ≥ 2.4 filters a few
-syscalls that could leak data between concurrent boxes; flag 4 blocks file
-locks, and `go build` takes `flock()`s on its build cache and exits 1 without
-them. The default keeps every other restriction. Set `65535` once the compile
-service passes `--syscalls` to Go compile boxes only.
+**What every box gets.** The compile service builds each `isolate --run`
+command line itself (`backend/src/services/sandbox/isolateCommand.ts`,
+unit-tested per language and phase):
+
+| | run box | compile box (g++, javac, go build) |
+|---|---|---|
+| CPU time / wall time | 10 s / 20 s (callers may lower) | 15 s / 30 s |
+| memory (`--cg-mem`) | 256 MB (callers: up to 512) | 512 MB |
+| processes + threads | per language: C++ and Python 1, JS and Go 16, Java 64 | 16; javac and go build 64 |
+| largest file (`--fsize`) | 16 MB | 64 MB |
+| core dumps (`--core`) | 0 | 0 |
+| syscall filter (`--syscalls`) | 65535: every restriction | 65535; **go build 65531** |
+| CPUs (`taskset` + cpuset) | one | every box CPU |
+| environment | `PATH=/usr/local/bin:/usr/bin:/bin HOME=/box LANG=C.UTF-8` + language vars (Go: `GOMAXPROCS=1`, `GOMEMLIMIT`) | same base + go build's toolchain vars |
+
+Nothing else reaches a box: not the service's environment (isolate itself is
+started with `PATH` only), no network (a private network namespace with just
+`lo`), no host files beyond read-only `/usr`, `/bin`, `/lib*` and `/dev`, and
+only the box's own processes in `/proc`.
+
+**Syscall filter.** isolate filters a few syscalls whose objects are shared
+between boxes (keyrings, vsock, io_uring, file locks on shared inodes,
+non-native architectures). Every box runs with all of them filtered. Only a Go
+compile box drops flag 4 (file locks): `go build` `flock()`s its build cache
+and exits 1 without it, and a compile box runs the compiler, not learner code.
+A Go *run* box is as strict as any other (`flock` fails with "function not
+implemented"). This needs isolate ≥ 2.7 (`--syscalls` per run); it is not
+configurable.
+
+**Output.** A program's stdout, its stderr and every file it writes are each
+capped at 16 MB (`--fsize`). Past that, writes fail (or it dies of `SIGXFSZ`)
+and the verdict is RE "Output limit exceeded (16 MB)" — also when the
+runtime swallowed the error and ran into the time limit, as Java and Go do.
+The service reads at most 16 MB of stdout and 1 MB of stderr (first and last
+half), never through a symlink. Because the box root is a tmpfs, everything a
+program writes also counts against its memory limit: many small files end in
+MLE, not a full disk.
+
+**CPU pinning (`ISOLATE_CPU_PINNING`, default `round-robin`).** Each run box
+gets one CPU of its own: box *N* → the *N*-th box CPU, round-robin over the
+CPUs the container may use; with 4+ CPUs the first is kept free of boxes for
+the API. The service starts every box under `taskset -c`, but a program can
+widen its own affinity mask, so the entrypoint also writes the plan as isolate
+per-box cpusets, which bind. The startup log says which is in force:
+
+```
+  CPU pinning: run boxes on CPUs 1-3, one CPU each, CPU 0 reserved for the API; enforced by per-box cpusets (sched_setaffinity cannot widen a box)
+```
+
+`ADVISORY ONLY` there means boxes are pinned with taskset alone (e.g. an
+isolate config without `box<N>.cpus` lines); `off` disables pinning, and then
+timings depend on load. The service refuses to start if pinning is on but
+`taskset` is missing.
 
 **Toolchains in a box:** a box sees only `/usr`, `/bin`, `/lib*`, `/dev`,
-`/proc` and a private `/tmp`, with an empty environment, so every compiler and
-runtime is linked into `/usr/bin` directly (Node 20, python3, Temurin JDK 21,
-Go, g++). `/usr/bin/g++` is a small shim (`deploy/backend/gxx-wrapper.sh`)
-because without `PATH` GCC resolves itself as `/bin/g++` in a box and then
-cannot find its C++ headers or `ld`.
+`/proc` and a private `/tmp`, so every compiler and runtime is linked into
+`/usr/bin` directly (Node 20, python3, Temurin JDK 21, Go, g++). `PATH` lists
+`/usr/bin` before `/bin`: GCC finds its headers and `cc1plus` relative to the
+path it was started from, and as `/bin/g++` it looks under `/include`.
+
+**Verification.** `backend/tests/isolate/smoke.mjs` runs all of the above
+against a running container (CI job `backend-isolate`):
+
+```bash
+docker build -f backend/Dockerfile -t codemare/backend:ci .
+docker run -d --name backend --privileged --cgroupns=private --init -m 4g \
+  -p 127.0.0.1:4600:4000 -e INTERNAL_TOKEN=smoke codemare/backend:ci
+INTERNAL_TOKEN=smoke node backend/tests/isolate/smoke.mjs http://127.0.0.1:4600
+docker rm -f backend
+```
 
 **Development machines:** Docker Desktop (macOS/Windows) runs a Linux VM with
 cgroup v2, and the same image works there privileged (verified on Apple
