@@ -1,114 +1,135 @@
-// Codemare web — Prisma schema.
+// Codemare — Prisma schema (docs/spec/architecture.md §2).
 //
-// Three concerns live here:
-//   1. Auth.js identity tables (User / Account / Session / VerificationToken)
-//      — these match the @auth/prisma-adapter contract verbatim. Don't rename.
-//   2. Problem catalog — moves out of the compile service's file-based JSON,
-//      including the C++ / Java harness templates the compile service doesn't
-//      need to know about.
-//   3. Submission history — every run a signed-in user makes.
+// Two Postgres schemas:
+//   · content.* — questions, the learning loop (tiers → topics → recipes,
+//     components, gates), badges, learn tracks and the hidden library.
+//     Edited by staff through Directus, seeded by `npm run seed -w web`.
+//   · app.*     — everything a user writes. Only web server code touches it.
 //
-// Migration: `npx prisma migrate dev --name init` after setting DATABASE_URL.
+// Conventions: models PascalCase singular, tables snake_case plural via
+// @@map, columns snake_case via @map, IDs cuid() (token_ledger: bigserial),
+// timestamps timestamptz. Enums live in the schema that owns them; the
+// shared ones (Difficulty, Language, HintCostKind) live in `content`.
+//
+// Things Prisma cannot express live in raw SQL in prisma/migrations/:
+//   · CHECK constraints (recipe quantity > 0, ledger amount <> 0, hint
+//     exactly-one-target, cooldown 12–24, handle format, no self-deps)
+//   · the append-only trigger on app.token_ledger
+//   · the partial unique index that makes ledger earns idempotent
+//
+// Change the schema with `npx prisma migrate dev --name <change>`; never
+// `db push` (it would drop the raw-SQL objects above).
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  schemas  = ["app", "content"]
 }
 
-// ─── Identity ────────────────────────────────────────────────────────────
+// ═══ Enums ══════════════════════════════════════════════════════════════
 
-model User {
-  id            String       @id @default(cuid())
-  email         String       @unique
-  name          String?
-  image         String?
-  handle        String?      @unique
-  // bcrypt hash for email/password sign-in. Null for OAuth-only accounts.
-  passwordHash  String?
-  emailVerified DateTime?
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-
-  accounts      Account[]
-  sessions      Session[]
-  submissions   Submission[]
-}
-
-model Account {
-  id                String  @id @default(cuid())
-  userId            String
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String? @db.Text
-  session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([provider, providerAccountId])
-}
-
-model Session {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model VerificationToken {
-  identifier String
-  token      String   @unique
-  expires    DateTime
-
-  @@unique([identifier, token])
-}
-
-// ─── Problems ────────────────────────────────────────────────────────────
-
+/// Ordered: Easy < Medium < Hard (recipe min_difficulty and debit order rely on it).
 enum Difficulty {
   Easy
   Medium
   Hard
+
+  @@schema("content")
 }
 
-model Problem {
-  id            String       @id @default(cuid())
-  slug          String       @unique
-  title         String
-  difficulty    Difficulty
-  description   String       @db.Text
-  examples      Json
-  constraints   Json
-  starterCode   Json
-  // The function signature for Problems-mode wrappers. Server-only code in
-  // lib/wrappers/ reads this when assembling per-language harnesses.
-  functionName  String
-  // Map of language -> harness template (with {{USER_CODE}} placeholder).
-  // Per-problem C++/Java harnesses live here so the compile service stays
-  // dumb. Null entries mean "Problems mode disabled for that language".
-  harnessTemplate Json?
-  testCases     Json
-  tags          String[]
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+enum Language {
+  python
+  javascript
+  typescript
+  cpp
+  java
+  go
 
-  submissions   Submission[]
+  @@schema("content")
 }
 
-// ─── Submissions ─────────────────────────────────────────────────────────
+enum CompareMode {
+  ordered
+  unordered
 
+  @@schema("content")
+}
+
+enum PublishStatus {
+  draft
+  published
+
+  @@schema("content")
+}
+
+enum BuildStepKind {
+  predict
+  build
+
+  @@schema("content")
+}
+
+/// Ladder order: nudge → concept → pseudo → line → solution.
+enum HintLevel {
+  nudge
+  concept
+  pseudo
+  line
+  solution
+
+  @@schema("content")
+}
+
+enum HintCostKind {
+  score
+  token
+
+  @@schema("content")
+}
+
+enum BadgeRarity {
+  common
+  rare
+  epic
+  legendary
+
+  @@schema("content")
+}
+
+enum TrackLevel {
+  beginner
+  intermediate
+  advanced
+
+  @@schema("content")
+}
+
+enum CheckpointKind {
+  mcq
+  short
+
+  @@schema("content")
+}
+
+/// Ordered: learner < author < staff < admin.
+enum Role {
+  learner
+  author
+  staff
+  admin
+
+  @@schema("app")
+}
+
+/// `queued` / `running` while in flight, then a verdict (OK WA TLE MLE RE CE XX).
 enum SubmissionStatus {
+  queued
+  running
   OK
   WA
   TLE
@@ -116,34 +137,807 @@ enum SubmissionStatus {
   RE
   CE
   XX
+
+  @@schema("app")
 }
 
-enum SubmissionLanguage {
-  python
-  javascript
-  cpp
-  java
+enum SubmissionKind {
+  run
+  submit
+  build
+  gate
+
+  @@schema("app")
+}
+
+enum LedgerReason {
+  solve
+  build
+  gate
+  unlock
+  hint
+  admin
+
+  @@schema("app")
+}
+
+enum LedgerRefType {
+  question
+  build_step
+  recipe
+  hint
+  gate
+  admin
+
+  @@schema("app")
+}
+
+enum UnlockKind {
+  topic
+  tier
+
+  @@schema("app")
+}
+
+enum StepStatus {
+  seen
+  predicted
+  passed
+
+  @@schema("app")
+}
+
+enum LessonStatus {
+  started
+  completed
+
+  @@schema("app")
+}
+
+// ═══ content: the learning loop ═════════════════════════════════════════
+
+/// ord 0 is the free tier: always open, its topics always unlocked.
+model Tier {
+  id      String @id @default(cuid())
+  ord     Int    @unique
+  slug    String @unique
+  title   String
+  summary String
+
+  topics Topic[]
+  gate   Gate?
+  tracks Track[]
+
+  @@map("tiers")
+  @@schema("content")
+}
+
+model Topic {
+  id      String @id @default(cuid())
+  tierId  String @map("tier_id")
+  slug    String @unique
+  title   String
+  summary String
+  /// An IconName from components/ui/Icon.tsx (spec §8).
+  icon    String
+  ord     Int
+
+  tier           Tier            @relation(fields: [tierId], references: [id])
+  recipes        UnlockRecipe[]
+  recipeItems    RecipeItem[]
+  components     Component[]
+  questionTopics QuestionTopic[]
+  lessons        Lesson[]
+  ledger         TokenLedger[]
+
+  @@index([tierId, ord])
+  @@map("topics")
+  @@schema("content")
+}
+
+/// Spending any one recipe (all of its items) unlocks the topic.
+model UnlockRecipe {
+  id      String @id @default(cuid())
+  topicId String @map("topic_id")
+  title   String
+  ord     Int
+
+  topic   Topic        @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  items   RecipeItem[]
+  unlocks Unlock[]
+
+  @@index([topicId, ord])
+  @@map("unlock_recipes")
+  @@schema("content")
+}
+
+/// `quantity` tokens of `token_topic` with difficulty ≥ `min_difficulty`.
+model RecipeItem {
+  id            String     @id @default(cuid())
+  recipeId      String     @map("recipe_id")
+  tokenTopicId  String     @map("token_topic_id")
+  /// > 0 (CHECK constraint)
+  quantity      Int
+  minDifficulty Difficulty @default(Easy) @map("min_difficulty")
+
+  recipe     UnlockRecipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  tokenTopic Topic        @relation(fields: [tokenTopicId], references: [id])
+
+  @@index([recipeId])
+  @@map("recipe_items")
+  @@schema("content")
+}
+
+/// A reusable function the learner builds (My Library); deps are prepended
+/// as a prelude when building it.
+model Component {
+  id           String     @id @default(cuid())
+  topicId      String     @map("topic_id")
+  slug         String     @unique
+  title        String
+  summaryMd    String     @map("summary_md")
+  functionName String     @map("function_name")
+  /// Signature (lib/types.ts)
+  signature    Json
+  languages    Language[]
+  ord          Int
+
+  topic      Topic              @relation(fields: [topicId], references: [id])
+  deps       ComponentDep[]     @relation("ComponentDeps")
+  dependents ComponentDep[]     @relation("ComponentDependents")
+  buildSteps BuildStep[]
+  versions   ComponentVersion[]
+
+  @@index([topicId, ord])
+  @@map("components")
+  @@schema("content")
+}
+
+/// Edge component → depends_on. Must stay acyclic (validated in seed + app).
+model ComponentDep {
+  componentId String @map("component_id")
+  dependsOnId String @map("depends_on_id")
+
+  component Component @relation("ComponentDeps", fields: [componentId], references: [id], onDelete: Cascade)
+  dependsOn Component @relation("ComponentDependents", fields: [dependsOnId], references: [id])
+
+  @@id([componentId, dependsOnId])
+  @@index([dependsOnId])
+  @@map("component_deps")
+  @@schema("content")
+}
+
+model BuildStep {
+  id          String        @id @default(cuid())
+  componentId String        @map("component_id")
+  ord         Int
+  kind        BuildStepKind
+  title       String
+  promptMd    String        @map("prompt_md")
+  difficulty  Difficulty    @default(Easy)
+  /// PredictPayload | BuildPayload (lib/types.ts), by `kind`.
+  payload     Json
+
+  component    Component      @relation(fields: [componentId], references: [id], onDelete: Cascade)
+  hints        Hint[]
+  submissions  Submission[]
+  stepProgress StepProgress[]
+  hintUses     HintUse[]
+
+  @@index([componentId, ord])
+  @@map("build_steps")
+  @@schema("content")
+}
+
+// ═══ content: questions ═════════════════════════════════════════════════
+
+model Question {
+  id                 String        @id @default(cuid())
+  slug               String        @unique
+  title              String
+  difficulty         Difficulty
+  statementMd        String        @map("statement_md")
+  /// Example[]
+  examples           Json
+  /// string[]
+  constraints        Json
+  functionName       String        @map("function_name")
+  /// Signature
+  signature          Json
+  compareMode        CompareMode   @default(ordered) @map("compare_mode")
+  /// Partial<Record<Language, string>>
+  starterCode        Json          @map("starter_code")
+  /// TestDef[] — hidden tests included; never send hidden ones to the client.
+  tests              Json
+  /// Partial<Record<Language, string>> — NEVER sent to learners.
+  referenceSolutions Json          @map("reference_solutions")
+  tags               String[]      @default([])
+  companies          String[]      @default([])
+  editorialMd        String?       @map("editorial_md")
+  /// Seeded questions are published; authored ones start as drafts.
+  status             PublishStatus @default(draft)
+  authorId           String?       @map("author_id")
+  timeLimitMs        Int           @default(2000) @map("time_limit_ms")
+  memoryLimitMb      Int           @default(256) @map("memory_limit_mb")
+  createdAt          DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  author        User?           @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  topics        QuestionTopic[]
+  hints         Hint[]
+  gateQuestions GateQuestion[]
+  submissions   Submission[]
+  hintUses      HintUse[]
+
+  @@index([status, difficulty])
+  @@map("questions")
+  @@schema("content")
+}
+
+/// A question pays tokens to each of its topics, split by weight.
+model QuestionTopic {
+  questionId String @map("question_id")
+  topicId    String @map("topic_id")
+  weight     Float  @default(1.0)
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  topic    Topic    @relation(fields: [topicId], references: [id])
+
+  @@id([questionId, topicId])
+  @@index([topicId])
+  @@map("question_topics")
+  @@schema("content")
+}
+
+/// Exactly one of question_id / build_step_id is set (CHECK constraint).
+model Hint {
+  id          String       @id @default(cuid())
+  questionId  String?      @map("question_id")
+  buildStepId String?      @map("build_step_id")
+  level       HintLevel
+  bodyMd      String       @map("body_md")
+  costKind    HintCostKind @map("cost_kind")
+  /// ≥ 0. score: % penalty on the future award; token: tokens spent.
+  costAmount  Int          @map("cost_amount")
+
+  question  Question?  @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  buildStep BuildStep? @relation(fields: [buildStepId], references: [id], onDelete: Cascade)
+  uses      HintUse[]
+
+  @@unique([questionId, level])
+  @@unique([buildStepId, level])
+  @@map("hints")
+  @@schema("content")
+}
+
+/// Passing a tier's gate opens that tier.
+model Gate {
+  id               String @id @default(cuid())
+  tierId           String @unique @map("tier_id")
+  title            String
+  summary          String
+  passThreshold    Int    @map("pass_threshold")
+  /// 12–24 (CHECK constraint)
+  cooldownHours    Int    @map("cooldown_hours")
+  timeLimitMinutes Int    @default(60) @map("time_limit_minutes")
+
+  tier      Tier           @relation(fields: [tierId], references: [id], onDelete: Cascade)
+  questions GateQuestion[]
+  attempts  GateAttempt[]
+
+  @@map("gates")
+  @@schema("content")
+}
+
+model GateQuestion {
+  gateId     String @map("gate_id")
+  questionId String @map("question_id")
+  ord        Int
+
+  gate     Gate     @relation(fields: [gateId], references: [id], onDelete: Cascade)
+  question Question @relation(fields: [questionId], references: [id])
+
+  @@id([gateId, questionId])
+  @@index([questionId])
+  @@map("gate_questions")
+  @@schema("content")
+}
+
+model Badge {
+  id          String      @id @default(cuid())
+  slug        String      @unique
+  name        String
+  description String
+  /// An IconName (spec §8).
+  icon        String
+  rarity      BadgeRarity
+  /// BadgeCriteria (lib/types.ts)
+  criteria    Json
+  ord         Int
+
+  awards BadgeAward[]
+
+  @@map("badges")
+  @@schema("content")
+}
+
+// ═══ content: learn ═════════════════════════════════════════════════════
+
+model Track {
+  id       String     @id @default(cuid())
+  slug     String     @unique
+  title    String
+  summary  String
+  level    TrackLevel
+  tierId   String?    @map("tier_id")
+  estHours Float      @map("est_hours")
+  ord      Int
+
+  tier    Tier?         @relation(fields: [tierId], references: [id], onDelete: SetNull)
+  modules LearnModule[]
+
+  @@map("tracks")
+  @@schema("content")
+}
+
+model LearnModule {
+  id      String @id @default(cuid())
+  trackId String @map("track_id")
+  slug    String
+  title   String
+  summary String
+  ord     Int
+
+  track               Track                @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  lessons             Lesson[]
+  checkpointQuestions CheckpointQuestion[]
+  checkpointAttempts  CheckpointAttempt[]
+
+  @@unique([trackId, slug])
+  @@map("learn_modules")
+  @@schema("content")
+}
+
+model Lesson {
+  id                   String   @id @default(cuid())
+  moduleId             String   @map("module_id")
+  slug                 String
+  title                String
+  ord                  Int
+  /// Lesson markdown (spec §6.2)
+  bodyMd               String   @map("body_md")
+  estMinutes           Int      @map("est_minutes")
+  topicId              String?  @map("topic_id")
+  relatedQuestionSlugs String[] @default([]) @map("related_question_slugs")
+
+  module   LearnModule      @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  topic    Topic?           @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  progress LessonProgress[]
+
+  @@unique([moduleId, slug])
+  @@map("lessons")
+  @@schema("content")
+}
+
+model CheckpointQuestion {
+  id            String         @id @default(cuid())
+  moduleId      String         @map("module_id")
+  ord           Int
+  kind          CheckpointKind
+  promptMd      String         @map("prompt_md")
+  /// string[] for mcq, null for short
+  choices       Json?
+  /// mcq: number (index into choices); short: string | string[] (accepted answers)
+  answer        Json
+  explanationMd String         @map("explanation_md")
+
+  module LearnModule @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  @@index([moduleId, ord])
+  @@map("checkpoint_questions")
+  @@schema("content")
+}
+
+// ═══ content: library (hidden) ══════════════════════════════════════════
+
+model LibraryArea {
+  id      String @id @default(cuid())
+  slug    String @unique
+  title   String
+  summary String
+  icon    String
+  ord     Int
+
+  chapters LibraryChapter[]
+
+  @@map("library_areas")
+  @@schema("content")
+}
+
+model LibraryChapter {
+  id     String @id @default(cuid())
+  areaId String @map("area_id")
+  slug   String
+  title  String
+  ord    Int
+
+  area     LibraryArea      @relation(fields: [areaId], references: [id], onDelete: Cascade)
+  articles LibraryArticle[]
+
+  @@unique([areaId, slug])
+  @@map("library_chapters")
+  @@schema("content")
+}
+
+model LibraryArticle {
+  id                    String        @id @default(cuid())
+  chapterId             String        @map("chapter_id")
+  slug                  String        @unique
+  title                 String
+  summary               String
+  difficulty            Difficulty
+  readingMinutes        Int           @map("reading_minutes")
+  ideaMd                String        @map("idea_md")
+  formula               String?
+  codeCpp               String        @map("code_cpp")
+  vizId                 String?       @map("viz_id")
+  applicationsMd        String        @map("applications_md")
+  pitfallMd             String        @map("pitfall_md")
+  practiceQuestionSlugs String[]      @default([]) @map("practice_question_slugs")
+  status                PublishStatus @default(draft)
+  ord                   Int
+
+  chapter  LibraryChapter    @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  progress LibraryProgress[]
+
+  @@index([chapterId, ord])
+  @@map("library_articles")
+  @@schema("content")
+}
+
+// ═══ app: identity (Auth.js adapter contract — keep field names) ════════
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  /// Unique, lowercase [a-z0-9_]{3,24} (CHECK constraint). Always set:
+  /// sign-up derives it from the username field, OAuth sign-ups generate one.
+  handle        String    @unique
+  image         String?
+  /// bcrypt hash for email/password sign-in. Null for OAuth-only accounts.
+  passwordHash  String?   @map("password_hash")
+  emailVerified DateTime? @map("email_verified") @db.Timestamptz(3)
+  role          Role      @default(learner)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  accounts           Account[]
+  sessions           Session[]
+  ledger             TokenLedger[]
+  unlocks            Unlock[]
+  submissions        Submission[]
+  componentVersions  ComponentVersion[]
+  stepProgress       StepProgress[]
+  hintUses           HintUse[]
+  gateAttempts       GateAttempt[]
+  badgeAwards        BadgeAward[]
+  lessonProgress     LessonProgress[]
+  checkpointAttempts CheckpointAttempt[]
+  libraryProgress    LibraryProgress[]
+  authoredQuestions  Question[]
+
+  @@map("users")
+  @@schema("app")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String  @map("user_id")
+  type              String
+  provider          String
+  providerAccountId String  @map("provider_account_id")
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("accounts")
+  @@schema("app")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique @map("session_token")
+  userId       String   @map("user_id")
+  expires      DateTime @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+  @@schema("app")
+}
+
+/// Also carries password-reset tokens (identifier `reset:<email>`).
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime @db.Timestamptz(3)
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+  @@schema("app")
+}
+
+// ═══ app: the learning loop ═════════════════════════════════════════════
+
+/// Append-only (a trigger raises on UPDATE/DELETE). Balance = SUM(amount).
+/// Earns (amount > 0) are idempotent through a partial unique index on
+/// (user_id, reason, ref_type, ref_id, topic_id, source_difficulty).
+model TokenLedger {
+  id               BigInt        @id @default(autoincrement())
+  userId           String        @map("user_id")
+  topicId          String        @map("topic_id")
+  /// ≠ 0 (CHECK constraint). Positive = earn, negative = spend.
+  amount           Int
+  sourceDifficulty Difficulty    @map("source_difficulty")
+  reason           LedgerReason
+  refType          LedgerRefType @map("ref_type")
+  refId            String        @map("ref_id")
+  createdAt        DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user  User  @relation(fields: [userId], references: [id])
+  topic Topic @relation(fields: [topicId], references: [id])
+
+  @@index([userId, topicId, sourceDifficulty])
+  @@map("token_ledger")
+  @@schema("app")
+}
+
+/// kind=tier: ref_id = tier id (written on gate pass).
+/// kind=topic: ref_id = topic id (written on recipe spend).
+model Unlock {
+  id          String     @id @default(cuid())
+  userId      String     @map("user_id")
+  kind        UnlockKind
+  refId       String     @map("ref_id")
+  viaRecipeId String?    @map("via_recipe_id")
+  createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  viaRecipe UnlockRecipe? @relation(fields: [viaRecipeId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, kind, refId])
+  @@map("unlocks")
+  @@schema("app")
 }
 
 model Submission {
-  id          String             @id @default(cuid())
-  userId      String
-  problemId   String
-  language    SubmissionLanguage
-  code        String             @db.Text
-  status      SubmissionStatus
-  totalPassed Int                @default(0)
-  totalTests  Int                @default(0)
-  runMs       Float?
-  wallMs      Float?
-  memoryKb    Float?
-  compileMs   Float?
-  error       String?            @db.Text
-  createdAt   DateTime           @default(now())
+  id            String           @id @default(cuid())
+  userId        String           @map("user_id")
+  kind          SubmissionKind
+  questionId    String?          @map("question_id")
+  buildStepId   String?          @map("build_step_id")
+  gateAttemptId String?          @map("gate_attempt_id")
+  language      Language
+  code          String
+  status        SubmissionStatus @default(queued)
+  totalPassed   Int              @default(0) @map("total_passed")
+  totalTests    Int              @default(0) @map("total_tests")
+  /// Sum of per-test CPU µs.
+  runtimeUs     BigInt?          @map("runtime_us")
+  /// Max per-test memory.
+  memoryKb      Int?             @map("memory_kb")
+  compileMs     Int?             @map("compile_ms")
+  error         String?
+  /// "Beats N%" — set on accepted submits (spec §3.8).
+  percentile    Float?
+  createdAt     DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
 
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  problem Problem @relation(fields: [problemId], references: [id], onDelete: Cascade)
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question         Question?         @relation(fields: [questionId], references: [id], onDelete: SetNull)
+  buildStep        BuildStep?        @relation(fields: [buildStepId], references: [id], onDelete: SetNull)
+  gateAttempt      GateAttempt?      @relation(fields: [gateAttemptId], references: [id], onDelete: SetNull)
+  testResults      TestResult[]
+  componentVersion ComponentVersion?
+  aiReviews        AiReview[]
 
   @@index([userId, createdAt])
-  @@index([problemId, status])
+  @@index([questionId, language, status, runtimeUs])
+  @@index([userId, questionId])
+  @@index([gateAttemptId])
+  @@map("submissions")
+  @@schema("app")
+}
+
+/// input/expected/actual are NULL for hidden tests; explain_on_fail is only
+/// set on failed tests.
+model TestResult {
+  id            String  @id @default(cuid())
+  submissionId  String  @map("submission_id")
+  idx           Int
+  passed        Boolean
+  hidden        Boolean
+  runtimeUs     Int?    @map("runtime_us")
+  memoryKb      Int?    @map("memory_kb")
+  input         Json?
+  expected      Json?
+  actual        Json?
+  error         String?
+  explainOnFail String? @map("explain_on_fail")
+
+  submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@unique([submissionId, idx])
+  @@map("test_results")
+  @@schema("app")
+}
+
+/// One per build submission; the latest passing one per (component, language)
+/// is what dependents get as their prelude.
+model ComponentVersion {
+  id           String   @id @default(cuid())
+  userId       String   @map("user_id")
+  componentId  String   @map("component_id")
+  language     Language
+  code         String
+  passed       Boolean
+  submissionId String   @unique @map("submission_id")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  component  Component  @relation(fields: [componentId], references: [id], onDelete: Cascade)
+  submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@index([userId, componentId, language, passed, createdAt(sort: Desc)])
+  @@map("component_versions")
+  @@schema("app")
+}
+
+model StepProgress {
+  userId      String     @map("user_id")
+  buildStepId String     @map("build_step_id")
+  status      StepStatus
+  answer      Json?
+  correct     Boolean?
+  updatedAt   DateTime   @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  buildStep BuildStep @relation(fields: [buildStepId], references: [id], onDelete: Cascade)
+
+  @@id([userId, buildStepId])
+  @@map("step_progress")
+  @@schema("app")
+}
+
+/// First reveal of a hint (re-viewing is free). Cost is copied at reveal time.
+model HintUse {
+  id          String       @id @default(cuid())
+  userId      String       @map("user_id")
+  hintId      String       @map("hint_id")
+  questionId  String?      @map("question_id")
+  buildStepId String?      @map("build_step_id")
+  costKind    HintCostKind @map("cost_kind")
+  costAmount  Int          @map("cost_amount")
+  createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  hint      Hint       @relation(fields: [hintId], references: [id], onDelete: Cascade)
+  question  Question?  @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  buildStep BuildStep? @relation(fields: [buildStepId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, hintId])
+  @@index([userId, questionId])
+  @@index([userId, buildStepId])
+  @@map("hint_uses")
+  @@schema("app")
+}
+
+model GateAttempt {
+  id             String    @id @default(cuid())
+  userId         String    @map("user_id")
+  gateId         String    @map("gate_id")
+  startedAt      DateTime  @default(now()) @map("started_at") @db.Timestamptz(3)
+  deadlineAt     DateTime  @map("deadline_at") @db.Timestamptz(3)
+  finishedAt     DateTime? @map("finished_at") @db.Timestamptz(3)
+  passedCount    Int       @default(0) @map("passed_count")
+  /// Null until finished.
+  passed         Boolean?
+  /// Set on a failed finish: finished_at + cooldown_hours.
+  nextEligibleAt DateTime? @map("next_eligible_at") @db.Timestamptz(3)
+
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  gate        Gate         @relation(fields: [gateId], references: [id], onDelete: Cascade)
+  submissions Submission[]
+
+  @@index([userId, gateId, startedAt])
+  @@map("gate_attempts")
+  @@schema("app")
+}
+
+model BadgeAward {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  badgeId   String   @map("badge_id")
+  awardedAt DateTime @default(now()) @map("awarded_at") @db.Timestamptz(3)
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge Badge @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, badgeId])
+  @@map("badge_awards")
+  @@schema("app")
+}
+
+// ═══ app: learn + library progress ══════════════════════════════════════
+
+model LessonProgress {
+  userId      String       @map("user_id")
+  lessonId    String       @map("lesson_id")
+  status      LessonStatus
+  startedAt   DateTime     @default(now()) @map("started_at") @db.Timestamptz(3)
+  completedAt DateTime?    @map("completed_at") @db.Timestamptz(3)
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@id([userId, lessonId])
+  @@map("lesson_progress")
+  @@schema("app")
+}
+
+model CheckpointAttempt {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  moduleId  String   @map("module_id")
+  score     Int
+  total     Int
+  passed    Boolean
+  answers   Json
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  module LearnModule @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  @@index([userId, moduleId])
+  @@map("checkpoint_attempts")
+  @@schema("app")
+}
+
+model LibraryProgress {
+  userId    String   @map("user_id")
+  articleId String   @map("article_id")
+  readAt    DateTime @default(now()) @map("read_at") @db.Timestamptz(3)
+
+  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  article LibraryArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, articleId])
+  @@map("library_progress")
+  @@schema("app")
+}
+
+model AiReview {
+  id              String   @id @default(cuid())
+  submissionId    String   @map("submission_id")
+  model           String
+  contentMd       String   @map("content_md")
+  inputTokens     Int      @map("input_tokens")
+  outputTokens    Int      @map("output_tokens")
+  cacheReadTokens Int      @default(0) @map("cache_read_tokens")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@index([submissionId])
+  @@map("ai_reviews")
+  @@schema("app")
 }

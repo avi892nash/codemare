@@ -16,9 +16,10 @@ import type { ExecutionRequest, ExecutionResponse } from '@/lib/types';
  *      user / errors during persistence are swallowed silently so dev keeps
  *      working — the run itself is the authoritative response either way.
  *
- * The Problem row is upserted by slug so we can persist a submission even
- * when the problem catalog still lives in the compile service (transitional;
- * the catalog moves into the DB in a later commit).
+ * The Question row is upserted by slug (as a `draft` stub when the seed has
+ * not provided it) so we can persist a submission even when the problem
+ * catalog still lives in the compile service (transitional; this page is
+ * replaced by /problems/[slug] + /api/submit).
  */
 export async function runSolution(req: ExecutionRequest): Promise<ExecutionResponse> {
   const session = await auth();
@@ -64,19 +65,21 @@ export async function runSolution(req: ExecutionRequest): Promise<ExecutionRespo
   // Persist if we can. Best-effort.
   try {
     if (session?.user?.id) {
-      const problem = await prisma.problem.upsert({
+      const question = await prisma.question.upsert({
         where: { slug: req.problemId },
         create: {
           slug: req.problemId,
-          title: req.problemId, // backfilled when the catalog migrates into the DB
+          title: req.problemId, // backfilled by the seed (upsert by slug)
           difficulty: 'Easy',
-          description: '',
+          statementMd: '',
           examples: [],
           constraints: [],
-          starterCode: {},
           functionName: '',
-          testCases: [],
-          tags: [],
+          signature: {},
+          starterCode: {},
+          tests: [],
+          referenceSolutions: {},
+          status: 'draft',
         },
         update: {},
         select: { id: true },
@@ -101,16 +104,16 @@ export async function runSolution(req: ExecutionRequest): Promise<ExecutionRespo
       await prisma.submission.create({
         data: {
           userId: session.user.id,
-          problemId: problem.id,
+          kind: 'submit',
+          questionId: question.id,
           language: req.language,
           code: req.code,
           status,
           totalPassed: response.totalPassed,
           totalTests: response.totalTests,
-          runMs: response.runMs ?? null,
-          wallMs: response.wallMs ?? null,
-          memoryKb: response.memoryKb ?? null,
-          compileMs: response.compileMs ?? null,
+          runtimeUs: response.runMs == null ? null : BigInt(Math.round(response.runMs * 1000)),
+          memoryKb: response.memoryKb == null ? null : Math.round(response.memoryKb),
+          compileMs: response.compileMs == null ? null : Math.round(response.compileMs),
           error: response.error ?? null,
         },
       });

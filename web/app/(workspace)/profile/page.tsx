@@ -23,11 +23,24 @@ export default async function ProfilePage() {
       .catch(() => []),
     prisma.submission
       .findMany({
-        where: { userId, status: 'OK' },
-        select: { runMs: true, memoryKb: true, problem: { select: { difficulty: true } } },
+        where: { userId, status: 'OK', questionId: { not: null } },
+        select: { runtimeUs: true, memoryKb: true, question: { select: { difficulty: true } } },
         orderBy: { createdAt: 'desc' },
         take: 50,
       })
+      .then((rows) =>
+        rows.flatMap((r) =>
+          r.question
+            ? [
+                {
+                  runMs: r.runtimeUs == null ? null : Number(r.runtimeUs) / 1000,
+                  memoryKb: r.memoryKb,
+                  problem: r.question,
+                },
+              ]
+            : []
+        )
+      )
       .catch(() => []),
   ]);
 

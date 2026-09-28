@@ -4,22 +4,31 @@ import { headers } from 'next/headers';
 import { prisma } from '@/lib/prisma';
 import { hashPassword, validatePassword } from '@/lib/password';
 import { clientIp, consume, retryMessage, SIGNUP_PER_IP } from '@/lib/rateLimit';
+import { HANDLE_INPUT_RE } from '@/lib/server/rules/handles';
+import { EmailTaken, HandleTaken, createUserWithHandle, isHandleAvailable } from '@/lib/server/users';
 
 export interface SignUpResult {
   ok: boolean;
   error?: string;
+  /** The account's handle (lowercase) on success. */
+  handle?: string;
 }
 
 /**
  * Create an email/password account. Validates, checks the email isn't taken,
- * hashes the password, and persists the User. Does NOT sign the user in — the
- * client calls signIn('credentials') after a successful sign-up so the same
- * password path is exercised.
+ * hashes the password, and persists the User with a unique lowercase handle:
+ * the username field (`handle`, or `username`) lowercased when given — a clash
+ * is reported — otherwise one generated from the email. Does NOT sign the
+ * user in — the client calls signIn('credentials') after a successful
+ * sign-up so the same password path is exercised.
  */
 export async function signUp(input: {
   email: string;
   password: string;
+  /** The username field: 3–24 letters, digits or underscores (stored lowercased). */
   handle?: string;
+  /** Alias of `handle`. */
+  username?: string;
 }): Promise<SignUpResult> {
   const ip = clientIp(await headers());
   const limit = consume(`signup:ip:${ip}`, SIGNUP_PER_IP.limit, SIGNUP_PER_IP.windowMs);
@@ -33,28 +42,27 @@ export async function signUp(input: {
   const pwErr = validatePassword(input.password);
   if (pwErr) return { ok: false, error: pwErr };
 
-  const handle = input.handle?.trim() || null;
-  if (handle && !/^[a-zA-Z0-9_]{3,24}$/.test(handle)) {
+  const username = (input.handle ?? input.username ?? '').trim();
+  if (username && !HANDLE_INPUT_RE.test(username)) {
     return { ok: false, error: 'Handle must be 3–24 chars: letters, numbers, underscore' };
   }
+  const handle = username ? username.toLowerCase() : undefined;
 
-  const existing = await prisma.user.findUnique({ where: { email } });
+  const existing = await prisma.user.findUnique({ where: { email }, select: { id: true } });
   if (existing) return { ok: false, error: 'An account with that email already exists' };
-
-  if (handle) {
-    const taken = await prisma.user.findUnique({ where: { handle } });
-    if (taken) return { ok: false, error: 'That handle is taken' };
-  }
+  if (handle && !(await isHandleAvailable(handle))) return { ok: false, error: 'That handle is taken' };
 
   const passwordHash = await hashPassword(input.password);
-  await prisma.user.create({
-    data: {
-      email,
-      name: handle ?? email.split('@')[0],
-      handle,
-      passwordHash,
-    },
-  });
-
-  return { ok: true };
+  const localPart = email.split('@')[0];
+  try {
+    const user = await createUserWithHandle(
+      { email, name: username || localPart, passwordHash },
+      handle ? { handle } : { seeds: [localPart] }
+    );
+    return { ok: true, handle: user.handle };
+  } catch (e) {
+    if (e instanceof HandleTaken) return { ok: false, error: 'That handle is taken' };
+    if (e instanceof EmailTaken) return { ok: false, error: 'An account with that email already exists' };
+    throw e;
+  }
 }
