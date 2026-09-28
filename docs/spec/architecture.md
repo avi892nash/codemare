@@ -320,7 +320,33 @@ HTTP 409 `{missing: [componentSlug]}`.
   prompt_md, difficulty, payload, hints[]}]}]`, `gates[{tier, title, summary,
   pass_threshold, cooldown_hours, time_limit_minutes, questions[slug]}]`
 - `badges.json`, `learn/<track>.json`, `library/<area>.json`
-- Seed is idempotent (upsert by slug) and runs with `npm run seed -w web`.
+- Runs with `npm run seed -w web` (`-- --mode <mode>`, or `SEED_MODE`); it
+  validates every file first and writes nothing if any is invalid, then writes
+  in one transaction. Two modes:
+  - **`upsert`** (default for `npm run seed`, i.e. development): the files are
+    the source of truth. Rows upsert by natural key (slug; module/lesson/chapter
+    slug within its parent; hint level; build step/recipe position); owned sets
+    — question topics, component deps, gate questions (kept by their pair, so
+    ids survive), recipe items, checkpoint questions — become exactly the
+    files'; children the files dropped are deleted unless learners touched them
+    (then kept, with a warning). Idempotent. Overwrites staff edits.
+  - **`insert-missing`** (production; the web image's default, used by
+    `SEED_ON_START`): the database is the source of truth. A row is created only
+    when its natural key is absent — a tier, topic, question, component, badge,
+    track or library area by slug, a gate by its tier — together with
+    everything it owns (a topic's recipes and items; a question's topics,
+    weights and hints; a component's deps, build steps and their hints; a
+    gate's questions; a track's modules, lessons and checkpoints; an area's
+    chapters and articles). An existing row is never updated or deleted, and
+    nothing is added under it: new children of an existing parent (a new hint,
+    lesson or gate question in the files) are not applied — make them in
+    Directus. References from new rows resolve by slug to the rows that exist.
+    Refused (nothing written): a new tier whose `ord` an existing tier holds.
+    Skipped with a warning: a new area's article whose slug exists elsewhere.
+    On an empty database it seeds exactly what `upsert` does. Since slugs are
+    the identity, a seeded row deleted or re-slugged in Directus is created
+    again on the next run — retire content by unpublishing it (`status`), or
+    remove it from the files too.
 
 Target shape: 3 tiers, ~10 topics, ~30 questions, every topic with ≥ 1
 recipe (tier > 0), components with build steps, one gate per tier > 0.
