@@ -54,6 +54,8 @@ export function SubmissionDetail({ view, now }: { view: SubmissionView; now: Dat
   const runtime = fmtMicros(view.runtimeUs);
   const memory = fmtMem(view.memoryKb);
   const tone = toneOf(view.status);
+  // A compile error (or a submission still judging) has nothing to measure.
+  const hasMetrics = view.runtimeUs != null || view.memoryKb != null || view.totalTests > 0 || view.compileMs != null;
   const beats = view.status === 'OK' && view.percentile != null ? Math.round(view.percentile * 10) / 10 : null;
   const lines = view.code.split('\n').length;
   const perTest = fmtMicros(
@@ -91,7 +93,7 @@ export function SubmissionDetail({ view, now }: { view: SubmissionView; now: Dat
                 </span>
               )}
               <span className={s.dot} aria-hidden="true">·</span>
-              <span className={s.cLang}>
+              <span className={s.metaLang}>
                 <LangMark lang={view.language} size={13} />
                 {lang}
               </span>
@@ -118,7 +120,7 @@ export function SubmissionDetail({ view, now }: { view: SubmissionView; now: Dat
           </div>
         </header>
 
-        <section className={s.hero} data-tone={tone} aria-label="Result">
+        <section className={s.hero} data-tone={tone} data-single={!hasMetrics || undefined} aria-label="Result">
           {view.runtimeUs != null ? (
             <BigMetric
               label="Runtime · CPU time, all tests"
@@ -138,23 +140,25 @@ export function SubmissionDetail({ view, now }: { view: SubmissionView; now: Dat
           ) : (
             <p className={s.heroNote}>{noRuntimeNote(view.status)}</p>
           )}
-          <div className={s.heroSide}>
-            <MetricChip size="lg" icon="memory" label="Peak memory" value={memory[0]} unit={memory[1] || undefined} />
-            <MetricChip
-              size="lg"
-              icon="check-circle"
-              label="Tests passed"
-              value={view.totalTests > 0 ? `${view.totalPassed}/${view.totalTests}` : '—'}
-            />
-            <MetricChip
-              size="lg"
-              icon="cpu"
-              label="Compile"
-              value={view.compileMs != null ? view.compileMs : '—'}
-              unit={view.compileMs != null ? 'ms' : undefined}
-            />
-            <MetricChip size="lg" icon="clock" label="Avg per test" value={perTest[0]} unit={perTest[1] || undefined} />
-          </div>
+          {hasMetrics && (
+            <div className={s.heroSide}>
+              <MetricChip size="lg" icon="memory" label="Peak memory" value={memory[0]} unit={memory[1] || undefined} />
+              <MetricChip
+                size="lg"
+                icon="check-circle"
+                label="Tests passed"
+                value={view.totalTests > 0 ? `${view.totalPassed}/${view.totalTests}` : '—'}
+              />
+              <MetricChip
+                size="lg"
+                icon="cpu"
+                label="Compile"
+                value={view.compileMs != null ? view.compileMs : '—'}
+                unit={view.compileMs != null ? 'ms' : undefined}
+              />
+              <MetricChip size="lg" icon="clock" label="Avg per test" value={perTest[0]} unit={perTest[1] || undefined} />
+            </div>
+          )}
         </section>
 
         {view.error && (

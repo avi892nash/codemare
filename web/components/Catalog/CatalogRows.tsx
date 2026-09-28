@@ -8,6 +8,15 @@ import s from './Catalog.module.css';
 
 const STATUS_TEXT = { solved: 'Solved', attempted: 'Attempted', todo: 'Not started' } as const;
 
+/**
+ * How many topic pills fit the column: two short ones, else one plus a "+N"
+ * (whose title and screen-reader text name the rest) instead of a clipped pill.
+ */
+function shownTopics(topics: CatalogRow['topics']): number {
+  if (topics.length < 2) return topics.length;
+  return topics[0].title.length + topics[1].title.length <= 26 ? 2 : 1;
+}
+
 /** Column titles, aligned with the row grid (visual only: rows carry their own labels). */
 export function CatalogColumnHead() {
   return (
@@ -31,6 +40,8 @@ export function CatalogRows({ rows }: { rows: CatalogRow[] }) {
     <ol className={s.rows} aria-label="Problems">
       {rows.map((r) => {
         const locked = !r.accessible;
+        const shown = shownTopics(r.topics);
+        const more = r.topics.slice(shown).map((t) => t.title).join(', ');
         return (
           <li key={r.id}>
             <Link
@@ -54,14 +65,15 @@ export function CatalogRows({ rows }: { rows: CatalogRow[] }) {
                 )}
               </span>
               <span className={s.cTopics}>
-                {r.topics.slice(0, 2).map((t) => (
+                {r.topics.slice(0, shown).map((t) => (
                   <Pill key={t.slug} tone="muted" size="xs" icon={t.icon}>
                     {t.title}
                   </Pill>
                 ))}
-                {r.topics.length > 2 && (
-                  <Pill tone="muted" size="xs">
-                    +{r.topics.length - 2}
+                {r.topics.length > shown && (
+                  <Pill tone="muted" size="xs" title={more}>
+                    +{r.topics.length - shown}
+                    <span className="sr-only"> more: {more}</span>
                   </Pill>
                 )}
               </span>

@@ -96,7 +96,7 @@ test.beforeAll(async () => {
         input: t.input as never, expected: t.expected as never, actual: (i === 1 ? [0, 0] : t.expected) as never,
         explainOnFail: i === 1 ? t.explain_on_fail ?? 'visible explanation' : null,
       })),
-      ...hidden.map((t, j) => ({
+      ...hidden.map((_test, j) => ({
         submissionId: wa.id, idx: visible.length + j, passed: j !== 0, hidden: true, runtimeUs: 150, memoryKb: 40000,
         explainOnFail: j === 0 ? 'HIDDEN-EXPLANATION-MUST-NOT-LEAK' : null,
         error: j === 0 ? 'HIDDEN-ERROR-MUST-NOT-LEAK' : null,

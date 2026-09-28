@@ -23,8 +23,14 @@ export function CatalogSkeleton({ rows = 10 }: { rows?: number }) {
         </div>
         <div className={s.table}>
           <div className={s.filters} style={{ paddingTop: 8 }}>
-            <Skeleton height={32} radius={6} />
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            <div className={s.searchRow}>
+              <Skeleton height={32} radius={6} style={{ flex: 1 }} />
+              {/* Phones: the Filters toggle stands in for the folded facets. */}
+              <span className={s.toggle}>
+                <Skeleton width={84} height={32} radius={6} />
+              </span>
+            </div>
+            <div className={s.panel}>
               {[66, 84, 66].map((w, i) => (
                 <Skeleton key={i} width={w} height={26} radius={999} />
               ))}
