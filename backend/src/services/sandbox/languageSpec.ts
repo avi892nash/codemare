@@ -1,5 +1,6 @@
 import { readdir } from 'node:fs/promises';
-import { Language } from '../../models/ExecutionResult.js';
+import { SandboxLanguage } from '../../models/ExecutionResult.js';
+import { goCompileDirs, goCompileEnv, goRunEnv, resolveGoBinary } from './goToolchain.js';
 import { LanguageSpec } from './types.js';
 
 /**
@@ -55,11 +56,21 @@ export function detectJavaClassName(code: string): string {
  *                     reference handler, finalizer, signal dispatcher, …).
  *                     64 leaves headroom for ForkJoinPool.common defaults
  *                     while still capping user-spawned thread pools.
+ *   go:         16  — the runtime needs a handful of threads (sysmon, the
+ *                     locked main thread, one to run the P while main is
+ *                     parked, GC). GOMAXPROCS=1 (goRunEnv) keeps it there.
  *
- * The real fairness lever is CPU pinning (one core per run box) — see
- * isolateAdapter. The pid caps are defence-in-depth and a fork-bomb stop.
+ * Compile-phase caps: javac is a multi-threaded JVM and `go build` runs the
+ * go command plus compile/link processes, each multi-threaded, so both get
+ * 64 instead of the default compile cap of 16 (enough for g++).
+ *
+ * The pid caps (isolate --processes = RLIMIT_NPROC) are defence-in-depth and
+ * a fork-bomb stop. NB: isolate has no CPU-affinity option — the adapter's
+ * `--core=N` is RLIMIT_CORE (core-dump size), not pinning — so these caps and
+ * per-thread CPU clocks (process-wide for Go, with GOMAXPROCS=1) are what keep
+ * parallelism from buying a better time.
  */
-const SPECS: Record<Language, LanguageSpec> = {
+const SPECS: Record<SandboxLanguage, LanguageSpec> = {
   python: {
     language: 'python',
     needsCompile: false,
@@ -105,10 +116,34 @@ const SPECS: Record<Language, LanguageSpec> = {
     // adapters expand this against the compile dir via resolveArtifactNames.
     artifacts: () => ['*.class'],
     pidsLimit: 64,
+    compilePidsLimit: 64,
+  },
+  go: {
+    language: 'go',
+    needsCompile: true,
+    mainFileName: () => 'main.go',
+    // `go build` on a single file needs no go.mod (it builds the synthetic
+    // command-line-arguments package). -s -w drops the symbol table/DWARF:
+    // smaller binary, faster link; panics still print file:line (pclntab).
+    compileArgv: (mainFile) => [
+      ...(resolveGoBinary() ? [resolveGoBinary() as string] : ['/usr/bin/env', 'go']),
+      'build',
+      '-ldflags=-s -w',
+      '-o',
+      'main',
+      mainFile,
+    ],
+    runArgv: () => ['./main'],
+    artifacts: () => ['main'],
+    pidsLimit: 16,
+    compilePidsLimit: 64,
+    compileEnv: (backend) => goCompileEnv(backend),
+    compileDirs: () => goCompileDirs(),
+    runEnv: (_backend, { memoryKb }) => goRunEnv(memoryKb),
   },
 };
 
-export function getLanguageSpec(language: Language): LanguageSpec {
+export function getLanguageSpec(language: SandboxLanguage): LanguageSpec {
   const spec = SPECS[language];
   if (!spec) {
     throw new Error(`Unsupported language: ${language}`);

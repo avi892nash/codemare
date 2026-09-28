@@ -1,5 +1,6 @@
 import {
   ExecutionStatus,
+  LANGUAGES,
   SandboxResultStatus,
   TestCaseResult,
 } from '../models/ExecutionResult.js';
@@ -10,18 +11,25 @@ import { CompareMode, TestCase } from '../models/Problem.js';
  * emits per-call `runNs` and `peakBytes`; we surface those as `runMs` and
  * `memoryKb` on each TestCaseResult so the frontend can show algorithm-only
  * timing (excluding interpreter startup).
+ *
+ * `passed` is decided here, against the problem's own expected value — never
+ * the harness's echo of it, which user code printing a fake record could
+ * otherwise make agree with its output.
  */
 export function validateResults(
-  wrappedResults: Array<{
-    output: any;
-    expected: any;
-    passed: boolean;
-    error?: string;
-    executionTime?: number;
-    runNs?: number;
-    wallNs?: number;
-    peakBytes?: number;
-  }>,
+  wrappedResults: ReadonlyArray<
+    | {
+        output?: any;
+        expected?: any;
+        passed?: boolean;
+        error?: string;
+        executionTime?: number;
+        runNs?: number;
+        wallNs?: number;
+        peakBytes?: number;
+      }
+    | undefined
+  >,
   testCases: TestCase[],
   compareMode: CompareMode = 'ordered'
 ): TestCaseResult[] {
@@ -44,7 +52,7 @@ export function validateResults(
       continue;
     }
 
-    const passed = deepEqual(wrapped.output, wrapped.expected, compareMode);
+    const passed = deepEqual(wrapped.output, testCase.expectedOutput, compareMode);
     // runNs is CPU time of the call (immune to host load); wallNs is the
     // elapsed wall clock for the same call, kept as a diagnostic.
     const runMs = wrapped.runNs !== undefined ? wrapped.runNs / 1_000_000 : undefined;
@@ -55,7 +63,7 @@ export function validateResults(
     results.push({
       input: testCase.input,
       expectedOutput: testCase.expectedOutput,
-      actualOutput: wrapped.output,
+      actualOutput: wrapped.output ?? null,
       passed: passed && !wrapped.error,
       executionTime: runMs ?? wrapped.executionTime ?? 0,
       runMs,
@@ -69,17 +77,47 @@ export function validateResults(
   return results;
 }
 
+export interface DeepEqualOptions {
+  /**
+   * Numbers within this absolute difference are equal. Used for
+   * double-returning signatures, matching the C++/Java harnesses' 1e-6.
+   */
+  floatTolerance?: number;
+}
+
 /**
  * Deep equality check for comparing outputs.
  *
  * With compareMode 'unordered', arrays are compared as multisets: both sides
- * are sorted by a canonical key before the element-wise deep-compare, so
- * [1, 0] equals [0, 1]. This applies recursively to nested arrays too.
+ * are canonicalised — every array, innermost first, sorted by a canonical
+ * key — before the element-wise deep-compare, so [1, 0] equals [0, 1] and
+ * [[3, 1], [0, 2]] equals [[1, 3], [2, 0]]. (Children are canonicalised
+ * before their parent is sorted, exactly like the harnesses do.)
  */
-export function deepEqual(a: any, b: any, compareMode: CompareMode = 'ordered'): boolean {
+export function deepEqual(
+  a: any,
+  b: any,
+  compareMode: CompareMode = 'ordered',
+  options: DeepEqualOptions = {}
+): boolean {
+  if (compareMode === 'unordered') {
+    return equalOrdered(canonicalize(a), canonicalize(b), options);
+  }
+  return equalOrdered(a, b, options);
+}
+
+function equalOrdered(a: any, b: any, options: DeepEqualOptions): boolean {
   // Handle null/undefined
   if (a === null || a === undefined || b === null || b === undefined) {
     return a === b;
+  }
+
+  if (
+    options.floatTolerance !== undefined &&
+    typeof a === 'number' &&
+    typeof b === 'number'
+  ) {
+    return a === b || Math.abs(a - b) <= options.floatTolerance;
   }
 
   // Handle primitive types
@@ -88,18 +126,12 @@ export function deepEqual(a: any, b: any, compareMode: CompareMode = 'ordered'):
   }
 
   // Handle arrays
-  if (Array.isArray(a) && Array.isArray(b)) {
-    if (a.length !== b.length) return false;
-    const left = compareMode === 'unordered' ? sortCanonical(a) : a;
-    const right = compareMode === 'unordered' ? sortCanonical(b) : b;
-    return left.every((item, index) => deepEqual(item, right[index], compareMode));
+  if (Array.isArray(a) || Array.isArray(b)) {
+    if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false;
+    return a.every((item, index) => equalOrdered(item, b[index], options));
   }
 
   // Handle objects
-  if (Array.isArray(a) !== Array.isArray(b)) {
-    return false;
-  }
-
   const keysA = Object.keys(a);
   const keysB = Object.keys(b);
 
@@ -107,20 +139,33 @@ export function deepEqual(a: any, b: any, compareMode: CompareMode = 'ordered'):
     return false;
   }
 
-  return keysA.every((key) => deepEqual(a[key], b[key], compareMode));
+  return keysA.every(
+    (key) => Object.prototype.hasOwnProperty.call(b, key) && equalOrdered(a[key], b[key], options)
+  );
 }
 
 /**
- * Return a copy of the array sorted by a canonical (JSON) key. Sorting both
- * sides with the same total order makes element-wise comparison equivalent to
- * multiset equality.
+ * Recursively sort every array by a canonical key. Sorting both sides with
+ * the same total order makes element-wise comparison equivalent to multiset
+ * equality. An all-number array sorts numerically (so values within a float
+ * tolerance line up); anything else sorts by the JSON of its canonical form.
  */
-function sortCanonical(arr: any[]): any[] {
-  return [...arr].sort((x, y) => {
-    const kx = JSON.stringify(x) ?? '';
-    const ky = JSON.stringify(y) ?? '';
-    return kx < ky ? -1 : kx > ky ? 1 : 0;
-  });
+function canonicalize(value: any): any {
+  if (Array.isArray(value)) {
+    const items = value.map(canonicalize);
+    if (items.every((v) => typeof v === 'number')) {
+      return items.sort((x, y) => x - y);
+    }
+    const keyed = items.map((v) => ({ v, k: JSON.stringify(v) ?? '' }));
+    keyed.sort((x, y) => (x.k < y.k ? -1 : x.k > y.k ? 1 : 0));
+    return keyed.map((e) => e.v);
+  }
+  if (value !== null && typeof value === 'object') {
+    const out: Record<string, any> = {};
+    for (const key of Object.keys(value)) out[key] = canonicalize(value[key]);
+    return out;
+  }
+  return value;
 }
 
 /**
@@ -160,9 +205,8 @@ export function sanitizeResults(results: TestCaseResult[]): TestCaseResult[] {
  */
 export function validateIdeRequest(request: any): { valid: boolean; error?: string } {
   // Validate language
-  const validLanguages = ['python', 'javascript', 'cpp', 'java'];
-  if (!validLanguages.includes(request.language)) {
-    return { valid: false, error: 'Invalid language. Must be: python, javascript, cpp, or java' };
+  if (!(LANGUAGES as readonly unknown[]).includes(request.language)) {
+    return { valid: false, error: `Invalid language. Must be one of: ${LANGUAGES.join(', ')}` };
   }
 
   // Validate code

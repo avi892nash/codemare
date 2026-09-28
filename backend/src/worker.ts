@@ -1,5 +1,6 @@
 import { isQueueEnabled, startWorker, QUEUE_INFO } from './queue/queue.js';
 import { sandboxReadinessProbe } from './services/sandboxService.js';
+import { warmGoBuildCache } from './services/sandbox/goToolchain.js';
 
 /**
  * Standalone worker process. Run one or more of these (each its own VM /
@@ -22,6 +23,7 @@ async function main() {
     process.exit(1);
   }
 
+  console.log(`worker: go build cache ${await warmGoBuildCache()}`);
   const probe = await sandboxReadinessProbe();
   console.log(`worker: sandbox=${probe.backend} languages=${probe.available.join(', ') || 'none'}`);
   if (probe.unavailable.length > 0) {
