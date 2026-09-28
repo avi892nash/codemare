@@ -30,6 +30,11 @@ let page: Page;
 
 /** Sign in through Auth.js's credentials endpoint (independent of the sign-in UI). */
 async function signIn(p: Page, who: { email: string; password: string }) {
+  // Park the page and drop the old session first: an open page keeps making
+  // requests as the previous user, and Auth.js re-issues that user's cookie
+  // on each one, which can land after — and overwrite — this sign-in.
+  await p.goto('about:blank');
+  await p.context().clearCookies();
   const { csrfToken } = await (await p.request.get('/api/auth/csrf')).json();
   const res = await p.request.post('/api/auth/callback/credentials', {
     form: { email: who.email, password: who.password, csrfToken, callbackUrl: '/learn', json: 'true' },

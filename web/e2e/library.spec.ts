@@ -37,6 +37,11 @@ async function makeUser(role: Role, tag: string) {
  * local request would otherwise share one bucket across test runs.
  */
 async function signIn(page: Page, email: string) {
+  // Park the page and drop the old session first: an open page keeps making
+  // requests as the previous user, and Auth.js re-issues that user's cookie
+  // on each one, which can land after — and overwrite — this sign-in.
+  await page.goto('about:blank');
+  await page.context().clearCookies();
   const ip = `10.${[0, 0, 0].map(() => Math.floor(Math.random() * 250) + 1).join('.')}`;
   const { csrfToken } = await (await page.request.get('/api/auth/csrf')).json();
   await page.request.post('/api/auth/callback/credentials', {
