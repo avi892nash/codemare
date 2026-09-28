@@ -11,10 +11,15 @@ export const inter = Inter({
   display: 'swap',
 });
 
+// Not preloaded: a 40 KB preload competes with the render-blocking CSS on a
+// slow link and pushed the editor's first paint back ~0.5 s (4G, applied
+// throttling). Mono text paints in its metric-matched fallback until the
+// font lands — and `--font-mono` is mostly numbers, code and IDs.
 export const jetbrains = JetBrains_Mono({
   subsets: ['latin'],
   variable: '--font-mono',
   display: 'swap',
+  preload: false,
 });
 
 export const fontVariables = `${inter.variable} ${jetbrains.variable}`;
