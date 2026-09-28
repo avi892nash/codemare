@@ -105,9 +105,13 @@ cd web && PLAYWRIGHT_BASE_URL=http://localhost:4001 npx playwright test
 ```
 
 CI runs all of it on every push: backend tests, a six-language judge smoke,
-web migrations/seed/unit tests/build, and the full Playwright suite against a
-production build. To build for production next to a running dev server, use
-`NEXT_DIST_DIR=.next-prod npm run build -w web` so the two don't share `.next`.
+the isolate smoke inside the production image, the Compose and Directus admin
+checks, web migrations/seed/unit tests/build, and the full Playwright suite —
+accessibility gate included — against a production build. To build for
+production next to a running dev server, use
+`NEXT_DIST_DIR=.next-prod npm run build -w web` so the two don't share `.next`
+(that build rewrites `web/next-env.d.ts` and `web/tsconfig.json`; restore them
+with `git checkout` afterwards).
 
 ## Documentation
 

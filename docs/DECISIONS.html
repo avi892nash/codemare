@@ -220,7 +220,7 @@
     <h1>Codemare Decisions</h1>
     <p class="dek">Why Codemare is shaped the way it is: every decision with the alternatives it beat, the path a submission takes, the contracts between the parts, and the bugs that set the rules.</p>
     <div class="meta">
-      <span>178 commits · Nov 2025 → Sep 2026</span>
+      <span>203 commits · Nov 2025 → Sep 2026</span>
       <span>grounded in <code>git log</code> and the merge messages</span>
       <span>companion to README.md and docs/spec/architecture.md</span>
     </div>
@@ -278,14 +278,14 @@
             <text class="sm" x="750" y="125" text-anchor="middle">phased parallel agents</text>
           </svg>
           </div>
-          <figcaption>Five phases. What each one left behind: the <code>/api/*</code> route alias (1), the <code>isolate</code> sandbox and the <code>web/</code> app (2), the login wall, Postgres and the QA process (3), this decision log (4), and everything a learner sees today (5).</figcaption>
+          <figcaption>Five phases. What each one left behind: the <code>/api/*</code> route alias (1, removed in September 2026), the <code>isolate</code> sandbox and the <code>web/</code> app (2), the login wall, Postgres and the QA process (3), this decision log (4), and everything a learner sees today (5).</figcaption>
         </figure>
 
         <h3>The latest move: from a judge to the learning platform</h3>
         <p>On 28 September 2026 the goal moved from “a judge behind a login wall” to the full platform in the design project's brief, copied verbatim into <code>docs/spec/implementation-prompt.md</code>: a catalog and editor, a learning loop of tokens, recipes and gates, Learn tracks, profiles and badges, authoring, a hidden library, a Directus admin, and a one-VPS deploy with backups. Two things shaped how it was built:</p>
         <ul>
           <li><strong>The design files never arrived.</strong> The brief builds from <code>/design/tokens.css</code>, <code>MVP Architecture.html</code> and the screen artboards; none were in the repository. Rather than stall, the build ran against a reconstructed spec, <code>docs/spec/architecture.md</code>, with the already-ported design system as canonical, and wrote down every place it departs from the brief (<a href="#d15">decision 15</a>).</li>
-          <li><strong>It was built by agents working in parallel</strong>: four phases, each a set of agents in their own git worktrees with strict file ownership, an integrator verifying and merging every branch, and CI as the final word (<a href="#d36">decision 36</a>). From the spec commit (<code>4ce8b73</code>, 14:58) to the last merge (<code>e746e6d</code>, 01:57 the next night): 106 commits, 13 merges, about eleven hours.</li>
+          <li><strong>It was built by agents working in parallel</strong>: five phases, each a set of agents in their own git worktrees with strict file ownership, an integrator verifying and merging every branch, and CI as the final word (<a href="#d36">decision 36</a>). From the spec commit (<code>4ce8b73</code>, 14:58) to the last merge (<code>5f8c924</code>, 03:55 the next night): 128 commits, 16 merges, about thirteen hours.</li>
         </ul>
       </section>
 
@@ -528,7 +528,7 @@
             <tr><td>02</td><td><a href="#d2">Measure the algorithm, not the process</a></td><td><span class="st">current</span></td></tr>
             <tr><td>03</td><td><a href="#d3">Fairness: one core, tight PID caps</a></td><td><span class="st">current</span></td></tr>
             <tr><td>04</td><td><a href="#d4">Two adapters: isolate and local</a></td><td><span class="st">current</span></td></tr>
-            <tr><td>05</td><td><a href="#d5">Compile cache and parallel IDE cases</a></td><td><span class="st">current</span></td></tr>
+            <tr><td>05</td><td><a href="#d5">Compile cache and parallel IDE cases</a></td><td><span class="st amended">amended</span></td></tr>
             <tr><td>06</td><td><a href="#d6">Split into two services with an internal token</a></td><td><span class="st amended">amended by 17</span></td></tr>
             <tr><td>07</td><td><a href="#d7">An optional Redis queue, not a mandatory one</a></td><td><span class="st amended">amended by 17</span></td></tr>
             <tr><td>08</td><td><a href="#d8">Next.js App Router with server actions</a></td><td><span class="st amended">amended by 17</span></td></tr>
@@ -675,19 +675,20 @@
         </article>
 
         <article class="dr" id="d5">
-          <div class="eyebrow">Decision 05 · <span class="st">current</span></div>
+          <div class="eyebrow">Decision 05 · <span class="st amended">amended</span></div>
           <h3>Compile cache and parallel IDE cases</h3>
+          <p class="note amended"><span class="tag">Amended</span>The cache is now bounded by bytes as well: <code>COMPILE_CACHE_MAX_MB</code> (default 1024) covers artifacts on disk — in the container, the host's disk, shared with Postgres — and cached compiler output in memory. One binary can reach the 64 MB compile file cap, so 256 entries alone could have pinned ~16 GB. The entry just stored is never the one evicted, because its caller is about to copy from it (<code>3fb1890</code>).</p>
           <dl class="drg">
             <dt>Situation</dt><dd><p>C++ compile is ~500 ms; users re-run unchanged code constantly; IDE mode ran its test cases one after another.</p></dd>
             <dt>Choice</dt><dd><p>A content-addressed compile cache keyed on <code>sha256(language + compiler argv + source)</code>, single-flight (concurrent identical compiles wait for one), bounded LRU of 256 entries, shared by both adapters, for C++, Java and Go. A cache hit emits no <code>compiling</code> event. IDE test cases run in parallel.</p></dd>
-            <dt>Result</dt><dd><p>About 10× faster C++ re-runs; about 4× faster multi-case IDE runs. The bound is an entry count, not bytes on disk — a known gap (section 7).</p></dd>
+            <dt>Result</dt><dd><p>About 10× faster C++ re-runs; about 4× faster multi-case IDE runs. The bound was an entry count, not bytes on disk, until the amendment above.</p></dd>
           </dl>
         </article>
 
         <article class="dr" id="d6">
           <div class="eyebrow">Decision 06 · <span class="st amended">amended by 17</span></div>
           <h3>Split into two services with an internal token</h3>
-          <p class="note amended"><span class="tag">Amended</span>The split and the token stand. What changed is what the compile service knows: it used to hold the problem catalog (<code>backend/src/data/problems/*.json</code>) and judge by problem id; since <a href="#d17">decision 17</a> the caller sends code and tests, and the service keeps no content at all.</p>
+          <p class="note amended"><span class="tag">Amended</span>The split and the token stand. What changed is what the compile service knows: it used to hold the problem catalog (<code>backend/src/data/problems/*.json</code>) and judge by problem id; since <a href="#d17">decision 17</a> the caller sends code and tests, and the service keeps no content at all. The catalog, its endpoints and the <code>/api/*</code> alias were deleted in September 2026 (<code>5f8c924</code>).</p>
           <dl class="drg">
             <dt>Situation</dt><dd><p>The original monolith mixed "run untrusted code" with "manage users". Those have opposite scaling and security profiles.</p></dd>
             <dt>Choice</dt><dd><p><code>backend/</code> became a stateless compile service; <code>web/</code> holds everything user-facing. They share one secret, <code>INTERNAL_TOKEN</code>, sent as <code>X-Codemare-Token</code> and compared timing-safely. The token lives only in server code (<code>web/lib/compile.ts</code> is <code>server-only</code>), never in the browser — and, since decision 29, never inside a sandbox either.</p></dd>
@@ -702,7 +703,7 @@
         <article class="dr" id="d7">
           <div class="eyebrow">Decision 07 · <span class="st amended">amended by 17</span></div>
           <h3>An optional Redis queue, not a mandatory one</h3>
-          <p class="note amended"><span class="tag">Amended</span><code>/v1/run</code> and <code>/v1/run/stream</code> always run inline, never through the queue, so the web app's judging doesn't use it. The queue now serves only the legacy <code>/v1/execute</code> and <code>/v1/ide/execute</code>; the web app's IDE client still handles a <code>202 {token}</code> transparently. Scaling judging past one host would need the streaming path to learn the queue.</p>
+          <p class="note amended"><span class="tag">Amended</span><code>/v1/run</code> and <code>/v1/run/stream</code> always run inline, never through the queue, so the web app's judging doesn't use it. The queue now serves only <code>/v1/ide/execute</code> (the legacy <code>/v1/execute</code> is gone); the web app's IDE client still handles a <code>202 {token}</code> transparently. Scaling judging past one host would need the streaming path to learn the queue.</p>
           <dl class="drg">
             <dt>Situation</dt><dd><p>Burst load — a class submitting at once — would pile onto a single VM.</p></dd>
             <dt>Choice</dt><dd><p>BullMQ over Redis, gated entirely on <code>REDIS_URL</code>. Unset → everything is synchronous, exactly as before. Set → <code>POST /v1/execute</code> returns <code>202 {token}</code> and the client polls, or forces sync with <code>?wait=true</code>. Workers run as a separate process (<code>npm run worker</code>) or inline (<code>WORKER_INLINE=true</code>) for a single-VM deploy. <code>GET /v1/queue/stats</code> exposes depth for tuning.</p></dd>
@@ -963,7 +964,7 @@
           <dl class="drg">
             <dt>Context</dt><dd><p>Content was moving into Postgres (21) and authors would write questions the compile service had never seen. The service still read problems from <code>backend/src/data/problems/*.json</code> by id (<code>/v1/problems</code>, <code>/v1/execute</code>), answered with one JSON document, and polled when queued.</p></dd>
             <dt>Decision</dt><dd><p><code>POST /v1/run</code> takes everything from the caller — code, an optional prelude, the function name, the signature, the compare mode, the tests with their expected values and hidden flags, and limits — and keeps no state about questions. <code>POST /v1/run/stream</code> is the same run as Server-Sent Events: <code>queued</code> (only while waiting for a box), <code>compiling</code> (only for a real compile), <code>running</code>, one <code>test</code> per test in index order, then <code>verdict</code>; a heartbeat every 15 s; a disconnect aborts the run. Validation is strict because the endpoint is now a trust boundary for data as well as code: 64 KB of code, 256 KB of prelude, 1–200 tests within 4 MB, every value checked against the signature (an <code>int</code> is 32-bit), unknown keys refused so a misspelt option can't be silently ignored — all a 400 before any stream opens. The web app relays the stream to the browser in its own protocol (<a href="#s5">section 5</a>).</p></dd>
-            <dt>Consequences</dt><dd><p>One service now judges learner runs and submits, gate attempts, build steps with preludes, IDE programs, lesson snippets and — at publish time — every reference solution of a new question. The run routes are always inline, never queued (07 amended). The catalog in backend JSON is superseded, but the files, <code>/v1/problems</code> and <code>/v1/execute</code> still ship and CI still smoke-tests them, though nothing in the web app calls them; spec §5 schedules their removal (section 7).</p></dd>
+            <dt>Consequences</dt><dd><p>One service now judges learner runs and submits, gate attempts, build steps with preludes, IDE programs, lesson snippets and — at publish time — every reference solution of a new question. The run routes are always inline, never queued (07 amended). The catalog in backend JSON, <code>/v1/problems</code>, <code>/v1/execute</code> and the unused <code>/api/*</code> alias were then deleted, as spec §5 required; the harness tests take their fixtures from the seed questions instead (<code>5f8c924</code>).</p></dd>
             <dt>Evidence</dt><dd><p><code>1c66a0e</code>, <code>9ba93c0</code>; CI's backend-e2e job judges Two Sum in all six languages through <code>/v1/run</code>, plus a wrong answer, a TypeScript syntax error and an SSE check.</p></dd>
           </dl>
         </article>
@@ -1010,7 +1011,7 @@
           <dl class="drg">
             <dt>Context</dt><dd><p>The brief wants <code>content.*</code> (edited by staff) and <code>app.*</code> (written by the API only). Before this, Prisma held <code>User</code>, <code>Problem</code> and <code>Submission</code> in <code>public</code>, changed with <code>db push</code>.</p></dd>
             <dt>Decision</dt><dd><p>Prisma <code>multiSchema</code> with <code>@@schema</code> on every model: 20 content tables, 17 app tables, snake_case through <code>@map</code>, cuid ids (the ledger's is a bigserial). Real migrations, never <code>db push</code>: the baseline, then one that adds what Prisma cannot express — the ledger's append-only trigger, the earn-once partial unique index, CHECKs (ledger amount ≠ 0, the handle format, recipe quantity &gt; 0, a hint with exactly one target, a 12–24 h cooldown, no self-dependency) and "one running gate attempt per user and gate" — and a third that gives the join tables surrogate ids (26). Only web server code writes <code>app.*</code>, and every rule lives in <code>web/lib/server</code> as plain functions over Prisma, with the pure rules separate in <code>lib/server/rules</code>.</p></dd>
-            <dt>Consequences</dt><dd><p>Prisma never diffs CHECKs, triggers or partial indexes, so later <code>migrate dev</code> runs leave them alone — but <code>db push</code> would silently drop them, which is why setup and CI use <code>migrate deploy</code>. The vitest setup migrates a dedicated <code>*_test</code> database, so the trigger and indexes are under test (520 web tests run against it). Rolling back images never undoes a migration; the runbook says to restore the pre-deploy backup when the migrations in between weren't additive.</p></dd>
+            <dt>Consequences</dt><dd><p>Prisma never diffs CHECKs, triggers or partial indexes, so later <code>migrate dev</code> runs leave them alone — but <code>db push</code> would silently drop them, which is why setup and CI use <code>migrate deploy</code>. The vitest setup migrates a dedicated <code>*_test</code> database, so the trigger and indexes are under test (522 web tests run against it). Rolling back images never undoes a migration; the runbook says to restore the pre-deploy backup when the migrations in between weren't additive.</p></dd>
             <dt>Evidence</dt><dd><p><code>89dbfc1</code>, <code>059d122</code>, <code>c0a7797</code>; the data model is drawn in the <a href="REPO-GUIDE.html#s5">repo guide</a>.</p></dd>
           </dl>
         </article>
@@ -1447,24 +1448,24 @@
               <polyline class="edge" points="170,122 170,179 200,179" marker-end="url(#a13)"/>
               <polyline class="edge" points="170,122 170,217 200,217" marker-end="url(#a13)"/>
               <rect class="box" x="200" y="10" width="640" height="34" rx="3"/>
-              <text x="214" y="32"><tspan class="b">backend</tspan> — lint · build · 160 unit tests (JDK 21 and Go 1.22 installed)</text>
+              <text x="214" y="32"><tspan class="b">backend</tspan> — lint · build · 163 unit tests (JDK 21 and Go 1.22 installed)</text>
               <rect class="box" x="200" y="48" width="640" height="34" rx="3"/>
-              <text x="214" y="70"><tspan class="b">backend-e2e</tspan> — /v1/run in six languages, WA, CE, the SSE stream; legacy /v1/execute</text>
+              <text x="214" y="70"><tspan class="b">backend-e2e</tspan> — /v1/run in six languages, WA, CE, the SSE stream, IDE mode</text>
               <rect class="box hi" x="200" y="86" width="640" height="34" rx="3"/>
               <text x="214" y="108"><tspan class="b">backend-isolate</tspan> — build the production image, run it privileged, 26-check smoke</text>
               <rect class="box" x="200" y="124" width="640" height="34" rx="3"/>
               <text x="214" y="146"><tspan class="b">infra</tspan> — compose config against .env.example · admin tests and typecheck</text>
               <rect class="box" x="200" y="162" width="640" height="34" rx="3"/>
-              <text x="214" y="184"><tspan class="b">web</tspan> — migrate · seed twice · 520 vitest tests · typecheck · lint · build</text>
+              <text x="214" y="184"><tspan class="b">web</tspan> — migrate · seed twice · 522 vitest tests · typecheck · lint · build</text>
               <rect class="box hi" x="200" y="200" width="640" height="34" rx="3"/>
-              <text x="214" y="222"><tspan class="b">e2e</tspan> — next start + compile service + seeded Postgres → 40 Playwright tests</text>
+              <text x="214" y="222"><tspan class="b">e2e</tspan> — next start + compile service + seeded Postgres → 43 Playwright tests</text>
             </svg>
             </div>
             <figcaption>The teal jobs exercise production as it really runs: the sandbox inside the real image, and the browser against <code>next start</code> rather than the dev server. Seeding twice proves the seed idempotent.</figcaption>
           </figure>
           <dl class="drg">
             <dt>Consequences</dt><dd><p>Every production-only bug found during the build is now covered in the mode it happened in. Not covered: amd64 builds of the web, Directus and backup images (CI builds only the backend image), the compose stack actually starting, and a real Storage Box.</p></dd>
-            <dt>Evidence</dt><dd><p><code>059d122</code>, <code>2e6f235</code>, <code>02598fd</code>, <code>f8a5144</code>; test counts measured at <code>d80f180</code>.</p></dd>
+            <dt>Evidence</dt><dd><p><code>059d122</code>, <code>2e6f235</code>, <code>02598fd</code>, <code>f8a5144</code>; test counts measured at <code>79c7592</code>.</p></dd>
           </dl>
         </article>
 
@@ -1482,45 +1483,51 @@
           </dl>
           <figure class="fig">
             <div class="scroll">
-            <svg viewBox="0 0 860 290" role="img" aria-label="Merge timeline from 28 September 15:00 to 29 September 02:00: the spec at 14:58; phase 1 merged 18:26 to 18:55 (seed content, data layer, UI kit, compile-service executor); phase 2 merged 20:02 to 20:24 (catalog, auth and submissions; judge runner, editor and IDE; learn, profile and badges; authoring and library) with an integration commit at 23:34; phase 3 merged 23:51 and 00:56 (infrastructure; the learning loop) with an integration at 01:01; phase 4 merged 01:28 and 01:57 (sandbox hardening; editable join tables and seed modes)">
+            <svg viewBox="0 0 860 340" role="img" aria-label="Merge timeline from 28 September 15:00 to 29 September 04:00: the spec at 14:58; phase 1 merged 18:26 to 18:55 (seed content, data layer, UI kit, compile-service executor); phase 2 merged 20:02 to 20:24 (catalog, auth and submissions; judge runner, editor and IDE; learn, profile and badges; authoring and library) with an integration commit at 23:35; phase 3 merged 23:51 and 00:56 (infrastructure; the learning loop) with an integration at 01:01; phase 4 merged 01:28 and 01:57 (sandbox hardening; editable join tables and seed modes); phase 5 merged 03:04, 03:43 and 03:55 (these decision records and the repo guide; the QA pass; the legacy removal)">
               <text class="lanelabel" x="10" y="40">SPEC</text>
               <text class="lanelabel" x="10" y="80">PHASE 1</text>
               <text class="lanelabel" x="10" y="130">PHASE 2</text>
               <text class="lanelabel" x="10" y="180">PHASE 3</text>
               <text class="lanelabel" x="10" y="230">PHASE 4</text>
-              <line class="edge" x1="90" y1="262" x2="830" y2="262"/>
-              <line class="edge" x1="90" y1="258" x2="90" y2="266"/><text class="mono sm" x="90" y="280" text-anchor="middle">15:00</text>
-              <line class="edge" x1="292" y1="258" x2="292" y2="266"/><text class="mono sm" x="292" y="280" text-anchor="middle">18:00</text>
-              <line class="edge" x1="494" y1="258" x2="494" y2="266"/><text class="mono sm" x="494" y="280" text-anchor="middle">21:00</text>
-              <line class="edge" x1="696" y1="258" x2="696" y2="266"/><text class="mono sm" x="696" y="280" text-anchor="middle">00:00</text>
-              <line class="edge" x1="830" y1="258" x2="830" y2="266"/><text class="mono sm" x="830" y="280" text-anchor="middle">02:00</text>
+              <text class="lanelabel" x="10" y="280">PHASE 5</text>
+              <line class="edge" x1="90" y1="312" x2="830" y2="312"/>
+              <line class="edge" x1="90" y1="308" x2="90" y2="316"/><text class="mono sm" x="90" y="330" text-anchor="middle">15:00</text>
+              <line class="edge" x1="261" y1="308" x2="261" y2="316"/><text class="mono sm" x="261" y="330" text-anchor="middle">18:00</text>
+              <line class="edge" x1="432" y1="308" x2="432" y2="316"/><text class="mono sm" x="432" y="330" text-anchor="middle">21:00</text>
+              <line class="edge" x1="602" y1="308" x2="602" y2="316"/><text class="mono sm" x="602" y="330" text-anchor="middle">00:00</text>
+              <line class="edge" x1="773" y1="308" x2="773" y2="316"/><text class="mono sm" x="773" y="330" text-anchor="middle">03:00</text>
+              <line class="edge" x1="830" y1="308" x2="830" y2="316"/><text class="mono sm" x="830" y="330" text-anchor="end">04:00</text>
               <circle class="dot" cx="88" cy="36" r="6"/>
               <text class="sm" x="100" y="40">4ce8b73 · the spec, shared dependencies pre-installed</text>
-              <circle class="dot" cx="321" cy="76" r="6"/>
-              <circle class="dot" cx="336" cy="70" r="6"/>
-              <circle class="dot" cx="340" cy="82" r="6"/>
-              <circle class="dot" cx="354" cy="76" r="6"/>
+              <circle class="dot" cx="285" cy="76" r="6"/>
+              <circle class="dot" cx="300" cy="70" r="6"/>
+              <circle class="dot" cx="301" cy="82" r="6"/>
+              <circle class="dot" cx="313" cy="76" r="6"/>
               <text class="sm" x="90" y="100">seed content · data layer · UI kit and app shell · compile-service executor</text>
-              <circle class="dot" cx="429" cy="126" r="6"/>
-              <circle class="dot" cx="453" cy="114" r="6"/>
-              <circle class="dot" cx="453" cy="126" r="6"/>
-              <circle class="dot" cx="453" cy="138" r="6"/>
-              <circle class="dot hollow" cx="666" cy="126" r="6"/>
+              <circle class="dot" cx="377" cy="126" r="6"/>
+              <circle class="dot" cx="397" cy="114" r="6"/>
+              <circle class="dot" cx="397" cy="126" r="6"/>
+              <circle class="dot" cx="397" cy="138" r="6"/>
+              <circle class="dot hollow" cx="579" cy="126" r="6"/>
               <text class="sm" x="90" y="156">catalog, auth, submissions · judge runner, editor, IDE · learn, profile, badges · authoring, library</text>
-              <circle class="dot" cx="685" cy="176" r="6"/>
-              <circle class="dot" cx="758" cy="176" r="6"/>
-              <circle class="dot hollow" cx="772" cy="176" r="6"/>
+              <circle class="dot" cx="594" cy="176" r="6"/>
+              <circle class="dot" cx="655" cy="170" r="6"/>
+              <circle class="dot hollow" cx="660" cy="182" r="6"/>
               <text class="sm" x="90" y="200">infrastructure: images, Compose, Directus, backups · the learning loop</text>
-              <circle class="dot" cx="794" cy="226" r="6"/>
-              <circle class="dot" cx="827" cy="226" r="6"/>
+              <circle class="dot" cx="686" cy="226" r="6"/>
+              <circle class="dot" cx="713" cy="226" r="6"/>
               <text class="sm" x="90" y="250">sandbox hardening · editable join tables and seed modes</text>
+              <circle class="dot" cx="777" cy="276" r="6"/>
+              <circle class="dot" cx="814" cy="270" r="6"/>
+              <circle class="dot" cx="825" cy="282" r="6"/>
+              <text class="sm" x="90" y="300">decision records and repo guide · QA: accessibility and first paint · legacy removal</text>
             </svg>
             </div>
             <figcaption>Each filled dot is a branch merged into master; hollow dots are the integrator's own integration commits. Agents in a phase worked at the same time in separate worktrees — the dot is when their branch was verified and merged, not when the work started.</figcaption>
           </figure>
           <dl class="drg">
-            <dt>Consequences</dt><dd><p>About eleven hours from spec to the last merge: 106 commits, 13 merges. The price is integration work and the discipline of writing the contract first; the benefit is that every merge carries its own verification record — the evidence cited throughout this page. What the process can't replace is a human look at the product against its design, which is still owed (15). This page and the repo guide were themselves written by one agent while a QA agent worked on the UI in parallel.</p></dd>
-            <dt>Evidence</dt><dd><p>The merge commits <code>a2c9e1f</code> … <code>e746e6d</code> (<code>git log --merges</code>).</p></dd>
+            <dt>Consequences</dt><dd><p>About thirteen hours from the spec to the last merge: 128 commits, 16 merges. The price is integration work and the discipline of writing the contract first; the benefit is that every merge carries its own verification record — the evidence cited throughout this page. What the process can't replace is a human look at the product against its design, which is still owed (15). This page and the repo guide were themselves written by one agent while a QA agent worked on the UI in parallel; a fifth phase merged them, the QA pass (<a href="#d37">decision 37</a>) and the removal of the legacy compile-service surface.</p></dd>
+            <dt>Evidence</dt><dd><p>The merge commits <code>a2c9e1f</code> … <code>5f8c924</code> (<code>git log --merges</code>).</p></dd>
           </dl>
         </article>
 
@@ -1561,7 +1568,7 @@ topics[]                     { slug, weight }                  → content.quest
 tags[], companies[], editorial_md
 hints[]                      { level, body_md, cost_kind: score | token, cost_amount }</code></pre>
         <p>The other files: <code>loop.json</code> (tiers, topics, recipes, components with their build steps, gates), <code>badges.json</code>, <code>learn/&lt;track&gt;.json</code> and <code>library/&lt;area&gt;.json</code>. The seed validates every file with zod and then the cross-file rules (unknown slugs, cycles, ladder gaps, unaffordable recipes, arity), writes nothing unless everything is valid, then writes in one transaction in one of two modes (decision 27). Rows land in the <code>content.*</code> tables drawn in the <a href="REPO-GUIDE.html#s5">repo guide</a>; JSON columns keep the shapes of spec §2.1 and are parsed with the same zod schemas when read back.</p>
-        <p class="note"><span class="tag">Superseded</span>Until September 2026 problems lived in <code>backend/src/data/problems/*.json</code> (camelCase: <code>functionName</code>, <code>testCases[{input, expectedOutput, hidden}]</code>, starter code in four languages) and the compile service looked them up by id. Decisions 17 and 21 replaced that. The files and <code>/v1/problems</code>, <code>/v1/execute</code> still ship as a legacy path with no web caller (section 7).</p>
+        <p class="note"><span class="tag">Superseded</span>Until September 2026 problems lived in <code>backend/src/data/problems/*.json</code> (camelCase: <code>functionName</code>, <code>testCases[{input, expectedOutput, hidden}]</code>, starter code in four languages) and the compile service looked them up by id. Decisions 17 and 21 replaced that, and the files, <code>/v1/problems</code> and <code>/v1/execute</code> were deleted in September 2026 (<code>5f8c924</code>).</p>
 
         <h3>Compile service — <code>POST /v1/run</code> and <code>/v1/run/stream</code></h3>
 <pre><code>request   { language, code,
@@ -1629,13 +1636,8 @@ POST /v1/run                  pure executor, JSON
 POST /v1/run/stream           pure executor, SSE
 POST /v1/ide/execute          a program + ≤ 10 stdin cases; ?wait=true forces sync
 GET  /v1/ide/execute/:token   poll (only with REDIS_URL)
-GET  /v1/queue/stats          { enabled, counts }   enabled:false without Redis
-— legacy, no web caller —
-GET  /v1/problems             { problems: [...] }   ← an object, not an array
-GET  /v1/problems/:id         sanitized problem
-POST /v1/execute              judge a catalog problem by id; 202 {token} with Redis
-GET  /v1/execute/:token       poll</code></pre>
-        <p>All <code>/v1/*</code> routes require <code>X-Codemare-Token</code> in production (401 missing, 403 wrong); <code>/api/*</code> is a legacy alias. Errors are always JSON: 400 bad input, 413 body over 1 MB (6 MB on the run routes), 429 from the circuit breaker (<code>EXECUTION_RATE_LIMIT_MAX</code> per minute per process), 500 opaque. Per-user limits live in the web app (decision 32).</p>
+GET  /v1/queue/stats          { enabled, counts }   enabled:false without Redis</code></pre>
+        <p>All <code>/v1/*</code> routes require <code>X-Codemare-Token</code> in production (401 missing, 403 wrong); anything else is a JSON 404. Errors are always JSON: 400 bad input, 413 body over 1 MB (6 MB on the run routes), 429 from the circuit breaker (<code>EXECUTION_RATE_LIMIT_MAX</code> per minute per process), 500 opaque. Per-user limits live in the web app (decision 32).</p>
 
         <h3>Environment (spec §9)</h3>
         <div class="table-wrap"><table>
@@ -1656,7 +1658,8 @@ GET  /v1/execute/:token       poll</code></pre>
             <tr><td><code>SANDBOX_MODE</code></td><td>backend</td><td><code>isolate</code> / <code>local</code>; local is refused in production</td></tr>
             <tr><td><code>ISOLATE_CPU_PINNING</code></td><td>backend</td><td><code>round-robin</code> (default) / <code>off</code></td></tr>
             <tr><td><code>EXECUTION_RATE_LIMIT_MAX</code></td><td>backend</td><td>the circuit breaker, per minute per process (default 6000)</td></tr>
-            <tr><td><code>REDIS_URL</code>, <code>WORKER_INLINE</code>, <code>WORKER_CONCURRENCY</code></td><td>backend</td><td>the optional queue (legacy endpoints and IDE mode only)</td></tr>
+            <tr><td><code>COMPILE_CACHE_MAX_MB</code></td><td>backend</td><td>what the compile cache may hold on disk and in memory (default 1024, at least 64)</td></tr>
+            <tr><td><code>REDIS_URL</code>, <code>WORKER_INLINE</code>, <code>WORKER_CONCURRENCY</code></td><td>backend</td><td>the optional queue (IDE mode only)</td></tr>
             <tr><td><code>PORT</code>, <code>ALLOWED_ORIGINS</code>, <code>GO_BUILD_CACHE_DIR</code></td><td>backend</td><td>4000 by default; CORS origins; the shared Go cache</td></tr>
             <tr><td><code>NODE_ENV=production</code></td><td>both</td><td>turns soft warnings into hard failures</td></tr>
             <tr><td><code>APP_DOMAIN</code>, <code>ADMIN_DOMAIN</code>, <code>*_DB_PASSWORD</code>, <code>DIRECTUS_*</code>, <code>RESTIC_*</code>, <code>BACKUP_*</code></td><td>deploy/.env</td><td>the Compose stack; every setting is in <code>deploy/.env.example</code>, rotation in <code>deploy/README.md</code> §4</td></tr>
@@ -1827,9 +1830,8 @@ GET  /v1/execute/:token       poll</code></pre>
           <li><strong>The design files</strong> are not synced into the repo (<code>/design-sync</code>). The spec reconstructs <code>MVP Architecture.html</code> and the existing design system stands in for the rest; every screen still has to be compared with its artboard, and the design files win on conflict.</li>
           <li><strong>Directus's license</strong>: on first admin login Directus 12 asks a project owner to accept its MSCL-1.0-GPL license and data processing agreement. That is the deployment owner's call; “Skip” defers it without accepting anything.</li>
           <li><strong>Java timing</strong> counts only the calling thread: work handed to other threads is missing from <code>runUs</code>, pinned or not.</li>
-          <li><strong>The compile cache</strong> is bounded at 256 entries, not by bytes on disk; the Go build cache sits outside it.</li>
           <li><strong>Untested</strong>: amd64 builds of the web, Directus and backup images (CI builds only the backend image), the Compose stack starting in CI, and a real Hetzner Storage Box (verified against an SFTP container).</li>
-          <li><strong>Legacy to remove</strong> (spec §5): <code>/v1/execute</code>, <code>/v1/problems</code>, <code>backend/src/data/problems</code> and CI's legacy step; <code>compile.ts</code>'s <code>listProblems</code>, <code>getProblem</code> and <code>execute</code>; four files nothing imports (<code>CatalogList.tsx</code>, <code>SignOutButton.tsx</code>, <code>components/states/index.ts</code>, <code>backend/src/utils/codeTemplates.ts</code>); a stale <code>web/README.md</code>.</li>
+          <li><strong>LCP on a real host</strong>: with throttling applied, the catalog and the editor paint their largest element in about 1.4 s on localhost, but Lighthouse's simulation still reports about 2.6 s (<a href="#d37">decision 37</a>); the brief's 2 s bar should be confirmed against the deployed VPS.</li>
           <li><strong>Scaling out</strong>: rate limits are in-process (one web instance), the Redis queue doesn't serve <code>/v1/run</code>, and the sandbox shares the one VPS.</li>
           <li><strong>Books and monetization</strong> from <code>docs/authoring-v1.md</code> — not started.</li>
         </ul>

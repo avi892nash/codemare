@@ -178,10 +178,10 @@
       <div class="fact"><b>6</b><span>languages judged</span></div>
       <div class="fact"><b>30</b><span>problems · 3 tiers · 10 topics</span></div>
       <div class="fact"><b>37</b><span>tables in 2 schemas</span></div>
-      <div class="fact"><b>709</b><span>unit tests (web · backend · admin)</span></div>
+      <div class="fact"><b>714</b><span>unit tests (web · backend · admin)</span></div>
       <div class="fact"><b>43</b><span>Playwright tests</span></div>
       <div class="fact"><b>6</b><span>CI jobs per push</span></div>
-      <div class="fact"><b>178</b><span>commits, Nov 2025 →</span></div>
+      <div class="fact"><b>203</b><span>commits, Nov 2025 →</span></div>
     </div>
   </header>
 
@@ -219,7 +219,7 @@
 
       <section id="s2">
         <h2><span class="n">2</span>Repo map</h2>
-        <p>Every tracked file (627) and directory (140) as <code>git ls-files</code> lists them at <code>d80f180</code>. Click a folder to open it and a file to read what it does, or filter by path or description. The 30 question files and the 11 legacy problem files share one entry each; <code>node_modules</code>, <code>.next</code> and <code>dist</code> are not tracked, so they are not here. <em>Legacy</em> marks files that still exist but nothing current depends on.</p>
+        <p>Every tracked file (609) and directory (137) as <code>git ls-files</code> lists them at <code>79c7592</code>. Click a folder to open it and a file to read what it does, or filter by path or description. The 30 question files share one entry; <code>node_modules</code>, <code>.next</code> and <code>dist</code> are not tracked, so they are not here. <em>Legacy</em> marks files that still exist but nothing current depends on.</p>
         <div class="map">
           <div class="map-left">
             <div class="tree-tools">
@@ -529,10 +529,7 @@ npm run dev            # compile service :4000 + web :4001</code></pre>
             <tr><td><code>POST /v1/run</code></td><td>Caller-supplied code and tests → per-test results and a verdict (JSON).</td><td rowspan="2"><code>X-Codemare-Token</code> · 6 MB body · 400 before any sandbox work · 6000/min circuit breaker</td></tr>
             <tr><td><code>POST /v1/run/stream</code></td><td>The same run as SSE: <code>queued</code>, <code>compiling</code>, <code>running</code>, <code>test</code>…, <code>verdict</code>.</td></tr>
             <tr><td><code>POST /v1/ide/execute</code> (+ <code>GET …/:token</code>)</td><td>A whole program against up to ten stdin cases; the poll exists for the Redis mode.</td><td>token</td></tr>
-            <tr><td><code>GET /v1/problems</code>, <code>/v1/problems/:id</code></td><td>Legacy JSON catalog. No web caller.</td><td>token</td></tr>
-            <tr><td><code>POST /v1/execute</code> (+ <code>GET …/:token</code>)</td><td>Legacy judge-by-problem-id. No web caller.</td><td>token</td></tr>
             <tr><td><code>GET /v1/queue/stats</code></td><td>Queue depth, or <code>{enabled: false}</code> without Redis.</td><td>token</td></tr>
-            <tr><td><code>/api/*</code></td><td>Legacy alias of <code>/v1/*</code>.</td><td>token</td></tr>
           </tbody>
         </table></div>
         <p>Directus lives on its own domain (<code>ADMIN_DOMAIN</code>): the data studio, the recipe-editor module at <code>/admin/recipe-editor</code>, and <code>GET /codemare/recipe-supply</code>. Directus signs its own users in (admin, and a <em>Content Editor</em> role for staff) and connects to Postgres as a role that can only edit content rows.</p>
@@ -548,7 +545,7 @@ npm run dev            # compile service :4000 + web :4001</code></pre>
           <div class="rail"><b>Login wall, fail-closed</b><code class="where">web/middleware.ts · web/components/Auth/routes.ts</code>JWT decoded on the Edge; signed-out API calls get 401 JSON; any auth error is treated as signed out; <code>?next=</code> accepts same-origin paths only.</div>
           <div class="rail"><b>Roles</b><code class="where">author/viewer.ts · library/viewer.ts · submissionHistory.ts</code>The role rides in the JWT for navigation; authoring, the library and other people's submissions re-read it from the database. Denied is the same 404 as unknown.</div>
           <div class="rail"><b>Rate limits</b><code class="where">web/lib/rateLimit.ts</code>Login 10/15 min per IP and 5 per email; sign-up 5/h per IP; reset flows per IP and email; one judge budget of 30/min per user shared by run, submit, build, IDE, snippets and reference runs; AI review 12/h. The compile service keeps only a 6000/min circuit breaker.</div>
-          <div class="rail"><b>Size caps</b><code class="where">web/lib/server/runner.ts · backend/src/services/runValidation.ts</code>Web: 64 KB source, 512 KB body, 8 custom inputs. Compile service: 64 KB code, 256 KB prelude, 200 tests, 4 MB of tests, 6 MB body, limits capped at 10 s and 512 MB.</div>
+          <div class="rail"><b>Size caps</b><code class="where">web/lib/server/runner.ts · backend/src/services/runValidation.ts</code>Web: 64 KB source, 512 KB body, 8 custom inputs. Compile service: 64 KB code, 256 KB prelude, 200 tests, 4 MB of tests, 6 MB body, limits capped at 10 s and 512 MB; the compile cache holds at most 256 entries and <code>COMPILE_CACHE_MAX_MB</code> (1 GiB) on disk and in memory.</div>
           <div class="rail"><b>Hidden tests stay hidden</b><code class="where">web/lib/server/runner.ts · rules/testResults.ts</code>No input, expected or output leaves the server; a hidden test's error is cut to its exception class. For Python, JS, TS and Go the expected values never enter the box.</div>
           <div class="rail"><b>Ledger guards in the database</b><code class="where">web/prisma/migrations/…_integrity_guards</code>An append-only trigger, an earn-once partial unique index, <code>amount ≠ 0</code>; spends re-read balances under a per-user advisory lock and write nothing on a shortfall.</div>
           <div class="rail"><b>Directus confined by Postgres</b><code class="where">deploy/postgres/db-init.sql · content-integrity hook</code>The <code>directus</code> role has row DML on <code>content.*</code> only: no DDL, no <code>app.*</code>. The hook re-checks recipe, weight, cycle and gate rules for every client.</div>
@@ -561,12 +558,12 @@ npm run dev            # compile service :4000 + web :4001</code></pre>
 
       <section id="s8">
         <h2><span class="n">8</span>Tests and CI</h2>
-        <p>Counts are from running each suite at <code>d80f180</code> on 29 Sep 2026 (the Playwright count from <code>npx playwright test --list</code>).</p>
+        <p>Counts are from running each suite at <code>79c7592</code> on 29 Sep 2026 (the Playwright count from <code>npx playwright test --list</code>).</p>
         <div class="table-wrap"><table>
           <thead><tr><th>Layer</th><th>Size</th><th>What it covers</th><th>Run</th></tr></thead>
           <tbody>
-            <tr><td>Web unit + DB (vitest)</td><td>41 files · 520 tests</td><td>The pure rules (the debit planner is cross-checked against a brute-force allocator); every domain service against a migrated Postgres test database, trigger and partial indexes included (20 parallel spends never overdraw); the seed's validation, modes and idempotency; the real content played end to end as a fresh learner; lesson markdown against hostile input; SSE framing; the runner with a fake compile client.</td><td><code>npm test -w web</code></td></tr>
-            <tr><td>Backend (<code>node:test</code>)</td><td>17 files · 160 tests</td><td>The exact isolate command line per language and phase, the CPU plan, bounded box output, the harness protocol, generators compiled and run for real (<code>javac</code>, <code>go build</code>), and <code>/v1/run</code> plus <code>/v1/run/stream</code> end to end through the local adapter in all six languages. One test (the cpuset CLI) runs on Linux only.</td><td><code>npm test -w backend</code></td></tr>
+            <tr><td>Web unit + DB (vitest)</td><td>41 files · 522 tests</td><td>The pure rules (the debit planner is cross-checked against a brute-force allocator); every domain service against a migrated Postgres test database, trigger and partial indexes included (20 parallel spends never overdraw); the seed's validation, modes and idempotency; the real content played end to end as a fresh learner; lesson markdown against hostile input; SSE framing; the runner with a fake compile client.</td><td><code>npm test -w web</code></td></tr>
+            <tr><td>Backend (<code>node:test</code>)</td><td>17 files · 163 tests</td><td>The exact isolate command line per language and phase, the CPU plan, bounded box output, the harness protocol, generators compiled and run for real (<code>javac</code>, <code>go build</code>), and <code>/v1/run</code> plus <code>/v1/run/stream</code> end to end through the local adapter in all six languages. One test (the cpuset CLI) runs on Linux only.</td><td><code>npm test -w backend</code></td></tr>
             <tr><td>Admin (vitest)</td><td>3 files · 29 tests</td><td>Recipe and join-row checks, the Postgres array codec, cuids, the enum parser, the recipe save payload.</td><td><code>npm --prefix admin test</code></td></tr>
             <tr><td>Playwright</td><td>11 specs · 43 tests</td><td>Every feature through the UI against a running app and compile service: auth, catalog, editor, IDE, submissions, learn, profile, authoring, the hidden library, the sign-up → solve → submit → gate → unlock journey, and an accessibility gate (axe, one <code>h1</code>, no sideways scroll) on a route per section in both themes.</td><td><code>cd web &amp;&amp; PLAYWRIGHT_BASE_URL=… npx playwright test</code></td></tr>
             <tr><td>Isolate smoke</td><td>26 checks</td><td>The production image, privileged: six languages, verdicts, the compile cache, fork/memory/output bombs, no network, no host files, one CPU per box, the syscall filter.</td><td><code>node backend/tests/isolate/smoke.mjs</code></td></tr>
@@ -586,15 +583,15 @@ npm run dev            # compile service :4000 + web :4001</code></pre>
             <polyline class="edge" points="170,122 170,179 200,179" marker-end="url(#g4)"/>
             <polyline class="edge" points="170,122 170,217 200,217" marker-end="url(#g4)"/>
             <rect class="box" x="200" y="10" width="640" height="34" rx="3"/>
-            <text x="214" y="32"><tspan class="b">backend</tspan> — lint · build · 160 unit tests (JDK 21 and Go 1.22 installed)</text>
+            <text x="214" y="32"><tspan class="b">backend</tspan> — lint · build · 163 unit tests (JDK 21 and Go 1.22 installed)</text>
             <rect class="box" x="200" y="48" width="640" height="34" rx="3"/>
-            <text x="214" y="70"><tspan class="b">backend-e2e</tspan> — /v1/run in six languages, WA, CE, the SSE stream; legacy /v1/execute</text>
+            <text x="214" y="70"><tspan class="b">backend-e2e</tspan> — /v1/run in six languages, WA, CE, the SSE stream, IDE mode</text>
             <rect class="box hi" x="200" y="86" width="640" height="34" rx="3"/>
             <text x="214" y="108"><tspan class="b">backend-isolate</tspan> — build the production image, run it privileged, 26-check smoke</text>
             <rect class="box" x="200" y="124" width="640" height="34" rx="3"/>
             <text x="214" y="146"><tspan class="b">infra</tspan> — compose config against .env.example · admin tests and typecheck</text>
             <rect class="box" x="200" y="162" width="640" height="34" rx="3"/>
-            <text x="214" y="184"><tspan class="b">web</tspan> — migrate · seed twice · 520 vitest tests · typecheck · lint · build</text>
+            <text x="214" y="184"><tspan class="b">web</tspan> — migrate · seed twice · 522 vitest tests · typecheck · lint · build</text>
             <rect class="box hi" x="200" y="200" width="640" height="34" rx="3"/>
             <text x="214" y="222"><tspan class="b">e2e</tspan> — next start + compile service + seeded Postgres → 43 Playwright tests</text>
           </svg>
@@ -613,7 +610,8 @@ npm run dev            # compile service :4000 + web :4001</code></pre>
               <li>The learning loop: ledger, recipes, unlocks, gates with cooldowns, the hint ladder, the queue, My Library</li>
               <li>Learn (3 tracks, 23 lessons), profiles, 17 badges, authoring with a re-verified publish, the hidden library</li>
               <li>Directus confined by Postgres roles, with editable join tables and the two seed modes</li>
-              <li>Sandbox hardening proven in the production image (the 26-check smoke runs in CI)</li>
+              <li>Sandbox hardening proven in the production image (the 26-check smoke runs in CI); the compile cache bounded by bytes as well as entries</li>
+              <li>The legacy compile-service surface removed: the web app and the compile service speak only <code>/v1/run</code>, <code>/v1/run/stream</code> and IDE mode</li>
               <li>The Compose stack, backups and a restore drill, verified locally end to end</li>
               <li>CI: six jobs, including Playwright against a production build</li>
               <li>Accessibility and first paint: no axe violations on any audited view in either theme, gated by a Playwright spec; LCP about 1.4 s on the catalog and the editor with throttling applied</li>
@@ -625,19 +623,16 @@ npm run dev            # compile service :4000 + web :4001</code></pre>
               <li>The design project's files are not synced (<code>/design-sync</code>); screens follow the spec's reconstruction and must be reconciled — the design files win on conflict</li>
               <li>Directus asks a project owner to accept its license and DPA on first login: the deployment owner's call</li>
               <li>Java's <code>runUs</code> counts only the calling thread; work handed to other threads is untimed</li>
-              <li>The compile cache is bounded by entries (256), not by disk size</li>
               <li>amd64 builds of the web, Directus and backup images, and a real Storage Box, are untested (local verification ran on Apple silicon with an SFTP stand-in; CI builds only the backend image)</li>
-              <li>Legacy still ships: <code>/v1/execute</code>, <code>/v1/problems</code> and <code>backend/src/data/problems</code> (smoke-tested by CI, no web caller); <code>compile.ts</code>'s <code>listProblems</code>/<code>getProblem</code>/<code>execute</code>; four unimported files; a stale <code>web/README.md</code></li>
               <li>Rate limits are in-process (one web instance); the Redis queue does not serve <code>/v1/run</code></li>
+              <li>The brief's LCP &lt; 2 s is met with throttling applied on localhost (about 1.4 s) but not in Lighthouse's simulation (about 2.6 s); confirm it on the deployed VPS</li>
             </ul>
           </div>
           <div class="col todo">
             <h4><i></i>Next</h4>
             <ul>
               <li>Sync the design files and reconcile every screen against its artboard</li>
-              <li>First production deploy: license decision, amd64 images, a restore drill against the real Storage Box</li>
-              <li>Remove the legacy compile-service surface and the dead files (spec §5)</li>
-              <li>Bound the compile cache by bytes</li>
+              <li>First production deploy: license decision, amd64 images, a restore drill against the real Storage Box, an LCP check on the real host</li>
               <li>Time Java across threads, or say in the UI that only the calling thread counts</li>
               <li>User-authored books and monetization (<code>docs/authoring-v1.md</code>) — not started</li>
             </ul>
@@ -693,7 +688,7 @@ docker compose --env-file deploy/.env -f docker-compose.prod.yml exec backup cod
 <script>
 (function () {
   // ---- repo map ---------------------------------------------------------
-  // [name, role, description, children?] — generated from `git ls-files` at d80f180;
+  // [name, role, description, children?] — generated from `git ls-files` at 79c7592;
   // a fourth element marks a directory.
   var TREE = [[".github","CI","GitHub configuration: the CI workflow.",[["workflows","CI","Workflows (one: ci.yml).",[["ci.yml","CI","Six jobs on every push to master and every PR: backend lint/build/unit tests; a six-language /v1/run smoke; the isolate smoke in the production image; compose and Directus admin checks; web migrations, seed, vitest, typecheck, lint, build; Playwright against a production build."]]]]],
 ["admin","Admin","Directus over content.*: the content model as code and one extension bundle (recipe editor, content-integrity hook, supply endpoint). A standalone npm package, deliberately not a workspace.",[["content-model","Admin","The Directus content model as data, applied through the REST API: meta only, never DDL.",[["apply.ts","Admin","Applies model.ts to a running Directus idempotently (unchanged entries are skipped); the directus-config one-shot runs it on every deploy and warns about content columns missing from the model."],
@@ -726,31 +721,26 @@ docker compose --env-file deploy/.env -f docker-compose.prod.yml exec backup cod
 ["package.json","Config","Scripts: build the extension and the content-model bundle, apply, typecheck (vue-tsc), test (vitest)."],
 ["tsconfig.json","Config","TypeScript config for the admin package."],
 ["vitest.config.ts","Config","The same @/ → web/ alias as the extension build."]]],
-["backend","Compile service","The stateless judge: Express API, harness generation for six languages, the isolate and local sandbox adapters. No database, no users, no sessions.",[["postman","Docs","Postman collection for the early API (legacy endpoints only).",[["README.md","Docs","How to use the collection (four-language era)."],
-["Codemare_API.postman_collection.json","Docs","Requests for the early API (/v1/problems, /v1/execute, /v1/ide/execute); predates /v1/run."],
-["Codemare_Environment.postman_environment.json","Docs","Variables for the collection."]]],
-["src","Compile service","Service sources.",[["config","Config","Every sandbox limit in one place.",[["sandbox.ts","Config","Run limits (10 s CPU, 256 MB, 16 MB output), compile limits (15 s, 512 MB, 64 MB files), 100 run boxes plus a compile pool sized to the cores, the pinning mode, the 256-entry compile cache, the Go cache directory."]]],
-["controllers","HTTP","Request parsing and response shaping; no judging logic here.",[["executionController.ts","Legacy","POST /v1/execute: judges a catalog problem by id (sync, or 202 + token with Redis). No caller since the web app moved to /v1/run."],
-["ideExecutionController.ts","HTTP","POST /v1/ide/execute and its poll: a whole program against up to ten stdin cases."],
-["problemController.ts","Legacy","GET /v1/problems and /v1/problems/:id from the JSON catalog, hidden tests blanked. No web caller."],
+["backend","Compile service","The stateless judge: Express API, harness generation for six languages, the isolate and local sandbox adapters. No database, no users, no sessions.",[["postman","Docs","Postman collection for the current API.",[["README.md","Docs","How to import and run the collection: the base URL and token variables, the requests, their test scripts."],
+["Codemare_API.postman_collection.json","Docs","24 requests with test scripts: /health, /v1/run in six languages and every verdict, a prelude, a 400, /v1/run/stream, IDE mode (sync, 202 + poll, 400s), queue stats."],
+["Codemare_Environment.postman_environment.json","Docs","baseUrl (http://localhost:4000) and internalToken (secret, empty)."]]],
+["src","Compile service","Service sources.",[["config","Config","Every sandbox limit in one place.",[["sandbox.ts","Config","Run limits (10 s CPU, 256 MB, 16 MB output), compile limits (15 s, 512 MB, 64 MB files), 100 run boxes plus a compile pool sized to the cores, the pinning mode, the compile cache’s bounds (256 entries, COMPILE_CACHE_MAX_MB), the Go cache directory."]]],
+["controllers","HTTP","Request parsing and response shaping; no judging logic here.",[["ideExecutionController.ts","HTTP","POST /v1/ide/execute and its poll: a whole program against up to ten stdin cases."],
 ["runController.ts","HTTP","POST /v1/run (JSON) and /v1/run/stream (SSE: queued, compiling, running, test…, verdict; a heartbeat every 15 s; a client disconnect aborts the run)."]]],
-["data","Legacy","The legacy problem catalog.",[["problems","Legacy","The four-language-era catalog behind /v1/problems and /v1/execute. Content now lives in Postgres (web/prisma/seed/data); spec §5 schedules this folder for removal.",[["*.json · 11 files","Legacy","index.json plus ten problems (statement, signature, tests, starter code in four languages). Still served by /v1/problems and smoke-tested by CI’s legacy step; nothing in the web app reads them."]]]]],
 ["middleware","Security","Cross-cutting request guards.",[["errorHandler.ts","HTTP","Keeps upstream statuses (400 bad JSON, 413 too large); 500s stay opaque."],
 ["internalAuth.ts","Security","Timing-safe X-Codemare-Token check; open only in development with no token set, and production refuses to start without one."],
 ["rateLimit.ts","Security","A circuit breaker (EXECUTION_RATE_LIMIT_MAX, default 6000/min per process), not a per-user limit: the only caller is the web server."]]],
-["models","Types","Request and response types.",[["ExecutionResult.ts","Types","The languages the service accepts and the legacy ExecutionRequest/Response shapes."],
+["models","Types","Request and response types.",[["ExecutionResult.ts","Types","The languages the service accepts."],
 ["IdeExecution.ts","Types","IDE-mode request and response: stdin cases and per-case results."],
-["Problem.ts","Types","Signature types, compareMode and the legacy Problem shape."],
+["Problem.ts","Types","Signature types, CompareMode and TestCase: the input the harness generators take."],
 ["Run.ts","Types","The pure-executor contract: RunRequest, RunTestResult, RunVerdict, RunResponse."]]],
-["queue","Queue","The optional Redis queue.",[["queue.ts","Queue","BullMQ queue and worker, gated on REDIS_URL. Serves only the legacy /v1/execute and /v1/ide/execute paths; /v1/run always runs inline."]]],
-["routes","HTTP","One router per resource.",[["executionRoutes.ts","Legacy","POST /v1/execute, GET /v1/execute/:token."],
-["ideRoutes.ts","HTTP","POST /v1/ide/execute, GET /v1/ide/execute/:token."],
-["problemRoutes.ts","Legacy","GET /v1/problems, GET /v1/problems/:id."],
+["queue","Queue","The optional Redis queue.",[["queue.ts","Queue","BullMQ queue and worker, gated on REDIS_URL. Serves only IDE mode (/v1/ide/execute); /v1/run always runs inline. A leftover job of another kind fails cleanly."]]],
+["routes","HTTP","One router per resource.",[["ideRoutes.ts","HTTP","POST /v1/ide/execute, GET /v1/ide/execute/:token."],
 ["queueRoutes.ts","Queue","GET /v1/queue/stats."],
 ["runRoutes.ts","HTTP","POST /v1/run and /v1/run/stream; parses their up-to-6 MB bodies only after the token check."]]],
 ["services","Judge","The judging pipeline: validation, source assembly, harnesses, the verdict.",[["sandbox","Sandbox","The adapters, the isolate command line, CPU pinning, box output, the compile cache.",[["boxOutput.ts","Sandbox","Reads what a box wrote (O_NOFOLLOW, regular files only, bounded) and turns isolate’s meta file into a result, including “Output limit exceeded”."],
 ["boxPool.ts","Sandbox","Async semaphore over a range of isolate box ids; run and compile boxes come from separate pools so they cannot deadlock."],
-["compileCache.ts","Sandbox","Content-addressed cache of compiled artifacts (sha256 of language + argv + source), single-flight, an LRU of 256 entries."],
+["compileCache.ts","Sandbox","Content-addressed cache of compiled artifacts (sha256 of language + argv + source), single-flight, an LRU bounded by 256 entries and by bytes (artifacts on disk + cached compiler output; never the entry just stored)."],
 ["cpuPinning.ts","Sandbox","The CPU plan: one CPU per run box, round-robin, the first CPU kept for the API on 4+ cores; compile boxes may use every box CPU."],
 ["cpuPinningCli.ts","Entry","Prints the plan as isolate box<N>.cpus lines; the container entrypoint appends them, so pinning is a cpuset rather than advice."],
 ["goToolchain.ts","Sandbox","Go plumbing: warms a shared build cache at startup and binds it read-only into compile boxes; build and run environments (GOMAXPROCS=1, GOMEMLIMIT)."],
@@ -761,7 +751,6 @@ docker compose --env-file deploy/.env -f docker-compose.prod.yml exec backup cod
 ["metaParser.ts","Sandbox","Parses isolate’s meta file (time, wall time, cgroup memory, exit status, kill reason)."],
 ["types.ts","Types","SandboxAdapter, RunOptions (phase and stdout hooks, abort signal), LanguageSpec, SandboxResult."]]],
 ["codeWrapperService.ts","Judge","Generates the harness per language: Python and JavaScript read inputs from stdin; C++, Java and Go are generated from the signature with typed literals (Java: one method per test, chunked literals)."],
-["executionService.ts","Legacy","The pre-/v1/run pipeline behind /v1/execute (catalog lookup → wrap → sandbox → validate)."],
 ["harnessProtocol.ts","Judge","The harness wire protocol: one marker-prefixed JSON line per test, flushed as it finishes, then a summary; an incremental parser for streaming. Anything unmarked is the learner’s own output."],
 ["ideExecutionService.ts","Judge","IDE mode: runs the stdin cases concurrently and compares stdout (trailing whitespace ignored)."],
 ["runService.ts","Judge","The pure executor behind /v1/run: assemble, compile, run, parse per-test records, compare with the caller’s expected values, derive the verdict. Start reading the backend here."],
@@ -769,38 +758,38 @@ docker compose --env-file deploy/.env -f docker-compose.prod.yml exec backup cod
 ["sandboxService.ts","Sandbox","Picks the adapter once (isolate on Linux, else local; local refused in production) and runs the startup readiness probe per language."],
 ["sourceAssembly.ts","Judge","Prelude assembly: dependency sources before the learner’s code, with a segment table that maps error lines back; Go imports merged; Java refused."],
 ["typescript.ts","Judge","TypeScript: transpile-only in the API process (types erased, syntax errors → CE at the learner’s line), then the JavaScript path."],
-["validationService.ts","Judge","deepEqual (ordered or unordered, canonicalized, optional float tolerance), result validation and deriveVerdict."]]],
-["utils","Legacy","Leftovers from the early API.",[["codeTemplates.ts","Legacy","Old default IDE templates per language. Nothing imports it."]]],
-["app.ts","HTTP","The Express app: open /health first (skips CORS and logging), then CORS, a 1 MB JSON parser (not for the run routes), and the token-authed /v1 router, also mounted at the legacy /api."],
+["validationService.ts","Judge","deepEqual (ordered or unordered, canonicalized, optional float tolerance) and deriveVerdict."]]],
+["app.ts","HTTP","The Express app: open /health first (skips CORS and logging), then CORS, a 1 MB JSON parser (not for the run routes), and the token-authed /v1 router; anything else is a JSON 404."],
 ["server.ts","Entry","Warms the Go build cache, probes every language and the CPU pinning, starts an inline queue worker if asked, then listens on PORT (4000)."],
-["worker.ts","Entry","Standalone BullMQ worker (npm run worker) for the legacy queued endpoints; needs REDIS_URL."]]],
-["tests","Test","node:test via tsx: 160 tests in 17 files (one runs on Linux only), plus the isolate smoke and a VM shell check.",[["isolate","Test","The production sandbox path, end to end.",[["smoke.mjs","Test","26 checks against a running privileged container: six languages through /v1/run and /v1/ide/execute, verdicts, the compile cache, fork/memory/output bombs, no network, no host files, one CPU per box, no file locks in run boxes. CI job backend-isolate."]]],
+["worker.ts","Entry","Standalone BullMQ worker (npm run worker) for IDE-mode jobs; needs REDIS_URL."]]],
+["tests","Test","node:test via tsx: 163 tests in 17 files (one runs on Linux only), plus the isolate smoke and a deploy smoke script.",[["isolate","Test","The production sandbox path, end to end.",[["smoke.mjs","Test","26 checks against a running privileged container: six languages through /v1/run and /v1/ide/execute, verdicts, the compile cache, fork/memory/output bombs, no network, no host files, one CPU per box, no file locks in run boxes. CI job backend-isolate."]]],
 ["queue","Test","Queue gating.",[["queue.test.ts","Test","Queue gating on REDIS_URL, without a live Redis (3 tests)."]]],
 ["run","Test","The /v1/run contract, over HTTP and in parts.",[["harnessProtocol.test.ts","Test","Marker records, learner output and partial results (7 tests)."],
 ["httpHarness.ts","Test","Boots the real Express app on an ephemeral port with the local adapter and reads SSE streams."],
-["runEndpoint.test.ts","Test","POST /v1/run end to end in every language — needs python3, node, g++, javac and go (14 tests)."],
+["runEndpoint.test.ts","Test","POST /v1/run end to end in every language, compareMode, and forged harness records that must not pass — needs python3, node, g++, javac and go (16 tests)."],
 ["runStream.test.ts","Test","POST /v1/run/stream: event order, heartbeats, CE/XX without test events (8 tests)."],
 ["runValidation.test.ts","Test","Every 400 the /v1/run boundary returns (13 tests)."],
 ["sourceAssembly.test.ts","Test","Preludes per language, Go import merging, error-line mapping (8 tests)."],
 ["typescript.test.ts","Test","Transpiling, and syntax errors as CE at the learner’s line and column (8 tests)."]]],
 ["sandbox","Test","Sandbox helpers and the exact isolate command line.",[["boxOutput.test.ts","Test","Bounded reads, never through a symlink; meta → result incl. the output cap (9 tests)."],
 ["boxPool.test.ts","Test","Box id allocation, blocking and release (6 tests)."],
-["compileCache.test.ts","Test","Keys, single-flight, LRU eviction (6 tests)."],
+["compileCache.test.ts","Test","Keys, single-flight, LRU eviction, the byte budget (9 tests)."],
 ["cpuPinning.test.ts","Test","CPU lists, the plan and the reserved API CPU; the cpuset CLI runs on Linux only (13 tests)."],
 ["isolateCommand.test.ts","Test","The exact isolate command line for every language and phase (15 tests)."],
 ["localAdapter.test.ts","Test","The local adapter’s minimal environment, output cap and kills (7 tests)."],
 ["metaParser.test.ts","Test","isolate meta files → status, time, memory (8 tests)."]]],
 ["setup","Test","Test setup.",[["warmGoCache.ts","Test","pretest: warms the Go build cache once, so parallel test files do not each compile the standard library."]]],
-["validation","Test","Result comparison and verdicts.",[["deepEqual.test.ts","Test","Ordered and unordered comparison, float tolerance, deriveVerdict (10 tests)."]]],
+["validation","Test","Result comparison and verdicts.",[["deepEqual.test.ts","Test","Ordered and unordered comparison, float tolerance, deriveVerdict (8 tests)."]]],
 ["wrapper","Test","Harness generators, compiled and run for real.",[["codeWrapper.test.ts","Test","C++/Java literal emission, escaping, the unordered canon; javac-compiles harnesses with large literals (15 tests)."],
-["goWrapper.test.ts","Test","Go harness generation, then go build and run for real: preludes, merged imports, panics, a 10k-element literal (10 tests)."]]],
-["deployment.test.sh","Test","Shell smoke for a VM provisioned by deploy/install.sh (the systemd path; run on the host)."]]],
+["goWrapper.test.ts","Test","Go harness generation, then go build and run for real: preludes, merged imports, panics, a 10k-element literal (10 tests)."],
+["seedQuestions.ts","Test","Turns seed question files (web/prisma/seed/data/questions) into the wrapper suites’ fixtures, and fails loudly if the seed loses the large inputs those suites exist to prove."]]],
+["deployment.test.sh","Test","Smoke for a running compile service (BASE_URL, default :4000; optional INTERNAL_TOKEN): health, /v1/run in Python, JavaScript and C++, a CE verdict, the SSE stream, IDE mode."]]],
 [".eslintrc.cjs","Config","ESLint for the service (CI runs it); _-prefixed unused parameters are allowed."],
 ["DEPLOYMENT.md","Docs","The older systemd path for the compile service on its own VM (install.sh, release.sh), its security model and capacity notes. The Compose runbook is deploy/README.md."],
 ["Dockerfile","Ops","codemare/backend: Node 20, python3, g++, Temurin JDK 21, Go and isolate 2.7 built from a checksum-pinned tarball; every toolchain linked into /usr/bin, where boxes can see it."],
 ["Dockerfile.dockerignore","Config","Allowlist build context for the backend image."],
 ["package-lock.json","Generated","Standalone lockfile that deploy/release.sh installs from on a VM."],
-["package.json","Config","Scripts: dev (tsx watch), build (tsc + copy the legacy catalog), test (node:test with the local adapter; warms the Go cache first), lint, typecheck, worker."],
+["package.json","Config","Scripts: dev (tsx watch), build (a clean tsc), test (node:test with the local adapter; warms the Go cache first), lint, typecheck, worker."],
 ["tsconfig.json","Config","TypeScript config for the service (ES modules)."]]],
 ["deploy","Ops","What the production Compose stack needs at runtime, the operations runbook, and the older systemd path.",[["backend","Ops","Compile-service container setup.",[["docker-entrypoint.sh","Ops","As root: cgroup v2 delegation, a tmpfs box root, isolate’s config with the service’s per-box cpusets, one test box; then drops to the service user."]]],
 ["backup","Ops","The backup image and its scripts.",[["backup.sh","Ops","codemare-backup: pg_dump -Fc of the whole database (uncompressed, so restic deduplicates), verified, a manifest, restic backup/forget/check, health stamp and ping."],
@@ -927,7 +916,6 @@ docker compose --env-file deploy/.env -f docker-compose.prod.yml exec backup cod
 ["BadgeStrip.tsx","UI","The profile’s strip of badges."]]],
 ["Catalog","UI","The /problems catalog (01, 08b).",[["Catalog.module.css","Style","Catalog toolbar, rows and facets."],
 ["CatalogFilters.tsx","UI","Search, difficulty chips and status/topic/tag/company selects; every change is a URL change, made in a transition."],
-["CatalogList.tsx","Legacy","The old client-filtered catalog list. Nothing imports it."],
 ["CatalogRows.tsx","UI","One link per question; locked ones keep a lock and open /map. Server component."],
 ["FilterNav.tsx","UI","Filter navigation shared by a page’s controls and results: transitions, a dimmed pending region, optimistic state so quick changes compose."],
 ["LinkPending.tsx","UI","Inside a catalog row’s link: swaps the status dot for a spinner while that navigation is in flight (useLinkStatus) — the editor has no loading.tsx to show the wait."],
@@ -1016,7 +1004,6 @@ docker compose --env-file deploy/.env -f docker-compose.prod.yml exec backup cod
 ["TestBreakdown.tsx","UI","Per-test results: visible tests open to input/expected/output/error; hidden ones show pass or fail only."],
 ["TestStrip.tsx","UI","One tick per test, filling in as test events arrive."]]],
 ["states","UI","Shared screen states (08): empty, loading, 404, 500.",[["EmptyState.tsx","UI","“Nothing here yet”: icon, title, one line of help, optional action."],
-["index.ts","Legacy","Barrel re-export. Nothing imports it; pages import each state directly."],
 ["LoadingState.tsx","UI","Skeletons shaped like the coming screen (list or editor), role=status; used by loading.tsx files."],
 ["NotFound.tsx","UI","The 404, inline or full page."],
 ["ServerError.tsx","UI","The 500, showing only the digest, never the raw message."],
@@ -1105,8 +1092,7 @@ docker compose --env-file deploy/.env -f docker-compose.prod.yml exec backup cod
 ["types.ts","Types","The workspace’s serializable props, so a server component can hand them straight over."],
 ["useModKey.ts","UI","Prints ⌘ or Ctrl for shortcut hints, corrected after mount."],
 ["useSplit.ts","UI","A resizable split remembered per browser, as a WAI-ARIA window splitter."],
-["Workspace.module.css","Style","Workspace layout (panes are positioned so hidden text cannot stretch the page)."]]],
-["SignOutButton.tsx","Legacy","An old client sign-out button. Nothing imports it (the profile menu signs out)."]]],
+["Workspace.module.css","Style","Workspace layout (panes are positioned so hidden text cannot stretch the page)."]]]]],
 ["e2e","Test","Playwright: 43 tests in 11 specs, run against an already-running app (PLAYWRIGHT_BASE_URL); each spec creates its own users (those that earned tokens stay: the ledger is append-only).",[["a11y.spec.ts","Test","The accessibility and layout gate: no serious or critical axe violation and exactly one h1 on a route per section in both themes, no sideways scroll at 375 px (3 tests; axe-core loaded from cdnjs)."],
 ["auth.spec.ts","Test","The login wall, sign-up, sign-in, forgot and reset (6 tests)."],
 ["author.spec.ts","Test","Role gate, write → verify on the judge → publish, ownership (3 tests)."],
@@ -1205,8 +1191,8 @@ docker compose --env-file deploy/.env -f docker-compose.prod.yml exec backup cod
 ["users.ts","Domain","User creation with a guaranteed unique handle."]]],
 ["authRoutes.test.ts","Test","decideRoute and safeNextPath, open-redirect tricks included (21 tests)."],
 ["catalogQuery.test.ts","Test","The /problems URL contract (9 tests)."],
-["compile.test.ts","Test","The SSE client against canned streams (4 tests)."],
-["compile.ts","Service link","The server-only compile-service client: run, runStream, executeIde, with X-Codemare-Token; refuses a placeholder token in production. listProblems, getProblem and execute remain but have no callers."],
+["compile.test.ts","Test","The SSE client against canned streams, and executeIde’s inline and 202 + poll replies (6 tests)."],
+["compile.ts","Service link","The server-only compile-service client: run, runStream, executeIde, with X-Codemare-Token; refuses a placeholder token in production."],
 ["mailer.test.ts","Test","Resend requests and the console fallback (6 tests)."],
 ["mailer.ts","Service link","Password-reset mail through Resend’s HTTP API with plain fetch; printed to the server log when RESEND_API_KEY or MAIL_FROM is unset."],
 ["password.ts","Auth","bcryptjs hash and verify (cost 12) and the password rules."],
@@ -1216,7 +1202,7 @@ docker compose --env-file deploy/.env -f docker-compose.prod.yml exec backup cod
 ["sse.ts","Service link","SSE framing in both directions and the web run protocol’s event types; isomorphic, shared by route handlers, the compile client and the browser hook."],
 ["submissionsFormat.test.ts","Test","Submission formatting and URL contract (7 tests)."],
 ["theme.ts","UI","The cm-theme cookie contract, shared by server and client."],
-["types.ts","Types","The shared vocabulary (difficulties, six languages, roles, verdicts, JSON shapes) plus the legacy compile-service types."]]],
+["types.ts","Types","The shared vocabulary (difficulties, six languages, roles, verdicts, JSON shapes) plus the compile service’s IDE-mode shapes."]]],
 ["prisma","Data","Schema, migrations and the content seed.",[["migrations","Data","Real migrations, applied with prisma migrate deploy on every start. Never db push: it would drop the SQL-only guards.",[["20260928094803_init","Data","The baseline.",[["migration.sql","Data","The baseline: both schemas, 37 tables, enums, indexes and foreign keys."]]],
 ["20260928094820_integrity_guards","Security","Guards Prisma cannot express.",[["migration.sql","Security","What Prisma cannot express: the ledger’s append-only trigger, the earn-once partial unique index, CHECKs, one running gate attempt per user and gate."]]],
 ["20260929090000_join_table_surrogate_ids","Data","Editable join tables.",[["migration.sql","Data","Surrogate ids for question_topics, gate_questions and component_deps (so Directus can edit them), a deterministic backfill, and CHECK (weight > 0)."]]],
@@ -1259,7 +1245,7 @@ docker compose --env-file deploy/.env -f docker-compose.prod.yml exec backup cod
 ["with-env.mjs","Config","Runs a command with web/.env.local loaded (Prisma’s CLI reads only .env)."]]],
 ["public","Asset","Static files.",[["logo.svg","Asset","The logomark, also the favicon."]]],
 ["scripts","Dev","Developer scripts.",[["setup.mjs","Dev","npm run setup: web/.env.local with a fresh AUTH_SECRET, the Prisma client, then migrations and the seed when DATABASE_URL is real. Safe to re-run."]]],
-["README.md","Docs","Stale: describes the pre-platform app (/v1/execute, port 3001). The root README is current."],
+["README.md","Docs","The web workspace: what lives where, its scripts, environment and tests (the root README has the quick start)."],
 [".env.example","Config","Template for web/.env.local (npm run setup copies it and writes a fresh AUTH_SECRET)."],
 [".eslintrc.json","Config","next/core-web-vitals."],
 [".gitignore","Config","Ignores .next, .next-prod and env files; /build/ is anchored so app/api/build stays tracked."],
