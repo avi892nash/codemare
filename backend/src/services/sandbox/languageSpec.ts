@@ -56,8 +56,13 @@ export function detectJavaClassName(code: string): string {
  *                     64 leaves headroom for ForkJoinPool.common defaults
  *                     while still capping user-spawned thread pools.
  *
- * The real fairness lever is CPU pinning (one core per run box) — see
- * isolateAdapter. The pid caps are defence-in-depth and a fork-bomb stop.
+ * Compile-phase caps: javac is a multi-threaded JVM, so it gets 64 instead of
+ * the default compile cap of 16 (enough for g++).
+ *
+ * The pid caps (isolate --processes = RLIMIT_NPROC) are defence-in-depth and
+ * a fork-bomb stop. NB: isolate has no CPU-affinity option — the adapter's
+ * `--core=N` is RLIMIT_CORE (core-dump size), not pinning — so these caps and
+ * per-thread CPU clocks are what keep parallelism from buying a better time.
  */
 const SPECS: Record<Language, LanguageSpec> = {
   python: {
@@ -105,6 +110,7 @@ const SPECS: Record<Language, LanguageSpec> = {
     // adapters expand this against the compile dir via resolveArtifactNames.
     artifacts: () => ['*.class'],
     pidsLimit: 64,
+    compilePidsLimit: 64,
   },
 };
 

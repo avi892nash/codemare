@@ -115,6 +115,13 @@ export class CompileCache {
     }
   }
 
+  /** True when `key` is compiled and stored (a getOrCompile would be a pure
+   *  hit). An in-flight compile is not "has" — callers waiting on it are
+   *  still compiling from the user's point of view. */
+  has(key: string): boolean {
+    return this.entries.has(key);
+  }
+
   size(): number {
     return this.entries.size;
   }

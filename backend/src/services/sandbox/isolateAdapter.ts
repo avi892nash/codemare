@@ -24,16 +24,23 @@ import { LanguageSpec, RunOptions, SandboxAdapter, SandboxResult } from './types
  *
  * The compile cost is therefore *not* charged against the user's run-time
  * budget, which is the core fix for the "timing dominated by setup" bug.
+ *
+ * Box pools: a request holds its run box while it compiles, so compile boxes
+ * come from a separate pool. With one shared pool, N concurrent compiled-
+ * language requests (N = pool size) could each hold a run box and wait
+ * forever for a compile box — a hold-and-wait deadlock the inline SSE path
+ * would hit under a burst.
  */
 
 const pool = new BoxPool(SANDBOX_CONFIG.isolate.maxBoxes);
+const compilePool = new BoxPool(SANDBOX_CONFIG.isolate.compileBoxes, SANDBOX_CONFIG.isolate.maxBoxes);
 const META_DIR = '/tmp';
 
 /**
- * Number of physical cores available to pin user submissions onto. Resolved
- * once at startup. We pin each run box to a single core (round-robin by box
- * id) so a user submission cannot parallelise its algorithm to win timing
- * comparisons unfairly — CP-judge convention.
+ * Host cores, resolved once. NB: the value is passed as isolate `--core=N`,
+ * which is RLIMIT_CORE (max core-dump size in KB) — isolate has no CPU
+ * affinity option, so this does not pin the run to a core. Kept as-is
+ * (harmless) pending a decision on real pinning (e.g. taskset in the box).
  */
 const HOST_CORES = Math.max(1, os.availableParallelism?.() ?? os.cpus().length);
 
@@ -42,12 +49,13 @@ interface IsolateRunSpec {
   timeoutMs: number;
   memoryKb: number;
   pidsLimit: number;
-  /**
-   * Pin the run to one host core (sched_setaffinity via isolate's --core flag).
-   * Omit during compile — g++ / javac can use whatever the scheduler gives them.
-   */
+  /** See HOST_CORES: forwarded as `--core=N` (RLIMIT_CORE), not pinning. */
   cpuCore?: number;
   stdinFile?: string;
+  /** Environment for the program (-E var=value); the box env is otherwise empty. */
+  env?: Record<string, string>;
+  /** Extra directory rules (`--dir=in=out[:opts]`). */
+  dirs?: string[];
 }
 
 interface IsolateRunResult {
@@ -90,7 +98,11 @@ async function runInBox(boxId: number, spec: IsolateRunSpec): Promise<IsolateRun
     `--box-id=${boxId}`,
     `--time=${(spec.timeoutMs / 1000).toFixed(3)}`,
     `--wall-time=${((spec.timeoutMs * 2) / 1000).toFixed(3)}`,
-    `--mem=${spec.memoryKb}`,
+    // --cg-mem caps the control group's real memory use (and is what makes
+    // cg-oom-killed → MLE work). Plain --mem would be RLIMIT_AS — an
+    // address-space cap that the JVM and V8 (and any runtime that reserves
+    // large virtual regions up front) cannot even start under at 256 MB.
+    `--cg-mem=${spec.memoryKb}`,
     `--processes=${spec.pidsLimit}`,
     `--meta=${metaPath}`,
     `--stdout=${stdoutFile}`,
@@ -103,6 +115,12 @@ async function runInBox(boxId: number, spec: IsolateRunSpec): Promise<IsolateRun
   if (spec.stdinFile) {
     args.push(`--stdin=${spec.stdinFile}`);
   }
+  for (const [name, value] of Object.entries(spec.env ?? {})) {
+    args.push(`--env=${name}=${value}`);
+  }
+  for (const rule of spec.dirs ?? []) {
+    args.push(`--dir=${rule}`);
+  }
   args.push('--run', '--', ...spec.argv);
 
   await runIsolate(args);
@@ -113,6 +131,7 @@ async function runInBox(boxId: number, spec: IsolateRunSpec): Promise<IsolateRun
     readFile(path.join(boxDir, stdoutFile), 'utf8').catch(() => ''),
     readFile(path.join(boxDir, stderrFile), 'utf8').catch(() => ''),
   ]);
+  await rm(metaPath, { force: true }).catch(() => undefined);
 
   return { metaText, stdout, stderr };
 }
@@ -130,7 +149,7 @@ async function compileToArtifactDir(
   code: string,
   artifactNames: string[]
 ): Promise<FreshCompileOutcome> {
-  const boxId = await pool.acquire();
+  const boxId = await compilePool.acquire();
   try {
     const boxDir = await initBox(boxId);
     await writeFile(path.join(boxDir, mainFile), code);
@@ -139,7 +158,9 @@ async function compileToArtifactDir(
       argv: spec.compileArgv!(mainFile),
       timeoutMs: SANDBOX_CONFIG.compileLimits.timeoutMs,
       memoryKb: SANDBOX_CONFIG.compileLimits.memoryKb,
-      pidsLimit: SANDBOX_CONFIG.compileLimits.pidsLimit,
+      pidsLimit: spec.compilePidsLimit ?? SANDBOX_CONFIG.compileLimits.pidsLimit,
+      env: spec.compileEnv?.('isolate'),
+      dirs: spec.compileDirs?.(),
     });
     const meta = parseIsolateMeta(result.metaText);
     const compileMs = (meta.timeWall ?? meta.time ?? 0) * 1000;
@@ -149,7 +170,8 @@ async function compileToArtifactDir(
         kind: 'fail',
         result: {
           output: '',
-          error: result.stderr.trim() || meta.message || 'Compilation failed',
+          // Compilers report on stderr; stdout is only a fallback.
+          error: result.stderr.trim() || result.stdout.trim() || meta.message || 'Compilation failed',
           status: 'CE',
           runMs: 0,
           wallMs: compileMs,
@@ -172,8 +194,12 @@ async function compileToArtifactDir(
     return { kind: 'ok', dir: artifactDir, artifacts: resolvedNames, compileMs };
   } finally {
     await cleanupBox(boxId);
-    pool.release(boxId);
+    compilePool.release(boxId);
   }
+}
+
+function cancelled(compileMs?: number): SandboxResult {
+  return { output: '', error: 'Run cancelled', status: 'XX', runMs: 0, wallMs: 0, memoryKb: 0, compileMs };
 }
 
 async function execute(
@@ -191,11 +217,15 @@ async function execute(
   // wins if the caller explicitly overrides.
   const pidsLimit = options?.pidsLimit ?? spec.pidsLimit ?? limits.pidsLimit;
   const mainFile = spec.mainFileName(code);
+  const signal = options?.signal;
+  if (signal?.aborted) return cancelled();
 
-  const runBoxId = await pool.acquire();
+  const runBoxId = await pool.acquire(() => options?.onPhase?.('queued'));
   let compileMs: number | undefined;
 
   try {
+    // Disconnected while queued: give the box straight back.
+    if (signal?.aborted) return cancelled();
     const runBoxDir = await initBox(runBoxId);
 
     if (spec.needsCompile) {
@@ -211,12 +241,15 @@ async function execute(
       let ownDir = false;
       if (SANDBOX_CONFIG.compileCache.enabled) {
         const key = compileCache.key(language, spec.compileArgv!(mainFile), code);
+        // Only a real (or in-flight) compile is a "compiling" phase.
+        if (!compileCache.has(key)) options?.onPhase?.('compiling');
         const outcome = await compileCache.getOrCompile(key, thunk);
         if (outcome.kind === 'fail') return outcome.result;
         compileMs = outcome.compileMs;
         artifactDir = outcome.dir;
         resolvedArtifacts = outcome.artifacts;
       } else {
+        options?.onPhase?.('compiling');
         const fresh = await thunk();
         if (fresh.kind === 'fail') return fresh.result;
         compileMs = fresh.compileMs;
@@ -240,16 +273,18 @@ async function execute(
 
     await writeFile(path.join(runBoxDir, 'stdin.txt'), input);
 
+    // A started isolate run is not killed on cancel: it is bounded by its own
+    // limits, and cleanupBox below tears the box down either way.
+    if (signal?.aborted) return cancelled(compileMs);
+    options?.onPhase?.('running');
     const runResult = await runInBox(runBoxId, {
       argv: spec.runArgv(mainFile),
       timeoutMs,
       memoryKb,
       pidsLimit,
-      // Round-robin core assignment across concurrent submissions so we don't
-      // pile every box onto core 0. Each box still sees exactly one core,
-      // which is what guarantees fair timing.
       cpuCore: runBoxId % HOST_CORES,
       stdinFile: 'stdin.txt',
+      env: spec.runEnv?.('isolate', { memoryKb }),
     });
 
     const meta = parseIsolateMeta(runResult.metaText);
@@ -260,7 +295,14 @@ async function execute(
 
     return {
       output: runResult.stdout,
-      error: status === 'OK' ? undefined : runResult.stderr.trim() || meta.message,
+      error:
+        status === 'OK'
+          ? undefined
+          : status === 'TLE'
+            ? `Time limit exceeded (${timeoutMs} ms)`
+            : status === 'MLE'
+              ? `Memory limit exceeded (${Math.round(memoryKb / 1024)} MB)`
+              : runResult.stderr.trim() || meta.message,
       status,
       runMs,
       wallMs,

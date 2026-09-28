@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import { createReadStream } from 'node:fs';
 import { cp, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -27,6 +28,8 @@ import { LanguageSpec, RunOptions, SandboxResult, SandboxStatus } from './types.
  *   · The per-language wrapper still emits accurate runMs / peakBytes for
  *     Python and JavaScript Problems mode.
  *   · stdin/stdout flow is identical so IDE mode behaves the same as in prod.
+ *   · Live stdout (RunOptions.onStdout), which isolate can't offer because
+ *     it writes stdout to a file read after the run.
  */
 let warned = false;
 function warnOnce(): void {
@@ -41,6 +44,10 @@ function warnOnce(): void {
   );
 }
 
+/** Output beyond this (UTF-16 units, ~bytes) is not collected; the process
+ *  is killed (RE). */
+const MAX_OUTPUT_BYTES = 32 * 1024 * 1024;
+
 interface SpawnOutcome {
   stdout: string;
   stderr: string;
@@ -48,51 +55,90 @@ interface SpawnOutcome {
   signal: NodeJS.Signals | null;
   wallMs: number;
   timedOut: boolean;
+  outputExceeded: boolean;
+  aborted: boolean;
 }
 
 function runProcess(
   argv: string[],
   cwd: string,
-  options: { stdinPath?: string; timeoutMs: number }
+  options: {
+    stdinPath?: string;
+    timeoutMs: number;
+    env?: Record<string, string>;
+    onStdout?: (chunk: string) => void;
+    signal?: AbortSignal;
+  }
 ): Promise<SpawnOutcome> {
   return new Promise((resolve, reject) => {
     const start = process.hrtime.bigint();
     const [cmd, ...args] = argv;
-    const child = spawn(cmd, args, { cwd, stdio: ['pipe', 'pipe', 'pipe'] });
+    const child = spawn(cmd, args, {
+      cwd,
+      stdio: ['pipe', 'pipe', 'pipe'],
+      env: options.env ? { ...process.env, ...options.env } : process.env,
+    });
 
     let stdout = '';
     let stderr = '';
+    let outBytes = 0;
     let timedOut = false;
+    let outputExceeded = false;
+    let aborted = false;
 
     const killTimer = setTimeout(() => {
       timedOut = true;
       child.kill('SIGKILL');
     }, options.timeoutMs);
 
-    child.stdout.on('data', (chunk) => {
-      stdout += chunk.toString();
+    const onAbort = (): void => {
+      aborted = true;
+      child.kill('SIGKILL');
+    };
+    options.signal?.addEventListener('abort', onAbort, { once: true });
+
+    // setEncoding decodes through a StringDecoder, so a multi-byte UTF-8
+    // character split across two chunks isn't mangled.
+    child.stdout.setEncoding('utf8');
+    child.stderr.setEncoding('utf8');
+    child.stdout.on('data', (text: string) => {
+      if (outputExceeded) return;
+      outBytes += text.length;
+      if (outBytes > MAX_OUTPUT_BYTES) {
+        outputExceeded = true;
+        child.kill('SIGKILL');
+        return;
+      }
+      stdout += text;
+      options.onStdout?.(text);
     });
-    child.stderr.on('data', (chunk) => {
-      stderr += chunk.toString();
+    child.stderr.on('data', (text: string) => {
+      if (stderr.length < MAX_OUTPUT_BYTES) stderr += text;
     });
+    // A program that exits without draining stdin makes the pipe write fail
+    // with EPIPE; without a listener that error would crash this process.
+    child.stdin.on('error', () => undefined);
+
+    const cleanup = (): void => {
+      clearTimeout(killTimer);
+      options.signal?.removeEventListener('abort', onAbort);
+    };
 
     child.on('error', (err) => {
-      clearTimeout(killTimer);
+      cleanup();
       reject(err);
     });
 
     child.on('close', (code, signal) => {
-      clearTimeout(killTimer);
+      cleanup();
       const wallMs = Number(process.hrtime.bigint() - start) / 1_000_000;
-      resolve({ stdout, stderr, exitCode: code, signal, wallMs, timedOut });
+      resolve({ stdout, stderr, exitCode: code, signal, wallMs, timedOut, outputExceeded, aborted });
     });
 
     if (options.stdinPath) {
-      import('node:fs').then((fs) => {
-        const input = fs.createReadStream(options.stdinPath as string);
-        input.on('error', (e) => reject(e));
-        input.pipe(child.stdin);
-      });
+      const input = createReadStream(options.stdinPath);
+      input.on('error', (e) => reject(e));
+      input.pipe(child.stdin);
     } else {
       child.stdin.end();
     }
@@ -115,6 +161,7 @@ async function compileLocalToDir(
   await writeFile(path.join(compileDir, mainFile), code);
   const res = await runProcess(spec.compileArgv!(mainFile), compileDir, {
     timeoutMs: compileTimeoutMs,
+    env: spec.compileEnv?.('local'),
   });
   if (res.timedOut || res.exitCode !== 0) {
     await rm(compileDir, { recursive: true, force: true }).catch(() => undefined);
@@ -122,7 +169,9 @@ async function compileLocalToDir(
       kind: 'fail',
       result: {
         output: '',
-        error: res.stderr || 'Compilation failed',
+        error: res.timedOut
+          ? `Compilation timed out (${compileTimeoutMs} ms)`
+          : res.stderr || 'Compilation failed',
         status: 'CE',
         runMs: 0,
         wallMs: res.wallMs,
@@ -138,6 +187,18 @@ async function compileLocalToDir(
   return { kind: 'ok', dir: compileDir, artifacts: resolved, compileMs: res.wallMs };
 }
 
+function abortedResult(compileMs?: number): SandboxResult {
+  return {
+    output: '',
+    error: 'Run cancelled',
+    status: 'XX',
+    runMs: 0,
+    wallMs: 0,
+    memoryKb: 0,
+    compileMs,
+  };
+}
+
 export async function executeLocal(
   language: Language,
   code: string,
@@ -147,8 +208,11 @@ export async function executeLocal(
   warnOnce();
 
   const timeoutMs = options?.timeoutMs ?? SANDBOX_CONFIG.limits.timeoutMs;
+  const memoryKb = options?.memoryKb ?? SANDBOX_CONFIG.limits.memoryKb;
   const compileTimeoutMs = SANDBOX_CONFIG.compileLimits.timeoutMs;
   const spec = getLanguageSpec(language);
+  const signal = options?.signal;
+  if (signal?.aborted) return abortedResult();
 
   const tmpDir = await mkdtemp(path.join(os.tmpdir(), 'codemare-local-'));
 
@@ -171,12 +235,16 @@ export async function executeLocal(
       let ownDir = false;
       if (SANDBOX_CONFIG.compileCache.enabled) {
         const key = compileCache.key(language, spec.compileArgv(mainFile), code);
+        // A cache hit is not a compile — only report the phase when one
+        // actually runs (or we wait on an identical in-flight compile).
+        if (!compileCache.has(key)) options?.onPhase?.('compiling');
         const outcome = await compileCache.getOrCompile(key, thunk);
         if (outcome.kind === 'fail') return outcome.result;
         compileMs = outcome.compileMs;
         artifactDir = outcome.dir;
         resolvedArtifacts = outcome.artifacts;
       } else {
+        options?.onPhase?.('compiling');
         const fresh = await thunk();
         if (fresh.kind === 'fail') return fresh.result;
         compileMs = fresh.compileMs;
@@ -198,10 +266,16 @@ export async function executeLocal(
       await writeFile(path.join(tmpDir, mainFile), code);
     }
 
+    if (signal?.aborted) return abortedResult(compileMs);
+    options?.onPhase?.('running');
     const runResult = await runProcess(spec.runArgv(mainFile), tmpDir, {
       timeoutMs,
       stdinPath,
+      env: spec.runEnv?.('local', { memoryKb }),
+      onStdout: options?.onStdout,
+      signal,
     });
+    if (runResult.aborted) return abortedResult(compileMs);
 
     const status = classify(runResult);
     return {
@@ -213,7 +287,12 @@ export async function executeLocal(
           ? undefined
           : status === 'TLE'
             ? `Time limit exceeded (${timeoutMs} ms)`
-            : runResult.stderr || `exit ${runResult.exitCode}`,
+            : runResult.outputExceeded
+              ? `Output limit exceeded (${MAX_OUTPUT_BYTES / (1024 * 1024)} MB)`
+              : runResult.stderr ||
+                (runResult.signal
+                  ? `Process killed by ${runResult.signal}`
+                  : `exit ${runResult.exitCode}`),
       status,
       // Without a meta file, runMs falls back to wall. The wrapper-emitted
       // totalRunNs (inside the user process) is what the response actually
@@ -230,9 +309,9 @@ export async function executeLocal(
 }
 
 function classify(outcome: SpawnOutcome): SandboxStatus {
+  if (outcome.outputExceeded) return 'RE';
   if (outcome.timedOut) return 'TLE';
   if (outcome.signal === 'SIGKILL') return 'TLE';
   if (outcome.exitCode === 0) return 'OK';
   return 'RE';
 }
-
