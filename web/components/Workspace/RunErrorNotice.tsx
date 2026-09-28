@@ -39,7 +39,16 @@ export function RunErrorNotice({ error, onRetry }: { error: RunRequestError; onR
   ) : null;
   let details: string[] = [];
 
-  if (error.code === 'access_denied' && body.reason === 'topic_locked') {
+  if (error.code === 'access_denied' && body.reason === 'gate_attempt_closed') {
+    icon = 'clock';
+    title = 'This gate attempt has ended';
+    message = 'Submissions after the deadline don’t count. Your result is on the map.';
+    action = (
+      <ButtonLink href="/map" size="sm" variant="primary" icon="map">
+        See the result
+      </ButtonLink>
+    );
+  } else if (error.code === 'access_denied' && body.reason === 'topic_locked') {
     icon = 'lock';
     title = 'This question is locked';
     details = ((body.blockers as BlockerView[] | undefined) ?? []).map(blockerLine);

@@ -18,7 +18,11 @@
   padding: 8px;
 }
 
+/* Panes and their scroll bodies are positioned: absolutely positioned
+ * descendants (e.g. .sr-only text) then resolve against them and are
+ * clipped with the scroll, instead of stretching the document. */
 .pane {
+  position: relative;
   min-width: 0;
   min-height: 0;
   display: flex;
@@ -89,6 +93,7 @@
   border-bottom: 1px solid var(--line-2);
 }
 .paneBody {
+  position: relative;
   flex: 1;
   min-height: 0;
   overflow-y: auto;
@@ -140,6 +145,7 @@
   border-bottom: 1px solid var(--line-2);
 }
 .consoleBody {
+  position: relative;
   flex: 1;
   min-height: 0;
   overflow-y: auto;
