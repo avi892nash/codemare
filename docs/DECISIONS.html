@@ -553,13 +553,14 @@
             <tr><td>27</td><td><a href="#d27">Two seed modes</a></td><td><span class="st new">new · Sep 2026</span></td></tr>
             <tr><td>28</td><td><a href="#d28">One VPS: Docker Compose, Caddy, restic backups</a></td><td><span class="st new">new · Sep 2026</span></td></tr>
             <tr><td>29</td><td><a href="#d29">Sandbox hardening: what every box gets</a></td><td><span class="st new">new · Sep 2026</span></td></tr>
-            <tr><td>30</td><td><a href="#d30">No route-level <code>loading.tsx</code> on query-navigated routes</a></td><td><span class="st new">new · Sep 2026</span></td></tr>
+            <tr><td>30</td><td><a href="#d30">No route-level <code>loading.tsx</code> on query-navigated routes</a></td><td><span class="st amended">amended by 37</span></td></tr>
             <tr><td>31</td><td><a href="#d31">An Edge-safe Auth.js config for the middleware</a></td><td><span class="st new">new · Sep 2026</span></td></tr>
             <tr><td>32</td><td><a href="#d32">Throttle where identity exists</a></td><td><span class="st new">new · Sep 2026</span></td></tr>
             <tr><td>33</td><td><a href="#d33">AI review after the verdict, never instead of it</a></td><td><span class="st new">new · Sep 2026</span></td></tr>
             <tr><td>34</td><td><a href="#d34">The hidden Library: a 404 like any other</a></td><td><span class="st new">new · Sep 2026</span></td></tr>
             <tr><td>35</td><td><a href="#d35">Six CI jobs; a production build is the final word</a></td><td><span class="st new">new · Sep 2026</span></td></tr>
             <tr><td>36</td><td><a href="#d36">How it was built: phased agents, an integrator, CI</a></td><td><span class="st new">new · Sep 2026</span></td></tr>
+            <tr><td>37</td><td><a href="#d37">Accessibility and first paint, measured and gated</a></td><td><span class="st new">new · Sep 2026</span></td></tr>
           </tbody>
         </table></div>
 
@@ -1371,8 +1372,9 @@
         </article>
 
         <article class="dr" id="d30">
-          <div class="eyebrow">Decision 30 · <span class="st new">new</span></div>
+          <div class="eyebrow">Decision 30 · <span class="st amended">amended by 37</span></div>
           <h3>No route-level <code>loading.tsx</code> on routes that navigate by query string</h3>
+          <p class="note amended"><span class="tag">Amended</span>The rule stands. The editor, <code>/problems/[slug]</code>, has since lost its <code>loading.tsx</code> as well, for a different reason: its skeleton delayed the first real paint by at least 300 ms (<a href="#d37">decision 37</a>). Only <code>/map</code> and <code>/me/library</code> keep one.</p>
           <dl class="drg">
             <dt>Context</dt><dd><p>Under <code>next start</code>, every catalog filter, “Clear filters” and the submissions pagination silently did nothing: the RSC fetch returned 200 with the right payload, but no history entry was written and the UI never updated. Under <code>next dev</code> all of it worked, because dev doesn't prefetch.</p></dd>
             <dt>Decision</dt><dd><p>Pinned down by elimination — <code>/learn</code>, without a <code>loading.tsx</code>, navigated by query fine; removing <code>/problems/loading.tsx</code> alone fixed <code>/problems</code>; Next 15.5.26 still behaves this way — and written into spec §8: in production builds Next 15.5's router never commits a same-path, query-only navigation under a route-level loading boundary, so routes that navigate by query string (<code>/problems</code>, <code>/submissions</code>, <code>/queue</code>) have none, and show skeletons with in-page <code>&lt;Suspense&gt;</code>. <code>/problems/[slug]</code>, <code>/map</code> and <code>/me/library</code> keep theirs because nothing navigates within them by query.</p></dd>
@@ -1519,6 +1521,22 @@
           <dl class="drg">
             <dt>Consequences</dt><dd><p>About eleven hours from spec to the last merge: 106 commits, 13 merges. The price is integration work and the discipline of writing the contract first; the benefit is that every merge carries its own verification record — the evidence cited throughout this page. What the process can't replace is a human look at the product against its design, which is still owed (15). This page and the repo guide were themselves written by one agent while a QA agent worked on the UI in parallel.</p></dd>
             <dt>Evidence</dt><dd><p>The merge commits <code>a2c9e1f</code> … <code>e746e6d</code> (<code>git log --merges</code>).</p></dd>
+          </dl>
+        </article>
+
+        <article class="dr" id="d37">
+          <div class="eyebrow">Decision 37 · <span class="st new">new</span></div>
+          <h3>Accessibility and first paint, measured and gated</h3>
+          <dl class="drg">
+            <dt>Context</dt><dd><p>Every feature had tests; nobody had yet looked at the product whole. The first audit found 92 axe violations (4 critical, 28 serious) on 17 of 46 route states, five page containers of different widths, the same runtime printed two different ways, and an editor whose problem statement — its largest paint — appeared 3.3 s into a simulated mobile load.</p></dd>
+            <dt>Decision</dt><dd><ul>
+              <li><strong>Audit everything, in both themes and at two widths</strong>: 46 route states × dark and light × 1440 and 375 px — a screenshot, axe, a sideways-scroll check and an <code>h1</code> count for each — plus a keyboard walk through every page and overlay.</li>
+              <li><strong>Fix inside the design system</strong>: contrast from derived tokens (<code>--fg-gutter</code>, <code>--mark-mix</code>), one page shell and one header rhythm in <code>globals.css</code>, one formatter for runtime, memory and time.</li>
+              <li><strong>Gate it</strong>: <code>web/e2e/a11y.spec.ts</code> fails on any serious or critical axe violation, a missing or second <code>h1</code>, or sideways scroll at 375 px, in both themes, and runs with every Playwright suite, CI's e2e job included.</li>
+              <li><strong>Paint the page, not a placeholder</strong>: <code>/problems/[slug]</code> has no route-level <code>loading.tsx</code> — React holds a Suspense reveal until at least 300 ms after its fallback painted, so the skeleton delayed the statement — and the clicked catalog row shows a spinner instead (<code>useLinkStatus</code>). CSS is no longer merged across routes (<code>experimental.cssChunking: false</code>), and the mono font is not preloaded.</li>
+            </ul></dd>
+            <dt>Consequences</dt><dd><p>axe now reports nothing, of any severity, on any audited view. With throttling applied, LCP went from 1.86 to 1.41 s on <code>/problems</code> and from 2.25 to 1.43 s on the editor; <code>/problems</code> downloads 11 KB of CSS in 3 files instead of 25 KB in 5, and all 184 screenshots are pixel-identical before and after. Lighthouse's simulated LCP stays above 2 s on localhost, because the simulation charges already-downloaded JavaScript and both fonts to the first paint. An unknown slug now answers with a real 404 (<a href="#l-200">section 6</a>). <code>/map</code> and <code>/me/library</code> keep their skeletons: neither is an LCP target, and both give navigation feedback.</p></dd>
+            <dt>Evidence</dt><dd><p><code>6bc9e62</code>, <code>cf279e6</code>, <code>6bb9b0b</code>, <code>87dc62d</code>, <code>41328e1</code>, <code>ee87ae1</code>, <code>41ab193</code>, <code>76fe57a</code>; merged in <code>3e9fe42</code> with 43 of 43 Playwright tests passing against a production build.</p></dd>
           </dl>
         </article>
       </section>
@@ -1787,6 +1805,18 @@ GET  /v1/execute/:token       poll</code></pre>
           <h3>A click before hydration throws the form away</h3>
           <p>The auth forms submit through a client handler with controlled, unnamed inputs. A click before hydration fell through to a native GET submit that reloaded the page and discarded what was typed — on a slow connection, a fast user just bounced.</p>
           <p class="rule"><span class="tag">Rule</span>Keep submit disabled until the form has hydrated; it also makes browser tests wait for the real handler instead of racing it (<code>d1508a2</code>).</p>
+        </div>
+
+        <div class="lesson" id="l-motion">
+          <h3>Reduced motion made the editor's text invisible</h3>
+          <p>The global reduced-motion rule shortened every transition to 0.01 ms instead of removing it. A non-zero duration on <code>*</code> turns the default <code>transition-property: all</code> into a real transition on every element, so <code>getComputedStyle()</code> returns the old value right after a change. The Monaco theme reads each token's color back through a probe element; with reduced motion on, every token resolved to the page background and all code was invisible.</p>
+          <p class="rule"><span class="tag">Rule</span>Switch transitions off (<code>0s</code>) rather than shortening them, and pin <code>transition: none</code> on any element whose computed style you read back (<code>6bc9e62</code>).</p>
+        </div>
+
+        <div class="lesson" id="l-skeleton">
+          <h3>A skeleton can delay the page it stands in for</h3>
+          <p>The editor's <code>loading.tsx</code> streamed a skeleton first and the page after it. React deliberately holds a Suspense reveal until at least 300 ms after the fallback painted, so on a hard load the problem statement — the page's largest paint — never appeared sooner than 300 ms after a placeholder nobody needed.</p>
+          <p class="rule"><span class="tag">Rule</span>Measure first paint with and without a loading boundary. Keep one only where navigation is slow enough to need feedback, and give fast routes their feedback where the click happened (<code>41ab193</code>).</p>
         </div>
       </section>
 

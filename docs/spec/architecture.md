@@ -408,7 +408,9 @@ Old routes `/p/[id]`, `/auth`, `/profile` redirect to their new homes.
   `map route book-open award coin sun moon log-out git-branch grid edit trash
   sort repeat shield puzzle network table window arrows-lr`.
 - **A11y**: keyboard reachable, visible `focus-ring`, AA contrast in both
-  themes, honor `prefers-reduced-motion`.
+  themes, honor `prefers-reduced-motion` (transitions off, not shortened).
+  `web/e2e/a11y.spec.ts` gates it: no serious or critical axe violation and
+  exactly one `h1` per page in both themes, no sideways scroll at 375 px.
 - **Responsive**: editor ≥ 1024 px; catalog, learn, library, profile ≥ 375 px.
 - **Perf**: RSC by default; client components only for editor, visualizations,
   filters, interactive widgets. Monaco and visualizations are dynamically
@@ -418,8 +420,11 @@ Old routes `/p/[id]`, `/auth`, `/profile` redirect to their new homes.
   never commits a same-path, query-only navigation under a route-level loading
   boundary — filters and pagination silently do nothing (dev mode doesn't
   prefetch, so it only shows up in `next start`). Use in-page `<Suspense>`
-  for skeletons instead. `/problems/[slug]` keeps its `loading.tsx` because
-  nothing navigates within it by query.
+  for skeletons instead. `/problems/[slug]` has none either, for a different
+  reason: React holds a Suspense reveal until ≥ 300 ms after its fallback
+  painted, so a skeleton there delays the statement (the LCP element); the
+  clicked catalog row shows a pending spinner instead. Only `/map` and
+  `/me/library` keep a `loading.tsx`.
 
 ---
 
