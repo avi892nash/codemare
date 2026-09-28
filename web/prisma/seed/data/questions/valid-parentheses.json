@@ -1,0 +1,83 @@
+{
+  "slug": "valid-parentheses",
+  "title": "Valid Parentheses",
+  "difficulty": "Easy",
+  "statement_md": "Given a string `s` containing just the characters `'('`, `')'`, `'{'`, `'}'`, `'['` and `']'`, determine if the input string is valid.\n\nAn input string is valid if:\n\n1. Open brackets must be closed by the same type of brackets.\n2. Open brackets must be closed in the correct order.\n3. Every close bracket has a corresponding open bracket of the same type.\n\nReturn `true` if the string is valid, and `false` otherwise.",
+  "examples": [
+    {"input": "s = \"()\"", "output": "true"},
+    {
+      "input": "s = \"()[]{}\"",
+      "output": "true",
+      "explanation": "Each pair opens and closes in order, so the string is valid."
+    },
+    {
+      "input": "s = \"(]\"",
+      "output": "false",
+      "explanation": "The '(' is closed by ']', which is the wrong type of bracket."
+    }
+  ],
+  "constraints": ["1 <= s.length <= 10^4", "s consists of parentheses only '()[]{}'."],
+  "function_name": "isValid",
+  "signature": {"params": [{"name": "s", "type": "string"}], "returns": "bool"},
+  "compare_mode": "ordered",
+  "starter_code": {
+    "python": "def isValid(s):\n    # Write your code here\n    pass\n",
+    "javascript": "function isValid(s) {\n    // Write your code here\n}\n",
+    "typescript": "function isValid(s: string): boolean {\n    // Write your code here\n    return false;\n}\n",
+    "cpp": "#include <string>\nusing namespace std;\n\nbool isValid(string s) {\n    // Write your code here\n    return false;\n}\n",
+    "java": "class Solution {\n    public static boolean isValid(String s) {\n        // Write your code here\n        return false;\n    }\n}\n",
+    "go": "func isValid(s string) bool {\n\t// Write your code here\n\treturn false\n}\n"
+  },
+  "tests": [
+    {"input":["()"],"expected":true,"hidden":false,"explain_on_fail":"The simplest matched pair."},
+    {"input":["()[]{}"],"expected":true,"hidden":false,"explain_on_fail":"Several pairs side by side, each of a different type."},
+    {"input":["(]"],"expected":false,"hidden":false,"explain_on_fail":"An opening bracket closed by the wrong type."},
+    {"input":["("],"expected":false,"hidden":true,"explain_on_fail":"An opening bracket that is never closed."},
+    {"input":["([)]"],"expected":false,"hidden":true,"explain_on_fail":"The counts match but the nesting order is wrong."},
+    {"input":["{[]}"],"expected":true,"hidden":true,"explain_on_fail":"Properly nested brackets of different types."},
+    {"input":["))(("],"expected":false,"hidden":true,"explain_on_fail":"Closing brackets that appear before any opener."},
+    {"input":["(((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((())))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))"],"expected":true,"hidden":true,"explain_on_fail":"Very deep nesting — hundreds of levels."},
+    {"input":["]"],"expected":false,"hidden":true,"explain_on_fail":"A lone closing bracket with nothing to match."},
+    {"input":["{[()()]}"],"expected":true,"hidden":false,"explain_on_fail":"Nested groups that contain sibling pairs."}
+  ],
+  "reference_solutions": {
+    "python": "def isValid(s):\n    pairs = {')': '(', ']': '[', '}': '{'}\n    stack = []\n    for ch in s:\n        if ch in pairs:\n            if not stack or stack[-1] != pairs[ch]:\n                return False\n            stack.pop()\n        else:\n            stack.append(ch)\n    return not stack\n",
+    "javascript": "function isValid(s) {\n  // Push the closer we expect next; every closer must match the top.\n  const expect = { '(': ')', '[': ']', '{': '}' };\n  const stack = [];\n  for (const ch of s) {\n    if (ch in expect) stack.push(expect[ch]);\n    else if (stack.pop() !== ch) return false;\n  }\n  return stack.length === 0;\n}\n"
+  },
+  "topics": [{"slug": "stack", "weight": 1.0}],
+  "tags": ["string", "stack"],
+  "companies": ["Amazon", "Meta", "Bloomberg"],
+  "editorial_md": "### Intuition\nThe most recently opened bracket must be the first one closed — last in, first out. That is exactly a stack.\n\n### Algorithm\nScan the string. Push every opening bracket. For a closing bracket, the stack must be non-empty and its top must be the matching opener; pop it. At the end the stack must be empty (nothing left unclosed).\n\n```python\ndef isValid(s):\n    pairs = {')': '(', ']': '[', '}': '{'}\n    stack = []\n    for ch in s:\n        if ch in pairs:\n            if not stack or stack[-1] != pairs[ch]:\n                return False\n            stack.pop()\n        else:\n            stack.append(ch)\n    return not stack\n```\n\n### Complexity\nO(n) time and O(n) space in the worst case (all openers).",
+  "hints": [
+    {
+      "level": "nudge",
+      "body_md": "When you meet a closing bracket, which opening bracket must it match?",
+      "cost_kind": "score",
+      "cost_amount": 0
+    },
+    {
+      "level": "concept",
+      "body_md": "The last unmatched opener must be closed first — last in, first out. Push openers onto a stack; each closer must match and pop the top.",
+      "cost_kind": "score",
+      "cost_amount": 10
+    },
+    {
+      "level": "pseudo",
+      "body_md": "```\nfor ch in s:\n    if ch is an opener: push ch\n    else if stack empty or top doesn't match ch: return false\n    else: pop\nreturn stack is empty\n```",
+      "cost_kind": "score",
+      "cost_amount": 25
+    },
+    {
+      "level": "line",
+      "body_md": "The check for a closer: `if not stack or stack[-1] != pairs[ch]: return False` — and don't forget `return not stack` at the end.",
+      "cost_kind": "score",
+      "cost_amount": 40
+    },
+    {
+      "level": "solution",
+      "body_md": "```python\ndef isValid(s):\n    pairs = {')': '(', ']': '[', '}': '{'}\n    stack = []\n    for ch in s:\n        if ch in pairs:\n            if not stack or stack[-1] != pairs[ch]:\n                return False\n            stack.pop()\n        else:\n            stack.append(ch)\n    return not stack\n```",
+      "cost_kind": "score",
+      "cost_amount": 100
+    }
+  ]
+}

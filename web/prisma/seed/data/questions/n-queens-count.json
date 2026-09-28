@@ -1,0 +1,83 @@
+{
+  "slug": "n-queens-count",
+  "title": "N-Queens Count",
+  "difficulty": "Hard",
+  "statement_md": "Place `n` chess queens on an `n × n` board so that no two attack each other: no two queens may share a row, a column, or a diagonal.\n\nReturn the number of distinct placements. Two placements differ if some square holds a queen in one and not in the other — rotations and reflections count as different placements.",
+  "examples": [
+    {
+      "input": "n = 4",
+      "output": "2",
+      "explanation": "There are exactly two ways to place four non-attacking queens on a 4 × 4 board."
+    },
+    {"input": "n = 1", "output": "1", "explanation": "A single queen on a 1 × 1 board."},
+    {
+      "input": "n = 3",
+      "output": "0",
+      "explanation": "Every placement of three queens on a 3 × 3 board has two queens attacking each other."
+    }
+  ],
+  "constraints": ["1 <= n <= 10"],
+  "function_name": "totalNQueens",
+  "signature": {"params": [{"name": "n", "type": "int"}], "returns": "int"},
+  "compare_mode": "ordered",
+  "starter_code": {
+    "python": "def totalNQueens(n):\n    # Write your code here\n    pass\n",
+    "javascript": "function totalNQueens(n) {\n    // Write your code here\n}\n",
+    "typescript": "function totalNQueens(n: number): number {\n    // Write your code here\n    return 0;\n}\n",
+    "cpp": "using namespace std;\n\nint totalNQueens(int n) {\n    // Write your code here\n    return 0;\n}\n",
+    "java": "class Solution {\n    public static int totalNQueens(int n) {\n        // Write your code here\n        return 0;\n    }\n}\n",
+    "go": "func totalNQueens(n int) int {\n\t// Write your code here\n\treturn 0\n}\n"
+  },
+  "tests": [
+    {"input":[4],"expected":2,"hidden":false,"explain_on_fail":"The classic small case with two mirror-image solutions."},
+    {"input":[1],"expected":1,"hidden":false,"explain_on_fail":"The smallest board."},
+    {"input":[3],"expected":0,"hidden":false,"explain_on_fail":"A board with no valid placement."},
+    {"input":[2],"expected":0,"hidden":true,"explain_on_fail":"A 2 × 2 board: every pair of squares shares a row, a column or a diagonal."},
+    {"input":[5],"expected":10,"hidden":true,"explain_on_fail":"n = 5."},
+    {"input":[6],"expected":4,"hidden":true,"explain_on_fail":"n = 6 — make sure both diagonal directions are checked."},
+    {"input":[7],"expected":40,"hidden":true,"explain_on_fail":"n = 7."},
+    {"input":[8],"expected":92,"hidden":true,"explain_on_fail":"The standard 8 × 8 chessboard."},
+    {"input":[9],"expected":352,"hidden":true,"explain_on_fail":"n = 9 — prune as soon as a queen is attacked; enumerating whole boards is far too slow."},
+    {"input":[10],"expected":724,"hidden":true,"explain_on_fail":"The largest board — track used columns and diagonals so each check is O(1)."}
+  ],
+  "reference_solutions": {
+    "python": "def totalNQueens(n):\n    cols, diag, anti = set(), set(), set()\n\n    def place(row):\n        if row == n:\n            return 1\n        count = 0\n        for c in range(n):\n            if c in cols or row - c in diag or row + c in anti:\n                continue\n            cols.add(c)\n            diag.add(row - c)\n            anti.add(row + c)\n            count += place(row + 1)\n            cols.remove(c)\n            diag.remove(row - c)\n            anti.remove(row + c)\n        return count\n\n    return place(0)\n",
+    "javascript": "function totalNQueens(n) {\n  // Bitmasks of attacked columns and diagonals for the next row.\n  const full = (1 << n) - 1;\n  function place(cols, d1, d2) {\n    if (cols === full) return 1;\n    let count = 0;\n    let free = full & ~(cols | d1 | d2);\n    while (free) {\n      const bit = free & -free;\n      free -= bit;\n      count += place(cols | bit, ((d1 | bit) << 1) & full, (d2 | bit) >> 1);\n    }\n    return count;\n  }\n  return place(0, 0, 0);\n}\n"
+  },
+  "topics": [{"slug": "recursion", "weight": 1.0}],
+  "tags": ["backtracking", "recursion", "bit-manipulation"],
+  "companies": ["Amazon", "Microsoft", "Google"],
+  "editorial_md": "### Intuition\nEach row holds exactly one queen, so place queens row by row and backtrack as soon as a square is attacked. Squares on the same down-right diagonal share `row − col`; squares on the same down-left diagonal share `row + col`.\n\n### Algorithm\nKeep three sets: used columns, used `row − col` values and used `row + col` values. In row `r`, try every column that is free in all three; place the queen, recurse into row `r + 1`, then remove it.\n\n```python\ndef totalNQueens(n):\n    cols, diag, anti = set(), set(), set()\n\n    def place(row):\n        if row == n:\n            return 1\n        count = 0\n        for c in range(n):\n            if c in cols or row - c in diag or row + c in anti:\n                continue\n            cols.add(c); diag.add(row - c); anti.add(row + c)\n            count += place(row + 1)\n            cols.remove(c); diag.remove(row - c); anti.remove(row + c)\n        return count\n\n    return place(0)\n```\n\n### Complexity\nExponential in the worst case, but pruning keeps n ≤ 10 well under a second. Bitmasks (as in many fast solutions) make each step a few machine instructions.",
+  "hints": [
+    {
+      "level": "nudge",
+      "body_md": "How many queens can a single row hold? Use that to decide what one recursive call is responsible for.",
+      "cost_kind": "score",
+      "cost_amount": 0
+    },
+    {
+      "level": "concept",
+      "body_md": "Backtracking row by row. A square `(r, c)` is attacked if column `c`, diagonal `r − c` or anti-diagonal `r + c` is already used — keep those in three sets so each check is O(1).",
+      "cost_kind": "score",
+      "cost_amount": 10
+    },
+    {
+      "level": "pseudo",
+      "body_md": "```\nplace(row):\n    if row == n: return 1\n    count = 0\n    for c in 0..n-1:\n        if c, row-c or row+c is used: continue\n        mark them; count += place(row + 1); unmark them\n    return count\n```",
+      "cost_kind": "score",
+      "cost_amount": 25
+    },
+    {
+      "level": "line",
+      "body_md": "The attack test in one line: `if c in cols or row - c in diag or row + c in anti: continue`.",
+      "cost_kind": "token",
+      "cost_amount": 1
+    },
+    {
+      "level": "solution",
+      "body_md": "```python\ndef totalNQueens(n):\n    cols, diag, anti = set(), set(), set()\n\n    def place(row):\n        if row == n:\n            return 1\n        count = 0\n        for c in range(n):\n            if c in cols or row - c in diag or row + c in anti:\n                continue\n            cols.add(c); diag.add(row - c); anti.add(row + c)\n            count += place(row + 1)\n            cols.remove(c); diag.remove(row - c); anti.remove(row + c)\n        return count\n\n    return place(0)\n```",
+      "cost_kind": "score",
+      "cost_amount": 100
+    }
+  ]
+}

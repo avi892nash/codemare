@@ -1,0 +1,92 @@
+{
+  "slug": "coin-change",
+  "title": "Coin Change",
+  "difficulty": "Medium",
+  "statement_md": "You have an unlimited supply of coins of every denomination in `coins`. Return the **fewest** coins that add up to exactly `amount`, or `-1` if that amount cannot be formed.\n\nAlways grabbing the largest coin that still fits does not always give the fewest coins.",
+  "examples": [
+    {
+      "input": "coins = [1,3,4], amount = 6",
+      "output": "2",
+      "explanation": "3 + 3 uses two coins. Grabbing the largest coin first gives 4 + 1 + 1, which uses three."
+    },
+    {
+      "input": "coins = [2], amount = 3",
+      "output": "-1",
+      "explanation": "Only even amounts can be made from 2s."
+    },
+    {
+      "input": "coins = [5,10], amount = 0",
+      "output": "0",
+      "explanation": "An amount of zero needs no coins."
+    }
+  ],
+  "constraints": ["1 <= coins.length <= 12", "1 <= coins[i] <= 10^4", "0 <= amount <= 10^4"],
+  "function_name": "coinChange",
+  "signature": {
+    "params": [{"name": "coins", "type": "int[]"}, {"name": "amount", "type": "int"}],
+    "returns": "int"
+  },
+  "compare_mode": "ordered",
+  "starter_code": {
+    "python": "def coinChange(coins, amount):\n    # Write your code here\n    pass\n",
+    "javascript": "function coinChange(coins, amount) {\n    // Write your code here\n}\n",
+    "typescript": "function coinChange(coins: number[], amount: number): number {\n    // Write your code here\n    return 0;\n}\n",
+    "cpp": "#include <vector>\nusing namespace std;\n\nint coinChange(vector<int>& coins, int amount) {\n    // Write your code here\n    return 0;\n}\n",
+    "java": "class Solution {\n    public static int coinChange(int[] coins, int amount) {\n        // Write your code here\n        return 0;\n    }\n}\n",
+    "go": "func coinChange(coins []int, amount int) int {\n\t// Write your code here\n\treturn 0\n}\n"
+  },
+  "tests": [
+    {"input":[[1,3,4],6],"expected":2,"hidden":false,"explain_on_fail":"Greedily taking the largest coin first is not optimal here."},
+    {"input":[[2],3],"expected":-1,"hidden":false,"explain_on_fail":"An amount that cannot be formed."},
+    {"input":[[5,10],0],"expected":0,"hidden":false,"explain_on_fail":"Zero amount."},
+    {"input":[[7],7],"expected":1,"hidden":false,"explain_on_fail":"A single coin that matches the amount exactly."},
+    {"input":[[2,5,10,1],27],"expected":4,"hidden":true,"explain_on_fail":"Several denominations, listed out of order."},
+    {"input":[[3,7],11],"expected":-1,"hidden":true,"explain_on_fail":"An amount that no combination of these coins can reach."},
+    {"input":[[9,6,5,1],11],"expected":2,"hidden":true,"explain_on_fail":"Taking the largest coin first leads to three coins; the best uses two."},
+    {"input":[[1,2,5],100],"expected":20,"hidden":true,"explain_on_fail":"A round amount with common denominations."},
+    {"input":[[10000],9999],"expected":-1,"hidden":true,"explain_on_fail":"Every coin is larger than the amount."},
+    {"input":[[1],10000],"expected":10000,"hidden":true,"explain_on_fail":"Only 1s: a top-down recursion this deep can hit Python's recursion limit; a bottom-up table avoids that."},
+    {"input":[[37,233,419,88],9999],"expected":34,"hidden":true,"explain_on_fail":"A large amount with awkward denominations — try every coin for every sub-amount."},
+    {"input":[[5,10,25],9999],"expected":-1,"hidden":true,"explain_on_fail":"A large amount that cannot be formed."}
+  ],
+  "reference_solutions": {
+    "python": "def coinChange(coins, amount):\n    INF = amount + 1\n    fewest = [0] + [INF] * amount\n    for a in range(1, amount + 1):\n        for c in coins:\n            if c <= a and fewest[a - c] + 1 < fewest[a]:\n                fewest[a] = fewest[a - c] + 1\n    return -1 if fewest[amount] == INF else fewest[amount]\n",
+    "javascript": "function coinChange(coins, amount) {\n  // Breadth-first search over amounts: level = number of coins used.\n  if (amount === 0) return 0;\n  const seen = new Uint8Array(amount + 1);\n  seen[0] = 1;\n  let frontier = [0];\n  for (let used = 1; frontier.length; used++) {\n    const next = [];\n    for (const a of frontier) {\n      for (const c of coins) {\n        const b = a + c;\n        if (b === amount) return used;\n        if (b < amount && !seen[b]) { seen[b] = 1; next.push(b); }\n      }\n    }\n    frontier = next;\n  }\n  return -1;\n}\n"
+  },
+  "topics": [{"slug": "dynamic-programming", "weight": 1.0}],
+  "tags": ["array", "dynamic-programming", "bfs"],
+  "companies": ["Amazon", "Google", "Goldman Sachs"],
+  "editorial_md": "### Intuition\nThe best way to pay `a` ends with some last coin `c`, and what remains (`a − c`) must itself be paid optimally. So `fewest[a] = 1 + min(fewest[a − c])` over the coins `c ≤ a`.\n\n### Algorithm\nFill a table from 0 up to `amount`. Use `amount + 1` as \"impossible\" — no real answer can need that many coins.\n\n```python\ndef coinChange(coins, amount):\n    INF = amount + 1\n    fewest = [0] + [INF] * amount\n    for a in range(1, amount + 1):\n        for c in coins:\n            if c <= a and fewest[a - c] + 1 < fewest[a]:\n                fewest[a] = fewest[a - c] + 1\n    return -1 if fewest[amount] == INF else fewest[amount]\n```\n\n### Complexity\nO(amount × number of coins) time, O(amount) space.\n\n### Pitfalls\n- Greedy (largest coin first) fails, e.g. coins `[1, 3, 4]`, amount 6.\n- A memoized top-down recursion is correct, but for large amounts in Python it can exceed the default recursion limit — the bottom-up table has no such problem.",
+  "hints": [
+    {
+      "level": "nudge",
+      "body_md": "Look at the *last* coin used in an optimal payment. What problem is left after removing it?",
+      "cost_kind": "score",
+      "cost_amount": 0
+    },
+    {
+      "level": "concept",
+      "body_md": "Dynamic programming over amounts: `fewest[a] = 1 + min(fewest[a − c])` for every coin `c ≤ a`, with `fewest[0] = 0`. Fill the table from small amounts to large.",
+      "cost_kind": "score",
+      "cost_amount": 10
+    },
+    {
+      "level": "pseudo",
+      "body_md": "```\nfewest = [0] + [INF] * amount\nfor a in 1..amount:\n    for c in coins:\n        if c <= a: fewest[a] = min(fewest[a], fewest[a - c] + 1)\nreturn fewest[amount] if finite else -1\n```",
+      "cost_kind": "score",
+      "cost_amount": 25
+    },
+    {
+      "level": "line",
+      "body_md": "The transition: `fewest[a] = min(fewest[a], fewest[a - c] + 1)` for each coin `c <= a`.",
+      "cost_kind": "token",
+      "cost_amount": 1
+    },
+    {
+      "level": "solution",
+      "body_md": "```python\ndef coinChange(coins, amount):\n    INF = amount + 1\n    fewest = [0] + [INF] * amount\n    for a in range(1, amount + 1):\n        for c in coins:\n            if c <= a and fewest[a - c] + 1 < fewest[a]:\n                fewest[a] = fewest[a - c] + 1\n    return -1 if fewest[amount] == INF else fewest[amount]\n```",
+      "cost_kind": "score",
+      "cost_amount": 100
+    }
+  ]
+}
