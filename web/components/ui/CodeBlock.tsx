@@ -1,117 +1,136 @@
-'use client';
-
-import { useState } from 'react';
-import { Icon } from './Icon';
+import type { CSSProperties, ReactNode } from 'react';
+import { CopyButton } from './CopyButton';
+import { LangMark } from './LangMark';
+import { highlight, LANGUAGE_LABEL, normalizeLanguage, type CodeToken } from './highlight';
 
 /**
- * Token classes (.tk-kw, .tk-fn, …) are defined in index.css. The block can
- * accept either a flat string (renders monospace, no highlighting) or an array
- * of [tokenClass, text] tuples for a hand-tokenized look matching the design.
+ * Token classes (.tk-kw, .tk-fn, …) are defined in app/globals.css and
+ * themed through --tk-* variables. Server-safe: highlighting runs wherever
+ * the block renders (on the server for RSC pages — no highlighter JS shipped);
+ * only the Copy button hydrates.
  *
- * Renders with optional gutter line numbers and a copy button.
+ * Accepts `code` (auto-highlighted when `language` is one of python,
+ * javascript, typescript, cpp, java, go — or an alias like py/js/ts/c++) or
+ * pre-tokenized `tokens` for hand-made highlighting.
  */
-export type CodeToken = [tokenClass: string, text: string];
+export type { CodeToken };
 export type CodeLine = CodeToken[] | string;
 
-interface CodeBlockProps {
-  /** Single string of code (no syntax tokens). */
+export interface CodeBlockProps {
+  /** Source text. */
   code?: string;
-  /** Pre-tokenized lines for the design's static highlighter. */
+  /** Pre-tokenized lines (skips the highlighter). */
   tokens?: CodeLine[];
+  /** Language id or alias; drives highlighting and the header badge. */
   language?: string;
+  /** Shown in the header, e.g. "two_sum.py". */
+  filename?: string;
+  /** Legacy header label; prefer `filename`. */
   badge?: string;
+  /** Copy-to-clipboard button in the header. */
   copy?: boolean;
   showGutter?: boolean;
+  /** Set false to render `code` as plain text. */
+  highlight?: boolean;
+  /** 1-based line numbers to emphasize. */
+  highlightLines?: number[];
+  startLine?: number;
+  maxHeight?: number | string;
+  /** Extra header content at the right (before Copy). */
+  actions?: ReactNode;
   className?: string;
+  style?: CSSProperties;
+}
+
+function flatten(lines: CodeLine[]): string {
+  return lines.map((ln) => (typeof ln === 'string' ? ln : ln.map((t) => t[1]).join(''))).join('\n');
 }
 
 export function CodeBlock({
-  code, tokens, language, badge, copy = false, showGutter = true, className = '',
+  code, tokens, language, filename, badge, copy = false, showGutter = true, highlight: doHighlight = true,
+  highlightLines, startLine = 1, maxHeight, actions, className = '', style,
 }: CodeBlockProps) {
-  const [copied, setCopied] = useState(false);
-  const lines: CodeLine[] = tokens ?? (code ?? '').split('\n').map((s) => [['tk-pa', s]] as CodeToken[]);
-
-  const onCopy = async () => {
-    try {
-      const flat = lines.map((ln) => (typeof ln === 'string' ? ln : ln.map((t) => t[1]).join(''))).join('\n');
-      await navigator.clipboard.writeText(flat);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1200);
-    } catch {
-      /* noop */
-    }
-  };
+  const lang = normalizeLanguage(language);
+  const lines: CodeLine[] =
+    tokens ?? (doHighlight ? highlight(code ?? '', lang) : (code ?? '').replace(/\n$/, '').split('\n'));
+  const text = code ?? flatten(lines);
+  const title = filename ?? badge;
+  const langLabel = lang ? LANGUAGE_LABEL[lang] : language;
+  const marked = new Set(highlightLines);
+  const showHeader = !!(title || langLabel || copy || actions);
 
   return (
-    <div className={`card-2 ${className}`} style={{ borderRadius: 'var(--r)', overflow: 'hidden' }}>
-      {(badge || copy) && (
+    <div
+      className={`card-2 ${className}`.trim()}
+      style={{ borderRadius: 'var(--r)', overflow: 'hidden', ...style }}
+    >
+      {showHeader && (
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
-            padding: '6px 10px',
+            gap: 8,
+            minHeight: 30,
+            padding: '4px 8px 4px 10px',
             background: 'var(--bg-3)',
             borderBottom: '1px solid var(--line-2)',
           }}
         >
-          {badge && (
-            <span className="mono" style={{ fontSize: 11, color: 'var(--fg-2)' }}>
-              {badge}
+          {lang && <LangMark lang={lang} size={13} />}
+          {title && (
+            <span className="mono" style={{ fontSize: 11.5, color: 'var(--fg-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {title}
             </span>
           )}
-          {language && (
-            <span className="mono" style={{ fontSize: 11, color: 'var(--fg-3)', marginLeft: 8 }}>
-              · {language}
+          {langLabel && (
+            <span style={{ fontSize: 11, color: 'var(--fg-2)', whiteSpace: 'nowrap' }}>
+              {title ? `· ${langLabel}` : langLabel}
             </span>
           )}
           <span style={{ flex: 1 }} />
-          {copy && (
-            <button
-              onClick={onCopy}
-              className="focus-ring"
-              title="Copy"
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: 'var(--fg-2)',
-                cursor: 'pointer',
-                fontSize: 11,
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 4,
-                padding: '2px 4px',
-                borderRadius: 4,
-              }}
-            >
-              <Icon name={copied ? 'check' : 'copy'} size={12} />
-              {copied ? 'Copied' : 'Copy'}
-            </button>
-          )}
+          {actions}
+          {copy && <CopyButton text={text} ariaLabel={title ? `Copy ${title}` : 'Copy code'} />}
         </div>
       )}
       <pre
-        className="mono"
+        className="mono scroll"
+        tabIndex={0}
         style={{
           margin: 0,
           padding: '12px 0',
           background: 'var(--bg-2)',
           fontSize: 12.5,
           lineHeight: 1.55,
-          overflowX: 'auto',
+          overflow: 'auto',
+          maxHeight,
+          outlineOffset: -2,
         }}
       >
-        {lines.map((ln, i) => (
-          <div key={i} style={{ display: 'flex' }}>
-            {showGutter && <span className="mono gutter-num">{i + 1}</span>}
-            <span style={{ paddingRight: 14, whiteSpace: 'pre' }}>
-              {typeof ln === 'string'
-                ? <span className="tk-pa">{ln || ' '}</span>
-                : (ln.length === 0
-                    ? ' '
-                    : ln.map(([cls, text], j) => <span key={j} className={cls}>{text}</span>))}
-            </span>
-          </div>
-        ))}
+        <code style={{ display: 'block', minWidth: 'max-content', fontFamily: 'inherit' }}>
+          {lines.map((ln, i) => {
+            const n = i + startLine;
+            const hot = marked.has(n);
+            return (
+              <div
+                key={i}
+                style={{
+                  display: 'flex',
+                  background: hot ? 'var(--accent-bg)' : undefined,
+                  boxShadow: hot ? 'inset 2px 0 0 var(--accent)' : undefined,
+                }}
+              >
+                {showGutter && <span className="mono gutter-num" aria-hidden="true">{n}</span>}
+                <span style={{ paddingLeft: showGutter ? 0 : 14, paddingRight: 14, whiteSpace: 'pre' }}>
+                  {typeof ln === 'string'
+                    ? <span className="tk-pa">{ln || ' '}</span>
+                    : ln.length === 0
+                      ? ' '
+                      : ln.map(([cls, t], j) => <span key={j} className={cls}>{t}</span>)}
+                </span>
+              </div>
+            );
+          })}
+        </code>
       </pre>
     </div>
   );
