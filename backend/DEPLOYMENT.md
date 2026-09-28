@@ -23,6 +23,10 @@ sudo bash deploy/install.sh
 - `isolate` (setuid root, ~200 KB) — the sandbox
 - `nodejs` 20+
 - `python3`, `default-jdk-headless`, `g++` — language toolchains
+- Go ≥ 1.22 — the distro `golang-go` when it is new enough (Ubuntu 24.04),
+  otherwise the latest official tarball from go.dev (checksum-verified) into
+  `/usr/local/go`, linked as `/usr/local/bin/go`. TypeScript needs nothing on
+  the host: it is transpiled in-process (the `typescript` npm package).
 - Creates the `codemare` system user + `/opt/codemare/backend` and `/var/log/codemare`
 - Drops `deploy/codemare-backend.service` into `/etc/systemd/system/` and reloads systemd
 
@@ -63,23 +67,29 @@ and any front-of-house load balancer probe.
 journalctl -u codemare-backend -f          # tail logs
 curl http://localhost:3000/health          # → {"status":"ok",...}   (open)
 TOKEN=$(sudo grep '^INTERNAL_TOKEN=' /etc/codemare/env | cut -d= -f2-)
-curl -s -X POST http://localhost:3000/v1/execute \
+curl -s -X POST http://localhost:3000/v1/run \
   -H 'Content-Type: application/json' \
   -H "X-Codemare-Token: ${TOKEN}" \
-  -d '{"problemId":"two-sum","language":"python","code":"def twoSum(nums, target):\n  return [0,1]\n"}'
+  -d '{"language":"go","code":"func add(a int, b int) int { return a + b }","functionName":"add",
+       "signature":{"params":[{"name":"a","type":"int"},{"name":"b","type":"int"}],"returns":"int"},
+       "tests":[{"input":[1,2],"expected":3}]}'
+# → {"status":"OK","totalPassed":1,...}; POST /v1/run/stream gives the same run as SSE
 ```
 
-The boot log should print `Sandbox: isolate` and list the available languages:
+The boot log should warm the Go build cache, print `Sandbox: isolate` and
+list the available languages:
 
 ```
+Go build cache: warm in 9000 ms (/tmp/codemare-gocache)
 Sandbox: isolate
-  Available: python, javascript, java, cpp
+  Available: python, javascript, typescript, cpp, java, go
 ```
 
 ## Security model
 
 - `isolate` runs each submission in its own Linux namespaces (mount/pid/ipc/uts/net/user).
-- `--cg --mem=N` enforces memory caps via cgroups v2.
+- `--cg --cg-mem=N` enforces memory caps via cgroups v2 (plain `--mem` is an
+  address-space rlimit that Go, the JVM and V8 cannot even start under).
 - `--processes=N`, `--time`, `--wall-time` cap fork count, CPU and wall time.
 - `--no-default-dirs` (default) means the box filesystem is empty except for
   what the adapter writes in.
@@ -94,11 +104,20 @@ Sandbox: isolate
   [src/config/sandbox.ts](src/config/sandbox.ts). The acquire/release semaphore
   in [src/services/sandbox/boxPool.ts](src/services/sandbox/boxPool.ts)
   guarantees no box-id collisions across concurrent requests.
+  Compile boxes come from a separate pool (`compileBoxes`, one per core, IDs
+  after the run boxes) so run-box holders can never deadlock waiting on them.
 - **Limits per submission**: `SANDBOX_CONFIG.limits` — 10 s CPU, 256 MB, 50
-  PIDs. Compile phase uses `compileLimits` — 15 s, 512 MB, 16 PIDs.
+  PIDs (callers of `/v1/run` pass their own `limits`, capped at 10 s /
+  512 MB). Compile phase uses `compileLimits` — 15 s, 512 MB, 16 PIDs (64
+  for javac and `go build`).
+- **Go build cache**: warmed at startup into `GO_BUILD_CACHE_DIR` (default
+  `$TMPDIR/codemare-gocache`, i.e. the unit's private `/tmp`) and bound
+  **read-only** into compile boxes, so untrusted builds reuse the compiled
+  standard library but can't write to it. See
+  [src/services/sandbox/goToolchain.ts](src/services/sandbox/goToolchain.ts).
 - **Languages**: defined in
   [src/services/sandbox/languageSpec.ts](src/services/sandbox/languageSpec.ts).
-  Adding Go / Rust / Kotlin is ~10 lines plus installing the toolchain in
+  Adding Rust / Kotlin is ~10 lines plus installing the toolchain in
   `deploy/install.sh`.
 
 ## What's NOT in this repo anymore

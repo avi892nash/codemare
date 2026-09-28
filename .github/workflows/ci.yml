@@ -6,8 +6,9 @@ on:
   pull_request:
 
 jobs:
-  # Unit tests + build. Needs a JDK because the wrapper test suite
-  # javac-compiles the generated Java harness for large-literal problems.
+  # Unit tests + build. Needs a JDK and Go because the wrapper suites
+  # javac-compile / go-build generated harnesses, and the /v1/run tests execute
+  # real python, node, g++, javac and go programs through the local adapter.
   backend:
     name: Backend — build & unit tests
     runs-on: ubuntu-latest
@@ -21,15 +22,22 @@ jobs:
         with:
           distribution: temurin
           java-version: 21
+      # The oldest Go the judge supports (deploy/install.sh requires >= 1.22),
+      # so generated Go harnesses are proven against it.
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22.x'
+          cache: false
       - run: npm ci
       - run: npm run build -w backend
       - run: npm test -w backend
 
   # End-to-end judge smoke on Linux: boot the built server with the local
-  # adapter and submit real solutions in all four languages. This is the
+  # adapter and run real solutions in all six languages through the
+  # pure-executor contract (POST /v1/run, POST /v1/run/stream). This is the
   # closest CI gets to the production Linux path without isolate.
   backend-e2e:
-    name: Backend — e2e judge smoke (4 languages)
+    name: Backend — e2e judge smoke (6 languages)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -41,41 +49,75 @@ jobs:
         with:
           distribution: temurin
           java-version: 21
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22.x'
+          cache: false
       - run: npm ci
       - run: npm run build -w backend
       - name: Start judge (local adapter)
         working-directory: backend
         run: |
           SANDBOX_MODE=local PORT=4000 node dist/server.js > server.log 2>&1 &
-          for i in $(seq 1 20); do
+          # Startup warms the Go build cache first — cold on a fresh runner.
+          for i in $(seq 1 120); do
             curl -sf http://localhost:4000/health > /dev/null && break
             sleep 1
           done
           curl -sf http://localhost:4000/health
-      - name: Submit solutions in all four languages
+          grep -E 'Go build cache|Available|Unavailable' server.log
+      - name: Run solutions in all six languages (POST /v1/run)
         run: |
           set -euo pipefail
-          submit() { # $1=label $2=payload-file $3=expected-status
-            resp=$(curl -sf -X POST 'http://localhost:4000/v1/execute?wait=true' \
+          run() { # $1=label $2=payload-file $3=expected-status
+            resp=$(curl -sf -X POST http://localhost:4000/v1/run \
               -H 'Content-Type: application/json' --data @"$2")
             status=$(echo "$resp" | jq -r .status)
-            passed=$(echo "$resp" | jq -r .totalPassed)
-            total=$(echo "$resp" | jq -r .totalTests)
-            echo "$1: $status $passed/$total"
+            echo "$1: $status $(echo "$resp" | jq -r '"\(.totalPassed)/\(.totalTests)"')"
             [ "$status" = "$3" ] || { echo "::error::$1 expected $3, got $status"; echo "$resp" | jq .; exit 1; }
           }
+          sig='{"params":[{"name":"nums","type":"int[]"},{"name":"target","type":"int"}],"returns":"int[]"}'
+          tests='[{"input":[[2,7,11,15],9],"expected":[0,1]},{"input":[[3,2,4],6],"expected":[1,2]},{"input":[[3,3],6],"expected":[0,1],"hidden":true}]'
+          payload() { # $1=language $2=code — Two Sum with inline tests
+            jq -n --arg language "$1" --arg code "$2" --argjson signature "$sig" --argjson tests "$tests" \
+              '{language: $language, code: $code, functionName: "twoSum", signature: $signature,
+                compareMode: "unordered", tests: $tests, limits: {timeMs: 5000, memoryMb: 256}}'
+          }
 
-          jq -n '{problemId:"two-sum",language:"python",code:"def twoSum(nums, target):\n    seen = {}\n    for i, n in enumerate(nums):\n        if target - n in seen:\n            return [seen[target - n], i]\n        seen[n] = i\n    return []"}' > py.json
-          jq -n '{problemId:"two-sum",language:"javascript",code:"function twoSum(nums, target) {\n  const seen = new Map();\n  for (let i = 0; i < nums.length; i++) {\n    if (seen.has(target - nums[i])) return [seen.get(target - nums[i]), i];\n    seen.set(nums[i], i);\n  }\n  return [];\n}"}' > js.json
-          jq -n '{problemId:"two-sum",language:"cpp",code:"std::vector<int> twoSum(std::vector<int>& nums, int target) {\n    std::unordered_map<int,int> seen;\n    for (int i = 0; i < (int)nums.size(); i++) {\n        auto it = seen.find(target - nums[i]);\n        if (it != seen.end()) return {it->second, i};\n        seen[nums[i]] = i;\n    }\n    return {};\n}"}' > cpp.json
-          jq -n '{problemId:"binary-search",language:"java",code:"class Solution { public static int search(int[] nums, int target) { int lo = 0, hi = nums.length - 1; while (lo <= hi) { int m = lo + (hi - lo) / 2; if (nums[m] == target) return m; if (nums[m] < target) lo = m + 1; else hi = m - 1; } return -1; } }"}' > java.json
-          jq -n '{problemId:"two-sum",language:"python",code:"def twoSum(nums, target):\n    return [0, 0]"}' > wrong.json
+          payload python $'def twoSum(nums, target):\n    seen = {}\n    for i, n in enumerate(nums):\n        if target - n in seen:\n            return [seen[target - n], i]\n        seen[n] = i\n    return []' > py.json
+          payload javascript $'function twoSum(nums, target) {\n  const seen = new Map();\n  for (let i = 0; i < nums.length; i++) {\n    if (seen.has(target - nums[i])) return [seen.get(target - nums[i]), i];\n    seen.set(nums[i], i);\n  }\n  return [];\n}' > js.json
+          payload typescript $'function twoSum(nums: number[], target: number): number[] {\n  const seen = new Map<number, number>();\n  for (let i = 0; i < nums.length; i++) {\n    const j = seen.get(target - nums[i]);\n    if (j !== undefined) return [j, i];\n    seen.set(nums[i], i);\n  }\n  return [];\n}' > ts.json
+          payload cpp $'std::vector<int> twoSum(std::vector<int>& nums, int target) {\n    std::unordered_map<int, int> seen;\n    for (int i = 0; i < (int)nums.size(); i++) {\n        auto it = seen.find(target - nums[i]);\n        if (it != seen.end()) return {it->second, i};\n        seen[nums[i]] = i;\n    }\n    return {};\n}' > cpp.json
+          payload java $'import java.util.*;\nclass Solution {\n    public static int[] twoSum(int[] nums, int target) {\n        Map<Integer, Integer> seen = new HashMap<>();\n        for (int i = 0; i < nums.length; i++) {\n            Integer j = seen.get(target - nums[i]);\n            if (j != null) return new int[]{j, i};\n            seen.put(nums[i], i);\n        }\n        return new int[0];\n    }\n}' > java.json
+          payload go $'import "sort"\n\nfunc twoSum(nums []int, target int) []int {\n    _ = sort.IntsAreSorted(nums)\n    seen := map[int]int{}\n    for i, n := range nums {\n        if j, ok := seen[target-n]; ok {\n            return []int{j, i}\n        }\n        seen[n] = i\n    }\n    return nil\n}' > go.json
+          payload python $'def twoSum(nums, target):\n    return [0, 0]' > wrong.json
+          payload typescript $'function twoSum(nums: number[], target: number): number[] {\n  return nums +;\n}' > ce.json
 
-          submit "python two-sum"      py.json    OK
-          submit "javascript two-sum"  js.json    OK
-          submit "cpp two-sum"         cpp.json   OK
-          submit "java binary-search"  java.json  OK
-          submit "python wrong answer" wrong.json WA
+          run "python two-sum"          py.json    OK
+          run "javascript two-sum"      js.json    OK
+          run "typescript two-sum"      ts.json    OK
+          run "cpp two-sum"             cpp.json   OK
+          run "java two-sum"            java.json  OK
+          run "go two-sum"              go.json    OK
+          run "python wrong answer"     wrong.json WA
+          run "typescript syntax error" ce.json    CE
+      - name: SSE smoke (POST /v1/run/stream)
+        run: |
+          set -euo pipefail
+          curl -sfN -X POST http://localhost:4000/v1/run/stream \
+            -H 'Content-Type: application/json' --data @cpp.json | tee sse.txt
+          grep -q '^event: running$' sse.txt
+          [ "$(grep -c '^event: test$' sse.txt)" -eq 3 ]
+          grep -A1 '^event: verdict$' sse.txt | grep -q '"status":"OK"'
+      # The web app still calls /v1/execute until it moves to /v1/run.
+      - name: Legacy POST /v1/execute still judges
+        run: |
+          set -euo pipefail
+          jq -n '{problemId:"two-sum",language:"python",code:"def twoSum(nums, target):\n    seen = {}\n    for i, n in enumerate(nums):\n        if target - n in seen:\n            return [seen[target - n], i]\n        seen[n] = i\n    return []"}' > legacy.json
+          status=$(curl -sf -X POST 'http://localhost:4000/v1/execute?wait=true' \
+            -H 'Content-Type: application/json' --data @legacy.json | jq -r .status)
+          echo "legacy python two-sum: $status"
+          [ "$status" = "OK" ]
       - name: Catalog sanity
         run: |
           count=$(curl -sf http://localhost:4000/v1/problems | jq '.problems | length')
