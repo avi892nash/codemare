@@ -6,10 +6,10 @@ import GitHub from 'next-auth/providers/github';
 import Google from 'next-auth/providers/google';
 import Credentials from 'next-auth/providers/credentials';
 import { PrismaAdapter } from '@auth/prisma-adapter';
+import { authConfig } from './auth.config';
 import { prisma } from '@/lib/prisma';
 import { verifyPassword } from '@/lib/password';
 import { clientIp, consume, reset, LOGIN_PER_EMAIL, LOGIN_PER_IP } from '@/lib/rateLimit';
-import { isRole } from '@/lib/server/rules/roles';
 import { createUserWithHandle } from '@/lib/server/users';
 import type { Role } from '@/lib/types';
 
@@ -138,29 +138,16 @@ function codemareAdapter(): Adapter {
 }
 
 export const { handlers, auth, signIn, signOut, unstable_update } = NextAuth({
+  ...authConfig,
   adapter: codemareAdapter(),
   providers,
-  // Self-hosted deployment behind our own host/proxy: there is no vendor
-  // platform setting AUTH_URL for us, so Auth.js must trust the incoming
-  // Host header or every /api/auth/* call throws UntrustedHost in prod.
-  trustHost: true,
-  session: { strategy: 'jwt' },
-  pages: {
-    signIn: '/signin',
-    // Auth.js errors (OAuth failures, AccessDenied, Configuration …) land on
-    // the sign-in page as ?error=<code>, which it turns into a message.
-    error: '/signin',
-  },
   callbacks: {
-    // Carry the DB user id, role and handle through the JWT so server code
-    // can join on the id and gate routes on the role without a DB read.
-    async jwt({ token, user, trigger }) {
-      if (user?.id) {
-        token.uid = user.id;
-        token.role = isRole(user.role) ? user.role : 'learner';
-        if (user.handle) token.handle = user.handle;
-      }
-      if (trigger === 'update' && token.uid) {
+    ...authConfig.callbacks,
+    // Sign-in mapping is shared with the middleware; on `update` re-read the
+    // row so a role change reaches an existing session (Node-only: Prisma).
+    async jwt(params) {
+      const token = authConfig.callbacks.jwt(params);
+      if (params.trigger === 'update' && token.uid) {
         const fresh = await prisma.user.findUnique({
           where: { id: token.uid },
           select: { role: true, handle: true },
@@ -171,14 +158,6 @@ export const { handlers, auth, signIn, signOut, unstable_update } = NextAuth({
         }
       }
       return token;
-    },
-    async session({ session, token }) {
-      if (session.user && token.uid) {
-        session.user.id = token.uid;
-        session.user.role = token.role ?? 'learner';
-        session.user.handle = token.handle ?? '';
-      }
-      return session;
     },
   },
 });

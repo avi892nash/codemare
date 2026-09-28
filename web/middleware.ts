@@ -1,4 +1,5 @@
-import { auth } from '@/auth';
+import NextAuth from 'next-auth';
+import { authConfig } from './auth.config';
 import { NextResponse, type NextFetchEvent, type NextRequest } from 'next/server';
 import { decideRoute } from '@/components/Auth/routes';
 
@@ -32,6 +33,9 @@ function respond(req: NextRequest, signedIn: boolean): Response {
       return NextResponse.redirect(new URL(decision.to, req.nextUrl.origin));
   }
 }
+
+// Edge-safe instance: decodes the session JWT only (see auth.config.ts).
+const { auth } = NextAuth(authConfig);
 
 const withAuth = auth((req) => respond(req, Boolean(req.auth?.user)));
 
