@@ -1,15 +1,39 @@
 /**
- * Write a validated seed bundle to the content schema — idempotently, in one
- * transaction. Top-level entities upsert by slug (ids survive re-seeds, so
- * user progress keeps pointing at the same rows); owned sets (question
- * topics, recipe items, deps, gate questions, checkpoint questions) are
- * replaced; ordered children (recipes, build steps, modules, lessons,
- * chapters, articles, hints) upsert by their natural key and stale ones are
- * deleted — unless users already touched them, in which case they are kept
- * and reported as warnings.
+ * Write a validated seed bundle to the content schema, in one transaction,
+ * in one of two modes (mode.ts, spec §6.1).
+ *
+ * upsert — the JSON files are the source of truth. Top-level entities upsert
+ * by slug (ids survive re-seeds, so user progress keeps pointing at the same
+ * rows); owned sets are made equal to the files — join rows (question topics,
+ * component deps, gate questions) by their natural pair, so their ids survive
+ * too; recipe items and checkpoint questions are replaced; ordered children
+ * (recipes, build steps, modules, lessons, chapters, articles, hints) upsert
+ * by their natural key and stale ones are deleted — unless users already
+ * touched them, in which case they are kept and reported as warnings.
+ *
+ * insert-missing — the database is the source of truth (staff edit content in
+ * Directus). A row is created only when its natural key does not exist yet,
+ * together with everything it owns; an existing row is never updated or
+ * deleted, and nothing is added under it:
+ *
+ *   natural key          created with it (only when it is new)
+ *   tier slug            —
+ *   topic slug           its recipes and their items
+ *   question slug        its topics + weights and its hints (tests are a column)
+ *   component slug       its dependencies, its build steps and their hints
+ *   gate (its tier)      its questions, in order
+ *   badge slug           —
+ *   track slug           its modules, lessons and checkpoint questions
+ *   library area slug    its chapters and articles
+ *
+ * References from new rows resolve by slug to whatever row exists (edited or
+ * not). A new tier whose ord an existing tier holds is refused (nothing is
+ * written); a new area's article whose slug already exists elsewhere is
+ * skipped with a warning.
  */
 import { Prisma, type PrismaClient } from '@prisma/client';
 import { SeedError } from './load';
+import { DEFAULT_SEED_MODE, type SeedMode } from './mode';
 import type { Hint, SeedBundle } from './types';
 
 type Tx = Prisma.TransactionClient;
@@ -17,44 +41,93 @@ type Ids = Map<string, string>;
 type Count = (kind: string, n?: number) => void;
 
 export interface SeedSummary {
+  mode: SeedMode;
+  /** Rows written (upsert) or created (insert-missing), by kind. */
   counts: Record<string, number>;
+  /** insert-missing only: existing rows left exactly as they were, by kind. */
+  kept: Record<string, number>;
   warnings: string[];
+}
+
+interface Ctx {
+  tx: Tx;
+  seed: SeedBundle;
+  mode: SeedMode;
+  warnings: string[];
+  count: Count;
+  keep: Count;
 }
 
 const json = (v: unknown) => v as Prisma.InputJsonValue;
 
-export async function writeSeed(prisma: PrismaClient, seed: SeedBundle): Promise<SeedSummary> {
+export async function writeSeed(
+  prisma: PrismaClient,
+  seed: SeedBundle,
+  opts: { mode?: SeedMode } = {}
+): Promise<SeedSummary> {
+  const mode = opts.mode ?? DEFAULT_SEED_MODE;
   const warnings: string[] = [];
   const counts: Record<string, number> = {};
-  const count: Count = (k, n = 1) => {
-    counts[k] = (counts[k] ?? 0) + n;
+  const kept: Record<string, number> = {};
+  const tally = (into: Record<string, number>): Count => (k, n = 1) => {
+    into[k] = (into[k] ?? 0) + n;
   };
 
   await prisma.$transaction(
     async (tx) => {
-      const tierIds = await writeTiers(tx, seed);
-      count('tiers', tierIds.size);
-      const topicIds = await writeTopics(tx, seed, tierIds);
-      count('topics', topicIds.size);
-      const questionIds = await writeQuestions(tx, seed, topicIds, warnings, count);
-      count('questions', questionIds.size);
-      count('recipes', await writeRecipes(tx, seed, topicIds));
-      count('components', await writeComponents(tx, seed, topicIds, warnings, count));
-      count('gates', await writeGates(tx, seed, tierIds, questionIds));
-      count('badges', await writeBadges(tx, seed));
-      await writeLearn(tx, seed, tierIds, topicIds, warnings, count);
-      await writeLibrary(tx, seed, warnings, count);
+      const ctx: Ctx = { tx, seed, mode, warnings, count: tally(counts), keep: tally(kept) };
+      const tierIds = await writeTiers(ctx);
+      const { ids: topicIds, written: writtenTopics } = await writeTopics(ctx, tierIds);
+      const questionIds = await writeQuestions(ctx, topicIds);
+      await writeRecipes(ctx, topicIds, writtenTopics);
+      await writeComponents(ctx, topicIds);
+      await writeGates(ctx, tierIds, questionIds);
+      await writeBadges(ctx);
+      await writeLearn(ctx, tierIds, topicIds);
+      await writeLibrary(ctx);
     },
     { maxWait: 30_000, timeout: 300_000 }
   );
-  return { counts, warnings };
+  return { mode, counts, kept, warnings };
+}
+
+/** insert-missing: which of `slugs` already exist (slug → id). */
+async function existingBySlug(
+  find: (slugs: string[]) => Promise<{ id: string; slug: string }[]>,
+  slugs: string[]
+): Promise<Ids> {
+  return new Map((await find(slugs)).map((r) => [r.slug, r.id]));
 }
 
 // ─── loop ────────────────────────────────────────────────────────────────
 
-async function writeTiers(tx: Tx, seed: SeedBundle): Promise<Ids> {
+async function writeTiers({ tx, seed, mode, count, keep }: Ctx): Promise<Ids> {
   const tiers = seed.loop.data.tiers;
   const existing = await tx.tier.findMany({ select: { id: true, slug: true, ord: true } });
+  const ids: Ids = new Map();
+
+  if (mode === 'insert-missing') {
+    const bySlug = new Map(existing.map((e) => [e.slug, e]));
+    const missing = tiers.filter((t) => !bySlug.has(t.slug));
+    const clashes = missing.flatMap((t) => {
+      const holder = existing.find((e) => e.ord === t.ord);
+      return holder ? [`tier "${t.slug}" needs ord ${t.ord}, which tier "${holder.slug}" holds — renumber one of them`] : [];
+    });
+    if (clashes.length) throw new SeedError(clashes, 'insert-missing cannot create these tiers');
+    for (const t of tiers) {
+      const found = bySlug.get(t.slug);
+      if (found) {
+        ids.set(t.slug, found.id);
+        keep('tiers');
+        continue;
+      }
+      const row = await tx.tier.create({ data: { slug: t.slug, ord: t.ord, title: t.title, summary: t.summary } });
+      ids.set(t.slug, row.id);
+      count('tiers');
+    }
+    return ids;
+  }
+
   const wanted = new Map(tiers.map((t) => [t.slug, t]));
   const squatters = tiers.flatMap((t) => {
     const s = existing.find((e) => e.ord === t.ord && e.slug !== t.slug && !wanted.has(e.slug));
@@ -68,40 +141,59 @@ async function writeTiers(tx: Tx, seed: SeedBundle): Promise<Ids> {
     const t = wanted.get(e.slug);
     if (t && t.ord !== e.ord) await tx.tier.update({ where: { id: e.id }, data: { ord: parking-- } });
   }
-  const ids: Ids = new Map();
   for (const t of tiers) {
     const data = { ord: t.ord, title: t.title, summary: t.summary };
     const row = await tx.tier.upsert({ where: { slug: t.slug }, create: { slug: t.slug, ...data }, update: data });
     ids.set(t.slug, row.id);
   }
+  count('tiers', ids.size);
   return ids;
 }
 
-async function writeTopics(tx: Tx, seed: SeedBundle, tierIds: Ids): Promise<Ids> {
+/** Topic ids by slug, and the slugs written now (insert-missing: only the new ones). */
+async function writeTopics({ tx, seed, mode, count, keep }: Ctx, tierIds: Ids): Promise<{ ids: Ids; written: Set<string> }> {
+  const topics = seed.loop.data.topics;
+  const existing =
+    mode === 'insert-missing'
+      ? await existingBySlug((slugs) => tx.topic.findMany({ where: { slug: { in: slugs } }, select: { id: true, slug: true } }), topics.map((t) => t.slug))
+      : new Map<string, string>();
   const ids: Ids = new Map();
+  const written = new Set<string>();
   const position = new Map<string, number>();
-  for (const t of seed.loop.data.topics) {
+  for (const t of topics) {
     const ord = t.ord ?? position.get(t.tier) ?? 0;
     position.set(t.tier, (position.get(t.tier) ?? 0) + 1);
+    const found = existing.get(t.slug);
+    if (found) {
+      ids.set(t.slug, found);
+      keep('topics');
+      continue;
+    }
     const data = { tierId: tierIds.get(t.tier)!, title: t.title, summary: t.summary, icon: t.icon, ord };
-    const row = await tx.topic.upsert({ where: { slug: t.slug }, create: { slug: t.slug, ...data }, update: data });
+    const row =
+      mode === 'insert-missing'
+        ? await tx.topic.create({ data: { slug: t.slug, ...data } })
+        : await tx.topic.upsert({ where: { slug: t.slug }, create: { slug: t.slug, ...data }, update: data });
     ids.set(t.slug, row.id);
+    written.add(t.slug);
+    count('topics');
   }
-  return ids;
+  return { ids, written };
 }
 
-async function writeRecipes(tx: Tx, seed: SeedBundle, topicIds: Ids): Promise<number> {
-  let n = 0;
+/** The recipes of the topics written now (insert-missing: only topics created in this run). */
+async function writeRecipes({ tx, seed, mode, count }: Ctx, topicIds: Ids, writtenTopics: ReadonlySet<string>): Promise<void> {
   for (const topic of seed.loop.data.topics) {
+    if (!writtenTopics.has(topic.slug)) continue;
     const topicId = topicIds.get(topic.slug)!;
     const recipes = seed.loop.data.recipes.filter((r) => r.topic === topic.slug);
-    const existing = await tx.unlockRecipe.findMany({ where: { topicId }, orderBy: { ord: 'asc' } });
+    const existing = mode === 'upsert' ? await tx.unlockRecipe.findMany({ where: { topicId }, orderBy: { ord: 'asc' } }) : [];
     for (const [ord, r] of recipes.entries()) {
       const match = existing.find((e) => e.ord === ord);
       const { id } = match
         ? await tx.unlockRecipe.update({ where: { id: match.id }, data: { title: r.title } })
         : await tx.unlockRecipe.create({ data: { topicId, title: r.title, ord } });
-      await tx.recipeItem.deleteMany({ where: { recipeId: id } });
+      if (match) await tx.recipeItem.deleteMany({ where: { recipeId: id } });
       await tx.recipeItem.createMany({
         data: r.items.map((it) => ({
           recipeId: id,
@@ -110,23 +202,32 @@ async function writeRecipes(tx: Tx, seed: SeedBundle, topicIds: Ids): Promise<nu
           minDifficulty: it.min_difficulty,
         })),
       });
-      n++;
+      count('recipes');
     }
     // unlocks.via_recipe_id is ON DELETE SET NULL: dropping a recipe keeps unlocks.
-    await tx.unlockRecipe.deleteMany({ where: { topicId, ord: { gte: recipes.length } } });
+    if (mode === 'upsert') await tx.unlockRecipe.deleteMany({ where: { topicId, ord: { gte: recipes.length } } });
   }
-  return n;
 }
 
+/**
+ * A hint ladder. upsert: by (target, level), pruning levels the files dropped
+ * unless users revealed them. insert-missing: only called for a new target.
+ */
 async function syncHints(
-  tx: Tx,
+  { tx, mode, warnings, count }: Ctx,
   target: { questionId: string } | { buildStepId: string },
   hints: readonly Hint[],
-  where: string,
-  warnings: string[],
-  count: Count
+  where: string
 ): Promise<void> {
   count('hints', hints.length);
+  if (mode === 'insert-missing') {
+    if (hints.length) {
+      await tx.hint.createMany({
+        data: hints.map((h) => ({ ...target, level: h.level, bodyMd: h.body_md, costKind: h.cost_kind, costAmount: h.cost_amount })),
+      });
+    }
+    return;
+  }
   for (const h of hints) {
     const data = { bodyMd: h.body_md, costKind: h.cost_kind, costAmount: h.cost_amount };
     await tx.hint.upsert({
@@ -148,9 +249,22 @@ async function syncHints(
   }
 }
 
-async function writeComponents(tx: Tx, seed: SeedBundle, topicIds: Ids, warnings: string[], count: Count): Promise<number> {
+async function writeComponents(ctx: Ctx, topicIds: Ids): Promise<void> {
+  const { tx, seed, mode, warnings, count, keep } = ctx;
+  const components = seed.loop.data.components;
+  const existing =
+    mode === 'insert-missing'
+      ? await existingBySlug((slugs) => tx.component.findMany({ where: { slug: { in: slugs } }, select: { id: true, slug: true } }), components.map((c) => c.slug))
+      : new Map<string, string>();
   const ids: Ids = new Map();
-  for (const [i, c] of seed.loop.data.components.entries()) {
+  const written = new Set<string>(); // insert-missing: only the new ones
+  for (const [i, c] of components.entries()) {
+    const found = existing.get(c.slug);
+    if (found) {
+      ids.set(c.slug, found);
+      keep('components');
+      continue;
+    }
     const data = {
       topicId: topicIds.get(c.topic)!,
       title: c.title,
@@ -160,27 +274,38 @@ async function writeComponents(tx: Tx, seed: SeedBundle, topicIds: Ids, warnings
       languages: c.languages,
       ord: c.ord ?? i,
     };
-    const row = await tx.component.upsert({ where: { slug: c.slug }, create: { slug: c.slug, ...data }, update: data });
+    const row =
+      mode === 'insert-missing'
+        ? await tx.component.create({ data: { slug: c.slug, ...data } })
+        : await tx.component.upsert({ where: { slug: c.slug }, create: { slug: c.slug, ...data }, update: data });
     ids.set(c.slug, row.id);
+    written.add(c.slug);
+    count('components');
   }
 
-  for (const c of seed.loop.data.components) {
+  for (const c of components) {
+    if (!written.has(c.slug)) continue; // insert-missing: an existing component keeps its deps and steps
     const componentId = ids.get(c.slug)!;
-    await tx.componentDep.deleteMany({ where: { componentId } });
-    if (c.depends_on.length) {
-      await tx.componentDep.createMany({ data: c.depends_on.map((d) => ({ componentId, dependsOnId: ids.get(d)! })) });
+    const dependsOnIds = c.depends_on.map((d) => ids.get(d)!);
+    if (mode === 'upsert') await tx.componentDep.deleteMany({ where: { componentId, dependsOnId: { notIn: dependsOnIds } } });
+    if (dependsOnIds.length) {
+      await tx.componentDep.createMany({
+        data: dependsOnIds.map((dependsOnId) => ({ componentId, dependsOnId })),
+        skipDuplicates: true, // upsert: edges that stay keep their row (and id)
+      });
     }
 
-    const existing = await tx.buildStep.findMany({ where: { componentId }, orderBy: { ord: 'asc' } });
+    const steps = mode === 'upsert' ? await tx.buildStep.findMany({ where: { componentId }, orderBy: { ord: 'asc' } }) : [];
     for (const [ord, s] of c.build_steps.entries()) {
       const data = { kind: s.kind, title: s.title, promptMd: s.prompt_md, difficulty: s.difficulty, payload: json(s.payload) };
-      const match = existing.find((e) => e.ord === ord);
+      const match = steps.find((e) => e.ord === ord);
       const { id } = match
         ? await tx.buildStep.update({ where: { id: match.id }, data })
         : await tx.buildStep.create({ data: { componentId, ord, ...data } });
-      await syncHints(tx, { buildStepId: id }, s.hints, `components "${c.slug}" build_steps[${ord}]`, warnings, count);
+      await syncHints(ctx, { buildStepId: id }, s.hints, `components "${c.slug}" build_steps[${ord}]`);
       count('build steps');
     }
+    if (mode === 'insert-missing') continue;
     const stale = await tx.buildStep.findMany({
       where: { componentId, ord: { gte: c.build_steps.length } },
       select: { id: true, ord: true, _count: { select: { submissions: true, stepProgress: true, hintUses: true } } },
@@ -193,12 +318,15 @@ async function writeComponents(tx: Tx, seed: SeedBundle, topicIds: Ids, warnings
       }
     }
   }
-  return ids.size;
 }
 
-async function writeGates(tx: Tx, seed: SeedBundle, tierIds: Ids, questionIds: Ids): Promise<number> {
+async function writeGates({ tx, seed, mode, count, keep }: Ctx, tierIds: Ids, questionIds: Ids): Promise<void> {
   for (const g of seed.loop.data.gates) {
     const tierId = tierIds.get(g.tier)!;
+    if (mode === 'insert-missing' && (await tx.gate.findUnique({ where: { tierId }, select: { id: true } }))) {
+      keep('gates');
+      continue;
+    }
     const data = {
       title: g.title,
       summary: g.summary,
@@ -206,20 +334,46 @@ async function writeGates(tx: Tx, seed: SeedBundle, tierIds: Ids, questionIds: I
       cooldownHours: g.cooldown_hours,
       timeLimitMinutes: g.time_limit_minutes,
     };
-    const gate = await tx.gate.upsert({ where: { tierId }, create: { tierId, ...data }, update: data });
-    await tx.gateQuestion.deleteMany({ where: { gateId: gate.id } });
-    await tx.gateQuestion.createMany({
-      data: g.questions.map((slug, ord) => ({ gateId: gate.id, questionId: questionIds.get(slug)!, ord })),
-    });
+    const gate =
+      mode === 'insert-missing'
+        ? await tx.gate.create({ data: { tierId, ...data } })
+        : await tx.gate.upsert({ where: { tierId }, create: { tierId, ...data }, update: data });
+    const wanted = g.questions.map((slug, ord) => ({ questionId: questionIds.get(slug)!, ord }));
+    if (mode === 'insert-missing') {
+      await tx.gateQuestion.createMany({ data: wanted.map((w) => ({ gateId: gate.id, ...w })) });
+    } else {
+      await tx.gateQuestion.deleteMany({ where: { gateId: gate.id, questionId: { notIn: wanted.map((w) => w.questionId) } } });
+      for (const w of wanted) {
+        await tx.gateQuestion.upsert({
+          where: { gateId_questionId: { gateId: gate.id, questionId: w.questionId } },
+          create: { gateId: gate.id, ...w },
+          update: { ord: w.ord },
+        });
+      }
+    }
+    count('gates');
   }
-  return seed.loop.data.gates.length;
 }
 
 // ─── questions, badges ───────────────────────────────────────────────────
 
-async function writeQuestions(tx: Tx, seed: SeedBundle, topicIds: Ids, warnings: string[], count: Count): Promise<Ids> {
+async function writeQuestions(ctx: Ctx, topicIds: Ids): Promise<Ids> {
+  const { tx, seed, mode, count, keep } = ctx;
+  const existing =
+    mode === 'insert-missing'
+      ? await existingBySlug(
+          (slugs) => tx.question.findMany({ where: { slug: { in: slugs } }, select: { id: true, slug: true } }),
+          seed.questions.map((q) => q.data.slug)
+        )
+      : new Map<string, string>();
   const ids: Ids = new Map();
   for (const { file, data: q } of seed.questions) {
+    const found = existing.get(q.slug);
+    if (found) {
+      ids.set(q.slug, found);
+      keep('questions');
+      continue;
+    }
     const data = {
       title: q.title,
       difficulty: q.difficulty,
@@ -239,20 +393,42 @@ async function writeQuestions(tx: Tx, seed: SeedBundle, topicIds: Ids, warnings:
       timeLimitMs: q.time_limit_ms,
       memoryLimitMb: q.memory_limit_mb,
     };
-    const row = await tx.question.upsert({ where: { slug: q.slug }, create: { slug: q.slug, ...data }, update: data });
+    const row =
+      mode === 'insert-missing'
+        ? await tx.question.create({ data: { slug: q.slug, ...data } })
+        : await tx.question.upsert({ where: { slug: q.slug }, create: { slug: q.slug, ...data }, update: data });
     ids.set(q.slug, row.id);
-    await tx.questionTopic.deleteMany({ where: { questionId: row.id } });
-    await tx.questionTopic.createMany({
-      data: q.topics.map((t) => ({ questionId: row.id, topicId: topicIds.get(t.slug)!, weight: t.weight })),
-    });
-    await syncHints(tx, { questionId: row.id }, q.hints, file, warnings, count);
+    count('questions');
+
+    const topics = q.topics.map((t) => ({ topicId: topicIds.get(t.slug)!, weight: t.weight }));
+    if (mode === 'insert-missing') {
+      await tx.questionTopic.createMany({ data: topics.map((t) => ({ questionId: row.id, ...t })) });
+    } else {
+      await tx.questionTopic.deleteMany({ where: { questionId: row.id, topicId: { notIn: topics.map((t) => t.topicId) } } });
+      for (const t of topics) {
+        await tx.questionTopic.upsert({
+          where: { questionId_topicId: { questionId: row.id, topicId: t.topicId } },
+          create: { questionId: row.id, ...t },
+          update: { weight: t.weight },
+        });
+      }
+    }
+    await syncHints(ctx, { questionId: row.id }, q.hints, file);
   }
   return ids;
 }
 
-async function writeBadges(tx: Tx, seed: SeedBundle): Promise<number> {
+async function writeBadges({ tx, seed, mode, count, keep }: Ctx): Promise<void> {
   const badges = seed.badges?.data ?? [];
+  const existing =
+    mode === 'insert-missing'
+      ? await existingBySlug((slugs) => tx.badge.findMany({ where: { slug: { in: slugs } }, select: { id: true, slug: true } }), badges.map((b) => b.slug))
+      : new Map<string, string>();
   for (const [i, b] of badges.entries()) {
+    if (existing.has(b.slug)) {
+      keep('badges');
+      continue;
+    }
     const data = {
       name: b.name,
       description: b.description,
@@ -261,22 +437,27 @@ async function writeBadges(tx: Tx, seed: SeedBundle): Promise<number> {
       criteria: json(b.criteria),
       ord: b.ord ?? i,
     };
-    await tx.badge.upsert({ where: { slug: b.slug }, create: { slug: b.slug, ...data }, update: data });
+    if (mode === 'insert-missing') await tx.badge.create({ data: { slug: b.slug, ...data } });
+    else await tx.badge.upsert({ where: { slug: b.slug }, create: { slug: b.slug, ...data }, update: data });
+    count('badges');
   }
-  return badges.length;
 }
 
 // ─── learn ───────────────────────────────────────────────────────────────
 
-async function writeLearn(
-  tx: Tx,
-  seed: SeedBundle,
-  tierIds: Ids,
-  topicIds: Ids,
-  warnings: string[],
-  count: Count
-): Promise<void> {
+async function writeLearn({ tx, seed, mode, warnings, count, keep }: Ctx, tierIds: Ids, topicIds: Ids): Promise<void> {
+  const existing =
+    mode === 'insert-missing'
+      ? await existingBySlug(
+          (slugs) => tx.track.findMany({ where: { slug: { in: slugs } }, select: { id: true, slug: true } }),
+          seed.tracks.map((t) => t.data.slug)
+        )
+      : new Map<string, string>();
   for (const { file, data: t } of seed.tracks) {
+    if (existing.has(t.slug)) {
+      keep('tracks');
+      continue;
+    }
     const trackData = {
       title: t.title,
       summary: t.summary,
@@ -285,6 +466,7 @@ async function writeLearn(
       estHours: t.est_hours,
       ord: t.ord,
     };
+    // insert-missing reaches here only for a new track: every upsert below creates.
     const track = await tx.track.upsert({ where: { slug: t.slug }, create: { slug: t.slug, ...trackData }, update: trackData });
     count('tracks');
 
@@ -313,16 +495,18 @@ async function writeLearn(
         });
         count('lessons');
       }
-      const staleLessons = await tx.lesson.findMany({
-        where: { moduleId: mod.id, slug: { notIn: m.lessons.map((l) => l.slug) } },
-        select: { id: true, slug: true, _count: { select: { progress: true } } },
-      });
-      for (const s of staleLessons) {
-        if (s._count.progress > 0) warnings.push(`${file}: lesson "${s.slug}" was removed but has learner progress — kept`);
-        else await tx.lesson.delete({ where: { id: s.id } });
+      if (mode === 'upsert') {
+        const staleLessons = await tx.lesson.findMany({
+          where: { moduleId: mod.id, slug: { notIn: m.lessons.map((l) => l.slug) } },
+          select: { id: true, slug: true, _count: { select: { progress: true } } },
+        });
+        for (const s of staleLessons) {
+          if (s._count.progress > 0) warnings.push(`${file}: lesson "${s.slug}" was removed but has learner progress — kept`);
+          else await tx.lesson.delete({ where: { id: s.id } });
+        }
+        await tx.checkpointQuestion.deleteMany({ where: { moduleId: mod.id } });
       }
 
-      await tx.checkpointQuestion.deleteMany({ where: { moduleId: mod.id } });
       if (m.checkpoint.length) {
         await tx.checkpointQuestion.createMany({
           data: m.checkpoint.map((c, ord) => ({
@@ -338,6 +522,7 @@ async function writeLearn(
         count('checkpoint questions', m.checkpoint.length);
       }
     }
+    if (mode === 'insert-missing') continue;
 
     const staleModules = await tx.learnModule.findMany({
       where: { trackId: track.id, slug: { notIn: t.modules.map((m) => m.slug) } },
@@ -358,9 +543,21 @@ async function writeLearn(
 
 // ─── library ─────────────────────────────────────────────────────────────
 
-async function writeLibrary(tx: Tx, seed: SeedBundle, warnings: string[], count: Count): Promise<void> {
+async function writeLibrary({ tx, seed, mode, warnings, count, keep }: Ctx): Promise<void> {
+  const existing =
+    mode === 'insert-missing'
+      ? await existingBySlug(
+          (slugs) => tx.libraryArea.findMany({ where: { slug: { in: slugs } }, select: { id: true, slug: true } }),
+          seed.areas.map((a) => a.data.slug)
+        )
+      : new Map<string, string>();
   for (const { file, data: a } of seed.areas) {
+    if (existing.has(a.slug)) {
+      keep('library areas');
+      continue;
+    }
     const areaData = { title: a.title, summary: a.summary, icon: a.icon, ord: a.ord };
+    // insert-missing reaches here only for a new area: its chapters are new too.
     const area = await tx.libraryArea.upsert({ where: { slug: a.slug }, create: { slug: a.slug, ...areaData }, update: areaData });
     count('library areas');
 
@@ -388,9 +585,20 @@ async function writeLibrary(tx: Tx, seed: SeedBundle, warnings: string[], count:
           status: x.status,
           ord: xi,
         };
-        await tx.libraryArticle.upsert({ where: { slug: x.slug }, create: { slug: x.slug, ...data }, update: data });
+        if (mode === 'insert-missing') {
+          // Article slugs are global: one that exists (in another area) stays where it is.
+          if (await tx.libraryArticle.findUnique({ where: { slug: x.slug }, select: { id: true } })) {
+            warnings.push(`${file}: article "${x.slug}" already exists in another chapter — left as it is`);
+            keep('library articles');
+            continue;
+          }
+          await tx.libraryArticle.create({ data: { slug: x.slug, ...data } });
+        } else {
+          await tx.libraryArticle.upsert({ where: { slug: x.slug }, create: { slug: x.slug, ...data }, update: data });
+        }
         count('library articles');
       }
+      if (mode === 'insert-missing') continue;
       const staleArticles = await tx.libraryArticle.findMany({
         where: { chapterId: chapter.id, slug: { notIn: c.articles.map((x) => x.slug) } },
         select: { id: true, slug: true, _count: { select: { progress: true } } },
@@ -400,6 +608,7 @@ async function writeLibrary(tx: Tx, seed: SeedBundle, warnings: string[], count:
         else await tx.libraryArticle.delete({ where: { id: s.id } });
       }
     }
+    if (mode === 'insert-missing') continue;
 
     const staleChapters = await tx.libraryChapter.findMany({
       where: { areaId: area.id, slug: { notIn: a.chapters.map((c) => c.slug) } },

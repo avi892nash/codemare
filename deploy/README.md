@@ -133,7 +133,7 @@ set; otherwise the links are only printed in the web log.
 
 ```bash
 # storage box access (section 8.1) → deploy/secrets/storagebox_ed25519 + storagebox_known_hosts
-# in deploy/.env: SEED_ON_START=true for this first run only
+# in deploy/.env: SEED_ON_START=true (loads the content; section 7.5)
 deploy/deploy.sh
 ```
 
@@ -141,8 +141,11 @@ deploy/deploy.sh
 records the tag as `CODEMARE_VERSION` in `deploy/.env`, starts everything and
 waits until web, backend, directus, caddy and postgres report healthy. Then:
 
-1. Set `SEED_ON_START=false` in `deploy/.env` (a re-seed overwrites seeded rows
-   that staff edited in Directus, recipes included).
+1. Decide whether to keep `SEED_ON_START=true`. The container seeds in
+   `insert-missing` mode, which never changes a row that exists, so later
+   deploys only add content whose slug is new in `web/prisma/seed/data` and
+   staff edits in Directus survive. Set it to `false` if content should only
+   ever change in Directus (section 7.5 has the trade-offs).
 2. Open `https://ADMIN_DOMAIN`, sign in with `DIRECTUS_ADMIN_EMAIL`/`PASSWORD`,
    change the password (and mirror it in `.env`). Directus 12 then asks for a
    license key and for a **project owner** who accepts its MSCL-1.0-GPL license
@@ -211,6 +214,12 @@ UI and the API, `prisma migrate status` reported *up to date*,
 `prisma migrate diff --from-schema-datasource … --to-schema-datamodel … --exit-code`
 reported *no difference*, and a `pg_dump --schema-only` of app/content/public
 was identical to that of a database migrated without Directus (grants included).
+Re-verified the same way after the join tables got surrogate ids (migration
+`20260929090000`): a Content Editor changed a question's topic weight,
+reordered a gate's questions and added a component dependency through the API
+and the data studio, the web app's domain functions read the changes, an
+`insert-missing` seed left every content row byte-identical, and `upsert`
+reverted them.
 
 ### 7.2 Admin bootstrap and users
 
@@ -233,19 +242,33 @@ was identical to that of a database migrated without Directus (grants included).
   total, the recipe a new learner is pointed at ("cheapest") and how many
   qualifying tokens all published content pays out. A save is one nested write,
   applied in a single transaction.
+* **Join rows, edited from their parent** (the join collections themselves are
+  hidden from the navigation):
+  * *Question → Topics*: each row is a topic and its weight — the share of the
+    solve award that topic gets (1 = the full award). **Create New** opens a
+    drawer with a topic picker and the weight; click a row to change its
+    weight, the bin removes it. A topic appears at most once per question
+    (unique pair); the weight must be > 0.
+  * *Gate → Questions*: the gate's timed question set, drag to reorder (the
+    order is `ord`); new questions go last. A gate can never be left with
+    fewer questions than its pass threshold, whether by removing questions or
+    by raising the threshold.
+  * *Component → Depends on*: the components whose code is prepended to its
+    builds; *Used by* lists the reverse, read-only. Self-dependencies and
+    cycles are refused with the cycle spelled out (the web app's own graph
+    rules, as the seed validator uses).
 * The extension also: gives rows created in Directus Prisma-style cuid ids
-  (content ids have no database default), stores Postgres arrays (tags,
-  companies, languages, slugs lists) correctly, bumps `questions.updated_at`,
-  and re-checks the recipe rules server-side for any client.
-* **Not editable in Directus:** `question_topics`, `gate_questions` and
-  `component_deps` have composite primary keys, which Directus ignores. Edit them
-  through the seed files or the web authoring UI. `questions.author_id` points
-  into `app.users`, which Directus cannot read, so it is hidden.
+  (content ids have no database default; that includes the join rows),
+  stores Postgres arrays (tags, companies, languages, slugs lists) correctly,
+  bumps `questions.updated_at`, and re-checks the recipe, weight, dependency
+  and gate rules server-side for any client, as readable 400s (Postgres CHECK
+  violations would otherwise surface as a bare 500).
+* `questions.author_id` points into `app.users`, which Directus cannot read, so
+  it is hidden.
 * After a migration adds a content column, `directus-config` logs
   `column content.x.y is not in admin/content-model/model.ts` — add it there.
-* The seed is a bootstrap tool: once staff edit content in Directus, the
-  database is the source of truth. Do not re-run the seed on production unless
-  you mean to reset the seeded rows.
+* Once staff edit content in Directus, the database is the source of truth:
+  seed production only in `insert-missing` mode (section 7.5).
 
 ### 7.4 Developing the extension
 
@@ -255,6 +278,44 @@ npm --prefix admin test && npm --prefix admin run typecheck
 npm --prefix admin run dev:extension     # rebuilds admin/extensions/codemare/dist
 docker compose up -d --build             # local postgres :5433 + directus :8055 (admin@example.com / codemare-admin-dev)
 ```
+
+### 7.5 Seeding: `upsert` vs `insert-missing`
+
+The seed (`web/prisma/seed/`, spec §6.1) validates every JSON file first and
+writes nothing unless all are valid, then writes in one transaction, in one of
+two modes:
+
+| mode | what it does | where |
+|---|---|---|
+| `upsert` | the JSON files are the source of truth: every seeded row is created or **overwritten**, owned sets (a question's topics, a gate's questions, deps, recipe items, …) become exactly the files', children the files dropped are deleted unless learners touched them | `npm run seed -w web` (the CLI default) |
+| `insert-missing` | the database is the source of truth: a row is created only when its natural key is absent (tier/topic/question/component/badge/track/area slug, a gate by its tier), **with everything it owns**; an existing row is never updated or deleted, and nothing is added under it | the web image (`SEED_ON_START=true`, manual runs in the container) |
+
+Choose with `--mode upsert|insert-missing` (wins) or `SEED_MODE`. In the web
+image the entrypoint defaults `SEED_MODE` to `insert-missing`, so both paths
+are safe for production:
+
+```bash
+# in deploy/.env: SEED_ON_START=true → every `up`/deploy inserts what is new, e.g. questions a release added
+dc run --rm web node prisma/seed/seed.cjs                  # the same by hand (insert-missing)
+dc run --rm -e SEED_MODE=upsert web node prisma/seed/seed.cjs   # RESET seeded rows to the files (loses staff edits)
+npm run seed -w web -- --mode insert-missing               # locally, against DATABASE_URL
+```
+
+What `insert-missing` does **not** do, by design (it never guesses whether a
+difference is a staff edit):
+* Changes to existing content in the JSON files (a reworded statement, new
+  tests, another hint, a new lesson in an existing track, a re-weighted topic)
+  are not applied — make them in Directus, or reset that row with `upsert`.
+* Slugs are the identity: a seeded row that staff deleted or re-slugged in
+  Directus is created again on the next run. Retire content by unpublishing it
+  (`status: draft`), or remove it from the JSON files as well.
+* A new tier whose `ord` an existing tier already holds is refused and nothing
+  is written (the `migrate` one-shot then fails; renumber one of them). A new
+  library area whose article slug already exists elsewhere skips that article
+  with a warning.
+
+On an empty database both modes produce the same content, so the first deploy
+needs nothing special.
 
 ## 8. Backups
 
@@ -494,7 +555,7 @@ browser specs run against the dev stack as well, e.g.
 |---|---|
 | backend exits: `is not a cgroup v2 mount` / `read-only` | host on cgroup v1, or container not privileged |
 | backend log `Unavailable: cpp …` / `go …` | see section 10; the probe message has the compiler's error |
-| `migrate` exited 1 | `dc logs migrate`; web and Directus wait for it |
+| `migrate` exited 1 | `dc logs migrate`; web and Directus wait for it. `seed: insert-missing cannot create these tiers` → a new tier's `ord` is taken (section 7.5) |
 | directus-config warns about unknown columns | update `admin/content-model/model.ts` after a migration |
 | Directus: `must be owner of table` | someone tried a data-model change; do it as a Prisma migration |
 | caddy: certificate errors | DNS not pointing at the VPS yet, or 80/443 blocked |

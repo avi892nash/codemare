@@ -13,7 +13,8 @@
 //
 // Things Prisma cannot express live in raw SQL in prisma/migrations/:
 //   · CHECK constraints (recipe quantity > 0, ledger amount <> 0, hint
-//     exactly-one-target, cooldown 12–24, handle format, no self-deps)
+//     exactly-one-target, cooldown 12–24, handle format, no self-deps,
+//     question topic weight > 0)
 //   · the append-only trigger on app.token_ledger
 //   · the partial unique index that makes ledger earns idempotent
 //
@@ -293,15 +294,19 @@ model Component {
   @@schema("content")
 }
 
-/// Edge component → depends_on. Must stay acyclic (validated in seed + app).
+/// Edge component → depends_on. Must stay acyclic (validated in seed + app,
+/// and by the Directus content-integrity hook); no self-dependency (CHECK).
+/// `id` is a surrogate key so Directus can edit rows (it needs a single-column
+/// primary key); the edge itself is the unique pair.
 model ComponentDep {
+  id          String @id @default(cuid())
   componentId String @map("component_id")
   dependsOnId String @map("depends_on_id")
 
   component Component @relation("ComponentDeps", fields: [componentId], references: [id], onDelete: Cascade)
   dependsOn Component @relation("ComponentDependents", fields: [dependsOnId], references: [id])
 
-  @@id([componentId, dependsOnId])
+  @@unique([componentId, dependsOnId])
   @@index([dependsOnId])
   @@map("component_deps")
   @@schema("content")
@@ -374,16 +379,19 @@ model Question {
   @@schema("content")
 }
 
-/// A question pays tokens to each of its topics, split by weight.
+/// A question pays tokens to each of its topics, split by weight. `id` is a
+/// surrogate key for Directus; (question, topic) is the unique pair.
 model QuestionTopic {
+  id         String @id @default(cuid())
   questionId String @map("question_id")
   topicId    String @map("topic_id")
+  /// > 0 (CHECK constraint)
   weight     Float  @default(1.0)
 
   question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
   topic    Topic    @relation(fields: [topicId], references: [id])
 
-  @@id([questionId, topicId])
+  @@unique([questionId, topicId])
   @@index([topicId])
   @@map("question_topics")
   @@schema("content")
@@ -429,7 +437,10 @@ model Gate {
   @@schema("content")
 }
 
+/// A gate's questions, in `ord` order. `id` is a surrogate key for Directus;
+/// (gate, question) is the unique pair.
 model GateQuestion {
+  id         String @id @default(cuid())
   gateId     String @map("gate_id")
   questionId String @map("question_id")
   ord        Int
@@ -437,7 +448,7 @@ model GateQuestion {
   gate     Gate     @relation(fields: [gateId], references: [id], onDelete: Cascade)
   question Question @relation(fields: [questionId], references: [id])
 
-  @@id([gateId, questionId])
+  @@unique([gateId, questionId])
   @@index([questionId])
   @@map("gate_questions")
   @@schema("content")
