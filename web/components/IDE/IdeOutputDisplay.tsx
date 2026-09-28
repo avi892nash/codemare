@@ -1,128 +1,175 @@
-import type { IdeExecutionResponse } from '@/lib/types';
-import { MetricChip, Pill, fmtMem, fmtTime } from '@/components/ui/primitives';
+'use client';
+
+import { EmptyState } from '@/components/states/EmptyState';
 import { Icon } from '@/components/ui/Icon';
+import { Spinner } from '@/components/ui/Spinner';
+import { StatusPill, isStatusCode, type StatusCode } from '@/components/ui/StatusPill';
+import { formatKb, formatMillis, text } from '@/lib/client/format';
+import { languageLabel } from '@/lib/client/languages';
+import type { IdeExecutionResponse, IdeTestResult, SupportedLanguage } from '@/lib/types';
+import s from './IDE.module.css';
 
 interface IdeOutputDisplayProps {
   results: IdeExecutionResponse | null;
+  pending?: boolean;
+  language?: SupportedLanguage;
 }
 
-export function IdeOutputDisplay({ results }: IdeOutputDisplayProps) {
+type DiffLine = { kind: 'same' | 'del' | 'add'; text: string };
+
+/** Line diff of expected vs actual stdout (trailing whitespace ignored, like the judge). */
+export function diffLines(expected: string, actual: string): DiffLine[] {
+  const exp = expected.replace(/\s+$/, '').split('\n');
+  const act = actual.replace(/\s+$/, '').split('\n');
+  const out: DiffLine[] = [];
+  for (let i = 0; i < Math.max(exp.length, act.length); i++) {
+    const e = exp[i];
+    const a = act[i];
+    if (e !== undefined && a !== undefined && e.trimEnd() === a.trimEnd()) out.push({ kind: 'same', text: a });
+    else {
+      if (e !== undefined) out.push({ kind: 'del', text: e });
+      if (a !== undefined) out.push({ kind: 'add', text: a });
+    }
+  }
+  return out;
+}
+
+/** A case's status: an unanswered expectation isn't a wrong answer. */
+function caseStatus(r: IdeTestResult, compared: boolean): StatusCode {
+  // The service also reports WA (a clean exit with different stdout); the legacy type predates it.
+  const status: string | undefined = r.status;
+  if (status && isStatusCode(status)) {
+    if (status === 'WA' && !compared) return 'OK';
+    return status;
+  }
+  if (r.error) return 'XX';
+  return !compared || r.passed ? 'OK' : 'WA';
+}
+
+function Block({ label, value, tone }: { label: string; value: string; tone?: 'err' | 'dim' }) {
+  return (
+    <div className={s.block}>
+      <span className={s.blockLabel}>{label}</span>
+      <pre className={`${s.pre} mono`} data-tone={tone}>
+        {value === '' ? <span className={s.empty}>(empty)</span> : value}
+      </pre>
+    </div>
+  );
+}
+
+/** Per-case results: status, runtime and memory, stdin, stdout, a diff against the expectation, errors. */
+export function IdeOutputDisplay({ results, pending = false, language }: IdeOutputDisplayProps) {
+  if (pending) {
+    return (
+      <div className={s.outputState} role="status">
+        <Spinner size={16} />
+        <span>Running{language ? ` ${languageLabel(language)}` : ''}…</span>
+      </div>
+    );
+  }
   if (!results) {
     return (
-      <div className="cm" style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-0)' }}>
-        <div style={{ textAlign: 'center', color: 'var(--fg-3)' }}>
-          <Icon name="terminal" size={26} style={{ color: 'var(--fg-4)', marginBottom: 12 }} />
-          <p style={{ margin: 0, fontSize: 14, color: 'var(--fg-1)' }}>No results yet</p>
-          <p style={{ margin: '4px 0 0', fontSize: 12 }}>Run your code to see runtime and memory.</p>
+      <EmptyState
+        size="sm"
+        icon="terminal"
+        headingLevel={2}
+        title="No output yet"
+        description="Run your code to see stdout, runtime and memory for every case."
+      />
+    );
+  }
+  if (results.testResults.length === 0) {
+    return (
+      <div className={s.outputBody}>
+        <div className={s.summary} data-tone="err">
+          <Icon name="alert-circle" size={16} />
+          <span>{results.error ?? 'Nothing ran.'}</span>
         </div>
       </div>
     );
   }
 
-  const verdict = results.error
-    ? 'XX' as const
-    : results.success
-      ? 'OK' as const
-      : 'WA' as const;
-
-  const accent =
-    verdict === 'OK' ? 'var(--ok)' :
-    verdict === 'WA' ? 'var(--warn)' :
-    'var(--err)';
-
-  const [tVal, tUnit] = fmtTime(results.totalExecutionTime);
+  const ce = results.testResults.find((r) => r.status === 'CE');
+  const compared = results.testResults.map((r) => r.expectedOutput.trim() !== '');
+  const statuses = results.testResults.map((r, i) => caseStatus(r, compared[i]));
+  const matched = results.testResults.filter((r, i) => compared[i] && r.passed).length;
+  const comparedCount = compared.filter(Boolean).length;
+  const worst: StatusCode = ce ? 'CE' : statuses.find((c) => c !== 'OK') ?? 'OK';
 
   return (
-    <div className="cm scroll" style={{ height: '100%', overflowY: 'auto', background: 'var(--bg-0)' }}>
-      <div style={{ padding: 16 }}>
-        <div className="card" style={{
-          padding: 14,
-          marginBottom: 14,
-          borderColor: `color-mix(in oklab, ${accent} 35%, var(--line-2))`,
-          background: `color-mix(in oklab, ${accent} 7%, var(--bg-1))`,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Icon name={verdict === 'OK' ? 'check-circle' : verdict === 'WA' ? 'alert-circle' : 'alert'}
-              size={18} style={{ color: accent }} />
-            <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: accent }}>
-              {verdict === 'OK' ? 'All passed' : verdict === 'WA' ? 'Some failed' : 'Error'}
-            </h3>
-            <span style={{ flex: 1 }} />
-            <Pill tone={verdict === 'OK' ? 'ok' : verdict === 'WA' ? 'warn' : 'err'} size="sm" className="mono">
-              {verdict}
-            </Pill>
-          </div>
-          <p style={{ margin: '6px 0 0', color: 'var(--fg-2)', fontSize: 12.5 }}>
-            {results.totalPassed} / {results.totalTests} test cases passed · total {tVal} {tUnit}
-            {results.error && <> · {results.error}</>}
-          </p>
-        </div>
+    <div className={`${s.outputBody} scroll`}>
+      <div className={s.summary} data-tone={worst === 'OK' ? 'ok' : worst === 'CE' ? 'info' : worst === 'TLE' || worst === 'MLE' ? 'warn' : 'err'}>
+        <StatusPill
+          code={worst}
+          size="md"
+          withIcon
+          showLong
+          label={worst === 'OK' ? (comparedCount > 0 ? 'All matched' : 'Ran') : worst === 'WA' ? 'Mismatch' : undefined}
+        />
+        <span className={s.summaryText}>
+          {ce
+            ? 'Compilation failed — nothing ran.'
+            : comparedCount > 0
+              ? `${matched} of ${comparedCount} expected output${comparedCount === 1 ? '' : 's'} matched`
+              : `${results.testResults.length} case${results.testResults.length === 1 ? '' : 's'} ran`}
+        </span>
+        {language && <span className={s.summaryLang}>{languageLabel(language)}</span>}
+      </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {results.testResults.map((tr, i) => {
-            const [trT, trTUnit] = fmtTime(tr.runMs ?? tr.executionTime);
-            const [trM, trMUnit] = fmtMem(tr.memoryKb);
-            const ok = tr.passed;
-            const a = ok ? 'var(--ok)' : 'var(--err)';
+      {ce?.error && (
+        <pre className={`${s.pre} ${s.compileOut} mono`} aria-label="Compiler output">
+          {ce.error}
+        </pre>
+      )}
+
+      {!ce && (
+        <ol className={s.results}>
+          {results.testResults.map((r, i) => {
+            const code = statuses[i];
+            const runtime = formatMillis(r.runMs ?? r.executionTime);
+            const memory = formatKb(r.memoryKb);
+            const wrong = compared[i] && !r.passed && (code === 'OK' || code === 'WA');
             return (
-              <div key={i} className="card" style={{
-                padding: 12,
-                borderColor: `color-mix(in oklab, ${a} 25%, var(--line-2))`,
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                  <Icon name={ok ? 'check-circle' : 'x'} size={15} style={{ color: a }} />
-                  <span style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--fg-0)' }}>Test case {i + 1}</span>
-                  <span style={{ flex: 1 }} />
-                  <span className="mono" style={{ fontSize: 11.5, color: 'var(--fg-1)' }}>
-                    {trT}
-                    <span style={{ color: 'var(--fg-3)' }}> {trTUnit}</span>
-                    {tr.memoryKb != null && tr.memoryKb > 0 && (
-                      <>
-                        {' · '}{trM}
-                        <span style={{ color: 'var(--fg-3)' }}> {trMUnit}</span>
-                      </>
-                    )}
+              <li key={i} className={s.result} data-status={code} data-testid={`ide-case-${i}`}>
+                <div className={s.resultHead}>
+                  <span className={s.resultName}>Case {i + 1}</span>
+                  <StatusPill code={code} size="xs" withIcon />
+                  {!compared[i] && <span className={s.resultNote}>no expected output</span>}
+                  <span className={s.spacer} />
+                  <span className={`${s.resultMetric} mono`} title="CPU time · peak memory">
+                    {text(runtime)}
+                    {memory.value !== '—' && <span className={s.dim}> · {text(memory)}</span>}
                   </span>
                 </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '90px 1fr', gap: 6, fontSize: 12, alignItems: 'baseline', marginBottom: 6 }}>
-                  <span style={{ color: 'var(--fg-3)' }}>stdin</span>
-                  <Pre value={tr.input} color="var(--fg-1)" />
-                  <span style={{ color: 'var(--fg-3)' }}>expected</span>
-                  <Pre value={tr.expectedOutput} color="var(--ok)" />
-                  <span style={{ color: 'var(--fg-3)' }}>actual</span>
-                  <Pre value={tr.actualOutput} color={ok ? 'var(--ok)' : 'var(--err)'} />
+                <div className={s.resultBody}>
+                  <Block label="stdin" value={r.input} tone="dim" />
+                  {wrong ? (
+                    <div className={s.block}>
+                      <span className={s.blockLabel}>
+                        diff <span className={s.legend}>− expected + yours</span>
+                      </span>
+                      <pre className={`${s.pre} ${s.diff} mono`} aria-label="Expected output versus your output">
+                        {diffLines(r.expectedOutput, r.actualOutput).map((l, k) => (
+                          <span key={k} className={s.diffLine} data-kind={l.kind}>
+                            <span className={s.diffSign} aria-hidden="true">
+                              {l.kind === 'del' ? '−' : l.kind === 'add' ? '+' : ' '}
+                            </span>
+                            <span className="sr-only">{l.kind === 'del' ? 'expected: ' : l.kind === 'add' ? 'yours: ' : ''}</span>
+                            {l.text || ' '}
+                          </span>
+                        ))}
+                      </pre>
+                    </div>
+                  ) : (
+                    <Block label="stdout" value={r.actualOutput} />
+                  )}
+                  {r.error && <Block label={code === 'TLE' ? 'limit' : 'stderr'} value={r.error} tone="err" />}
                 </div>
-
-                {tr.error && (
-                  <Pre value={tr.error} color="var(--err)" tone="err" />
-                )}
-              </div>
+              </li>
             );
           })}
-        </div>
-
-        {results.testResults.length === 0 && results.error && (
-          <MetricChip label="Error" value={results.error.slice(0, 32)} />
-        )}
-      </div>
+        </ol>
+      )}
     </div>
-  );
-}
-
-function Pre({ value, color, tone }: { value: string; color: string; tone?: 'err' }) {
-  return (
-    <pre className="mono" style={{
-      margin: 0,
-      background: tone === 'err' ? 'var(--err-bg)' : 'var(--bg-2)',
-      border: `1px solid ${tone === 'err' ? 'color-mix(in oklab, var(--err) 25%, transparent)' : 'var(--line-1)'}`,
-      borderRadius: 'var(--r-sm)',
-      padding: '6px 8px',
-      fontSize: 11.5,
-      color,
-      whiteSpace: 'pre-wrap',
-      wordBreak: 'break-word',
-      lineHeight: 1.5,
-    }}>{value || <span style={{ color: 'var(--fg-4)', fontStyle: 'italic' }}>{'<empty>'}</span>}</pre>
   );
 }
