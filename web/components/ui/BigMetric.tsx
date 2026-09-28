@@ -42,7 +42,7 @@ export function BigMetric({ label, primary, sub = [], pct, tone = 'default', ext
         <div style={{ display: 'flex', gap: 14, fontSize: 11.5 }}>
           {sub.map((s, i) => (
             <span key={i} className="mono">
-              <span style={{ color: 'var(--fg-4)' }}>{s.k}</span>{' '}
+              <span style={{ color: 'var(--fg-2)' }}>{s.k}</span>{' '}
               <span style={{ color: 'var(--fg-1)' }}>{s.v}</span>
             </span>
           ))}
