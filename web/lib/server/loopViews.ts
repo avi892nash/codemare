@@ -103,6 +103,8 @@ export type TopicBlockerView =
       kind: 'gate';
       tier: { slug: string; title: string };
       gate: { id: string; title: string; state: GateState; nextEligibleAt: string | null; attemptId: string | null } | null;
+      /** The tier below — it must open first (gate state `previous_tier_closed`). */
+      previousTier: { slug: string; title: string } | null;
     }
   | {
       kind: 'recipe';
@@ -303,6 +305,7 @@ export async function getMapView(userId: string, now: Date = new Date()): Promis
             gate: g
               ? { id: g.gate.id, title: g.gate.title, state: g.state, nextEligibleAt: iso(g.nextEligibleAt), attemptId: g.runningAttempt?.id ?? null }
               : null,
+            previousTier: previous ? { slug: previous.slug, title: previous.title } : null,
           };
         } else if (t.blocker?.kind === 'recipe') {
           const cheapestId = t.blocker.cheapest.recipeId;
