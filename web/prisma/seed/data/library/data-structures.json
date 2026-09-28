@@ -1,0 +1,72 @@
+{
+  "slug": "data-structures",
+  "title": "Data structures",
+  "summary": "Structures that answer range and connectivity questions faster than recomputing from scratch.",
+  "icon": "layers",
+  "ord": 1,
+  "chapters": [
+    {
+      "slug": "range-queries",
+      "title": "Range queries",
+      "articles": [
+        {
+          "slug": "fenwick-tree",
+          "title": "Fenwick tree (binary indexed tree)",
+          "summary": "Prefix sums that survive point updates: both operations in O(log n) with a single array.",
+          "difficulty": "Medium",
+          "reading_minutes": 9,
+          "idea_md": "A prefix-sum array answers `a[1] + … + a[i]` instantly but needs `O(n)` work after a single change. A plain array is the opposite. A Fenwick tree sits in between: every query and every update costs `O(log n)`, and it is just one array of size `n + 1`.\n\nThe trick is in which ranges the array stores. Cell `i` holds the sum of the last `lowbit(i)` elements ending at `i`, where `lowbit(i)` is the value of the lowest set bit of `i`:\n\n| `i` | binary | `lowbit(i)` | `tree[i]` covers |\n|---|---|---|---|\n| 6 | `110` | 2 | `a[5..6]` |\n| 7 | `111` | 1 | `a[7..7]` |\n| 8 | `1000` | 8 | `a[1..8]` |\n\n**Prefix query.** To sum `a[1..i]`, add `tree[i]`, then jump to `i − lowbit(i)` — the part not covered yet — and repeat until `i` reaches `0`. For `i = 7` that visits `7`, `6`, `4`: the ranges `[7,7]`, `[5,6]`, `[1,4]`.\n\n**Point update.** Changing `a[i]` affects every cell whose range contains `i`. They are exactly `i`, `i + lowbit(i)`, and so on upward: for `i = 3` that is `3`, `4`, `8`.\n\nThe query loop clears the lowest set bit of `i` on every jump, and the update loop moves it at least one position up, so both take at most about `log₂ n` steps. In code, `lowbit(i)` is `i & -i` thanks to two's complement.\n",
+          "formula": "\\text{tree}[i] = \\sum_{j = i - \\operatorname{lowbit}(i) + 1}^{i} a_j, \\qquad \\operatorname{lowbit}(i) = i \\,\\&\\, (-i)",
+          "code_cpp": "#include <iostream>\n#include <vector>\nusing namespace std;\n\n// 1-indexed Fenwick tree over n values: point add and prefix sum in O(log n).\nstruct Fenwick {\n    int n;\n    vector<long long> tree;\n    explicit Fenwick(int n) : n(n), tree(n + 1, 0) {}\n\n    void add(int i, long long delta) {  // a[i] += delta\n        for (; i <= n; i += i & -i) tree[i] += delta;\n    }\n    long long prefix(int i) const {  // a[1] + ... + a[i]\n        long long sum = 0;\n        for (; i > 0; i -= i & -i) sum += tree[i];\n        return sum;\n    }\n    long long range(int l, int r) const {  // a[l] + ... + a[r]\n        return prefix(r) - prefix(l - 1);\n    }\n};\n\nint main() {\n    vector<int> a = {5, 2, 9, -3, 4, 7, 1, 6};\n    Fenwick fw((int)a.size());\n    for (int i = 0; i < (int)a.size(); ++i) fw.add(i + 1, a[i]);\n\n    cout << \"sum a[1..7] = \" << fw.prefix(7) << \"\\n\";\n    cout << \"sum a[3..6] = \" << fw.range(3, 6) << \"\\n\";\n    fw.add(3, 10);  // a[3]: 9 -> 19\n    cout << \"after a[3] += 10: sum a[3..6] = \" << fw.range(3, 6) << \"\\n\";\n\n    // Inversions: pairs i < j with v[i] > v[j]. Values are 1..8, so index by value.\n    vector<int> v = {3, 1, 4, 8, 2, 7, 6, 5};\n    Fenwick seen(8);\n    long long inversions = 0;\n    for (int j = 0; j < (int)v.size(); ++j) {\n        inversions += j - seen.prefix(v[j]);  // earlier values that are larger than v[j]\n        seen.add(v[j], 1);\n    }\n    cout << \"inversions in {3,1,4,8,2,7,6,5} = \" << inversions << \"\\n\";\n    return 0;\n}\n",
+          "viz_id": "fenwick",
+          "applications_md": "- **Dynamic prefix sums** and range sums with point updates (scores, counters, running totals).\n- **Counting inversions** or \"how many earlier elements are smaller\" in `O(n log n)`.\n- **Longest increasing subsequence** in `O(n log n)`: index the tree by value and store the best length so far (a prefix *maximum* instead of a sum).\n- **Order statistics** over a bounded value range: find the k-th smallest by descending the tree's bits.\n",
+          "pitfall_md": "- The classic tree is **1-indexed**: index `0` makes `i & -i` equal `0` and the update loop never ends.\n- It supports invertible operations (sums, xor) for ranges; a range *minimum* only works for prefixes, and only if values never increase.\n- When setup time matters, build in `O(n)` instead of `n` separate updates: start from `tree[i] = a[i]`, then for `i = 1 … n` add `tree[i]` into `tree[i + lowbit(i)]` whenever that index exists.\n- Range updates need a second trick (a difference array, or two trees for range-add/range-sum).\n",
+          "practice_question_slugs": [
+            "longest-increasing-subsequence"
+          ],
+          "status": "published"
+        },
+        {
+          "slug": "sparse-table",
+          "title": "Sparse table",
+          "summary": "Answer range-minimum queries on a static array in O(1) after an O(n log n) precomputation.",
+          "difficulty": "Medium",
+          "reading_minutes": 7,
+          "idea_md": "If the array never changes, you can afford to precompute a lot. A sparse table stores the minimum of every block whose length is a power of two: `st[k][i]` is the minimum of `a[i .. i + 2^k − 1]`.\n\nLevel `0` is the array itself. Every higher level is built from two halves of the level below:\n\n`st[k][i] = min(st[k−1][i], st[k−1][i + 2^(k−1)])`.\n\nThere are `log₂ n` levels of `n` entries, so the build is `O(n log n)` time and memory.\n\nA query for `[l, r]` picks the largest power of two that fits, `2^k ≤ r − l + 1`, and takes the minimum of two blocks: one starting at `l`, one ending at `r`. They may overlap — that is harmless, because `min(x, x) = x`. Two lookups, no loop: `O(1)`.\n\nThe overlap argument is what restricts the trick to *idempotent* operations: minimum, maximum, gcd, bitwise and/or. For sums, overlapping blocks would count elements twice; a sparse table can still answer them in `O(log n)` by splitting `[l, r]` into disjoint blocks, but a prefix-sum array does that job better.\n",
+          "formula": "\\min_{l \\le i \\le r} a_i = \\min\\left(\\text{st}_k[l],\\ \\text{st}_k[r - 2^k + 1]\\right), \\qquad k = \\left\\lfloor \\log_2 (r - l + 1) \\right\\rfloor",
+          "code_cpp": "#include <algorithm>\n#include <iostream>\n#include <vector>\nusing namespace std;\n\n// Range-minimum queries on a static array: O(n log n) build, O(1) per query.\nstruct SparseTable {\n    vector<vector<int>> st;  // st[k][i] = min of a[i .. i + 2^k - 1]\n    vector<int> lg;          // lg[len] = floor(log2(len))\n\n    explicit SparseTable(const vector<int>& a) {\n        int n = (int)a.size();\n        lg.assign(n + 1, 0);\n        for (int len = 2; len <= n; ++len) lg[len] = lg[len / 2] + 1;\n        st.assign(lg[n] + 1, vector<int>(n));\n        st[0] = a;\n        for (int k = 1; k <= lg[n]; ++k)\n            for (int i = 0; i + (1 << k) <= n; ++i)\n                st[k][i] = min(st[k - 1][i], st[k - 1][i + (1 << (k - 1))]);\n    }\n\n    int query(int l, int r) const {  // min of a[l..r], inclusive\n        int k = lg[r - l + 1];\n        return min(st[k][l], st[k][r - (1 << k) + 1]);\n    }\n};\n\nint main() {\n    vector<int> a = {7, 2, 9, 4, 6, 1, 8, 3, 5};\n    SparseTable t(a);\n    int queries[][2] = {{0, 8}, {0, 3}, {2, 4}, {6, 8}, {4, 4}};\n    for (auto& q : queries)\n        cout << \"min a[\" << q[0] << \"..\" << q[1] << \"] = \" << t.query(q[0], q[1]) << \"\\n\";\n    return 0;\n}\n",
+          "viz_id": null,
+          "applications_md": "- **Range minimum / maximum queries** on data that does not change: sliding-window extremes, histogram problems, \"smallest value between two positions\".\n- **Lowest common ancestor** in `O(1)`: a range minimum over an Euler tour of the tree.\n- **Range gcd** queries, since `gcd` is idempotent too.\n- **Divide and conquer on minima**: find the minimum of a range, split around it, recurse — e.g. the largest rectangle in a histogram.\n",
+          "pitfall_md": "- Any update invalidates up to `n` entries; use a segment tree when values change.\n- Precompute `lg[]` (or use `__builtin_clz`) instead of calling floating-point `log2` in every query: it is slower, and a result such as `2.9999…` truncated to an integer picks the wrong level.\n- Memory is `n log n` integers — for `n = 10^6` that is about 80 MB with `int`, often too much.\n",
+          "practice_question_slugs": [
+            "largest-rectangle-in-histogram"
+          ],
+          "status": "published"
+        }
+      ]
+    },
+    {
+      "slug": "sets",
+      "title": "Sets and connectivity",
+      "articles": [
+        {
+          "slug": "disjoint-set-union",
+          "title": "Disjoint set union",
+          "summary": "Track which elements are connected while edges keep arriving, in nearly constant time per operation.",
+          "difficulty": "Medium",
+          "reading_minutes": 8,
+          "idea_md": "Disjoint set union (union–find) maintains a partition of `n` elements into groups under two operations:\n\n- `find(x)` — which group is `x` in? The answer is a representative element, the **root**.\n- `unite(a, b)` — merge the groups of `a` and `b`.\n\nEach group is stored as a tree through a `parent` array: an element points at another element of its group, and the root points at itself. `find` climbs parent links to the root; `unite` finds both roots and hangs one under the other. Two elements are connected exactly when they have the same root.\n\nLeft alone, the trees can degenerate into long chains. Two small habits fix that:\n\n1. **Union by size** — hang the smaller tree under the larger one. A node's depth then only grows when its group at least doubles, so depth stays `O(log n)`.\n2. **Path compression** — while `find` climbs, repoint nodes closer to the root (the code below halves the path on each step). Later finds on the same path are almost free.\n\nWith both, a sequence of `m` operations costs `O(m · α(n))`, where `α` is the inverse Ackermann function — below 5 for any input that fits in the universe, so in practice constant.\n",
+          "formula": "T(m \\text{ operations on } n \\text{ elements}) = O\\left(m \\, \\alpha(n)\\right)",
+          "code_cpp": "#include <iostream>\n#include <numeric>\n#include <utility>\n#include <vector>\nusing namespace std;\n\n// Disjoint set union with path halving and union by size.\nstruct DSU {\n    vector<int> parent, size;\n    explicit DSU(int n) : parent(n), size(n, 1) { iota(parent.begin(), parent.end(), 0); }\n\n    int find(int x) {\n        while (parent[x] != x) {\n            parent[x] = parent[parent[x]];  // skip a level on the way up\n            x = parent[x];\n        }\n        return x;\n    }\n\n    bool unite(int a, int b) {  // false when a and b were already connected\n        a = find(a);\n        b = find(b);\n        if (a == b) return false;\n        if (size[a] < size[b]) swap(a, b);  // the smaller tree goes under the larger\n        parent[b] = a;\n        size[a] += size[b];\n        return true;\n    }\n};\n\nint main() {\n    DSU d(8);\n    int components = 8;\n    vector<pair<int, int>> edges = {{0, 1}, {2, 3}, {1, 3}, {4, 5}, {3, 0}, {6, 7}, {5, 6}};\n    for (const auto& [a, b] : edges) {\n        if (d.unite(a, b)) {\n            --components;\n            cout << \"join \" << a << \"-\" << b << \": \" << components << \" components\\n\";\n        } else {\n            cout << \"skip \" << a << \"-\" << b << \": already connected, so this edge closes a cycle\\n\";\n        }\n    }\n    cout << \"0 and 2 connected? \" << (d.find(0) == d.find(2) ? \"yes\" : \"no\") << \"\\n\";\n    cout << \"0 and 4 connected? \" << (d.find(0) == d.find(4) ? \"yes\" : \"no\") << \"\\n\";\n    return 0;\n}\n",
+          "viz_id": "dsu",
+          "applications_md": "- **Connected components** as edges arrive (grids, networks, \"number of islands\" with unions between neighbours).\n- **Kruskal's minimum spanning tree**: take edges by weight, skip the ones whose endpoints are already connected.\n- **Cycle detection** in an undirected graph: an edge whose endpoints share a root closes a cycle.\n- **Offline connectivity questions** and equivalence classes (\"these accounts belong to the same person\").\n",
+          "pitfall_md": "- Always compare **roots**, never raw parents: `parent[a] == parent[b]` misses deeper nodes of the same tree.\n- Plain union (always `parent[a] = b`) plus no compression degrades to `O(n)` per find on adversarial input.\n- A recursive `find` with full path compression can overflow the stack on a million-node chain before the first compression; the iterative halving above cannot.\n- DSU only merges; it cannot split groups or delete edges.\n",
+          "practice_question_slugs": [
+            "number-of-islands"
+          ],
+          "status": "published"
+        }
+      ]
+    }
+  ]
+}
