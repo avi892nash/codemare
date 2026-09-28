@@ -247,6 +247,25 @@ export function pickContinue<T extends { progress: TrackProgress }>(tracks: read
   return fresh ? { track: fresh, step: fresh.progress.next! } : null;
 }
 
+/**
+ * The step to continue with after `at`: the next unfinished step after it
+ * in learning order, else the first unfinished one before it, else null
+ * (the track is done). `at` itself never counts — it is being finished.
+ */
+export function nextUnfinishedAfter(
+  track: TrackShape,
+  progress: TrackProgress,
+  at: { kind: 'lesson'; moduleSlug: string; lessonSlug: string } | { kind: 'checkpoint'; moduleSlug: string }
+): LearnStep | null {
+  const seq = learnSequence(track);
+  const i = seq.findIndex((s) => sameStep(s, at));
+  const lessonState = new Map(progress.modules.flatMap((m) => m.lessons.map((l) => [l.lesson.slug, l.state] as const)));
+  const passed = new Map(track.modules.map((m, k) => [m.slug, progress.modules[k]?.checkpoint?.passed ?? true] as const));
+  const open = (s: LearnStep) => (s.kind === 'lesson' ? lessonState.get(s.lessonSlug) !== 'completed' : !passed.get(s.moduleSlug));
+  const order = i < 0 ? seq : [...seq.slice(i + 1), ...seq.slice(0, i)];
+  return order.find(open) ?? null;
+}
+
 /** Where "continue" goes: the lesson left open, else the next step in order. */
 export function continueStep(p: TrackProgress): LearnStep | null {
   return p.resume ?? p.next;

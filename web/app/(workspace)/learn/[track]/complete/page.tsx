@@ -26,6 +26,7 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
 }
 
 const fmtDate = (d: Date) => d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+const fmtShort = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
 
 /** L7 — track completion: summary, checkpoint scores, badges earned, what next. */
 export default async function TrackCompletePage({ params }: { params: Promise<Params> }) {
@@ -192,7 +193,7 @@ export default async function TrackCompletePage({ params }: { params: Promise<Pa
                   <span className={bs.tileState}>
                     <span className={bs.tileDate}>
                       <Icon name="check-circle" size={12} />
-                      Earned {b.awardedAt ? fmtDate(b.awardedAt) : ''}
+                      Earned {b.awardedAt ? fmtShort(b.awardedAt) : ''}
                     </span>
                   </span>
                 </Link>

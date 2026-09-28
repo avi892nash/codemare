@@ -50,15 +50,16 @@ export function StateIcon({ state, size = 16 }: { state: LessonState | 'failed';
   );
 }
 
+/** Durations never break between number and unit (non-breaking spaces). */
 export function minutes(n: number): string {
-  if (n < 60) return `${n} min`;
+  if (n < 60) return `${n}\u00a0min`;
   const h = Math.floor(n / 60);
   const m = n % 60;
-  return m ? `${h} h ${m} min` : `${h} h`;
+  return m ? `${h}\u00a0h ${m}\u00a0min` : `${h}\u00a0h`;
 }
 
 export function hours(n: number): string {
-  return `${Number.isInteger(n) ? n : n.toFixed(1)} h`;
+  return `${Number.isInteger(n) ? n : n.toFixed(1)}\u00a0h`;
 }
 
 export function SectionHead({ title, note, id, children }: { title: string; note?: ReactNode; id?: string; children?: ReactNode }) {

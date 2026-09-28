@@ -3,6 +3,7 @@ import {
   continueStep,
   learnSequence,
   neighbors,
+  nextUnfinishedAfter,
   pickContinue,
   stepHref,
   summarizeCheckpoint,
@@ -153,6 +154,24 @@ describe('resume / continueStep', () => {
     expect(p.resume).toBeNull();
     expect(continueStep(p)).toMatchObject({ lessonSlug: 'hashing' });
     expect(trackProgress(track, new Map(), new Map()).resume).toBeNull();
+  });
+});
+
+describe('nextUnfinishedAfter', () => {
+  const at = { kind: 'lesson' as const, moduleSlug: 'arrays', lessonSlug: 'hashing' };
+
+  it('skips finished steps after the current one', () => {
+    const p = trackProgress(track, new Map([done('l1', 1)]), new Map([['m1', [attempt(3, 3, true, 2)]]]));
+    // hashing → (checkpoint passed) → two-ends
+    expect(nextUnfinishedAfter(track, p, at)).toMatchObject({ kind: 'lesson', lessonSlug: 'two-ends' });
+  });
+
+  it('wraps to an earlier unfinished step, and is null when everything else is done', () => {
+    const p = trackProgress(track, new Map([done('l3', 1)]), new Map([['m1', [attempt(3, 3, true, 2)]]]));
+    expect(nextUnfinishedAfter(track, p, at)).toMatchObject({ lessonSlug: 'intro' });
+    const all = trackProgress(track, new Map([done('l1', 1), done('l3', 1)]), new Map([['m1', [attempt(3, 3, true, 2)]]]));
+    expect(nextUnfinishedAfter(track, all, at)).toBeNull();
+    expect(nextUnfinishedAfter(track, all, { kind: 'checkpoint', moduleSlug: 'arrays' })).toMatchObject({ lessonSlug: 'hashing' });
   });
 });
 

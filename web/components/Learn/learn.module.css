@@ -358,9 +358,10 @@ a.qcard:hover { border-color: var(--accent-line); background: color-mix(in oklab
 }
 .qbody { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .qkicker { font-size: 10.5px; font-weight: 600; letter-spacing: 0.7px; text-transform: uppercase; color: var(--fg-2); }
-.qtitle { font-size: 14px; font-weight: 500; color: var(--fg-0); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.qtitle { font-size: 14px; font-weight: 500; color: var(--fg-0); line-height: 1.35; overflow-wrap: anywhere; }
 .qside { display: inline-flex; align-items: center; gap: 8px; color: var(--fg-2); }
-.qgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; }
+.qgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; }
+@media (max-width: 420px) { .qgrid { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 420px) {
   .qcard { grid-template-columns: minmax(0, 1fr) auto; }
   .qicon { display: none; }

@@ -11,7 +11,7 @@ import { Prose } from '@/components/Learn/Prose';
 import s from '@/components/Learn/learn.module.css';
 import { requireViewer } from '@/components/Learn/viewer';
 import { getCheckpointReview, getCheckpointView, getLearnTitles } from '@/lib/server/learnViews';
-import { stepHref } from '@/lib/server/rules/learnProgress';
+import { nextUnfinishedAfter, stepHref } from '@/lib/server/rules/learnProgress';
 import { submitCheckpointAction } from '../../../actions';
 
 type Params = { track: string; slug: string };
@@ -40,15 +40,11 @@ export default async function CheckpointPage({ params, searchParams }: { params:
   const passPercent = Math.round(view.passRatio * 100);
   const summary = moduleProgress.checkpoint!;
 
-  // Where to go after a passing review: the next step, or the completion page.
-  const trackDone = view.progress.complete;
-  const continueTo = trackDone
-    ? { href: `/learn/${track.slug}/complete`, label: 'Track summary' }
-    : nav.next
-      ? { href: stepHref(track.slug, nav.next), label: nav.next.kind === 'lesson' ? 'Next lesson' : 'Next checkpoint' }
-      : view.progress.next
-        ? { href: stepHref(track.slug, view.progress.next), label: 'Continue the track' }
-        : null;
+  // Where to go after a passing review: the next unfinished step, or the completion page.
+  const after = nextUnfinishedAfter(track, view.progress, { kind: 'checkpoint', moduleSlug: mod.slug });
+  const continueTo = after
+    ? { href: stepHref(track.slug, after), label: after.kind === 'lesson' ? 'Next lesson' : 'Next checkpoint' }
+    : { href: `/learn/${track.slug}/complete`, label: 'Track summary' };
 
   return (
     <PageShell>

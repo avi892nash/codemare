@@ -11,7 +11,7 @@ import { QuestionCard } from '@/components/Learn/QuestionCard';
 import s from '@/components/Learn/learn.module.css';
 import { requireViewer } from '@/components/Learn/viewer';
 import { findModuleId, getLearnTitles, getLessonView } from '@/lib/server/learnViews';
-import { stepHref } from '@/lib/server/rules/learnProgress';
+import { nextUnfinishedAfter, stepHref } from '@/lib/server/rules/learnProgress';
 import { completeLessonAction, runSnippet, startLessonAction } from '../../actions';
 
 type Params = { track: string; slug: string };
@@ -34,8 +34,10 @@ export default async function LessonPage({ params }: { params: Promise<Params> }
   }
   const { track, module: mod, moduleIndex, lesson, nav } = view;
 
-  const next = nav.next
-    ? { href: stepHref(track.slug, nav.next), label: nav.next.kind === 'lesson' ? nav.next.title : `${nav.next.moduleTitle} checkpoint` }
+  // After finishing: the next unfinished step (not merely the next one), else the summary.
+  const after = nextUnfinishedAfter(track, view.progress, { kind: 'lesson', moduleSlug: mod.slug, lessonSlug: lesson.slug });
+  const next = after
+    ? { href: stepHref(track.slug, after), label: after.kind === 'lesson' ? after.title : `${after.moduleTitle} checkpoint` }
     : { href: `/learn/${track.slug}/complete`, label: 'Track summary' };
   const related = lesson.relatedQuestionSlugs;
 
