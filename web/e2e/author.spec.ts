@@ -87,8 +87,8 @@ test('an author writes a question, fills expected outputs from the reference and
   // Statement + example.
   await page.getByRole('textbox', { name: 'Problem statement', exact: true }).fill('Return the sum of the **positive** numbers in `nums`.');
   await expect(page.getByRole('region', { name: 'Problem statement preview' }).locator('strong')).toHaveText('positive');
-  await page.getByLabel('Input', { exact: true }).fill('nums = [1,-2,3]');
-  await page.getByLabel('Output', { exact: true }).fill('4');
+  await page.getByRole('textbox', { name: 'Example 1 Input', exact: true }).fill('nums = [1,-2,3]');
+  await page.getByRole('textbox', { name: 'Example 1 Output', exact: true }).fill('4');
 
   // Signature: the default parameter is nums: int[] → int; stubs follow the function name.
   await page.getByRole('textbox', { name: 'Function name', exact: true }).fill('sumPositives');

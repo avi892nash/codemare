@@ -99,7 +99,11 @@ export function ExamplesSection({ draft, update, checks }: SectionProps) {
               <div className={s.itemBody}>
                 <div className={s.grid2}>
                   <Textarea
-                    label="Input"
+                    label={
+                      <>
+                        <span className="sr-only">Example {i + 1} </span>Input
+                      </>
+                    }
                     mono
                     rows={2}
                     value={ex.input}
@@ -107,7 +111,11 @@ export function ExamplesSection({ draft, update, checks }: SectionProps) {
                     onChange={(e) => set({ input: e.target.value })}
                   />
                   <Textarea
-                    label="Output"
+                    label={
+                      <>
+                        <span className="sr-only">Example {i + 1} </span>Output
+                      </>
+                    }
                     mono
                     rows={2}
                     value={ex.output}
@@ -116,7 +124,11 @@ export function ExamplesSection({ draft, update, checks }: SectionProps) {
                   />
                 </div>
                 <Textarea
-                  label="Explanation (optional)"
+                  label={
+                    <>
+                      <span className="sr-only">Example {i + 1} </span>Explanation (optional)
+                    </>
+                  }
                   rows={2}
                   value={ex.explanation}
                   placeholder="Because nums[0] + nums[1] == 9, we return [0, 1]."

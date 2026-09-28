@@ -39,7 +39,7 @@
 .cellSmall { height: 24px; font-size: 12px; background: transparent; border-color: transparent; color: var(--fg-2); }
 .cellSmall[data-state='new'] { color: var(--accent-hi); font-weight: 700; }
 .cellSmall[data-state='set'] { color: var(--fg-0); }
-.idx { font-family: var(--font-mono); font-size: 10.5px; color: var(--fg-3); width: 34px; text-align: center; }
+.idx { font-family: var(--font-mono); font-size: 10.5px; color: var(--fg-2); width: 34px; text-align: center; }
 @media (max-width: 520px) { .idx { width: 30px; } }
 .rowLabel { width: 28px; flex: none; font-family: var(--font-mono); font-size: 11px; color: var(--fg-2); text-align: right; padding-right: 6px; }
 .marker { font-family: var(--font-mono); font-size: 10.5px; color: var(--accent-hi); height: 14px; width: 34px; text-align: center; }
@@ -109,7 +109,7 @@
   font-size: 15px;
   color: var(--fg-1);
 }
-.bit small { font-size: 9.5px; color: var(--fg-3); }
+.bit small { font-size: 9.5px; color: var(--fg-2); }
 .bit[data-state='current'] { border-color: var(--accent); background: var(--accent-bg); color: var(--accent-hi); }
 .bit[data-state='done'] { opacity: 0.5; }
 

@@ -138,7 +138,11 @@ export function TestsSection({ draft, update, checks, freshRun, onFill }: Props)
                   size="sm"
                   checked={t.hidden}
                   onChange={(v) => set({ hidden: v })}
-                  label="Hidden"
+                  label={
+                    <>
+                      <span className="sr-only">Test {i + 1} </span>Hidden
+                    </>
+                  }
                   style={{ marginLeft: 8 }}
                 />
                 <ItemTools
@@ -164,7 +168,8 @@ export function TestsSection({ draft, update, checks, freshRun, onFill }: Props)
                 <div className={s.testGrid}>
                   <div className={s.fieldset}>
                     <label className={s.label} htmlFor={`${idBase}-args`}>
-                      Arguments <span className="mono" style={{ color: 'var(--fg-3)' }}>JSON array</span>
+                      <span className="sr-only">Test {i + 1} </span>
+                      Arguments <span className="mono" style={{ color: 'var(--fg-2)' }}>JSON array</span>
                     </label>
                     <textarea
                       id={`${idBase}-args`}
@@ -181,7 +186,8 @@ export function TestsSection({ draft, update, checks, freshRun, onFill }: Props)
                   </div>
                   <div className={s.fieldset}>
                     <label className={s.label} htmlFor={`${idBase}-exp`}>
-                      Expected <span className="mono" style={{ color: 'var(--fg-3)' }}>{draft.returns}</span>
+                      <span className="sr-only">Test {i + 1} </span>
+                      Expected <span className="mono" style={{ color: 'var(--fg-2)' }}>{draft.returns}</span>
                     </label>
                     <textarea
                       id={`${idBase}-exp`}
@@ -211,7 +217,11 @@ export function TestsSection({ draft, update, checks, freshRun, onFill }: Props)
                 )}
                 {result?.error && <p className={s.errText}>{result.error}</p>}
                 <Input
-                  label="Explain on fail (optional)"
+                  label={
+                    <>
+                      <span className="sr-only">Test {i + 1} </span>Explain on fail (optional)
+                    </>
+                  }
                   full
                   maxLength={300}
                   value={t.explainOnFail}
