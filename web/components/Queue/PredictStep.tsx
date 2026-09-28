@@ -1,19 +1,24 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { submitPredictionAction } from '@/app/(workspace)/queue/actions';
-import { Markdown } from '@/components/Problem/Markdown';
 import { Button, ButtonLink } from '@/components/ui/Button';
 import { DifficultyPill } from '@/components/ui/DifficultyPill';
 import { Icon } from '@/components/ui/Icon';
 import { Input } from '@/components/ui/Input';
 import { Pill } from '@/components/ui/Pill';
 import type { PredictStepView } from '@/lib/server/loopViews';
-import { usePinnedStep } from './usePinnedStep';
+import { pinStep, settleRouterActions, useStepVisit } from './stepRefresh';
 import s from './queue.module.css';
 
 const KEYS = 'ABCDEFGHIJ';
+
+// The explanation only renders after answering: keep the markdown renderer out of the page's first load.
+const Markdown = dynamic(() => import('@/components/Problem/Markdown').then((m) => m.Markdown), {
+  loading: () => <p style={{ margin: 0, fontSize: 13, color: 'var(--fg-2)' }}>Loading the explanation…</p>,
+});
 
 export interface PredictStepProps {
   view: PredictStepView;
@@ -40,7 +45,7 @@ export function PredictStep({ view, prompt, snippet, meta, next }: PredictStepPr
   const resultRef = useRef<HTMLHeadingElement>(null);
   const titleId = useId();
   const questionId = useId();
-  usePinnedStep(view.stepId, result !== null);
+  useStepVisit(view.stepId, view.result !== null);
 
   // Fresh server data (e.g. answered in another tab) wins over an empty local state.
   useEffect(() => {
@@ -57,6 +62,9 @@ export function PredictStep({ view, prompt, snippet, meta, next }: PredictStepPr
     setPending(true);
     setError(null);
     try {
+      // Pin the step while no router action is in flight (see pinStep), then answer, then refresh.
+      await settleRouterActions();
+      pinStep(view.stepId);
       const res = await submitPredictionAction(view.stepId, answer);
       if (!res.ok) {
         setError(res.message);

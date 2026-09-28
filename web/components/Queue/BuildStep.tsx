@@ -14,7 +14,7 @@ import type { QueueView } from '@/lib/server/queue';
 import type { VerdictEventData } from '@/lib/sse';
 import type { SupportedLanguage } from '@/lib/types';
 import { QueueList } from './QueueList';
-import { usePinnedStep } from './usePinnedStep';
+import { refreshKeepingStep, useStepVisit } from './stepRefresh';
 import s from './queue.module.css';
 
 type WorkspaceProps = ComponentProps<typeof SolveWorkspace>;
@@ -48,16 +48,16 @@ export function BuildStep(props: BuildStepProps) {
   const [justPassed, setJustPassed] = useState(false);
   const [listOpen, setListOpen] = useState(false);
   const passed = props.passed || justPassed;
-  usePinnedStep(problem.id, passed);
+  useStepVisit(problem.id, props.passed);
 
   const onVerdict = useCallback(
     (verdict: VerdictEventData, kind: RunKind) => {
       if (kind !== 'build' || verdict.status !== 'OK') return;
       setJustPassed(true);
-      // Re-render from the server: the queue list advances and the navbar's token total updates.
-      router.refresh();
+      // Re-render from the server around this step: the queue advances, the navbar's token total updates.
+      void refreshKeepingStep(router, problem.id);
     },
-    [router]
+    [router, problem.id]
   );
 
   return (

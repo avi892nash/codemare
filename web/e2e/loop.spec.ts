@@ -164,13 +164,15 @@ test('sign-up → solve → submit → unlock, then predict → build into My Li
     await page.goto('/queue');
     const predict = page.getByTestId('predict-step');
     await expect(predict).toContainText('Read a prefix array');
-    await expect(page).toHaveURL(/\/queue\?step=/);
     const answer = predict.getByTestId('choice-0');
     await expect(answer).toContainText('3');
     await answer.click();
     await predict.getByTestId('predict-submit').click();
     await expect(page.getByTestId('predict-result')).toContainText('Correct');
+    // The list advances around the answered step, which stays on screen (and in the URL).
     await expect(page.getByTestId('queue-steps-done')).toHaveText(/^1\s*\/\s*\d+$/);
+    await expect(page).toHaveURL(/\/queue\?step=/);
+    await expect(predict).toContainText('Read a prefix array');
 
     await page.getByTestId('predict-continue').click();
     await expect(page.getByTestId('queue-bar')).toContainText('Prefix Sums', { timeout: 30_000 });
