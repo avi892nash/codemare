@@ -1,0 +1,46 @@
+{
+  "prefix-sums": {
+    "python": "def prefixSums(nums):\n    p = [0]\n    for x in nums:\n        p.append(p[-1] + x)\n    return p\n",
+    "javascript": "function prefixSums(nums) {\n  const p = new Array(nums.length + 1).fill(0);\n  for (let i = 0; i < nums.length; i++) p[i + 1] = p[i] + nums[i];\n  return p;\n}\n"
+  },
+  "range-sum": {
+    "python": "def rangeSum(nums, queries):\n    p = prefixSums(nums)\n    return [p[r + 1] - p[l] for l, r in queries]\n",
+    "javascript": "function rangeSum(nums, queries) {\n  const p = prefixSums(nums);\n  return queries.map(([l, r]) => p[r + 1] - p[l]);\n}\n"
+  },
+  "is-palindrome": {
+    "python": "def isPalindrome(s, lo, hi):\n    while lo < hi:\n        if s[lo] != s[hi]:\n            return False\n        lo += 1\n        hi -= 1\n    return True\n",
+    "javascript": "function isPalindrome(s, lo, hi) {\n  if (lo >= hi) return true;\n  return s[lo] === s[hi] && isPalindrome(s, lo + 1, hi - 1);\n}\n"
+  },
+  "lower-bound": {
+    "python": "def lowerBound(nums, target):\n    lo, hi = 0, len(nums)\n    while lo < hi:\n        mid = (lo + hi) // 2\n        if nums[mid] < target:\n            lo = mid + 1\n        else:\n            hi = mid\n    return lo\n",
+    "javascript": "function lowerBound(nums, target) {\n  // Binary lifting: `pos` counts elements known to be < target; try to\n  // extend it by decreasing powers of two.\n  let pos = 0;\n  let step = 1;\n  while (step * 2 <= nums.length) step *= 2;\n  for (; step >= 1; step = Math.floor(step / 2)) {\n    if (pos + step <= nums.length && nums[pos + step - 1] < target) pos += step;\n  }\n  return pos;\n}\n"
+  },
+  "count-in-range": {
+    "python": "def countInRange(nums, lo, hi):\n    if lo > hi:\n        return 0\n    return lowerBound(nums, hi + 1) - lowerBound(nums, lo)\n",
+    "javascript": "function countInRange(nums, lo, hi) {\n  if (lo > hi) return 0;\n  return lowerBound(nums, hi + 1) - lowerBound(nums, lo);\n}\n"
+  },
+  "gcd": {
+    "python": "def greatestCommonDivisor(a, b):\n    return a if b == 0 else greatestCommonDivisor(b, a % b)\n",
+    "javascript": "function greatestCommonDivisor(a, b) {\n  while (b !== 0) {\n    const r = a % b;\n    a = b;\n    b = r;\n  }\n  return a;\n}\n"
+  },
+  "lcm": {
+    "python": "def leastCommonMultiple(a, b):\n    if a == 0 or b == 0:\n        return 0\n    return a // greatestCommonDivisor(a, b) * b\n",
+    "javascript": "function leastCommonMultiple(a, b) {\n  if (a === 0 || b === 0) return 0;\n  return (a / greatestCommonDivisor(a, b)) * b;\n}\n"
+  },
+  "merge-sorted": {
+    "python": "def mergeSorted(a, b):\n    out = []\n    i = j = 0\n    while i < len(a) and j < len(b):\n        if a[i] <= b[j]:\n            out.append(a[i])\n            i += 1\n        else:\n            out.append(b[j])\n            j += 1\n    out.extend(a[i:])\n    out.extend(b[j:])\n    return out\n",
+    "javascript": "function mergeSorted(a, b) {\n  const out = [];\n  let i = 0, j = 0;\n  while (i < a.length || j < b.length) {\n    if (j >= b.length || (i < a.length && a[i] <= b[j])) out.push(a[i++]);\n    else out.push(b[j++]);\n  }\n  return out;\n}\n"
+  },
+  "merge-sort": {
+    "python": "def mergeSort(nums):\n    if len(nums) <= 1:\n        return list(nums)\n    mid = len(nums) // 2\n    return mergeSorted(mergeSort(nums[:mid]), mergeSort(nums[mid:]))\n",
+    "javascript": "function mergeSort(nums) {\n  // Bottom-up: merge runs of width 1, 2, 4, ...\n  let runs = nums.map((x) => [x]);\n  if (runs.length === 0) return [];\n  while (runs.length > 1) {\n    const next = [];\n    for (let i = 0; i < runs.length; i += 2) {\n      next.push(i + 1 < runs.length ? mergeSorted(runs[i], runs[i + 1]) : runs[i]);\n    }\n    runs = next;\n  }\n  return runs[0];\n}\n"
+  },
+  "bfs-distances": {
+    "python": "from collections import deque\n\ndef bfsDistances(n, edges, src):\n    adj = [[] for _ in range(n)]\n    for u, v in edges:\n        adj[u].append(v)\n        adj[v].append(u)\n    dist = [-1] * n\n    dist[src] = 0\n    queue = deque([src])\n    while queue:\n        u = queue.popleft()\n        for v in adj[u]:\n            if dist[v] == -1:\n                dist[v] = dist[u] + 1\n                queue.append(v)\n    return dist\n",
+    "javascript": "function bfsDistances(n, edges, src) {\n  // Level-by-level frontier instead of a queue.\n  const adj = Array.from({ length: n }, () => []);\n  for (const [u, v] of edges) { adj[u].push(v); adj[v].push(u); }\n  const dist = new Array(n).fill(-1);\n  dist[src] = 0;\n  let frontier = [src];\n  for (let level = 1; frontier.length; level++) {\n    const next = [];\n    for (const u of frontier) {\n      for (const v of adj[u]) {\n        if (dist[v] === -1) { dist[v] = level; next.push(v); }\n      }\n    }\n    frontier = next;\n  }\n  return dist;\n}\n"
+  },
+  "shortest-path-len": {
+    "python": "def shortestPathLen(n, edges, src, dst):\n    return bfsDistances(n, edges, src)[dst]\n",
+    "javascript": "function shortestPathLen(n, edges, src, dst) {\n  return bfsDistances(n, edges, src)[dst];\n}\n"
+  }
+}
