@@ -1,81 +1,7 @@
-import {
-  ExecutionStatus,
-  LANGUAGES,
-  SandboxResultStatus,
-  TestCaseResult,
-} from '../models/ExecutionResult.js';
-import { CompareMode, TestCase } from '../models/Problem.js';
-
-/**
- * Validate and format test results from the wrapped-code harness. The harness
- * emits per-call `runNs` and `peakBytes`; we surface those as `runMs` and
- * `memoryKb` on each TestCaseResult so the frontend can show algorithm-only
- * timing (excluding interpreter startup).
- *
- * `passed` is decided here, against the problem's own expected value — never
- * the harness's echo of it, which user code printing a fake record could
- * otherwise make agree with its output.
- */
-export function validateResults(
-  wrappedResults: ReadonlyArray<
-    | {
-        output?: any;
-        expected?: any;
-        passed?: boolean;
-        error?: string;
-        executionTime?: number;
-        runNs?: number;
-        wallNs?: number;
-        peakBytes?: number;
-      }
-    | undefined
-  >,
-  testCases: TestCase[],
-  compareMode: CompareMode = 'ordered'
-): TestCaseResult[] {
-  const results: TestCaseResult[] = [];
-
-  for (let i = 0; i < testCases.length; i++) {
-    const testCase = testCases[i];
-    const wrapped = wrappedResults[i];
-
-    if (!wrapped) {
-      results.push({
-        input: testCase.input,
-        expectedOutput: testCase.expectedOutput,
-        actualOutput: null,
-        passed: false,
-        executionTime: 0,
-        error: 'No result returned from executor',
-        hidden: testCase.hidden,
-      });
-      continue;
-    }
-
-    const passed = deepEqual(wrapped.output, testCase.expectedOutput, compareMode);
-    // runNs is CPU time of the call (immune to host load); wallNs is the
-    // elapsed wall clock for the same call, kept as a diagnostic.
-    const runMs = wrapped.runNs !== undefined ? wrapped.runNs / 1_000_000 : undefined;
-    const wallMs = wrapped.wallNs !== undefined ? wrapped.wallNs / 1_000_000 : undefined;
-    const memoryKb =
-      wrapped.peakBytes !== undefined ? wrapped.peakBytes / 1024 : undefined;
-
-    results.push({
-      input: testCase.input,
-      expectedOutput: testCase.expectedOutput,
-      actualOutput: wrapped.output ?? null,
-      passed: passed && !wrapped.error,
-      executionTime: runMs ?? wrapped.executionTime ?? 0,
-      runMs,
-      wallMs,
-      memoryKb,
-      error: wrapped.error,
-      hidden: testCase.hidden,
-    });
-  }
-
-  return results;
-}
+import { LANGUAGES } from '../models/ExecutionResult.js';
+import { CompareMode } from '../models/Problem.js';
+import { RunStatus } from '../models/Run.js';
+import { SandboxStatus } from './sandbox/types.js';
 
 export interface DeepEqualOptions {
   /**
@@ -171,33 +97,17 @@ function canonicalize(value: any): any {
 /**
  * Derive the final judge verdict from the sandbox status and test outcomes.
  * The sandbox reports 'OK' whenever the process exits cleanly — a clean exit
- * with failing tests is a Wrong Answer, not an accepted run. Real sandbox
- * statuses (TLE/RE/CE/MLE/XX) pass through untouched.
+ * with failing tests is a Wrong Answer ('WA', which the sandbox itself never
+ * emits), not an accepted run. Real sandbox statuses (TLE/RE/CE/MLE/XX) pass
+ * through untouched.
  */
 export function deriveVerdict(
-  sandboxStatus: SandboxResultStatus | undefined,
+  sandboxStatus: SandboxStatus | undefined,
   totalPassed: number,
   totalTests: number
-): ExecutionStatus | undefined {
+): RunStatus | undefined {
   if (sandboxStatus !== 'OK') return sandboxStatus;
   return totalPassed === totalTests ? 'OK' : 'WA';
-}
-
-/**
- * Sanitize test results for frontend (hide hidden test case details)
- */
-export function sanitizeResults(results: TestCaseResult[]): TestCaseResult[] {
-  return results.map((result) => {
-    if (result.hidden) {
-      return {
-        ...result,
-        input: [],
-        expectedOutput: null,
-        actualOutput: null,
-      };
-    }
-    return result;
-  });
 }
 
 /**

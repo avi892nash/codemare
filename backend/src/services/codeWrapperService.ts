@@ -290,10 +290,10 @@ __cm_emit({ done: true, totalRunNs: Number(__cm_totalRunNs), peakBytes: __cm_pea
 /**
  * A problem without a typed `signature` cannot be harnessed for C++/Java
  * (we need concrete types to emit literals and declarations). Emit a minimal
- * program that prints a structured error so the UI surfaces a clean verdict
- * instead of a JSON-parse failure. executionService maps the wrapper-declared
- * `error` to status XX. (The summary record also carries an empty legacy
- * `results` array.)
+ * program that prints a structured error so the caller gets a clean verdict
+ * instead of a parse failure: runService maps a wrapper-declared summary
+ * `error` to status XX. (The summary record also carries an empty `results`
+ * array from the older single-document harness format.)
  *
  * IDE mode works fully for C++ and Java because it bypasses this wrapper.
  * /v1/run never reaches this: it rejects C++/Java/Go without a signature.

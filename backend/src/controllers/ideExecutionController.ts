@@ -38,7 +38,7 @@ export async function executeIde(req: Request, res: Response): Promise<void> {
 
 /**
  * Poll a queued IDE submission by token.
- * GET /v1/ide/submissions/:token
+ * GET /v1/ide/execute/:token
  */
 export async function pollIdeSubmission(req: Request, res: Response): Promise<void> {
   const poll = await getResult(req.params.token);

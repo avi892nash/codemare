@@ -1,14 +1,5 @@
 import 'server-only';
-import type {
-  ExecutionRequest,
-  ExecutionResponse,
-  IdeExecutionRequest,
-  IdeExecutionResponse,
-  Problem,
-  ProblemListItem,
-  Signature,
-  SupportedLanguage,
-} from './types';
+import type { IdeExecutionRequest, IdeExecutionResponse, Signature, SupportedLanguage } from './types';
 import { readSseEvents } from './sse';
 
 /**
@@ -20,12 +11,12 @@ import { readSseEvents } from './sse';
  *   2. reads INTERNAL_TOKEN from env and attaches it as X-Codemare-Token,
  *   3. never includes credentials in client-rendered HTML.
  *
- * Callers in the workspace pages should `await compile.listProblems()` etc.
- * directly from server components, or invoke them from server actions /
- * route handlers when the call is triggered by a client component.
+ * Use the `compile` object below from server code only: server components,
+ * server actions and route handlers (lib/server/runner.ts streams judging
+ * through `compile.runStream`; the IDE action calls `compile.executeIde`).
  */
 
-const BASE = (process.env.COMPILE_SERVICE_URL ?? 'http://localhost:3000').replace(/\/$/, '');
+const BASE = (process.env.COMPILE_SERVICE_URL ?? 'http://localhost:4000').replace(/\/$/, '');
 const TOKEN = process.env.INTERNAL_TOKEN ?? '';
 
 // Startup guard: in production a missing or placeholder INTERNAL_TOKEN means
@@ -75,7 +66,7 @@ function isToken(v: unknown): v is TokenResponse {
 }
 
 /** Pending poll responses are exactly `{ status: 'PND' }`; the final result
- *  never carries that marker (Problems results use OK/WA/…; IDE has none). */
+ *  never carries that marker (an IDE result has no top-level status). */
 function isPending(v: unknown): boolean {
   return typeof v === 'object' && v !== null && (v as { status?: string }).status === 'PND';
 }
@@ -224,28 +215,10 @@ export const compile = {
     yield* parseSse(res.body);
   },
 
-  /** List all problems in the catalog. Cheap, cacheable per-request. */
-  listProblems(): Promise<ProblemListItem[]> {
-    return call<{ problems: ProblemListItem[] }>('/v1/problems').then((r) => r.problems);
-  },
-
-  /** Full problem (with hidden testcases hidden behind sanitize). */
-  getProblem(id: string): Promise<Problem> {
-    return call<{ problem: Problem }>(`/v1/problems/${encodeURIComponent(id)}`).then(
-      (r) => r.problem
-    );
-  },
-
-  /** Run a Problems-mode submission. Works in both sync and async service modes. */
-  execute(request: ExecutionRequest): Promise<ExecutionResponse> {
-    return resolveSubmission<ExecutionResponse>(
-      '/v1/execute',
-      (token) => `/v1/execute/${token}`,
-      JSON.stringify(request)
-    );
-  },
-
-  /** Run an IDE-mode submission (raw stdin/stdout, multiple custom testcases). */
+  /**
+   * Run an IDE-mode submission (raw stdin/stdout, multiple custom testcases).
+   * Works in both sync and async (queued) service modes.
+   */
   executeIde(request: IdeExecutionRequest | IdeRunRequest): Promise<IdeExecutionResponse> {
     return resolveSubmission<IdeExecutionResponse>(
       '/v1/ide/execute',

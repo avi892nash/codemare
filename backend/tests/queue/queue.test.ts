@@ -1,10 +1,9 @@
 // Run with: npx tsx --test tests/queue/queue.test.ts
 //
 // These cover the queue's behaviour WITHOUT a live Redis — the gating that
-// keeps dev and synchronous prod working when REDIS_URL is unset. The
-// enqueue/getResult/worker paths against a real Redis are exercised by the
-// integration smoke test (tests/queue/integration.sh), which is skipped when
-// no REDIS_URL is present.
+// keeps dev and synchronous prod working when REDIS_URL is unset. (The queue
+// serves only IDE mode; /v1/run never uses it.) The enqueue/getResult/worker
+// paths against a real Redis have no automated test here.
 import { test } from 'node:test';
 import { strict as assert } from 'node:assert';
 

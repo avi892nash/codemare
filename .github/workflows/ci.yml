@@ -110,20 +110,6 @@ jobs:
           grep -q '^event: running$' sse.txt
           [ "$(grep -c '^event: test$' sse.txt)" -eq 3 ]
           grep -A1 '^event: verdict$' sse.txt | grep -q '"status":"OK"'
-      # The web app still calls /v1/execute until it moves to /v1/run.
-      - name: Legacy POST /v1/execute still judges
-        run: |
-          set -euo pipefail
-          jq -n '{problemId:"two-sum",language:"python",code:"def twoSum(nums, target):\n    seen = {}\n    for i, n in enumerate(nums):\n        if target - n in seen:\n            return [seen[target - n], i]\n        seen[n] = i\n    return []"}' > legacy.json
-          status=$(curl -sf -X POST 'http://localhost:4000/v1/execute?wait=true' \
-            -H 'Content-Type: application/json' --data @legacy.json | jq -r .status)
-          echo "legacy python two-sum: $status"
-          [ "$status" = "OK" ]
-      - name: Catalog sanity
-        run: |
-          count=$(curl -sf http://localhost:4000/v1/problems | jq '.problems | length')
-          echo "problems: $count"
-          [ "$count" -ge 10 ]
       - name: Server log on failure
         if: failure()
         working-directory: backend

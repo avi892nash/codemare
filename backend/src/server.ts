@@ -22,8 +22,9 @@ async function startServer() {
     const pinningOk = probe.pinning.state === 'enforced' || probe.pinning.state === 'off';
     (pinningOk ? console.log : console.warn)(`  CPU pinning: ${probe.pinning.message}`);
 
-    // Queue mode: with REDIS_URL set, submissions can be enqueued and polled.
-    // Without it, the API runs every submission synchronously (unchanged).
+    // Queue mode: with REDIS_URL set, IDE submissions can be enqueued and
+    // polled. Without it, they run synchronously. /v1/run and /v1/run/stream
+    // never use the queue: they always run inline.
     if (isQueueEnabled()) {
       console.log(`Queue: enabled (${QUEUE_INFO.name})`);
       // A single VM can run the API and a worker in one process via
@@ -43,12 +44,11 @@ async function startServer() {
       console.log(`\nCodemare backend running on http://localhost:${PORT}`);
       console.log(`   Health check: http://localhost:${PORT}/health`);
       console.log(`   API Endpoints:`);
-      console.log(`     POST /v1/run            (pure executor, JSON)`);
-      console.log(`     POST /v1/run/stream     (pure executor, SSE)`);
-      console.log(`     POST /v1/ide/execute    (stdin/stdout programs)`);
-      console.log(`     GET  /v1/problems       (legacy catalog)`);
-      console.log(`     POST /v1/execute        (legacy; ?wait=true for sync)`);
-      console.log(`     GET  /v1/execute/:token (legacy; poll async)\n`);
+      console.log(`     POST /v1/run                (pure executor, JSON)`);
+      console.log(`     POST /v1/run/stream         (pure executor, SSE)`);
+      console.log(`     POST /v1/ide/execute        (stdin/stdout programs; ?wait=true for sync)`);
+      console.log(`     GET  /v1/ide/execute/:token (poll a queued IDE run)`);
+      console.log(`     GET  /v1/queue/stats        (queue depth)\n`);
     });
   } catch (error) {
     console.error('Failed to start server:', error);

@@ -47,9 +47,8 @@ deploy/release.sh user@your-vm
 
 ## Internal auth
 
-This service is **not** publicly addressable. Every request to `/v1/*` and
-the legacy `/api/*` aliases requires the header
-`X-Codemare-Token: <shared-secret>`. The secret lives in
+This service is **not** publicly addressable. Every request to `/v1/*`
+requires the header `X-Codemare-Token: <shared-secret>`. The secret lives in
 `/etc/codemare/env` (mode 0640, group `codemare`) and is loaded by the
 systemd unit via `EnvironmentFile=`.
 
@@ -151,16 +150,21 @@ is missing) — see [src/services/sandboxService.ts](src/services/sandboxService
 
 ## Scaling: synchronous vs. queued
 
-The backend runs in one of two modes, chosen by whether `REDIS_URL` is set.
+`POST /v1/run` and `POST /v1/run/stream` (all judging: runs, submits, gate
+attempts, build steps, reference solutions) always run inline in the API
+process; they never touch a queue. The optional queue serves IDE mode
+(`POST /v1/ide/execute`) only, and whether it is on is chosen by whether
+`REDIS_URL` is set.
 
-**Synchronous (default, single-node).** No Redis. `POST /v1/execute` runs the
-submission inline and returns the result. Concurrency is bounded by the
-in-memory BoxPool (100 isolate boxes) on the one host. Simplest; fine until a
-single VM's cores are the bottleneck.
+**Synchronous (default, single-node).** No Redis. Every request runs inline
+and answers with its result. Concurrency is bounded by the in-memory BoxPool
+(100 isolate boxes) on the one host. Simplest; fine until a single VM's cores
+are the bottleneck.
 
-**Queued (horizontal scale).** Set `REDIS_URL`. The API enqueues each
-submission and returns `{ token }` (202); clients poll `GET /v1/execute/:token`.
-Workers drain the queue:
+**Queued (IDE mode).** Set `REDIS_URL`. `POST /v1/ide/execute` (without
+`?wait=true`) enqueues the run and returns `{ token }` (202); clients poll
+`GET /v1/ide/execute/:token` (the web app's compile client does this
+transparently). Workers drain the queue:
 
 ```
                  ┌─────────────┐     enqueue      ┌─────────┐
@@ -176,8 +180,8 @@ Workers drain the queue:
 
 - API hosts: `deploy/codemare-backend.service` (no workers), behind a load balancer.
 - Worker hosts: `deploy/codemare-worker.service` — run M of them, each its own
-  VM/process, all sharing one `REDIS_URL`. Scale execution by adding workers
-  without touching the API tier.
+  VM/process, all sharing one `REDIS_URL`. Scale IDE execution by adding
+  workers without touching the API tier.
 - Single VM: set `WORKER_INLINE=true` to run a worker inside the API process —
   you still get the async API + backpressure without a separate process.
 
@@ -188,21 +192,22 @@ REDIS_URL=redis://10.0.0.5:6379    # unset → synchronous mode
 WORKER_CONCURRENCY=<cores>         # jobs one worker runs at once — defaults to os.cpus().length
 QUEUE_RESULT_TTL_SEC=3600          # how long completed results are retained
 WORKER_INLINE=true                 # single-VM: run a worker in the API process
-EXECUTION_RATE_LIMIT_MAX=6000      # /v1/execute + /v1/ide/execute cap per API process, per minute
+EXECUTION_RATE_LIMIT_MAX=6000      # circuit breaker: requests/min per API process, all execution routes together
 ```
 
-The backend is stateless either way (file-based problem catalog, no DB).
-Submission history lives in the web app's Postgres, not here.
+The backend is stateless either way: no problem catalog and no DB — the
+caller sends the code and the tests with every run. Submission history lives
+in the web app's Postgres, not here.
 
 ## Capacity planning: what it takes to hit 1000 req/s
 
 Two very different numbers hide behind "1000 requests per second" for a judge,
 and they need different fixes.
 
-**The API layer (catalog reads, polling, health checks) is not the
+**The API layer (health checks, polling, request handling) is not the
 bottleneck.** Measured on a 10-core dev machine, one Node process serves
-`/health` at ~16k req/s and `/v1/problems` at ~8k req/s. Clustering or extra
-hardware for this tier isn't needed until well past 1000 req/s.
+`/health` at ~16k req/s. Clustering or extra hardware for this tier isn't
+needed until well past 1000 req/s.
 
 **Executing submitted code is the bottleneck, and it's a hard, physical one.**
 A CPU profile of the API process under load (`node --prof` +
@@ -234,19 +239,21 @@ second per core.
 
 **The math for 1000 req/s of real submissions:** at ~290 spawns/sec/host for
 the cheap case, you need on the order of 4 hosts of this size purely for the
-run phase — more if the mix skews toward C++/Java cache misses. This is
-exactly what the queued architecture above is for: point N worker hosts at
-one `REDIS_URL` and scale this tier horizontally. There is no single-process
-or single-host trick that gets a code-execution judge to 1000 req/s of *real,
-isolated* executions — that number is a hardware/fleet-size question, not a
-software-efficiency one.
+run phase — more if the mix skews toward C++/Java cache misses. The queued
+architecture above scales IDE runs that way today (point N worker hosts at one
+`REDIS_URL`); `/v1/run` and `/v1/run/stream` run inline on the API host, so
+scaling judging past one host would need the streaming path to learn the
+queue. There is no single-process or single-host trick that gets a
+code-execution judge to 1000 req/s of *real, isolated* executions — that
+number is a hardware/fleet-size question, not a software-efficiency one.
 
-**What was actually a software bug, and is now fixed:** `/v1/execute` and
-`/v1/ide/execute` previously rate-limited to 10 requests/minute **per source
-IP**. Since this service has exactly one caller (the Next.js server, behind
+**What was actually a software bug, and is now fixed:** the execution
+endpoints previously rate-limited to 10 requests/minute **per source IP**.
+Since this service has exactly one caller (the Next.js server, behind
 `requireInternalToken`), every real user's traffic shared that one IP — the
 limiter was capping the *entire platform* at 10 submissions/minute, not
 guarding against abuse. It's now a generous, configurable circuit breaker
-(`EXECUTION_RATE_LIMIT_MAX`, default 6000/min ≈ 100 req/s) against a runaway
-caller, and real per-user throttling (30 runs/min) lives in the web app's
-server actions, where user identity actually exists.
+(`EXECUTION_RATE_LIMIT_MAX`, default 6000/min ≈ 100 req/s per API process,
+shared by `/v1/run`, `/v1/run/stream` and `/v1/ide/execute`) against a
+runaway caller, and real per-user throttling (30 runs/min) lives in the web
+app's server actions, where user identity actually exists.

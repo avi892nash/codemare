@@ -1,21 +1,19 @@
 import { randomUUID } from 'node:crypto';
 import { cpus } from 'node:os';
 import { Queue, Worker, type ConnectionOptions, type Job } from 'bullmq';
-import { ExecutionRequest, ExecutionResponse } from '../models/ExecutionResult.js';
 import { IdeExecutionRequest, IdeExecutionResponse } from '../models/IdeExecution.js';
-import { Problem } from '../models/Problem.js';
-import { executeCode } from '../services/executionService.js';
 import { executeIdeCode } from '../services/ideExecutionService.js';
-import { sanitizeResults } from '../services/validationService.js';
 
 /**
- * Optional Redis-backed job queue (BullMQ).
+ * Optional Redis-backed job queue (BullMQ) for IDE mode.
  *
  * Gated entirely on REDIS_URL: with it unset, isQueueEnabled() is false and
- * the controllers run synchronously exactly as before — dev and the current
- * single-node prod need no Redis. With it set, submissions can be enqueued
- * (returning a token) and processed by one or more worker processes, which is
- * what lets execution scale independently of the API under burst load.
+ * POST /v1/ide/execute runs synchronously — dev and the current single-node
+ * prod need no Redis. With it set, an IDE submission without `?wait=true` is
+ * enqueued (the client gets a token and polls GET /v1/ide/execute/:token) and
+ * processed by one or more worker processes, which lets that execution scale
+ * independently of the API under burst load. POST /v1/run and /v1/run/stream
+ * never go through the queue: they always run inline in the API process.
  *
  * Result storage uses BullMQ's own completed-job retention (returnvalue kept
  * for RESULT_TTL_SEC), so we don't run a second result store.
@@ -31,11 +29,9 @@ const RESULT_TTL_SEC = Number(process.env.QUEUE_RESULT_TTL_SEC ?? 3600);
 // instead of a flat 4 so a bigger box is used without extra config.
 const WORKER_CONCURRENCY = Number(process.env.WORKER_CONCURRENCY ?? cpus().length);
 
-export type JobPayload =
-  | { kind: 'execute'; request: ExecutionRequest; problem: Problem }
-  | { kind: 'ide'; request: IdeExecutionRequest };
+export type JobPayload = { kind: 'ide'; request: IdeExecutionRequest };
 
-export type JobResult = ExecutionResponse | IdeExecutionResponse;
+export type JobResult = IdeExecutionResponse;
 
 export type PollResult =
   | { state: 'pending' }
@@ -144,15 +140,14 @@ export async function getResult(token: string): Promise<PollResult> {
 
 /**
  * Run the actual job. Shared by both the standalone worker and the optional
- * in-process worker. Returns the sanitized response stored as the job result.
+ * in-process worker. Returns the response stored as the job result.
  */
 async function processJob(job: Job<JobPayload, JobResult>): Promise<JobResult> {
-  const payload = job.data;
-  if (payload.kind === 'execute') {
-    const result = await executeCode(payload.request, payload.problem);
-    return { ...result, testResults: sanitizeResults(result.testResults) };
-  }
-  return executeIdeCode(payload.request);
+  // Jobs outlive deploys in Redis: fail anything this version can't run
+  // (e.g. an 'execute' job queued by an older version) with a clear reason.
+  const kind: string = job.data.kind;
+  if (kind !== 'ide') throw new Error(`Unsupported job kind: ${kind}`);
+  return executeIdeCode(job.data.request);
 }
 
 /**

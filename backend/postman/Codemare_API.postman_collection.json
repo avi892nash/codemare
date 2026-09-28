@@ -1,37 +1,32 @@
 {
 	"info": {
 		"_postman_id": "codemare-api-collection",
-		"name": "Codemare Backend API",
-		"description": "Complete API collection for the Codemare online code execution platform.\n\n## Features\n- Health check endpoint\n- Problem listing and retrieval\n- Code execution for Python, JavaScript, C++, and Java\n- **NEW: IDE execution with custom test cases (stdin/stdout)**\n- Comprehensive test coverage\n- Working examples for all languages\n\n## Base URL\nDefault: {{baseUrl}} (http://localhost:3000)\n\n## Authentication\nNo authentication required for this API.\n\n## Endpoints\n1. **Problem-based execution** (`/api/execute`) - Execute function-based code against predefined test cases\n2. **IDE execution** (`/api/ide/execute`) - Execute complete programs with custom stdin/stdout test cases\n\n## Problems Available\n1. Two Sum (Easy)\n2. Reverse String (Easy)\n\n## Supported Languages\n- python\n- javascript\n- cpp\n- java\n\n## Usage\n1. Import the collection and environment into Postman\n2. Ensure the backend server is running on port 3000\n3. Run requests individually or use the Collection Runner for full test suite\n\nFor detailed documentation, see the README.md file in the postman directory.",
+		"name": "Codemare compile service",
+		"description": "Requests for the Codemare compile service (`backend/`): the stateless executor the web app calls to judge code.\n\n- `GET /health` (open)\n- `POST /v1/run` and `POST /v1/run/stream` (SSE): run code against caller-supplied tests\n- `POST /v1/ide/execute` and `GET /v1/ide/execute/:token`: stdin/stdout programs\n- `GET /v1/queue/stats`: the optional IDE-mode queue\n\nEverything under `/v1` needs `X-Codemare-Token` when the service has `INTERNAL_TOKEN` set (always in production). Every request here sends `{{internalToken}}` from the environment; leave it empty for a local dev service without a token.\n\nDefault `{{baseUrl}}`: http://localhost:4000. See backend/postman/README.md.",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [
 		{
-			"name": "01 - Health Check",
+			"name": "01 - Health",
 			"item": [
 				{
-					"name": "GET Health Status",
+					"name": "GET /health",
 					"event": [
 						{
 							"listen": "test",
 							"script": {
+								"type": "text/javascript",
 								"exec": [
 									"pm.test(\"Status code is 200\", function () {",
 									"    pm.response.to.have.status(200);",
 									"});",
 									"",
-									"pm.test(\"Response has correct structure\", function () {",
-									"    const jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('status');",
-									"    pm.expect(jsonData).to.have.property('timestamp');",
-									"    pm.expect(jsonData.status).to.equal('ok');",
-									"});",
-									"",
-									"pm.test(\"Response time is acceptable\", function () {",
-									"    pm.expect(pm.response.responseTime).to.be.below(500);",
+									"pm.test(\"Body is {status: \\\"ok\\\", timestamp}\", function () {",
+									"    const res = pm.response.json();",
+									"    pm.expect(res.status).to.equal(\"ok\");",
+									"    pm.expect(res.timestamp).to.be.a(\"string\");",
 									"});"
-								],
-								"type": "text/javascript"
+								]
 							}
 						}
 					],
@@ -47,197 +42,120 @@
 								"health"
 							]
 						},
-						"description": "Health check endpoint to verify the backend server is running and responsive."
+						"description": "Liveness probe. Open: no token needed (load balancers and container healthchecks call it)."
 					},
 					"response": []
 				}
 			]
 		},
 		{
-			"name": "02 - Problems",
+			"name": "02 - Run (POST /v1/run)",
+			"description": "The pure executor: the caller sends the code and the tests, the service answers with per-test results and a verdict (OK, WA, TLE, MLE, RE, CE, XX). Always runs inline, never through the queue.",
 			"item": [
 				{
-					"name": "GET All Problems",
+					"name": "Two Sum - Python (OK)",
 					"event": [
 						{
 							"listen": "test",
 							"script": {
+								"type": "text/javascript",
 								"exec": [
 									"pm.test(\"Status code is 200\", function () {",
 									"    pm.response.to.have.status(200);",
 									"});",
 									"",
-									"pm.test(\"Response is an array\", function () {",
-									"    const jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.be.an('array');",
+									"pm.test(\"Verdict is OK\", function () {",
+									"    const res = pm.response.json();",
+									"    pm.expect(res.status).to.equal(\"OK\");",
+									"    pm.expect(res.totalTests).to.be.a(\"number\");",
+									"    pm.expect(res.runUs).to.be.a(\"number\");",
+									"    pm.expect(res.memoryKb).to.be.a(\"number\");",
+									"    pm.expect(res.tests).to.be.an(\"array\");",
 									"});",
 									"",
-									"pm.test(\"Each problem has required fields\", function () {",
-									"    const jsonData = pm.response.json();",
-									"    jsonData.forEach(function(problem) {",
-									"        pm.expect(problem).to.have.property('id');",
-									"        pm.expect(problem).to.have.property('title');",
-									"        pm.expect(problem).to.have.property('difficulty');",
+									"pm.test(\"All tests passed\", function () {",
+									"    const res = pm.response.json();",
+									"    pm.expect(res.totalPassed).to.equal(res.totalTests);",
+									"    res.tests.forEach(function (t) { pm.expect(t.passed).to.equal(true); });",
+									"});",
+									"",
+									"pm.test(\"Every test result carries idx, hidden, passed, runUs, wallUs, memoryKb, actual\", function () {",
+									"    const res = pm.response.json();",
+									"    pm.expect(res.tests).to.have.lengthOf(res.totalTests);",
+									"    res.tests.forEach(function (t, i) {",
+									"        pm.expect(t.idx).to.equal(i);",
+									"        pm.expect(t).to.include.keys(\"hidden\", \"passed\", \"runUs\", \"wallUs\", \"memoryKb\", \"actual\");",
 									"    });",
-									"});",
-									"",
-									"pm.test(\"Contains expected problems\", function () {",
-									"    const jsonData = pm.response.json();",
-									"    const problemIds = jsonData.map(p => p.id);",
-									"    pm.expect(problemIds).to.include('two-sum');",
-									"    pm.expect(problemIds).to.include('reverse-string');",
+									"    pm.expect(res.tests[2].hidden).to.equal(true);",
 									"});"
-								],
-								"type": "text/javascript"
+								]
 							}
 						}
 					],
 					"request": {
-						"method": "GET",
-						"header": [],
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "X-Codemare-Token",
+								"value": "{{internalToken}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"language\": \"python\",\n  \"code\": \"def twoSum(nums, target):\\n    seen = {}\\n    for i, n in enumerate(nums):\\n        if target - n in seen:\\n            return [seen[target - n], i]\\n        seen[n] = i\\n    return []\\n\",\n  \"functionName\": \"twoSum\",\n  \"compareMode\": \"unordered\",\n  \"tests\": [\n    {\n      \"input\": [\n        [\n          2,\n          7,\n          11,\n          15\n        ],\n        9\n      ],\n      \"expected\": [\n        0,\n        1\n      ]\n    },\n    {\n      \"input\": [\n        [\n          3,\n          2,\n          4\n        ],\n        6\n      ],\n      \"expected\": [\n        1,\n        2\n      ]\n    },\n    {\n      \"input\": [\n        [\n          3,\n          3\n        ],\n        6\n      ],\n      \"expected\": [\n        0,\n        1\n      ],\n      \"hidden\": true\n    }\n  ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
 						"url": {
-							"raw": "{{baseUrl}}/api/problems",
+							"raw": "{{baseUrl}}/v1/run",
 							"host": [
 								"{{baseUrl}}"
 							],
 							"path": [
-								"api",
-								"problems"
+								"v1",
+								"run"
 							]
 						},
-						"description": "Get a list of all available coding problems."
+						"description": "Judge a Python solution against the tests in the body. `signature` is optional for Python, JavaScript and TypeScript."
 					},
 					"response": []
 				},
 				{
-					"name": "GET Two Sum Problem",
+					"name": "Two Sum - JavaScript (OK)",
 					"event": [
 						{
 							"listen": "test",
 							"script": {
+								"type": "text/javascript",
 								"exec": [
 									"pm.test(\"Status code is 200\", function () {",
 									"    pm.response.to.have.status(200);",
 									"});",
 									"",
-									"pm.test(\"Problem has complete structure\", function () {",
-									"    const jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('id');",
-									"    pm.expect(jsonData).to.have.property('title');",
-									"    pm.expect(jsonData).to.have.property('difficulty');",
-									"    pm.expect(jsonData).to.have.property('description');",
-									"    pm.expect(jsonData).to.have.property('examples');",
-									"    pm.expect(jsonData).to.have.property('constraints');",
-									"    pm.expect(jsonData).to.have.property('starterCode');",
-									"    pm.expect(jsonData).to.have.property('functionName');",
-									"});",
-									"",
-									"pm.test(\"Starter code contains all languages\", function () {",
-									"    const jsonData = pm.response.json();",
-									"    pm.expect(jsonData.starterCode).to.have.property('python');",
-									"    pm.expect(jsonData.starterCode).to.have.property('javascript');",
-									"    pm.expect(jsonData.starterCode).to.have.property('cpp');",
-									"    pm.expect(jsonData.starterCode).to.have.property('java');",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/api/problems/{{problemId_twoSum}}",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"problems",
-								"{{problemId_twoSum}}"
-							]
-						},
-						"description": "Get detailed information about the Two Sum problem including starter code and test cases."
-					},
-					"response": []
-				},
-				{
-					"name": "GET Reverse String Problem",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Status code is 200\", function () {",
-									"    pm.response.to.have.status(200);",
-									"});",
-									"",
-									"pm.test(\"Problem has complete structure\", function () {",
-									"    const jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('id');",
-									"    pm.expect(jsonData).to.have.property('title');",
-									"    pm.expect(jsonData).to.have.property('difficulty');",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/api/problems/{{problemId_reverseString}}",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"problems",
-								"{{problemId_reverseString}}"
-							]
-						},
-						"description": "Get detailed information about the Reverse String problem."
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "03 - Execute Python",
-			"item": [
-				{
-					"name": "Two Sum - Python (Valid Solution)",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Status code is 200\", function () {",
-									"    pm.response.to.have.status(200);",
-									"});",
-									"",
-									"pm.test(\"Execution completed successfully\", function () {",
-									"    const jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('success');",
-									"    pm.expect(jsonData).to.have.property('testResults');",
-									"    pm.expect(jsonData).to.have.property('totalPassed');",
-									"    pm.expect(jsonData).to.have.property('totalTests');",
+									"pm.test(\"Verdict is OK\", function () {",
+									"    const res = pm.response.json();",
+									"    pm.expect(res.status).to.equal(\"OK\");",
+									"    pm.expect(res.totalTests).to.be.a(\"number\");",
+									"    pm.expect(res.runUs).to.be.a(\"number\");",
+									"    pm.expect(res.memoryKb).to.be.a(\"number\");",
+									"    pm.expect(res.tests).to.be.an(\"array\");",
 									"});",
 									"",
 									"pm.test(\"All tests passed\", function () {",
-									"    const jsonData = pm.response.json();",
-									"    pm.expect(jsonData.success).to.be.true;",
-									"    pm.expect(jsonData.totalPassed).to.equal(jsonData.totalTests);",
-									"});",
-									"",
-									"pm.test(\"Execution time is reasonable\", function () {",
-									"    const jsonData = pm.response.json();",
-									"    pm.expect(jsonData.executionTime).to.be.below(10000);",
+									"    const res = pm.response.json();",
+									"    pm.expect(res.totalPassed).to.equal(res.totalTests);",
+									"    res.tests.forEach(function (t) { pm.expect(t.passed).to.equal(true); });",
 									"});"
-								],
-								"type": "text/javascript"
+								]
 							}
 						}
 					],
@@ -246,92 +164,69 @@
 						"header": [
 							{
 								"key": "Content-Type",
-								"value": "application/json"
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "X-Codemare-Token",
+								"value": "{{internalToken}}",
+								"type": "text"
 							}
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"problemId\": \"two-sum\",\n  \"language\": \"python\",\n  \"code\": \"def twoSum(nums, target):\\n    seen = {}\\n    for i, num in enumerate(nums):\\n        complement = target - num\\n        if complement in seen:\\n            return [seen[complement], i]\\n        seen[num] = i\\n    return []\"\n}"
+							"raw": "{\n  \"language\": \"javascript\",\n  \"code\": \"function twoSum(nums, target) {\\n  const seen = new Map();\\n  for (let i = 0; i < nums.length; i++) {\\n    if (seen.has(target - nums[i])) return [seen.get(target - nums[i]), i];\\n    seen.set(nums[i], i);\\n  }\\n  return [];\\n}\\n\",\n  \"functionName\": \"twoSum\",\n  \"compareMode\": \"unordered\",\n  \"tests\": [\n    {\n      \"input\": [\n        [\n          2,\n          7,\n          11,\n          15\n        ],\n        9\n      ],\n      \"expected\": [\n        0,\n        1\n      ]\n    },\n    {\n      \"input\": [\n        [\n          3,\n          2,\n          4\n        ],\n        6\n      ],\n      \"expected\": [\n        1,\n        2\n      ]\n    },\n    {\n      \"input\": [\n        [\n          3,\n          3\n        ],\n        6\n      ],\n      \"expected\": [\n        0,\n        1\n      ],\n      \"hidden\": true\n    }\n  ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
 						},
 						"url": {
-							"raw": "{{baseUrl}}/api/execute",
+							"raw": "{{baseUrl}}/v1/run",
 							"host": [
 								"{{baseUrl}}"
 							],
 							"path": [
-								"api",
-								"execute"
+								"v1",
+								"run"
 							]
 						},
-						"description": "Execute a valid Python solution for the Two Sum problem using hash map approach."
+						"description": "Judge a JavaScript solution against the tests in the body. `signature` is optional for Python, JavaScript and TypeScript."
 					},
 					"response": []
 				},
 				{
-					"name": "Two Sum - Python (Invalid Solution)",
+					"name": "Two Sum - TypeScript (OK)",
 					"event": [
 						{
 							"listen": "test",
 							"script": {
+								"type": "text/javascript",
 								"exec": [
 									"pm.test(\"Status code is 200\", function () {",
 									"    pm.response.to.have.status(200);",
 									"});",
 									"",
-									"pm.test(\"Solution fails some tests\", function () {",
-									"    const jsonData = pm.response.json();",
-									"    pm.expect(jsonData.success).to.be.false;",
-									"    pm.expect(jsonData.totalPassed).to.be.below(jsonData.totalTests);",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"problemId\": \"two-sum\",\n  \"language\": \"python\",\n  \"code\": \"def twoSum(nums, target):\\n    return [0, 1]\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/execute",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"execute"
-							]
-						},
-						"description": "Execute an invalid Python solution that returns hardcoded values."
-					},
-					"response": []
-				},
-				{
-					"name": "Reverse String - Python (Valid Solution)",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Status code is 200\", function () {",
-									"    pm.response.to.have.status(200);",
+									"pm.test(\"Verdict is OK\", function () {",
+									"    const res = pm.response.json();",
+									"    pm.expect(res.status).to.equal(\"OK\");",
+									"    pm.expect(res.totalTests).to.be.a(\"number\");",
+									"    pm.expect(res.runUs).to.be.a(\"number\");",
+									"    pm.expect(res.memoryKb).to.be.a(\"number\");",
+									"    pm.expect(res.tests).to.be.an(\"array\");",
 									"});",
 									"",
 									"pm.test(\"All tests passed\", function () {",
-									"    const jsonData = pm.response.json();",
-									"    pm.expect(jsonData.success).to.be.true;",
-									"    pm.expect(jsonData.totalPassed).to.equal(jsonData.totalTests);",
+									"    const res = pm.response.json();",
+									"    pm.expect(res.totalPassed).to.equal(res.totalTests);",
+									"    res.tests.forEach(function (t) { pm.expect(t.passed).to.equal(true); });",
+									"});",
+									"",
+									"pm.test(\"Reports the compile time\", function () {",
+									"    pm.expect(pm.response.json().compileMs).to.be.a(\"number\");",
 									"});"
-								],
-								"type": "text/javascript"
+								]
 							}
 						}
 					],
@@ -340,97 +235,69 @@
 						"header": [
 							{
 								"key": "Content-Type",
-								"value": "application/json"
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "X-Codemare-Token",
+								"value": "{{internalToken}}",
+								"type": "text"
 							}
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"problemId\": \"reverse-string\",\n  \"language\": \"python\",\n  \"code\": \"def reverseString(s):\\n    left, right = 0, len(s) - 1\\n    while left < right:\\n        s[left], s[right] = s[right], s[left]\\n        left += 1\\n        right -= 1\\n    return s\"\n}"
+							"raw": "{\n  \"language\": \"typescript\",\n  \"code\": \"function twoSum(nums: number[], target: number): number[] {\\n  const seen = new Map<number, number>();\\n  for (let i = 0; i < nums.length; i++) {\\n    const j = seen.get(target - nums[i]);\\n    if (j !== undefined) return [j, i];\\n    seen.set(nums[i], i);\\n  }\\n  return [];\\n}\\n\",\n  \"functionName\": \"twoSum\",\n  \"compareMode\": \"unordered\",\n  \"tests\": [\n    {\n      \"input\": [\n        [\n          2,\n          7,\n          11,\n          15\n        ],\n        9\n      ],\n      \"expected\": [\n        0,\n        1\n      ]\n    },\n    {\n      \"input\": [\n        [\n          3,\n          2,\n          4\n        ],\n        6\n      ],\n      \"expected\": [\n        1,\n        2\n      ]\n    },\n    {\n      \"input\": [\n        [\n          3,\n          3\n        ],\n        6\n      ],\n      \"expected\": [\n        0,\n        1\n      ],\n      \"hidden\": true\n    }\n  ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
 						},
 						"url": {
-							"raw": "{{baseUrl}}/api/execute",
+							"raw": "{{baseUrl}}/v1/run",
 							"host": [
 								"{{baseUrl}}"
 							],
 							"path": [
-								"api",
-								"execute"
+								"v1",
+								"run"
 							]
 						},
-						"description": "Execute a valid Python solution for the Reverse String problem."
+						"description": "Judge a TypeScript solution against the tests in the body. `signature` is optional for Python, JavaScript and TypeScript. TypeScript is transpiled in the service, then runs as JavaScript."
 					},
 					"response": []
 				},
 				{
-					"name": "Reverse String - Python (Syntax Error)",
+					"name": "Two Sum - C++ (OK)",
 					"event": [
 						{
 							"listen": "test",
 							"script": {
+								"type": "text/javascript",
 								"exec": [
 									"pm.test(\"Status code is 200\", function () {",
 									"    pm.response.to.have.status(200);",
 									"});",
 									"",
-									"pm.test(\"Error is reported\", function () {",
-									"    const jsonData = pm.response.json();",
-									"    pm.expect(jsonData.success).to.be.false;",
-									"    pm.expect(jsonData.error).to.exist;",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"problemId\": \"reverse-string\",\n  \"language\": \"python\",\n  \"code\": \"def reverseString(s)\\n    return s[::-1]\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/execute",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"execute"
-							]
-						},
-						"description": "Execute Python code with a syntax error (missing colon)."
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "04 - Execute JavaScript",
-			"item": [
-				{
-					"name": "Two Sum - JavaScript (Valid Solution)",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Status code is 200\", function () {",
-									"    pm.response.to.have.status(200);",
+									"pm.test(\"Verdict is OK\", function () {",
+									"    const res = pm.response.json();",
+									"    pm.expect(res.status).to.equal(\"OK\");",
+									"    pm.expect(res.totalTests).to.be.a(\"number\");",
+									"    pm.expect(res.runUs).to.be.a(\"number\");",
+									"    pm.expect(res.memoryKb).to.be.a(\"number\");",
+									"    pm.expect(res.tests).to.be.an(\"array\");",
 									"});",
 									"",
 									"pm.test(\"All tests passed\", function () {",
-									"    const jsonData = pm.response.json();",
-									"    pm.expect(jsonData.success).to.be.true;",
-									"    pm.expect(jsonData.totalPassed).to.equal(jsonData.totalTests);",
+									"    const res = pm.response.json();",
+									"    pm.expect(res.totalPassed).to.equal(res.totalTests);",
+									"    res.tests.forEach(function (t) { pm.expect(t.passed).to.equal(true); });",
+									"});",
+									"",
+									"pm.test(\"Reports the compile time\", function () {",
+									"    pm.expect(pm.response.json().compileMs).to.be.a(\"number\");",
 									"});"
-								],
-								"type": "text/javascript"
+								]
 							}
 						}
 					],
@@ -439,90 +306,69 @@
 						"header": [
 							{
 								"key": "Content-Type",
-								"value": "application/json"
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "X-Codemare-Token",
+								"value": "{{internalToken}}",
+								"type": "text"
 							}
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"problemId\": \"two-sum\",\n  \"language\": \"javascript\",\n  \"code\": \"function twoSum(nums, target) {\\n    const seen = {};\\n    for (let i = 0; i < nums.length; i++) {\\n        const complement = target - nums[i];\\n        if (complement in seen) {\\n            return [seen[complement], i];\\n        }\\n        seen[nums[i]] = i;\\n    }\\n    return [];\\n}\"\n}"
+							"raw": "{\n  \"language\": \"cpp\",\n  \"code\": \"std::vector<int> twoSum(std::vector<int>& nums, int target) {\\n    std::unordered_map<int, int> seen;\\n    for (int i = 0; i < (int)nums.size(); i++) {\\n        auto it = seen.find(target - nums[i]);\\n        if (it != seen.end()) return {it->second, i};\\n        seen[nums[i]] = i;\\n    }\\n    return {};\\n}\\n\",\n  \"functionName\": \"twoSum\",\n  \"signature\": {\n    \"params\": [\n      {\n        \"name\": \"nums\",\n        \"type\": \"int[]\"\n      },\n      {\n        \"name\": \"target\",\n        \"type\": \"int\"\n      }\n    ],\n    \"returns\": \"int[]\"\n  },\n  \"compareMode\": \"unordered\",\n  \"tests\": [\n    {\n      \"input\": [\n        [\n          2,\n          7,\n          11,\n          15\n        ],\n        9\n      ],\n      \"expected\": [\n        0,\n        1\n      ]\n    },\n    {\n      \"input\": [\n        [\n          3,\n          2,\n          4\n        ],\n        6\n      ],\n      \"expected\": [\n        1,\n        2\n      ]\n    },\n    {\n      \"input\": [\n        [\n          3,\n          3\n        ],\n        6\n      ],\n      \"expected\": [\n        0,\n        1\n      ],\n      \"hidden\": true\n    }\n  ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
 						},
 						"url": {
-							"raw": "{{baseUrl}}/api/execute",
+							"raw": "{{baseUrl}}/v1/run",
 							"host": [
 								"{{baseUrl}}"
 							],
 							"path": [
-								"api",
-								"execute"
+								"v1",
+								"run"
 							]
 						},
-						"description": "Execute a valid JavaScript solution for the Two Sum problem."
+						"description": "Judge a C++ solution against the tests in the body. C++, Java and Go need `signature`: their harnesses are generated from typed literals."
 					},
 					"response": []
 				},
 				{
-					"name": "Two Sum - JavaScript (Runtime Error)",
+					"name": "Two Sum - Java (OK)",
 					"event": [
 						{
 							"listen": "test",
 							"script": {
+								"type": "text/javascript",
 								"exec": [
 									"pm.test(\"Status code is 200\", function () {",
 									"    pm.response.to.have.status(200);",
 									"});",
 									"",
-									"pm.test(\"Error is reported\", function () {",
-									"    const jsonData = pm.response.json();",
-									"    pm.expect(jsonData.success).to.be.false;",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"problemId\": \"two-sum\",\n  \"language\": \"javascript\",\n  \"code\": \"function twoSum(nums, target) {\\n    return nums.undefinedMethod();\\n}\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/execute",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"execute"
-							]
-						},
-						"description": "Execute JavaScript code with a runtime error."
-					},
-					"response": []
-				},
-				{
-					"name": "Reverse String - JavaScript (Valid Solution)",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Status code is 200\", function () {",
-									"    pm.response.to.have.status(200);",
+									"pm.test(\"Verdict is OK\", function () {",
+									"    const res = pm.response.json();",
+									"    pm.expect(res.status).to.equal(\"OK\");",
+									"    pm.expect(res.totalTests).to.be.a(\"number\");",
+									"    pm.expect(res.runUs).to.be.a(\"number\");",
+									"    pm.expect(res.memoryKb).to.be.a(\"number\");",
+									"    pm.expect(res.tests).to.be.an(\"array\");",
 									"});",
 									"",
 									"pm.test(\"All tests passed\", function () {",
-									"    const jsonData = pm.response.json();",
-									"    pm.expect(jsonData.success).to.be.true;",
+									"    const res = pm.response.json();",
+									"    pm.expect(res.totalPassed).to.equal(res.totalTests);",
+									"    res.tests.forEach(function (t) { pm.expect(t.passed).to.equal(true); });",
+									"});",
+									"",
+									"pm.test(\"Reports the compile time\", function () {",
+									"    pm.expect(pm.response.json().compileMs).to.be.a(\"number\");",
 									"});"
-								],
-								"type": "text/javascript"
+								]
 							}
 						}
 					],
@@ -531,96 +377,69 @@
 						"header": [
 							{
 								"key": "Content-Type",
-								"value": "application/json"
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "X-Codemare-Token",
+								"value": "{{internalToken}}",
+								"type": "text"
 							}
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"problemId\": \"reverse-string\",\n  \"language\": \"javascript\",\n  \"code\": \"function reverseString(s) {\\n    let left = 0;\\n    let right = s.length - 1;\\n    while (left < right) {\\n        const temp = s[left];\\n        s[left] = s[right];\\n        s[right] = temp;\\n        left++;\\n        right--;\\n    }\\n    return s;\\n}\"\n}"
+							"raw": "{\n  \"language\": \"java\",\n  \"code\": \"import java.util.*;\\n\\nclass Solution {\\n    public static int[] twoSum(int[] nums, int target) {\\n        Map<Integer, Integer> seen = new HashMap<>();\\n        for (int i = 0; i < nums.length; i++) {\\n            Integer j = seen.get(target - nums[i]);\\n            if (j != null) return new int[]{j, i};\\n            seen.put(nums[i], i);\\n        }\\n        return new int[0];\\n    }\\n}\\n\",\n  \"functionName\": \"twoSum\",\n  \"signature\": {\n    \"params\": [\n      {\n        \"name\": \"nums\",\n        \"type\": \"int[]\"\n      },\n      {\n        \"name\": \"target\",\n        \"type\": \"int\"\n      }\n    ],\n    \"returns\": \"int[]\"\n  },\n  \"compareMode\": \"unordered\",\n  \"tests\": [\n    {\n      \"input\": [\n        [\n          2,\n          7,\n          11,\n          15\n        ],\n        9\n      ],\n      \"expected\": [\n        0,\n        1\n      ]\n    },\n    {\n      \"input\": [\n        [\n          3,\n          2,\n          4\n        ],\n        6\n      ],\n      \"expected\": [\n        1,\n        2\n      ]\n    },\n    {\n      \"input\": [\n        [\n          3,\n          3\n        ],\n        6\n      ],\n      \"expected\": [\n        0,\n        1\n      ],\n      \"hidden\": true\n    }\n  ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
 						},
 						"url": {
-							"raw": "{{baseUrl}}/api/execute",
+							"raw": "{{baseUrl}}/v1/run",
 							"host": [
 								"{{baseUrl}}"
 							],
 							"path": [
-								"api",
-								"execute"
+								"v1",
+								"run"
 							]
 						},
-						"description": "Execute a valid JavaScript solution for Reverse String."
+						"description": "Judge a Java solution against the tests in the body. C++, Java and Go need `signature`: their harnesses are generated from typed literals. The function is a static method of `class Solution`."
 					},
 					"response": []
 				},
 				{
-					"name": "Reverse String - JavaScript (Wrong Answer)",
+					"name": "Two Sum - Go (OK)",
 					"event": [
 						{
 							"listen": "test",
 							"script": {
+								"type": "text/javascript",
 								"exec": [
 									"pm.test(\"Status code is 200\", function () {",
 									"    pm.response.to.have.status(200);",
 									"});",
 									"",
-									"pm.test(\"Solution fails tests\", function () {",
-									"    const jsonData = pm.response.json();",
-									"    pm.expect(jsonData.success).to.be.false;",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"problemId\": \"reverse-string\",\n  \"language\": \"javascript\",\n  \"code\": \"function reverseString(s) {\\n    return s;\\n}\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/execute",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"execute"
-							]
-						},
-						"description": "Execute JavaScript code that returns wrong answer."
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "05 - Execute C++",
-			"item": [
-				{
-					"name": "Two Sum - C++ (Valid Solution)",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Status code is 200\", function () {",
-									"    pm.response.to.have.status(200);",
+									"pm.test(\"Verdict is OK\", function () {",
+									"    const res = pm.response.json();",
+									"    pm.expect(res.status).to.equal(\"OK\");",
+									"    pm.expect(res.totalTests).to.be.a(\"number\");",
+									"    pm.expect(res.runUs).to.be.a(\"number\");",
+									"    pm.expect(res.memoryKb).to.be.a(\"number\");",
+									"    pm.expect(res.tests).to.be.an(\"array\");",
 									"});",
 									"",
 									"pm.test(\"All tests passed\", function () {",
-									"    const jsonData = pm.response.json();",
-									"    pm.expect(jsonData.success).to.be.true;",
-									"    pm.expect(jsonData.totalPassed).to.equal(jsonData.totalTests);",
+									"    const res = pm.response.json();",
+									"    pm.expect(res.totalPassed).to.equal(res.totalTests);",
+									"    res.tests.forEach(function (t) { pm.expect(t.passed).to.equal(true); });",
+									"});",
+									"",
+									"pm.test(\"Reports the compile time\", function () {",
+									"    pm.expect(pm.response.json().compileMs).to.be.a(\"number\");",
 									"});"
-								],
-								"type": "text/javascript"
+								]
 							}
 						}
 					],
@@ -629,45 +448,65 @@
 						"header": [
 							{
 								"key": "Content-Type",
-								"value": "application/json"
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "X-Codemare-Token",
+								"value": "{{internalToken}}",
+								"type": "text"
 							}
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"problemId\": \"two-sum\",\n  \"language\": \"cpp\",\n  \"code\": \"#include <vector>\\n#include <unordered_map>\\nusing namespace std;\\n\\nvector<int> twoSum(vector<int>& nums, int target) {\\n    unordered_map<int, int> seen;\\n    for (int i = 0; i < nums.size(); i++) {\\n        int complement = target - nums[i];\\n        if (seen.find(complement) != seen.end()) {\\n            return {seen[complement], i};\\n        }\\n        seen[nums[i]] = i;\\n    }\\n    return {};\\n}\"\n}"
+							"raw": "{\n  \"language\": \"go\",\n  \"code\": \"func twoSum(nums []int, target int) []int {\\n\\tseen := map[int]int{}\\n\\tfor i, n := range nums {\\n\\t\\tif j, ok := seen[target-n]; ok {\\n\\t\\t\\treturn []int{j, i}\\n\\t\\t}\\n\\t\\tseen[n] = i\\n\\t}\\n\\treturn nil\\n}\\n\",\n  \"functionName\": \"twoSum\",\n  \"signature\": {\n    \"params\": [\n      {\n        \"name\": \"nums\",\n        \"type\": \"int[]\"\n      },\n      {\n        \"name\": \"target\",\n        \"type\": \"int\"\n      }\n    ],\n    \"returns\": \"int[]\"\n  },\n  \"compareMode\": \"unordered\",\n  \"tests\": [\n    {\n      \"input\": [\n        [\n          2,\n          7,\n          11,\n          15\n        ],\n        9\n      ],\n      \"expected\": [\n        0,\n        1\n      ]\n    },\n    {\n      \"input\": [\n        [\n          3,\n          2,\n          4\n        ],\n        6\n      ],\n      \"expected\": [\n        1,\n        2\n      ]\n    },\n    {\n      \"input\": [\n        [\n          3,\n          3\n        ],\n        6\n      ],\n      \"expected\": [\n        0,\n        1\n      ],\n      \"hidden\": true\n    }\n  ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
 						},
 						"url": {
-							"raw": "{{baseUrl}}/api/execute",
+							"raw": "{{baseUrl}}/v1/run",
 							"host": [
 								"{{baseUrl}}"
 							],
 							"path": [
-								"api",
-								"execute"
+								"v1",
+								"run"
 							]
 						},
-						"description": "Execute a valid C++ solution for the Two Sum problem."
+						"description": "Judge a Go solution against the tests in the body. C++, Java and Go need `signature`: their harnesses are generated from typed literals."
 					},
 					"response": []
 				},
 				{
-					"name": "Two Sum - C++ (Compilation Error)",
+					"name": "Wrong answer - Python (WA)",
 					"event": [
 						{
 							"listen": "test",
 							"script": {
+								"type": "text/javascript",
 								"exec": [
 									"pm.test(\"Status code is 200\", function () {",
 									"    pm.response.to.have.status(200);",
 									"});",
 									"",
-									"pm.test(\"Compilation error is reported\", function () {",
-									"    const jsonData = pm.response.json();",
-									"    pm.expect(jsonData.error).to.exist;",
-									"    pm.expect(jsonData.error).to.include('Compilation Error');",
+									"pm.test(\"Verdict is WA\", function () {",
+									"    const res = pm.response.json();",
+									"    pm.expect(res.status).to.equal(\"WA\");",
+									"    pm.expect(res.totalTests).to.be.a(\"number\");",
+									"    pm.expect(res.runUs).to.be.a(\"number\");",
+									"    pm.expect(res.memoryKb).to.be.a(\"number\");",
+									"    pm.expect(res.tests).to.be.an(\"array\");",
+									"});",
+									"",
+									"pm.test(\"No test passed; actual values are reported\", function () {",
+									"    const res = pm.response.json();",
+									"    pm.expect(res.totalPassed).to.equal(0);",
+									"    pm.expect(res.tests[0].actual).to.eql([0, 0]);",
 									"});"
-								],
-								"type": "text/javascript"
+								]
 							}
 						}
 					],
@@ -676,44 +515,331 @@
 						"header": [
 							{
 								"key": "Content-Type",
-								"value": "application/json"
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "X-Codemare-Token",
+								"value": "{{internalToken}}",
+								"type": "text"
 							}
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"problemId\": \"two-sum\",\n  \"language\": \"cpp\",\n  \"code\": \"#include <vector>\\nusing namespace std;\\n\\nvector<int> twoSum(vector<int>& nums, int target) {\\n    return {0, 1}\\n\"\n}"
+							"raw": "{\n  \"language\": \"python\",\n  \"code\": \"def twoSum(nums, target):\\n    return [0, 0]\\n\",\n  \"functionName\": \"twoSum\",\n  \"compareMode\": \"unordered\",\n  \"tests\": [\n    {\n      \"input\": [\n        [\n          2,\n          7,\n          11,\n          15\n        ],\n        9\n      ],\n      \"expected\": [\n        0,\n        1\n      ]\n    },\n    {\n      \"input\": [\n        [\n          3,\n          2,\n          4\n        ],\n        6\n      ],\n      \"expected\": [\n        1,\n        2\n      ]\n    },\n    {\n      \"input\": [\n        [\n          3,\n          3\n        ],\n        6\n      ],\n      \"expected\": [\n        0,\n        1\n      ],\n      \"hidden\": true\n    }\n  ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
 						},
 						"url": {
-							"raw": "{{baseUrl}}/api/execute",
+							"raw": "{{baseUrl}}/v1/run",
 							"host": [
 								"{{baseUrl}}"
 							],
 							"path": [
-								"api",
-								"execute"
+								"v1",
+								"run"
 							]
 						},
-						"description": "Execute C++ code with compilation error (missing closing brace and semicolon)."
+						"description": "A clean run whose answers are wrong is WA; each test carries the actual value."
 					},
 					"response": []
 				},
 				{
-					"name": "Reverse String - C++ (Valid Solution)",
+					"name": "Syntax error - Python (CE)",
 					"event": [
 						{
 							"listen": "test",
 							"script": {
+								"type": "text/javascript",
 								"exec": [
 									"pm.test(\"Status code is 200\", function () {",
 									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Verdict is CE\", function () {",
+									"    const res = pm.response.json();",
+									"    pm.expect(res.status).to.equal(\"CE\");",
+									"    pm.expect(res.totalTests).to.be.a(\"number\");",
+									"    pm.expect(res.runUs).to.be.a(\"number\");",
+									"    pm.expect(res.memoryKb).to.be.a(\"number\");",
+									"    pm.expect(res.tests).to.be.an(\"array\");",
+									"});",
+									"",
+									"pm.test(\"No tests ran; the error names solution.py\", function () {",
+									"    const res = pm.response.json();",
+									"    pm.expect(res.tests).to.have.lengthOf(0);",
+									"    pm.expect(res.error).to.include(\"solution.py\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "X-Codemare-Token",
+								"value": "{{internalToken}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"language\": \"python\",\n  \"code\": \"def twoSum(nums, target):\\n    return [0,\\n\",\n  \"functionName\": \"twoSum\",\n  \"compareMode\": \"unordered\",\n  \"tests\": [\n    {\n      \"input\": [\n        [\n          2,\n          7,\n          11,\n          15\n        ],\n        9\n      ],\n      \"expected\": [\n        0,\n        1\n      ]\n    },\n    {\n      \"input\": [\n        [\n          3,\n          2,\n          4\n        ],\n        6\n      ],\n      \"expected\": [\n        1,\n        2\n      ]\n    },\n    {\n      \"input\": [\n        [\n          3,\n          3\n        ],\n        6\n      ],\n      \"expected\": [\n        0,\n        1\n      ],\n      \"hidden\": true\n    }\n  ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/v1/run",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"run"
+							]
+						},
+						"description": "A syntax error is a CE verdict (not an HTTP error). No test runs; `error` points at the learner's own file and line."
+					},
+					"response": []
+				},
+				{
+					"name": "Compile error - C++ (CE)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Verdict is CE\", function () {",
+									"    const res = pm.response.json();",
+									"    pm.expect(res.status).to.equal(\"CE\");",
+									"    pm.expect(res.totalTests).to.be.a(\"number\");",
+									"    pm.expect(res.runUs).to.be.a(\"number\");",
+									"    pm.expect(res.memoryKb).to.be.a(\"number\");",
+									"    pm.expect(res.tests).to.be.an(\"array\");",
+									"});",
+									"",
+									"pm.test(\"The compiler error names solution.cpp\", function () {",
+									"    pm.expect(pm.response.json().error).to.match(/solution\\.cpp:2:\\d+: error/);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "X-Codemare-Token",
+								"value": "{{internalToken}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"language\": \"cpp\",\n  \"code\": \"std::vector<int> twoSum(std::vector<int>& nums, int target) {\\n    return nums.size() + ;\\n}\\n\",\n  \"functionName\": \"twoSum\",\n  \"signature\": {\n    \"params\": [\n      {\n        \"name\": \"nums\",\n        \"type\": \"int[]\"\n      },\n      {\n        \"name\": \"target\",\n        \"type\": \"int\"\n      }\n    ],\n    \"returns\": \"int[]\"\n  },\n  \"compareMode\": \"unordered\",\n  \"tests\": [\n    {\n      \"input\": [\n        [\n          2,\n          7,\n          11,\n          15\n        ],\n        9\n      ],\n      \"expected\": [\n        0,\n        1\n      ]\n    },\n    {\n      \"input\": [\n        [\n          3,\n          2,\n          4\n        ],\n        6\n      ],\n      \"expected\": [\n        1,\n        2\n      ]\n    },\n    {\n      \"input\": [\n        [\n          3,\n          3\n        ],\n        6\n      ],\n      \"expected\": [\n        0,\n        1\n      ],\n      \"hidden\": true\n    }\n  ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/v1/run",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"run"
+							]
+						},
+						"description": "Compiler output comes back in `error`, with paths mapped to solution.cpp."
+					},
+					"response": []
+				},
+				{
+					"name": "Runtime error - Python (RE)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Verdict is RE\", function () {",
+									"    const res = pm.response.json();",
+									"    pm.expect(res.status).to.equal(\"RE\");",
+									"    pm.expect(res.totalTests).to.be.a(\"number\");",
+									"    pm.expect(res.runUs).to.be.a(\"number\");",
+									"    pm.expect(res.memoryKb).to.be.a(\"number\");",
+									"    pm.expect(res.tests).to.be.an(\"array\");",
+									"});",
+									"",
+									"pm.test(\"Every test is reported, none passed\", function () {",
+									"    const res = pm.response.json();",
+									"    pm.expect(res.tests).to.have.lengthOf(3);",
+									"    pm.expect(res.totalPassed).to.equal(0);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "X-Codemare-Token",
+								"value": "{{internalToken}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"language\": \"python\",\n  \"code\": \"import sys\\n\\ndef twoSum(nums, target):\\n    sys.exit(3)\\n\",\n  \"functionName\": \"twoSum\",\n  \"compareMode\": \"unordered\",\n  \"tests\": [\n    {\n      \"input\": [\n        [\n          2,\n          7,\n          11,\n          15\n        ],\n        9\n      ],\n      \"expected\": [\n        0,\n        1\n      ]\n    },\n    {\n      \"input\": [\n        [\n          3,\n          2,\n          4\n        ],\n        6\n      ],\n      \"expected\": [\n        1,\n        2\n      ]\n    },\n    {\n      \"input\": [\n        [\n          3,\n          3\n        ],\n        6\n      ],\n      \"expected\": [\n        0,\n        1\n      ],\n      \"hidden\": true\n    }\n  ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/v1/run",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"run"
+							]
+						},
+						"description": "The process dying (a crash or a non-zero exit) is RE. (An exception raised inside one call is only that test failing: WA.)"
+					},
+					"response": []
+				},
+				{
+					"name": "Time limit - Python (TLE)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Verdict is TLE\", function () {",
+									"    const res = pm.response.json();",
+									"    pm.expect(res.status).to.equal(\"TLE\");",
+									"    pm.expect(res.totalTests).to.be.a(\"number\");",
+									"    pm.expect(res.runUs).to.be.a(\"number\");",
+									"    pm.expect(res.memoryKb).to.be.a(\"number\");",
+									"    pm.expect(res.tests).to.be.an(\"array\");",
+									"});",
+									"",
+									"pm.test(\"The first test passed, the second hit the limit\", function () {",
+									"    const res = pm.response.json();",
+									"    pm.expect(res.tests[0].passed).to.equal(true);",
+									"    pm.expect(res.tests[1].error).to.equal(\"Time limit exceeded\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "X-Codemare-Token",
+								"value": "{{internalToken}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"language\": \"python\",\n  \"code\": \"def twoSum(nums, target):\\n    while target == 6:\\n        pass\\n    return [0, 1]\\n\",\n  \"functionName\": \"twoSum\",\n  \"compareMode\": \"unordered\",\n  \"tests\": [\n    {\n      \"input\": [\n        [\n          2,\n          7,\n          11,\n          15\n        ],\n        9\n      ],\n      \"expected\": [\n        0,\n        1\n      ]\n    },\n    {\n      \"input\": [\n        [\n          3,\n          2,\n          4\n        ],\n        6\n      ],\n      \"expected\": [\n        1,\n        2\n      ]\n    },\n    {\n      \"input\": [\n        [\n          3,\n          3\n        ],\n        6\n      ],\n      \"expected\": [\n        0,\n        1\n      ],\n      \"hidden\": true\n    }\n  ],\n  \"limits\": {\n    \"timeMs\": 1000,\n    \"memoryMb\": 256\n  }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/v1/run",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"run"
+							]
+						},
+						"description": "`limits` caps the whole run (timeMs 100-10000, memoryMb 32-512). Tests that finished before the limit keep their results; the one running carries the reason; later ones are \"not run\"."
+					},
+					"response": []
+				},
+				{
+					"name": "Prelude - Python helper (OK)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Verdict is OK\", function () {",
+									"    const res = pm.response.json();",
+									"    pm.expect(res.status).to.equal(\"OK\");",
+									"    pm.expect(res.totalTests).to.be.a(\"number\");",
+									"    pm.expect(res.runUs).to.be.a(\"number\");",
+									"    pm.expect(res.memoryKb).to.be.a(\"number\");",
+									"    pm.expect(res.tests).to.be.an(\"array\");",
 									"});",
 									"",
 									"pm.test(\"All tests passed\", function () {",
-									"    const jsonData = pm.response.json();",
-									"    pm.expect(jsonData.success).to.be.true;",
+									"    const res = pm.response.json();",
+									"    pm.expect(res.totalPassed).to.equal(res.totalTests);",
+									"    res.tests.forEach(function (t) { pm.expect(t.passed).to.equal(true); });",
 									"});"
-								],
-								"type": "text/javascript"
+								]
 							}
 						}
 					],
@@ -722,578 +848,56 @@
 						"header": [
 							{
 								"key": "Content-Type",
-								"value": "application/json"
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "X-Codemare-Token",
+								"value": "{{internalToken}}",
+								"type": "text"
 							}
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"problemId\": \"reverse-string\",\n  \"language\": \"cpp\",\n  \"code\": \"#include <vector>\\nusing namespace std;\\n\\nvector<char> reverseString(vector<char>& s) {\\n    int left = 0;\\n    int right = s.size() - 1;\\n    while (left < right) {\\n        char temp = s[left];\\n        s[left] = s[right];\\n        s[right] = temp;\\n        left++;\\n        right--;\\n    }\\n    return s;\\n}\"\n}"
+							"raw": "{\n  \"language\": \"python\",\n  \"code\": \"def twoSum(nums, target):\\n    seen = {}\\n    for i, n in enumerate(nums):\\n        if complement(target, n) in seen:\\n            return [seen[complement(target, n)], i]\\n        seen[n] = i\\n    return []\\n\",\n  \"functionName\": \"twoSum\",\n  \"compareMode\": \"unordered\",\n  \"tests\": [\n    {\n      \"input\": [\n        [\n          2,\n          7,\n          11,\n          15\n        ],\n        9\n      ],\n      \"expected\": [\n        0,\n        1\n      ]\n    },\n    {\n      \"input\": [\n        [\n          3,\n          2,\n          4\n        ],\n        6\n      ],\n      \"expected\": [\n        1,\n        2\n      ]\n    },\n    {\n      \"input\": [\n        [\n          3,\n          3\n        ],\n        6\n      ],\n      \"expected\": [\n        0,\n        1\n      ],\n      \"hidden\": true\n    }\n  ],\n  \"prelude\": [\n    \"def complement(target, n):\\n    return target - n\\n\"\n  ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
 						},
 						"url": {
-							"raw": "{{baseUrl}}/api/execute",
+							"raw": "{{baseUrl}}/v1/run",
 							"host": [
 								"{{baseUrl}}"
 							],
 							"path": [
-								"api",
-								"execute"
+								"v1",
+								"run"
 							]
 						},
-						"description": "Execute a valid C++ solution for Reverse String."
+						"description": "`prelude` sources (same language; not Java) are placed before `code`, e.g. the components a build step depends on."
 					},
 					"response": []
 				},
 				{
-					"name": "Reverse String - C++ (Invalid Solution)",
+					"name": "Validation - C++ without a signature (400)",
 					"event": [
 						{
 							"listen": "test",
 							"script": {
-								"exec": [
-									"pm.test(\"Status code is 200\", function () {",
-									"    pm.response.to.have.status(200);",
-									"});",
-									"",
-									"pm.test(\"Solution fails tests\", function () {",
-									"    const jsonData = pm.response.json();",
-									"    pm.expect(jsonData.success).to.be.false;",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"problemId\": \"reverse-string\",\n  \"language\": \"cpp\",\n  \"code\": \"#include <vector>\\nusing namespace std;\\n\\nvector<char> reverseString(vector<char>& s) {\\n    return s;\\n}\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/execute",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"execute"
-							]
-						},
-						"description": "Execute C++ code that returns wrong answer."
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "06 - Execute Java",
-			"item": [
-				{
-					"name": "Two Sum - Java (Valid Solution)",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Status code is 200\", function () {",
-									"    pm.response.to.have.status(200);",
-									"});",
-									"",
-									"pm.test(\"All tests passed\", function () {",
-									"    const jsonData = pm.response.json();",
-									"    pm.expect(jsonData.success).to.be.true;",
-									"    pm.expect(jsonData.totalPassed).to.equal(jsonData.totalTests);",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"problemId\": \"two-sum\",\n  \"language\": \"java\",\n  \"code\": \"class Solution {\\n    public int[] twoSum(int[] nums, int target) {\\n        java.util.HashMap<Integer, Integer> seen = new java.util.HashMap<>();\\n        for (int i = 0; i < nums.length; i++) {\\n            int complement = target - nums[i];\\n            if (seen.containsKey(complement)) {\\n                return new int[]{seen.get(complement), i};\\n            }\\n            seen.put(nums[i], i);\\n        }\\n        return new int[]{};\\n    }\\n}\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/execute",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"execute"
-							]
-						},
-						"description": "Execute a valid Java solution for the Two Sum problem."
-					},
-					"response": []
-				},
-				{
-					"name": "Two Sum - Java (Compilation Error)",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Status code is 200\", function () {",
-									"    pm.response.to.have.status(200);",
-									"});",
-									"",
-									"pm.test(\"Compilation error is reported\", function () {",
-									"    const jsonData = pm.response.json();",
-									"    pm.expect(jsonData.error).to.exist;",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"problemId\": \"two-sum\",\n  \"language\": \"java\",\n  \"code\": \"class Solution {\\n    public int[] twoSum(int[] nums, int target) {\\n        return new int[]{0, 1}\\n    }\\n}\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/execute",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"execute"
-							]
-						},
-						"description": "Execute Java code with compilation error (missing semicolon)."
-					},
-					"response": []
-				},
-				{
-					"name": "Reverse String - Java (Valid Solution)",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Status code is 200\", function () {",
-									"    pm.response.to.have.status(200);",
-									"});",
-									"",
-									"pm.test(\"All tests passed\", function () {",
-									"    const jsonData = pm.response.json();",
-									"    pm.expect(jsonData.success).to.be.true;",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"problemId\": \"reverse-string\",\n  \"language\": \"java\",\n  \"code\": \"class Solution {\\n    public char[] reverseString(char[] s) {\\n        int left = 0;\\n        int right = s.length - 1;\\n        while (left < right) {\\n            char temp = s[left];\\n            s[left] = s[right];\\n            s[right] = temp;\\n            left++;\\n            right--;\\n        }\\n        return s;\\n    }\\n}\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/execute",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"execute"
-							]
-						},
-						"description": "Execute a valid Java solution for Reverse String."
-					},
-					"response": []
-				},
-				{
-					"name": "Reverse String - Java (Runtime Error)",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Status code is 200\", function () {",
-									"    pm.response.to.have.status(200);",
-									"});",
-									"",
-									"pm.test(\"Error is reported\", function () {",
-									"    const jsonData = pm.response.json();",
-									"    pm.expect(jsonData.success).to.be.false;",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"problemId\": \"reverse-string\",\n  \"language\": \"java\",\n  \"code\": \"class Solution {\\n    public char[] reverseString(char[] s) {\\n        return s[999];\\n    }\\n}\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/execute",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"execute"
-							]
-						},
-						"description": "Execute Java code with runtime error (array index out of bounds)."
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "07 - IDE Execution",
-			"item": [
-				{
-					"name": "IDE - Python (Simple Addition)",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Status code is 200\", function () {",
-									"    pm.response.to.have.status(200);",
-									"});",
-									"",
-									"pm.test(\"All tests passed\", function () {",
-									"    const jsonData = pm.response.json();",
-									"    pm.expect(jsonData.success).to.be.true;",
-									"    pm.expect(jsonData.totalPassed).to.equal(jsonData.totalTests);",
-									"});",
-									"",
-									"pm.test(\"Test results are correct\", function () {",
-									"    const jsonData = pm.response.json();",
-									"    pm.expect(jsonData.testResults).to.be.an('array');",
-									"    jsonData.testResults.forEach(function(result) {",
-									"        pm.expect(result.passed).to.be.true;",
-									"    });",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"code\": \"a, b = map(int, input().split())\\nprint(a + b)\",\n  \"language\": \"python\",\n  \"testCases\": [\n    {\"input\": \"2 3\", \"expectedOutput\": \"5\\n\"},\n    {\"input\": \"10 20\", \"expectedOutput\": \"30\\n\"},\n    {\"input\": \"-5 15\", \"expectedOutput\": \"10\\n\"}\n  ]\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/ide/execute",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"ide",
-								"execute"
-							]
-						},
-						"description": "Execute Python code that reads two numbers from stdin and outputs their sum."
-					},
-					"response": []
-				},
-				{
-					"name": "IDE - JavaScript (String Manipulation)",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Status code is 200\", function () {",
-									"    pm.response.to.have.status(200);",
-									"});",
-									"",
-									"pm.test(\"All tests passed\", function () {",
-									"    const jsonData = pm.response.json();",
-									"    pm.expect(jsonData.success).to.be.true;",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"code\": \"const line = readline();\\nconsole.log(line.toUpperCase());\",\n  \"language\": \"javascript\",\n  \"testCases\": [\n    {\"input\": \"hello\", \"expectedOutput\": \"HELLO\\n\"},\n    {\"input\": \"world\", \"expectedOutput\": \"WORLD\\n\"}\n  ]\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/ide/execute",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"ide",
-								"execute"
-							]
-						},
-						"description": "Execute JavaScript code that converts input to uppercase."
-					},
-					"response": []
-				},
-				{
-					"name": "IDE - C++ (Simple I/O)",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Status code is 200\", function () {",
-									"    pm.response.to.have.status(200);",
-									"});",
-									"",
-									"pm.test(\"All tests passed\", function () {",
-									"    const jsonData = pm.response.json();",
-									"    pm.expect(jsonData.success).to.be.true;",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"code\": \"#include <iostream>\\nusing namespace std;\\nint main() {\\n    int a, b;\\n    cin >> a >> b;\\n    cout << a + b << endl;\\n    return 0;\\n}\",\n  \"language\": \"cpp\",\n  \"testCases\": [\n    {\"input\": \"3 4\", \"expectedOutput\": \"7\\n\"},\n    {\"input\": \"100 200\", \"expectedOutput\": \"300\\n\"}\n  ]\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/ide/execute",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"ide",
-								"execute"
-							]
-						},
-						"description": "Execute C++ code with stdin/stdout."
-					},
-					"response": []
-				},
-				{
-					"name": "IDE - Java (Scanner Input)",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Status code is 200\", function () {",
-									"    pm.response.to.have.status(200);",
-									"});",
-									"",
-									"pm.test(\"All tests passed\", function () {",
-									"    const jsonData = pm.response.json();",
-									"    pm.expect(jsonData.success).to.be.true;",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"code\": \"import java.util.*;\\npublic class Main {\\n    public static void main(String[] args) {\\n        Scanner sc = new Scanner(System.in);\\n        int a = sc.nextInt();\\n        int b = sc.nextInt();\\n        System.out.println(a + b);\\n    }\\n}\",\n  \"language\": \"java\",\n  \"testCases\": [\n    {\"input\": \"8 12\", \"expectedOutput\": \"20\\n\"},\n    {\"input\": \"50 75\", \"expectedOutput\": \"125\\n\"}\n  ]\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/ide/execute",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"ide",
-								"execute"
-							]
-						},
-						"description": "Execute Java code with Scanner for stdin input."
-					},
-					"response": []
-				},
-				{
-					"name": "IDE - Python (Failed Test)",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Status code is 200\", function () {",
-									"    pm.response.to.have.status(200);",
-									"});",
-									"",
-									"pm.test(\"Test fails as expected\", function () {",
-									"    const jsonData = pm.response.json();",
-									"    pm.expect(jsonData.success).to.be.false;",
-									"    pm.expect(jsonData.totalPassed).to.be.below(jsonData.totalTests);",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"code\": \"a, b = map(int, input().split())\\nprint(a * b)\",\n  \"language\": \"python\",\n  \"testCases\": [\n    {\"input\": \"2 3\", \"expectedOutput\": \"5\\n\"}\n  ]\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/ide/execute",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"ide",
-								"execute"
-							]
-						},
-						"description": "Execute code where output doesn't match expected (multiplication instead of addition)."
-					},
-					"response": []
-				},
-				{
-					"name": "IDE - Python (Runtime Error)",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Status code is 200\", function () {",
-									"    pm.response.to.have.status(200);",
-									"});",
-									"",
-									"pm.test(\"Runtime error is reported\", function () {",
-									"    const jsonData = pm.response.json();",
-									"    pm.expect(jsonData.success).to.be.false;",
-									"    pm.expect(jsonData.testResults[0].error).to.exist;",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"code\": \"a, b = map(int, input().split())\\nprint(a / 0)\",\n  \"language\": \"python\",\n  \"testCases\": [\n    {\"input\": \"10 5\", \"expectedOutput\": \"2\\n\"}\n  ]\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/ide/execute",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"ide",
-								"execute"
-							]
-						},
-						"description": "Execute code with runtime error (division by zero)."
-					},
-					"response": []
-				},
-				{
-					"name": "IDE - Too Many Test Cases",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
+								"type": "text/javascript",
 								"exec": [
 									"pm.test(\"Status code is 400\", function () {",
 									"    pm.response.to.have.status(400);",
 									"});",
 									"",
-									"pm.test(\"Error message about limit\", function () {",
-									"    const jsonData = pm.response.json();",
-									"    pm.expect(jsonData.error).to.include('10 test cases');",
+									"pm.test(\"Says what is wrong\", function () {",
+									"    const res = pm.response.json();",
+									"    pm.expect(res.error).to.equal(\"signature: required for cpp\");",
+									"    pm.expect(res.details).to.be.an(\"array\");",
 									"});"
-								],
-								"type": "text/javascript"
+								]
 							}
 						}
 					],
@@ -1302,97 +906,84 @@
 						"header": [
 							{
 								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"code\": \"print('test')\",\n  \"language\": \"python\",\n  \"testCases\": [\n    {\"input\": \"1\", \"expectedOutput\": \"test\\n\"},\n    {\"input\": \"2\", \"expectedOutput\": \"test\\n\"},\n    {\"input\": \"3\", \"expectedOutput\": \"test\\n\"},\n    {\"input\": \"4\", \"expectedOutput\": \"test\\n\"},\n    {\"input\": \"5\", \"expectedOutput\": \"test\\n\"},\n    {\"input\": \"6\", \"expectedOutput\": \"test\\n\"},\n    {\"input\": \"7\", \"expectedOutput\": \"test\\n\"},\n    {\"input\": \"8\", \"expectedOutput\": \"test\\n\"},\n    {\"input\": \"9\", \"expectedOutput\": \"test\\n\"},\n    {\"input\": \"10\", \"expectedOutput\": \"test\\n\"},\n    {\"input\": \"11\", \"expectedOutput\": \"test\\n\"}\n  ]\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/ide/execute",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"ide",
-								"execute"
-							]
-						},
-						"description": "Test validation error for exceeding 10 test case limit."
-					},
-					"response": []
-				},
-				{
-					"name": "IDE - Invalid Language",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Status code is 400\", function () {",
-									"    pm.response.to.have.status(400);",
-									"});",
-									"",
-									"pm.test(\"Error message present\", function () {",
-									"    const jsonData = pm.response.json();",
-									"    pm.expect(jsonData.error).to.exist;",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
+								"value": "application/json",
+								"type": "text"
+							},
 							{
-								"key": "Content-Type",
-								"value": "application/json"
+								"key": "X-Codemare-Token",
+								"value": "{{internalToken}}",
+								"type": "text"
 							}
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"code\": \"puts 'hello'\",\n  \"language\": \"ruby\",\n  \"testCases\": [\n    {\"input\": \"\", \"expectedOutput\": \"hello\\n\"}\n  ]\n}"
+							"raw": "{\n  \"language\": \"cpp\",\n  \"code\": \"int f() { return 1; }\",\n  \"functionName\": \"f\",\n  \"tests\": [\n    {\n      \"input\": [],\n      \"expected\": 1\n    }\n  ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
 						},
 						"url": {
-							"raw": "{{baseUrl}}/api/ide/execute",
+							"raw": "{{baseUrl}}/v1/run",
 							"host": [
 								"{{baseUrl}}"
 							],
 							"path": [
-								"api",
-								"ide",
-								"execute"
+								"v1",
+								"run"
 							]
 						},
-						"description": "Test validation error for unsupported language."
+						"description": "Caller mistakes are a 400 `{error, details}` before anything runs."
 					},
 					"response": []
 				}
 			]
 		},
 		{
-			"name": "08 - Error Cases",
+			"name": "03 - Run stream (POST /v1/run/stream)",
+			"description": "The same run as Server-Sent Events: `queued` (only when waiting for a sandbox box), `compiling` (TypeScript, and compiled languages on a compile-cache miss), `running`, one `test` per test in order, then `verdict` (the JSON result without `tests`). An `error` event appears only if the run itself failed. Heartbeat comments (`: keep-alive`) every 15 s.",
 			"item": [
 				{
-					"name": "Execute - Invalid Language",
+					"name": "Two Sum - C++ (SSE)",
 					"event": [
 						{
 							"listen": "test",
 							"script": {
+								"type": "text/javascript",
 								"exec": [
-									"pm.test(\"Status code indicates error\", function () {",
-									"    pm.expect(pm.response.code).to.be.oneOf([400, 404, 500]);",
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
 									"});",
 									"",
-									"pm.test(\"Error message is present\", function () {",
-									"    const jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('error');",
+									"pm.test(\"Content-Type is text/event-stream\", function () {",
+									"    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"text/event-stream\");",
+									"});",
+									"",
+									"function events() {",
+									"    return pm.response.text().split(\"\\n\\n\").filter(function (b) {",
+									"        return b.trim() !== \"\" && b.charAt(0) !== \":\";",
+									"    }).map(function (block) {",
+									"        var e = { event: \"message\", data: \"\" };",
+									"        block.split(\"\\n\").forEach(function (line) {",
+									"            if (line.indexOf(\"event: \") === 0) e.event = line.slice(7);",
+									"            else if (line.indexOf(\"data: \") === 0) e.data += line.slice(6);",
+									"        });",
+									"        e.data = e.data ? JSON.parse(e.data) : undefined;",
+									"        return e;",
+									"    });",
+									"}",
+									"",
+									"pm.test(\"running, three test events in order, then an OK verdict\", function () {",
+									"    const all = events();",
+									"    const names = all.map(function (e) { return e.event; });",
+									"    pm.expect(names).to.include(\"running\");",
+									"    const tests = all.filter(function (e) { return e.event === \"test\"; });",
+									"    pm.expect(tests.map(function (e) { return e.data.idx; })).to.eql([0, 1, 2]);",
+									"    pm.expect(names[names.length - 1]).to.equal(\"verdict\");",
+									"    pm.expect(all[all.length - 1].data.status).to.equal(\"OK\");",
 									"});"
-								],
-								"type": "text/javascript"
+								]
 							}
 						}
 					],
@@ -1401,167 +992,614 @@
 						"header": [
 							{
 								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"problemId\": \"two-sum\",\n  \"language\": \"ruby\",\n  \"code\": \"def two_sum(nums, target)\\n  []\\nend\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/execute",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"execute"
-							]
-						},
-						"description": "Test error handling for invalid language."
-					},
-					"response": []
-				},
-				{
-					"name": "Execute - Code Too Large",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Request completes\", function () {",
-									"    pm.response.to.not.be.error;",
-									"});",
-									"",
-									"pm.test(\"Error is reported\", function () {",
-									"    const jsonData = pm.response.json();",
-									"    pm.expect(jsonData.success).to.be.false;",
-									"    pm.expect(jsonData.error).to.exist;",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
+								"value": "application/json",
+								"type": "text"
+							},
 							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"problemId\": \"two-sum\",\n  \"language\": \"python\",\n  \"code\": \"def twoSum(nums, target):\\n    # This is a very long comment to exceed the 10KB limit.\\n    # Adding many lines of comments...\\n    # AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\\n    return []\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/execute",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"execute"
-							]
-						},
-						"description": "Test error handling for code exceeding 10KB limit."
-					},
-					"response": []
-				},
-				{
-					"name": "Execute - Problem Not Found",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Status code indicates error\", function () {",
-									"    pm.expect(pm.response.code).to.be.oneOf([400, 404, 500]);",
-									"});",
-									"",
-									"pm.test(\"Error message is present\", function () {",
-									"    const jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('error');",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
+								"key": "X-Codemare-Token",
+								"value": "{{internalToken}}",
+								"type": "text"
+							},
 							{
-								"key": "Content-Type",
-								"value": "application/json"
+								"key": "Accept",
+								"value": "text/event-stream",
+								"type": "text"
 							}
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"problemId\": \"non-existent-problem\",\n  \"language\": \"python\",\n  \"code\": \"def solution(): return True\"\n}"
+							"raw": "{\n  \"language\": \"cpp\",\n  \"code\": \"std::vector<int> twoSum(std::vector<int>& nums, int target) {\\n    std::unordered_map<int, int> seen;\\n    for (int i = 0; i < (int)nums.size(); i++) {\\n        auto it = seen.find(target - nums[i]);\\n        if (it != seen.end()) return {it->second, i};\\n        seen[nums[i]] = i;\\n    }\\n    return {};\\n}\\n\",\n  \"functionName\": \"twoSum\",\n  \"signature\": {\n    \"params\": [\n      {\n        \"name\": \"nums\",\n        \"type\": \"int[]\"\n      },\n      {\n        \"name\": \"target\",\n        \"type\": \"int\"\n      }\n    ],\n    \"returns\": \"int[]\"\n  },\n  \"compareMode\": \"unordered\",\n  \"tests\": [\n    {\n      \"input\": [\n        [\n          2,\n          7,\n          11,\n          15\n        ],\n        9\n      ],\n      \"expected\": [\n        0,\n        1\n      ]\n    },\n    {\n      \"input\": [\n        [\n          3,\n          2,\n          4\n        ],\n        6\n      ],\n      \"expected\": [\n        1,\n        2\n      ]\n    },\n    {\n      \"input\": [\n        [\n          3,\n          3\n        ],\n        6\n      ],\n      \"expected\": [\n        0,\n        1\n      ],\n      \"hidden\": true\n    }\n  ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
 						},
 						"url": {
-							"raw": "{{baseUrl}}/api/execute",
+							"raw": "{{baseUrl}}/v1/run/stream",
 							"host": [
 								"{{baseUrl}}"
 							],
 							"path": [
-								"api",
-								"execute"
+								"v1",
+								"run",
+								"stream"
 							]
 						},
-						"description": "Test error handling for non-existent problem ID."
-					},
-					"response": []
-				},
-				{
-					"name": "Execute - Missing Fields",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Status code indicates error\", function () {",
-									"    pm.expect(pm.response.code).to.be.oneOf([400, 404, 500]);",
-									"});",
-									"",
-									"pm.test(\"Error message is present\", function () {",
-									"    const jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('error');",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"problemId\": \"two-sum\",\n  \"language\": \"python\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/execute",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"execute"
-							]
-						},
-						"description": "Test error handling for missing required field (code)."
+						"description": "Postman shows the events as they arrive; the tests below run once the stream ends."
 					},
 					"response": []
 				}
 			]
+		},
+		{
+			"name": "04 - IDE (POST /v1/ide/execute)",
+			"description": "Whole programs reading stdin and writing stdout, 1-10 test cases, compared on stdout (trailing whitespace ignored). `?wait=true` always answers inline. Without it, a service with REDIS_URL set queues the run and answers 202 `{token, status: \"PND\"}`; poll GET /v1/ide/execute/:token. Without Redis every request answers inline.",
+			"item": [
+				{
+					"name": "Python - sum of two numbers (wait)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Every case passed\", function () {",
+									"    const res = pm.response.json();",
+									"    pm.expect(res.success).to.equal(true);",
+									"    pm.expect(res.totalPassed).to.equal(res.totalTests);",
+									"    res.testResults.forEach(function (r) {",
+									"        pm.expect(r.passed).to.equal(true);",
+									"        pm.expect(r.status).to.equal(\"OK\");",
+									"    });",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "X-Codemare-Token",
+								"value": "{{internalToken}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"language\": \"python\",\n  \"code\": \"a, b = map(int, input().split())\\nprint(a + b)\\n\",\n  \"testCases\": [\n    {\n      \"input\": \"2 3\",\n      \"expectedOutput\": \"5\"\n    },\n    {\n      \"input\": \"10 20\",\n      \"expectedOutput\": \"30\"\n    },\n    {\n      \"input\": \"-5 15\",\n      \"expectedOutput\": \"10\"\n    }\n  ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/v1/ide/execute?wait=true",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"ide",
+								"execute"
+							],
+							"query": [
+								{
+									"key": "wait",
+									"value": "true"
+								}
+							]
+						},
+						"description": "Each case gets its own process; `testResults[i].status` is OK, WA, TLE, MLE, RE, CE or XX."
+					},
+					"response": []
+				},
+				{
+					"name": "Java - Scanner input (wait)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Every case passed\", function () {",
+									"    const res = pm.response.json();",
+									"    pm.expect(res.success).to.equal(true);",
+									"    pm.expect(res.totalPassed).to.equal(res.totalTests);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "X-Codemare-Token",
+								"value": "{{internalToken}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"language\": \"java\",\n  \"code\": \"import java.util.Scanner;\\n\\npublic class Main {\\n    public static void main(String[] args) {\\n        Scanner in = new Scanner(System.in);\\n        String name = in.nextLine().trim();\\n        System.out.println(\\\"Hello, \\\" + name + \\\"!\\\");\\n    }\\n}\\n\",\n  \"testCases\": [\n    {\n      \"input\": \"World\",\n      \"expectedOutput\": \"Hello, World!\"\n    },\n    {\n      \"input\": \"Codemare\",\n      \"expectedOutput\": \"Hello, Codemare!\"\n    }\n  ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/v1/ide/execute?wait=true",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"ide",
+								"execute"
+							],
+							"query": [
+								{
+									"key": "wait",
+									"value": "true"
+								}
+							]
+						},
+						"description": "Java runs the `public class` it finds (here Main); the class is compiled once for all cases."
+					},
+					"response": []
+				},
+				{
+					"name": "Go - word count (wait)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Every case passed\", function () {",
+									"    const res = pm.response.json();",
+									"    pm.expect(res.success).to.equal(true);",
+									"    pm.expect(res.totalPassed).to.equal(res.totalTests);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "X-Codemare-Token",
+								"value": "{{internalToken}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"language\": \"go\",\n  \"code\": \"package main\\n\\nimport (\\n\\t\\\"bufio\\\"\\n\\t\\\"fmt\\\"\\n\\t\\\"os\\\"\\n\\t\\\"strings\\\"\\n)\\n\\nfunc main() {\\n\\tline, _ := bufio.NewReader(os.Stdin).ReadString('\\\\n')\\n\\tfmt.Println(len(strings.Fields(line)))\\n}\\n\",\n  \"testCases\": [\n    {\n      \"input\": \"the quick brown fox\\n\",\n      \"expectedOutput\": \"4\"\n    },\n    {\n      \"input\": \"hello\\n\",\n      \"expectedOutput\": \"1\"\n    }\n  ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/v1/ide/execute?wait=true",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"ide",
+								"execute"
+							],
+							"query": [
+								{
+									"key": "wait",
+									"value": "true"
+								}
+							]
+						},
+						"description": "Go programs are complete `package main` files."
+					},
+					"response": []
+				},
+				{
+					"name": "Wrong output - Python (WA case)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"The case is WA with the program's output\", function () {",
+									"    const res = pm.response.json();",
+									"    pm.expect(res.success).to.equal(false);",
+									"    pm.expect(res.testResults[0].status).to.equal(\"WA\");",
+									"    pm.expect(res.testResults[0].actualOutput.trim()).to.equal(\"-1\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "X-Codemare-Token",
+								"value": "{{internalToken}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"language\": \"python\",\n  \"code\": \"a, b = map(int, input().split())\\nprint(a - b)\\n\",\n  \"testCases\": [\n    {\n      \"input\": \"2 3\",\n      \"expectedOutput\": \"5\"\n    }\n  ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/v1/ide/execute?wait=true",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"ide",
+								"execute"
+							],
+							"query": [
+								{
+									"key": "wait",
+									"value": "true"
+								}
+							]
+						},
+						"description": "A clean exit with different stdout is a WA case; `actualOutput` shows what the program printed."
+					},
+					"response": []
+				},
+				{
+					"name": "Submit without wait (202 token when queued)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"202 with a token (queue on) or 200 with the result (queue off)\", function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([200, 202]);",
+									"    const res = pm.response.json();",
+									"    if (pm.response.code === 202) {",
+									"        pm.expect(res.token).to.be.a(\"string\");",
+									"        pm.expect(res.status).to.equal(\"PND\");",
+									"        pm.collectionVariables.set(\"ideToken\", res.token);",
+									"    } else {",
+									"        pm.expect(res.success).to.equal(true);",
+									"        pm.collectionVariables.set(\"ideToken\", \"none\");",
+									"    }",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "X-Codemare-Token",
+								"value": "{{internalToken}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"language\": \"python\",\n  \"code\": \"print(input()[::-1])\\n\",\n  \"testCases\": [\n    {\n      \"input\": \"stressed\",\n      \"expectedOutput\": \"desserts\"\n    }\n  ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/v1/ide/execute",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"ide",
+								"execute"
+							]
+						},
+						"description": "With REDIS_URL set on the service: 202 `{token, status: \"PND\"}`, and the token is saved for the next request. Without Redis: 200 with the result, like `?wait=true`."
+					},
+					"response": []
+				},
+				{
+					"name": "Poll a queued run",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Pending, done, or 404 when nothing was queued\", function () {",
+									"    const token = pm.collectionVariables.get(\"ideToken\");",
+									"    const res = pm.response.json();",
+									"    if (!token || token === \"none\") {",
+									"        pm.response.to.have.status(404);",
+									"        pm.expect(res.error).to.equal(\"Unknown or expired token\");",
+									"        return;",
+									"    }",
+									"    pm.response.to.have.status(200);",
+									"    if (res.status !== \"PND\") pm.expect(res.success).to.equal(true);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-Codemare-Token",
+								"value": "{{internalToken}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/v1/ide/execute/{{ideToken}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"ide",
+								"execute",
+								"{{ideToken}}"
+							]
+						},
+						"description": "Poll with the token from the previous request: `{status: \"PND\"}` while queued or running, then the full result (kept for QUEUE_RESULT_TTL_SEC). An unknown or expired token, or a service without Redis, answers 404."
+					},
+					"response": []
+				},
+				{
+					"name": "Validation - too many test cases (400)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status code is 400\", function () {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test(\"Says why\", function () {",
+									"    pm.expect(pm.response.json().error).to.equal(\"Maximum 10 test cases allowed\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "X-Codemare-Token",
+								"value": "{{internalToken}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"language\": \"python\",\n  \"code\": \"print(input())\\n\",\n  \"testCases\": [\n    {\n      \"input\": \"0\",\n      \"expectedOutput\": \"0\"\n    },\n    {\n      \"input\": \"1\",\n      \"expectedOutput\": \"1\"\n    },\n    {\n      \"input\": \"2\",\n      \"expectedOutput\": \"2\"\n    },\n    {\n      \"input\": \"3\",\n      \"expectedOutput\": \"3\"\n    },\n    {\n      \"input\": \"4\",\n      \"expectedOutput\": \"4\"\n    },\n    {\n      \"input\": \"5\",\n      \"expectedOutput\": \"5\"\n    },\n    {\n      \"input\": \"6\",\n      \"expectedOutput\": \"6\"\n    },\n    {\n      \"input\": \"7\",\n      \"expectedOutput\": \"7\"\n    },\n    {\n      \"input\": \"8\",\n      \"expectedOutput\": \"8\"\n    },\n    {\n      \"input\": \"9\",\n      \"expectedOutput\": \"9\"\n    },\n    {\n      \"input\": \"10\",\n      \"expectedOutput\": \"10\"\n    }\n  ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/v1/ide/execute?wait=true",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"ide",
+								"execute"
+							],
+							"query": [
+								{
+									"key": "wait",
+									"value": "true"
+								}
+							]
+						},
+						"description": "At most 10 test cases per request."
+					},
+					"response": []
+				},
+				{
+					"name": "Validation - unknown language (400)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status code is 400\", function () {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test(\"Lists the supported languages\", function () {",
+									"    pm.expect(pm.response.json().error).to.equal(",
+									"        \"Invalid language. Must be one of: python, javascript, typescript, cpp, java, go\"",
+									"    );",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "X-Codemare-Token",
+								"value": "{{internalToken}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"language\": \"rust\",\n  \"code\": \"fn main() {}\",\n  \"testCases\": [\n    {\n      \"input\": \"\",\n      \"expectedOutput\": \"\"\n    }\n  ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/v1/ide/execute?wait=true",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"ide",
+								"execute"
+							],
+							"query": [
+								{
+									"key": "wait",
+									"value": "true"
+								}
+							]
+						},
+						"description": "Languages: python, javascript, typescript, cpp, java, go."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "05 - Queue",
+			"item": [
+				{
+					"name": "GET /v1/queue/stats",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Reports whether the queue is on\", function () {",
+									"    const res = pm.response.json();",
+									"    pm.expect(res.enabled).to.be.a(\"boolean\");",
+									"    if (res.enabled) {",
+									"        pm.expect(res.name).to.be.a(\"string\");",
+									"        pm.expect(res.counts).to.include.keys(\"waiting\", \"active\", \"completed\", \"failed\", \"delayed\");",
+									"    }",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-Codemare-Token",
+								"value": "{{internalToken}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/v1/queue/stats",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"queue",
+								"stats"
+							]
+						},
+						"description": "Live depth of the IDE-mode queue: `{enabled: false}` without REDIS_URL; otherwise its name, worker concurrency, result TTL and job counts (waiting, active, completed, failed, delayed)."
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "ideToken",
+			"value": "",
+			"type": "string"
 		}
 	]
 }

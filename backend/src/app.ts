@@ -1,7 +1,5 @@
 import express from 'express';
 import cors from 'cors';
-import problemRoutes from './routes/problemRoutes.js';
-import executionRoutes from './routes/executionRoutes.js';
 import ideRoutes from './routes/ideRoutes.js';
 import queueRoutes from './routes/queueRoutes.js';
 import runRoutes from './routes/runRoutes.js';
@@ -33,7 +31,7 @@ app.use(
 // The run routes parse their own (larger) JSON bodies after the token check
 // — see routes/runRoutes.ts — so the default 1 MB parser skips them.
 const defaultJson = express.json({ limit: '1mb' });
-const RUN_PATH = /^\/(?:v1|api)\/run(?:\/|$)/;
+const RUN_PATH = /^\/v1\/run(?:\/|$)/;
 app.use((req, res, next) => (RUN_PATH.test(req.path) ? next() : defaultJson(req, res, next)));
 app.use(express.urlencoded({ extended: true }));
 
@@ -43,19 +41,15 @@ app.use((req, _res, next) => {
   next();
 });
 
-// Authed: anything under /v1 (the frozen API surface) and /api (legacy alias).
-// Both require X-Codemare-Token in production. The legacy /api/* mounts will be
-// removed once the Next.js app is the only caller.
+// Authed: everything under /v1 (the frozen API surface) requires
+// X-Codemare-Token in production.
 const authed = express.Router();
 authed.use(requireInternalToken);
-authed.use('/problems', problemRoutes);
-authed.use('/execute', executionRoutes);
 authed.use('/ide', ideRoutes);
 authed.use('/queue', queueRoutes);
 authed.use('/run', runRoutes);
 
 app.use('/v1', authed);
-app.use('/api', authed);
 
 // 404
 app.use((_req, res) => {

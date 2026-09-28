@@ -2,10 +2,9 @@
 import { test } from 'node:test';
 import { strict as assert } from 'node:assert';
 import { execFile } from 'node:child_process';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import {
   cppLiteral,
@@ -16,22 +15,9 @@ import {
   wrapFunctionCode,
 } from '../../src/services/codeWrapperService.js';
 import { ProblemSignature, TestCase } from '../../src/models/Problem.js';
+import { largestArgument, loadSeedQuestion } from './seedQuestions.js';
 
 const execFileAsync = promisify(execFile);
-
-const PROBLEMS_DIR = fileURLToPath(new URL('../../src/data/problems', import.meta.url));
-
-interface LoadedProblem {
-  starterCode: { java: string };
-  functionName: string;
-  compareMode?: 'ordered' | 'unordered';
-  signature?: ProblemSignature;
-  testCases: TestCase[];
-}
-
-async function loadProblem(id: string): Promise<LoadedProblem> {
-  return JSON.parse(await readFile(path.join(PROBLEMS_DIR, `${id}.json`), 'utf8'));
-}
 
 const twoSumSignature: ProblemSignature = {
   params: [
@@ -203,13 +189,14 @@ test('arity mismatch between tests and signature throws', () => {
 });
 
 test('large java array literals are hoisted into chunked builder methods', async () => {
-  const problem = await loadProblem('binary-search');
+  const problem = await loadSeedQuestion('binary-search');
+  assert.ok(largestArgument(problem.testCases) >= 10_000, 'fixture: binary-search keeps its 10k-element tests');
   const { wrappedCode } = wrapFunctionCode(
     problem.starterCode.java,
     problem.functionName,
     problem.testCases,
     'java',
-    problem.compareMode ?? 'ordered',
+    problem.compareMode,
     problem.signature
   );
   // The 10k-element hidden test must not be inlined into a test method.
@@ -228,13 +215,14 @@ test('large java array literals are hoisted into chunked builder methods', async
 });
 
 test('long java string constants are split across StringBuilder appends', async () => {
-  const problem = await loadProblem('longest-substring-without-repeating-characters');
+  const problem = await loadSeedQuestion('longest-substring-without-repeating-characters');
+  assert.ok(largestArgument(problem.testCases) >= 17_000, 'fixture: keeps its ~20k-character hidden input');
   const { wrappedCode } = wrapFunctionCode(
     problem.starterCode.java,
     problem.functionName,
     problem.testCases,
     'java',
-    problem.compareMode ?? 'ordered',
+    problem.compareMode,
     problem.signature
   );
   // The ~20k-char hidden input must be hoisted into a StringBuilder builder
@@ -261,13 +249,14 @@ test('generated Main.java compiles under javac for large-input problems', async 
     'longest-substring-without-repeating-characters',
   ];
   for (const id of problems) {
-    const problem = await loadProblem(id);
+    const problem = await loadSeedQuestion(id);
+    assert.ok(largestArgument(problem.testCases) >= 10_000, `fixture: ${id} keeps its 10k+ element/character input`);
     const { wrappedCode } = wrapFunctionCode(
       problem.starterCode.java,
       problem.functionName,
       problem.testCases,
       'java',
-      problem.compareMode ?? 'ordered',
+      problem.compareMode,
       problem.signature
     );
     const dir = await mkdtemp(path.join(os.tmpdir(), 'codemare-javac-test-'));

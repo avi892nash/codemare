@@ -6,10 +6,9 @@
 import { test } from 'node:test';
 import { strict as assert } from 'node:assert';
 import { execFile } from 'node:child_process';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import {
   goLiteral,
@@ -20,9 +19,9 @@ import {
 import { parseHarnessOutput } from '../../src/services/harnessProtocol.js';
 import { goCompileEnv } from '../../src/services/sandbox/goToolchain.js';
 import { ProblemSignature, SignatureType, TestCase } from '../../src/models/Problem.js';
+import { largestArgument, loadSeedQuestion } from './seedQuestions.js';
 
 const execFileAsync = promisify(execFile);
-const PROBLEMS_DIR = fileURLToPath(new URL('../../src/data/problems', import.meta.url));
 
 const BASES = ['int', 'long', 'double', 'bool', 'string', 'char'] as const;
 const ALL_TYPES: SignatureType[] = BASES.flatMap((b) => [b, `${b}[]`, `${b}[][]`] as SignatureType[]);
@@ -282,7 +281,8 @@ test('go build + run: a panic is a per-test error and later tests still run', as
 });
 
 test('go build + run: the 10k-element catalog literal compiles and runs', async () => {
-  const problem = JSON.parse(await readFile(path.join(PROBLEMS_DIR, 'binary-search.json'), 'utf8'));
+  const problem = await loadSeedQuestion('binary-search');
+  assert.ok(largestArgument(problem.testCases) >= 10_000, 'fixture: binary-search keeps its 10k-element tests');
   const code = `func ${problem.functionName}(nums []int, target int) int {
 \tlo, hi := 0, len(nums)-1
 \tfor lo <= hi {
@@ -304,10 +304,10 @@ test('go build + run: the 10k-element catalog literal compiles and runs', async 
     problem.functionName,
     problem.testCases,
     'go',
-    problem.compareMode ?? 'ordered',
+    problem.compareMode,
     problem.signature
   );
   const r = await buildAndRun(wrappedCode);
   assert.ok(r.done);
-  assert.deepEqual(r.outputs, problem.testCases.map((tc: TestCase) => tc.expectedOutput));
+  assert.deepEqual(r.outputs, problem.testCases.map((tc) => tc.expectedOutput));
 });
