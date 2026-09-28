@@ -70,6 +70,8 @@ export function Modal({
   }, [open]);
 
   // Focus in, lock scroll, inert the background; undo it all on close.
+  // Keyed on `layer` too: the Portal mounts a render late, so a Modal that is
+  // open on its very first render has no panel yet when this first runs.
   useEffect(() => {
     if (!open) return;
     const layerEl = layerRef.current;
@@ -101,7 +103,7 @@ export function Modal({
       document.body.style.overflow = prevOverflow;
       if (opener?.isConnected) opener.focus();
     };
-  }, [open, initialFocusRef]);
+  }, [open, initialFocusRef, layer]);
 
   if (!open) return null;
 
