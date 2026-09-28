@@ -1,109 +1,115 @@
 # Codemare web
 
-The user-facing app: Next.js 15 (App Router), TypeScript, Tailwind v3, Auth.js
-v5, Prisma 5, Monaco editor. Talks to the compile service over HTTPS with
-`X-Codemare-Token`.
+The user-facing app: Next.js 15 (App Router) in TypeScript, Tailwind CSS 3,
+Auth.js v5 (email and password, plus GitHub / Google when their keys are
+set), Prisma 5 on Postgres, and the Monaco editor. It owns all user state and
+content, and judges code by calling the compile service (`../backend`) from
+server code only, with `X-Codemare-Token` (`lib/compile.ts`). The browser
+never sees that token.
 
-## Architecture
+The product, data model and rules are specified in
+[`docs/spec/architecture.md`](../docs/spec/architecture.md).
 
-```
-Browser ──▶ Next.js (this app)  ──HTTPS+token──▶  Compile service (backend/)
-              │                                          │
-              ├── App Router pages + server actions       └── isolate sandbox
-              ├── Auth.js (GitHub / Google + Prisma)
-              └── Postgres (User, Submission, Problem)
-```
+## Running it
 
-The browser never carries the compile-service token. Every call to
-`/v1/execute` is server-side, attached by `lib/compile.ts`.
-
-## Local dev
+Follow the quick start in the [root README](../README.md#running-it-locally).
+From the repo root:
 
 ```bash
-cd web
-cp .env.example .env.local
-# Fill in DATABASE_URL, AUTH_SECRET, AUTH_GITHUB_*, COMPILE_SERVICE_URL, INTERNAL_TOKEN
 npm install
-npx prisma generate
-npx prisma migrate dev --name init  # only after setting DATABASE_URL
-npm run dev                          # http://localhost:3001
+npm run setup          # creates web/.env.local (with a fresh AUTH_SECRET)
+createdb codemare      # then set DATABASE_URL in web/.env.local to point at it
+npm run setup          # again: Prisma client, migrations, seed
+npm run dev            # compile service :4000 + web http://localhost:4001
 ```
 
-For the compile service to respond, run a Linux box with `deploy/install.sh`
-from this repo's root, copy `INTERNAL_TOKEN` from `/etc/codemare/env` to your
-`.env.local`, and point `COMPILE_SERVICE_URL` at it.
+`npm run setup` (`scripts/setup.mjs`) is safe to re-run. Without a real
+`DATABASE_URL` it skips the migrations and the seed.
 
-## Routes
+## Scripts
 
-| Path | Server / client | Notes |
-|---|---|---|
-| `/` | server | Problem catalog. Fetches list from compile service. |
-| `/p/[id]` | server + client | Problem detail; editor / IDE workspace. |
-| `/ide` | client | Free-form IDE with stdin/stdout test cases. |
-| `/design-system` | server (with client section state) | Full kit page. |
-| `/auth` | client | Sign-in / sign-up / forgot password. OAuth wired. |
-| `/submissions` | server | Personal history (requires auth). |
-| `/profile` | server | Stats + sign-out (requires auth). |
+Run from `web/`, or from the root with `-w web` (e.g. `npm test -w web`).
 
-`/learn/*` is the planned next section — not built yet.
+| Script | Does |
+|---|---|
+| `dev` / `start` | `next dev` / `next start` on port 4001 |
+| `build` | production build (`NEXT_DIST_DIR=.next-prod` keeps it apart from a running dev server's `.next`) |
+| `lint`, `typecheck` | `next lint`, `tsc --noEmit` |
+| `test`, `test:watch` | vitest unit tests (see below) |
+| `test:e2e` | Playwright (see below) |
+| `setup` | first-time setup, as above |
+| `db:migrate`, `db:deploy`, `db:reset` | `prisma migrate dev` / `deploy` / `reset` |
+| `seed` | load `prisma/seed/data` (upsert by slug; `--mode insert-missing` or `SEED_MODE` to only add new rows; `SEED_DIR` for another directory) |
+| `seed:fixtures` | load the small fixture set in `prisma/seed/fixtures` |
 
-## Directory map
+The `db:*` and `seed*` scripts load `web/.env.local` themselves
+(`prisma/with-env.mjs`), since Prisma's CLI only reads `.env`.
+
+## Environment
+
+Copy [`.env.example`](.env.example) to `.env.local` (`npm run setup` does it).
+Server-side only; nothing here is `NEXT_PUBLIC_`.
+
+- `DATABASE_URL`: Postgres; the app uses two schemas, `app` and `content`.
+- `AUTH_SECRET`: Auth.js signing secret.
+- `COMPILE_SERVICE_URL` (default `http://localhost:4000`) and
+  `INTERNAL_TOKEN`: where the compile service is and the shared secret it
+  expects. In production the compile client throws on load when the token
+  is missing or still the placeholder.
+- `AUTH_GITHUB_ID` / `AUTH_GITHUB_SECRET`, `AUTH_GOOGLE_ID` /
+  `AUTH_GOOGLE_SECRET`: optional OAuth sign-in.
+
+Optional settings (the public library flag, AI review, password-reset mail,
+`AUTH_URL`) are in the spec's
+[environment table](../docs/spec/architecture.md#9-environment).
+
+## Where things live
 
 ```
 app/
-  layout.tsx                   # root <html>/<body>, fonts, SessionProvider
-  globals.css                  # design tokens, font vars, base classes
-  (workspace)/                 # route group sharing the navbar layout
-    layout.tsx                 # reads session, renders <Navbar />
-    page.tsx                   # catalog
-    p/[id]/
-      page.tsx                 # problem detail
-      actions.ts               # runSolution server action + DB persist
-    ide/
-      page.tsx
-      actions.ts               # runIdeCode server action
-    submissions/page.tsx
-    profile/page.tsx
-    design-system/page.tsx
-    auth/page.tsx
-  api/auth/[...nextauth]/route.ts
-
-components/
-  ui/                          # design-system primitives, one per file
-  Layout/Navbar.tsx
-  Auth/                        # AuthPage, AuthForm, AuthBrandPanel, FormField, SessionProvider
-  Catalog/CatalogList.tsx
-  Problem/                     # ProblemDescription, ProblemExamples
-  Editor/                      # CodeEditor (Monaco), LanguageSelector, EditorWorkspace
-  Results/                     # OutputDisplay, TestCaseResults
-  IDE/                         # IdeView, IdeOutputDisplay, TestCaseManager
-  DesignSystem/                # DesignSystemPage + sections/
-
+  (workspace)/     every page: problems, ide, submissions, learn, map, queue,
+                   me/library, u/[handle], author, library, sign-in pages
+  api/             run · submit · build (SSE), hints, ai-review, auth
+  dev/system/      the design system in both themes (not in production)
+components/        ui/ (design system), states/ (empty, loading, error
+                   pages), one folder per feature
 lib/
-  types.ts                     # shared TS types (mirror compile-service shapes)
-  compile.ts                   # server-only HTTP client (attaches X-Codemare-Token)
-  prisma.ts                    # PrismaClient singleton
-
+  compile.ts       server-only compile-service client (/v1/run, /v1/run/stream,
+                   /v1/ide/execute)
+  types.ts         shared domain types
+  client/          browser-side helpers (run stream, drafts, formatting)
+  server/          the domain layer: ledger, recipes and unlocks, gates,
+                   hints, badges, the runner, authoring… (rules/ holds the
+                   pure rule functions; test/ the DB test harness)
 prisma/
-  schema.prisma                # Identity + Problem + Submission tables
-
-auth.ts                        # NextAuth config (GitHub + Google + PrismaAdapter)
-middleware.ts                  # gates /submissions and /profile
+  schema.prisma    the data model
+  migrations/      applied with prisma migrate deploy
+  seed/            loader and validation; data/ is all content as JSON,
+                   fixtures/ a small set, verify/ Python checks of the content
+                   (reference solutions, starters, the loop)
+e2e/               Playwright specs
+auth.ts            Auth.js (credentials + optional OAuth), JWT sessions
+middleware.ts      route guards
 ```
 
-## What's done vs. parked
+## Tests
 
-Done:
-- Full design-language port from the Vite frontend (tokens, primitives, screens)
-- Problem catalog + detail + Monaco editor + Results panel
-- IDE mode + stdin/stdout test cases
-- Design system page with dark/light toggle
-- Auth page with GitHub / Google OAuth wired
-- Prisma schema + submission persistence on successful runs
-- Submissions history page (last 100, table)
-- Profile page (identity card, stats, by-difficulty)
+**Unit tests** (`npm test -w web`, vitest) cover `lib/**/*.test.ts` and
+`prisma/**/*.test.ts`. The database tests truncate every table, so they run
+against a database whose name must end in `_test`: `TEST_DATABASE_URL` if
+set, otherwise `DATABASE_URL` (from the environment or `.env.local`) with the
+database name swapped for `codemare_test`. The global setup creates that
+database if needed and applies the migrations; test files run one at a time.
 
-Parked for follow-ups:
-- Email/password Credentials provider (needs bcrypt + sign-up endpoint)
-- Migrating the problem catalog from compile-service JSON into the DB
-- Learn section (tracks / modules / lessons / runnable code blocks / quizzes)
+**End-to-end tests** (`npm run test:e2e -w web`, Playwright) drive an app
+that is already running, with a seeded database and the compile service
+behind it. `PLAYWRIGHT_BASE_URL` points them at it (default
+`http://localhost:4001`):
+
+```bash
+cd web
+npx playwright install chromium                                # once
+PLAYWRIGHT_BASE_URL=http://localhost:4001 npx playwright test
+```
+
+CI runs both, the second against a production build.
