@@ -1,5 +1,5 @@
 import 'server-only';
-import { BUILD_LANGUAGES, DIFFICULTIES, type Difficulty, type Signature, type SupportedLanguage } from '@/lib/types';
+import { BUILD_LANGUAGES, type Difficulty, type Signature, type SupportedLanguage } from '@/lib/types';
 import { canAccessBuildStep, getMapState, type MapTopic, type RecipeView } from './access';
 import { getLibrary } from './components';
 import { prisma } from './db';
@@ -636,9 +636,6 @@ export async function getMyLibraryView(userId: string): Promise<MyLibraryView> {
 }
 
 // ─── helpers shared with pages ───────────────────────────────────────────
-
-/** Difficulties easiest first — for bucket rows. */
-export const BUCKETS: readonly Difficulty[] = DIFFICULTIES;
 
 /** A component's signature as one line: `prefixSums(nums: int[]) → int[]`. */
 export function signatureLine(functionName: string, signature: Signature): string {
