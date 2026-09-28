@@ -1,12 +1,7 @@
 // Run with: npx tsx --test tests/validation/deepEqual.test.ts
 import { test } from 'node:test';
 import { strict as assert } from 'node:assert';
-import {
-  deepEqual,
-  deriveVerdict,
-  validateResults,
-} from '../../src/services/validationService.js';
-import { TestCase } from '../../src/models/Problem.js';
+import { deepEqual, deriveVerdict } from '../../src/services/validationService.js';
 
 test('ordered mode (default) is order-sensitive', () => {
   assert.equal(deepEqual([0, 1], [0, 1]), true);
@@ -48,19 +43,6 @@ test('unordered mode leaves primitives and objects alone', () => {
   assert.equal(deepEqual({ a: 1 }, { a: 1 }, 'unordered'), true);
 });
 
-test('validateResults honours compareMode when re-checking outputs', () => {
-  const testCases: TestCase[] = [
-    { input: [[2, 7], 9], expectedOutput: [0, 1], hidden: false },
-  ];
-  const wrapped = [{ output: [1, 0], expected: [0, 1], passed: true }];
-
-  const ordered = validateResults(wrapped, testCases);
-  assert.equal(ordered[0].passed, false);
-
-  const unordered = validateResults(wrapped, testCases, 'unordered');
-  assert.equal(unordered[0].passed, true);
-});
-
 test('deriveVerdict turns a clean exit with failing tests into WA', () => {
   assert.equal(deriveVerdict('OK', 5, 5), 'OK');
   assert.equal(deriveVerdict('OK', 0, 5), 'WA');
@@ -90,14 +72,4 @@ test('floatTolerance compares numbers within an absolute tolerance', () => {
   assert.equal(deepEqual([1.1, 2], [1, 2], 'ordered', { floatTolerance: 1e-6 }), false);
   // Unordered numeric arrays sort numerically, so near-equal values line up.
   assert.equal(deepEqual([0.30000000000000004, 0.2], [0.2, 0.3], 'unordered', { floatTolerance: 1e-6 }), true);
-});
-
-test('validateResults judges against the problem’s expected value, not the harness echo', () => {
-  const testCases: TestCase[] = [{ input: [1], expectedOutput: 2, hidden: false }];
-  // A forged record claiming output == expected (its own echo) must not pass.
-  const forged = validateResults([{ output: 7, expected: 7, passed: true }], testCases);
-  assert.equal(forged[0].passed, false);
-  const missing = validateResults([undefined], testCases);
-  assert.equal(missing[0].passed, false);
-  assert.equal(missing[0].error, 'No result returned from executor');
 });

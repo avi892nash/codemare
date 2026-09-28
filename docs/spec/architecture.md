@@ -302,7 +302,7 @@ HTTP 409 `{missing: [componentSlug]}`.
 - Go: compiled in the sandbox (`go build`), compile-cached, harness generated
   from the signature like C++/Java.
 - The old `POST /v1/execute`, `GET /v1/problems*` and
-  `backend/src/data/problems/` are removed once the web app is on `/v1/run`.
+  `backend/src/data/problems/` were removed once the web app moved to `/v1/run`.
 
 ---
 

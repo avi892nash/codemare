@@ -1,23 +1,14 @@
+/**
+ * One test as the harness generators (codeWrapperService) take it. runService
+ * builds these from a /v1/run request's tests; `expectedOutput` is filled in
+ * only for C++/Java, whose generated programs embed it as a typed literal
+ * (null otherwise, so the answers never enter the sandbox).
+ */
 export interface TestCase {
   input: any[];
   expectedOutput: any;
-  hidden: boolean; // Hidden test cases not shown to user
+  hidden: boolean;
 }
-
-export interface Example {
-  input: string;
-  output: string;
-  explanation?: string;
-}
-
-export interface StarterCode {
-  python: string;
-  javascript: string;
-  cpp: string;
-  java: string;
-}
-
-export type Difficulty = 'Easy' | 'Medium' | 'Hard';
 
 /**
  * How the judge compares actual output against expected output.
@@ -56,31 +47,11 @@ export interface SignatureParam {
 }
 
 /**
- * Typed function signature for the problem. Required for C++/Java Problems
- * mode (the harness generator embeds test inputs as typed literals); optional
- * for Python/JavaScript, whose harnesses are dynamically typed.
+ * Typed signature of the function under test. Required for C++, Java and Go
+ * (their harness generators embed test inputs as typed literals); optional
+ * for Python/JavaScript/TypeScript, whose harnesses are dynamically typed.
  */
 export interface ProblemSignature {
   params: SignatureParam[];
   returns: SignatureType;
-}
-
-export interface Problem {
-  id: string;
-  title: string;
-  difficulty: Difficulty;
-  description: string;
-  examples: Example[];
-  constraints: string[];
-  testCases: TestCase[];
-  starterCode: StarterCode;
-  functionName: string; // e.g., "twoSum", "reverseString"
-  compareMode?: CompareMode; // defaults to 'ordered' when omitted
-  signature?: ProblemSignature; // required for C++/Java Problems mode
-}
-
-export interface ProblemListItem {
-  id: string;
-  title: string;
-  difficulty: Difficulty;
 }

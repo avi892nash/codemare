@@ -318,9 +318,9 @@ export async function executeLocal(
                   ? `Process killed by ${runResult.signal}`
                   : `exit ${runResult.exitCode}`),
       status,
-      // Without a meta file, runMs falls back to wall. The wrapper-emitted
-      // totalRunNs (inside the user process) is what the response actually
-      // surfaces for Py/JS — see executionService.
+      // Without a meta file, runMs falls back to wall. The harness's own
+      // per-test CPU timings (runNs, inside the user process) are what a run
+      // actually reports — see runService.
       runMs: runResult.wallMs,
       wallMs: runResult.wallMs,
       memoryKb: 0,

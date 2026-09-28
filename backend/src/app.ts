@@ -1,7 +1,5 @@
 import express from 'express';
 import cors from 'cors';
-import problemRoutes from './routes/problemRoutes.js';
-import executionRoutes from './routes/executionRoutes.js';
 import ideRoutes from './routes/ideRoutes.js';
 import queueRoutes from './routes/queueRoutes.js';
 import runRoutes from './routes/runRoutes.js';
@@ -48,8 +46,6 @@ app.use((req, _res, next) => {
 // removed once the Next.js app is the only caller.
 const authed = express.Router();
 authed.use(requireInternalToken);
-authed.use('/problems', problemRoutes);
-authed.use('/execute', executionRoutes);
 authed.use('/ide', ideRoutes);
 authed.use('/queue', queueRoutes);
 authed.use('/run', runRoutes);

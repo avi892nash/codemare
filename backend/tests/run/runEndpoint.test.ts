@@ -222,6 +222,51 @@ test('unordered compare is recursive (multisets of multisets)', async () => {
   assert.equal(json.status, 'OK');
 });
 
+test('compareMode decides whether a reordered answer passes', async () => {
+  const reversed = (compareMode?: string) => ({
+    language: 'python',
+    code: 'def pair(nums, target):\n    return [1, 0]\n',
+    functionName: 'pair',
+    ...(compareMode ? { compareMode } : {}),
+    tests: [{ input: [[2, 7], 9], expected: [0, 1] }],
+  });
+  // Ordered is the default: the same elements in another order are wrong.
+  const ordered = await postJson(RUN, reversed());
+  assert.equal(ordered.json.status, 'WA');
+  assert.equal(ordered.json.tests[0].passed, false);
+  assert.deepEqual(ordered.json.tests[0].actual, [1, 0]);
+  assert.equal((await postJson(RUN, reversed('ordered'))).json.status, 'WA');
+  assert.equal((await postJson(RUN, reversed('unordered'))).json.status, 'OK');
+});
+
+test('forged harness records are judged against the request’s expected values, not their own claims', async () => {
+  // The program prints a record claiming test 0 passed (echoing a matching
+  // "expected") and a summary claiming the run finished, then exits before
+  // the harness runs. Only `output` is used, against the expected value the
+  // service holds; a test with no record at all is a failure.
+  const code =
+    'import json, os\n' +
+    'def f(x):\n    return x + 1\n' +
+    'print("\\x1eCMR:" + json.dumps({"i": 0, "output": 7, "expected": 7, "passed": True}), flush=True)\n' +
+    'print("\\x1eCMR:" + json.dumps({"done": True}), flush=True)\n' +
+    'os._exit(0)\n';
+  const { json } = await postJson(RUN, {
+    language: 'python',
+    code,
+    functionName: 'f',
+    tests: [
+      { input: [1], expected: 2 },
+      { input: [2], expected: 3 },
+    ],
+  });
+  assert.equal(json.status, 'WA');
+  assert.equal(json.totalPassed, 0);
+  assert.equal(json.tests[0].passed, false);
+  assert.equal(json.tests[0].actual, 7);
+  assert.equal(json.tests[1].passed, false);
+  assert.match(json.tests[1].error, /exited before reporting a result/);
+});
+
 test('typescript, java and go run through their harnesses', async () => {
   const ts = await postJson(
     RUN,

@@ -3,9 +3,11 @@ import { sandboxReadinessProbe } from './services/sandboxService.js';
 import { warmGoBuildCache } from './services/sandbox/goToolchain.js';
 
 /**
- * Standalone worker process. Run one or more of these (each its own VM /
- * container / process) pointed at the same REDIS_URL to scale execution
- * horizontally and independently of the API.
+ * Standalone worker process for the IDE-mode queue. Run one or more of these
+ * (each its own VM / container / process) pointed at the same REDIS_URL to
+ * scale IDE execution (POST /v1/ide/execute without ?wait=true) horizontally
+ * and independently of the API. /v1/run never reaches a worker: it always
+ * runs inline in the API process.
  *
  *   npm run worker
  *
