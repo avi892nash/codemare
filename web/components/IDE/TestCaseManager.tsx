@@ -15,9 +15,9 @@ interface TestCaseManagerProps {
 
 /**
  * The IDE's stdin cases: an accordion of cases, each with stdin and an
- * optional expected stdout. The row header is a div with role=button (not a
- * <button>) so the remove button beside the label is valid HTML — a
- * button can't contain a button — while staying keyboard operable.
+ * optional expected stdout. Each row header holds two sibling controls — the
+ * disclosure button (label + peek) and the remove button — because an
+ * interactive element can't contain another one.
  */
 export function TestCaseManager({ testCases, onTestCasesChange, maxTestCases = 10 }: TestCaseManagerProps) {
   const [expandedIndex, setExpandedIndex] = useState<number | null>(0);
@@ -59,33 +59,19 @@ export function TestCaseManager({ testCases, onTestCasesChange, maxTestCases = 1
           const toggle = () => setExpandedIndex(expanded ? null : i);
           return (
             <div key={i} className={s.case} data-expanded={expanded || undefined}>
-              <div
-                role="button"
-                tabIndex={0}
-                aria-expanded={expanded}
-                onClick={toggle}
-                onKeyDown={(e) => {
-                  if (e.target !== e.currentTarget) return;
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    toggle();
-                  }
-                }}
-                className={`${s.caseHead} focus-ring`}
-              >
-                <Icon name={expanded ? 'chev-down' : 'chev-right'} size={12} />
-                <span className={s.caseName}>Case {i + 1}</span>
-                {!expanded && tc.input && <span className={`${s.casePeek} mono`}>{tc.input.replace(/\n/g, ' ⏎ ')}</span>}
+              <div className={s.caseHead}>
+                <button type="button" aria-expanded={expanded} onClick={toggle} className={`${s.caseToggle} focus-ring`}>
+                  <Icon name={expanded ? 'chev-down' : 'chev-right'} size={12} />
+                  <span className={s.caseName}>Case {i + 1}</span>
+                  {!expanded && tc.input && <span className={`${s.casePeek} mono`}>{tc.input.replace(/\n/g, ' ⏎ ')}</span>}
+                </button>
                 <Button
                   variant="ghost"
                   size="xs"
                   icon="x"
                   aria-label={`Remove case ${i + 1}`}
                   disabled={testCases.length <= 1}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    removeTest(i);
-                  }}
+                  onClick={() => removeTest(i)}
                 />
               </div>
 

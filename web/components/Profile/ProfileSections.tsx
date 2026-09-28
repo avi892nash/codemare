@@ -10,6 +10,7 @@ import { Pill } from '@/components/ui/Pill';
 import { Progress } from '@/components/ui/Progress';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { StatusPill, isStatusCode } from '@/components/ui/StatusPill';
+import { formatMicros, timeAgo } from '@/lib/client/format';
 import type { ProfileView } from '@/lib/server/profile';
 import type { Difficulty } from '@/lib/types';
 import s from './profile.module.css';
@@ -18,23 +19,6 @@ const LANG_LABEL: Record<string, string> = { python: 'Python', javascript: 'Java
 
 const fmtMonth = (d: Date) => d.toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
 
-/** µs with thousands separators; ms past 100 ms. */
-export function fmtMicros(us: number): { value: string; unit: string } {
-  if (us < 100_000) return { value: Math.round(us).toLocaleString('en-US'), unit: 'µs' };
-  return { value: (us / 1000).toLocaleString('en-US', { maximumFractionDigits: 1 }), unit: 'ms' };
-}
-
-export function timeAgo(d: Date, now = new Date()): string {
-  const s = Math.max(0, Math.round((now.getTime() - d.getTime()) / 1000));
-  if (s < 60) return 'just now';
-  const m = Math.round(s / 60);
-  if (m < 60) return `${m} min ago`;
-  const h = Math.round(m / 60);
-  if (h < 24) return `${h} h ago`;
-  const days = Math.round(h / 24);
-  if (days < 30) return `${days} d ago`;
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
-}
 
 export function ProfileHeader({ view }: { view: ProfileView }) {
   const { user } = view;
@@ -94,7 +78,8 @@ const DIFF_TONE = { Easy: 'ok', Medium: 'warn', Hard: 'err' } as const;
 export function StatTiles({ view }: { view: ProfileView }) {
   const { solved, acceptance, fastest, streak } = view;
   const catalogTotal = solved.catalog.Easy + solved.catalog.Medium + solved.catalog.Hard;
-  const fast = fastest ? fmtMicros(fastest.runtimeUs) : null;
+  // Same runtime formatting as the editor and the submissions list.
+  const fast = fastest ? formatMicros(fastest.runtimeUs) : null;
   return (
     <dl className={s.tiles}>
       <Tile icon="check-circle" label="Solved">
@@ -184,7 +169,7 @@ export function RecentSubmissions({ view, now }: { view: ProfileView; now: Date 
             <span className={s.subName}>{r.target?.title ?? 'A draft question'}</span>
           );
         const status = isStatusCode(r.status) ? r.status : 'PND';
-        const t = r.runtimeUs === null ? null : fmtMicros(r.runtimeUs);
+        const t = r.runtimeUs === null ? null : formatMicros(r.runtimeUs);
         return (
           <li key={r.id} className={s.subRow}>
             <StatusPill code={status} size="xs" withIcon={status === 'PND'} />
@@ -205,10 +190,10 @@ export function RecentSubmissions({ view, now }: { view: ProfileView; now: Date 
               <br />
               {view.isOwner ? (
                 <Link href={`/submissions/${r.id}`} className="focus-ring" style={{ color: 'var(--fg-2)', borderRadius: 3 }}>
-                  {timeAgo(r.createdAt, now)}
+                  {timeAgo(r.createdAt, now.getTime())}
                 </Link>
               ) : (
-                timeAgo(r.createdAt, now)
+                timeAgo(r.createdAt, now.getTime())
               )}
             </span>
           </li>

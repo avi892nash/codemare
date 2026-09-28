@@ -33,7 +33,8 @@ export function LangMark({ lang, size = 14 }: { lang: string; size?: number }) {
         alignItems: 'center',
         justifyContent: 'center',
         background: `color-mix(in oklab, ${meta.c} 18%, transparent)`,
-        color: meta.c,
+        // --mark-mix (globals.css) keeps the brand hue in dark and darkens it in light for AA.
+        color: `color-mix(in oklab, ${meta.c} var(--mark-mix), var(--fg-0))`,
         fontSize: size * 0.66,
         fontWeight: 600,
         border: `1px solid color-mix(in oklab, ${meta.c} 30%, transparent)`,

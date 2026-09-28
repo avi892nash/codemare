@@ -1,7 +1,18 @@
 /**
  * Formatting for submission metrics and times. Pure and server-safe.
  */
+import { formatKb } from '@/lib/client/format';
 import type { SupportedLanguage } from '@/lib/types';
+
+/**
+ * Peak memory in KB → [value, unit]: `575 KB`, `2.16 MB` — the editor's
+ * results formatting (lib/client/format), so a submission reads the same
+ * on every page.
+ */
+export function fmtKb(kb: number | null | undefined): [string, string] {
+  const m = formatKb(kb);
+  return [m.value, m.unit];
+}
 
 /**
  * CPU time in µs → [value, unit]: `412 µs`, `4.12 ms`, `41.2 ms`, `1.24 s`.

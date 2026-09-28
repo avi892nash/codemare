@@ -11,7 +11,7 @@ import { runIdeCode } from '@/app/(workspace)/ide/actions';
 import { clearDraft, loadDraft, loadLanguage, saveDraft, saveLanguage } from '@/lib/client/drafts';
 import { LANGUAGE_META } from '@/lib/client/languages';
 import type { IdeExecutionResponse, IdeTestCase, SupportedLanguage } from '@/lib/types';
-import { IdeOutputDisplay } from './IdeOutputDisplay';
+import { IdeOutputDisplay, runSummary } from './IdeOutputDisplay';
 import { TestCaseManager } from './TestCaseManager';
 import s from './IDE.module.css';
 
@@ -102,7 +102,8 @@ export function IdeView() {
   }, [onRun]);
 
   return (
-    <div className={s.root}>
+    <main className={s.root}>
+      <h1 className="sr-only">IDE playground</h1>
       <aside className={s.cases} aria-label="Test cases">
         <TestCaseManager testCases={testCases} onTestCasesChange={setTestCases} />
       </aside>
@@ -135,9 +136,13 @@ export function IdeView() {
           </div>
         </section>
         <section className={s.output} aria-label="Output" data-testid="ide-output">
+          {/* Always mounted, so the outcome is announced when the run finishes. */}
+          <div className="sr-only" role="status" aria-live="polite">
+            {!pending && results ? runSummary(results) : ''}
+          </div>
           <IdeOutputDisplay results={results} pending={pending} language={ranLanguage} />
         </section>
       </div>
-    </div>
+    </main>
   );
 }

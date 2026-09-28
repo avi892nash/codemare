@@ -57,6 +57,22 @@ function Block({ label, value, tone }: { label: string; value: string; tone?: 'e
   );
 }
 
+/**
+ * One-line outcome of a run, for the IDE's live region: the visible summary
+ * is re-rendered on completion, so screen readers need it announced.
+ */
+export function runSummary(results: IdeExecutionResponse): string {
+  if (results.testResults.length === 0) return `Run failed: ${results.error ?? 'nothing ran.'}`;
+  if (results.testResults.some((r) => r.status === 'CE')) return 'Run finished: compilation failed — nothing ran.';
+  const compared = results.testResults.map((r) => r.expectedOutput.trim() !== '');
+  const comparedCount = compared.filter(Boolean).length;
+  const matched = results.testResults.filter((r, i) => compared[i] && r.passed).length;
+  const failed = results.testResults.map((r, i) => caseStatus(r, compared[i])).filter((c) => c !== 'OK').length;
+  const cases = `${results.testResults.length} case${results.testResults.length === 1 ? '' : 's'} ran`;
+  if (comparedCount > 0) return `Run finished: ${matched} of ${comparedCount} expected outputs matched; ${cases}.`;
+  return `Run finished: ${cases}${failed ? `, ${failed} with errors` : ''}.`;
+}
+
 /** Per-case results: status, runtime and memory, stdin, stdout, a diff against the expectation, errors. */
 export function IdeOutputDisplay({ results, pending = false, language }: IdeOutputDisplayProps) {
   if (pending) {

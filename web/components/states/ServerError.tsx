@@ -14,6 +14,8 @@ interface ServerErrorProps {
   onRetry?: () => void;
   homeHref?: string;
   fullPage?: boolean;
+  /** Inside a page that already has a <main> (see StatePage). */
+  embedded?: boolean;
 }
 
 /**
@@ -27,14 +29,17 @@ export function ServerError({
   onRetry,
   homeHref = '/',
   fullPage = false,
+  embedded = false,
 }: ServerErrorProps) {
+  // The page's h1 — or, embedded in the /dev/system sheet, a sub-heading.
+  const Heading = embedded ? 'h4' : 'h1';
   return (
-    <StatePage fullPage={fullPage}>
+    <StatePage fullPage={fullPage} embedded={embedded}>
       <div className={s.errorCard} role="alert">
         <div className={s.code} aria-hidden="true">
           500<span>.</span>
         </div>
-        <h1 className={s.title}>{title}</h1>
+        <Heading className={s.title}>{title}</Heading>
         <p className={s.desc}>{description}</p>
         {digest && (
           <span className={s.digest}>

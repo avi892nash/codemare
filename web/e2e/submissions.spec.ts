@@ -146,7 +146,7 @@ test('lists your submissions newest first, filters by status and language, and p
   await expect(first).toContainText('C++');
   await expect(rows(page).nth(1)).toContainText('1.83 ms'); // WA javascript: 1830 µs
   await expect(rows(page).nth(2)).toContainText('412 µs'); // the accepted run, still in µs
-  await expect(rows(page).nth(2)).toContainText('9.0 MB');
+  await expect(rows(page).nth(2)).toContainText('9 MB'); // 9216 KB, formatted like the editor's results
 
   await page.getByRole('navigation', { name: 'Pagination' }).getByRole('link', { name: 'Next' }).click();
   await expect(page).toHaveURL(/\/submissions\?page=2$/);
@@ -178,7 +178,7 @@ test('detail: verdict hero, code and tests, with hidden tests reduced to pass/fa
   const hero = page.getByRole('region', { name: 'Result' });
   await expect(hero).toContainText('1.83');
   await expect(hero).toContainText('ms');
-  await expect(hero).toContainText('40.0');
+  await expect(hero).toContainText(/Peak memory\s*40\s*MB/); // 40960 KB
   await expect(page.getByText('Wrong Answer').first()).toBeVisible();
 
   await expect(page.getByRole('heading', { name: /^Code/ })).toBeVisible();

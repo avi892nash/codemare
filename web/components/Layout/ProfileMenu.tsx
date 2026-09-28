@@ -25,20 +25,21 @@ const ROLE_TONE: Record<NavRole, PillTone> = {
 export function ProfileMenu({ user, libraryVisible = false }: { user: NavUser; libraryVisible?: boolean }) {
   const pathname = usePathname();
   const profileHref = user.handle ? `/u/${user.handle}` : '/profile';
-  const link = (label: string, href: string, icon: IconName): MenuItem => ({
+  // `section` links stay current on their sub-pages (/author/new, /library/graphs, …).
+  const link = (label: string, href: string, icon: IconName, section = false): MenuItem => ({
     kind: 'link',
     label,
     href,
     icon,
-    current: pathname === href,
+    current: pathname === href || (section && !!pathname?.startsWith(`${href}/`)),
   });
 
   const items: MenuItem[] = [
     link('Profile', profileHref, 'user'),
     link('My Library', '/me/library', 'puzzle'),
     ...(user.handle ? [link('Badges', `/u/${user.handle}/badges`, 'award')] : []),
-    ...(roleAtLeast(user.role, 'author') ? [link('Author', '/author', 'edit')] : []),
-    ...(libraryVisible ? [link('Library', '/library', 'book-open')] : []),
+    ...(roleAtLeast(user.role, 'author') ? [link('Author', '/author', 'edit', true)] : []),
+    ...(libraryVisible ? [link('Library', '/library', 'book-open', true)] : []),
     { kind: 'separator' },
     { kind: 'action', label: 'Sign out', icon: 'log-out', onSelect: () => void signOut({ redirectTo: '/' }) },
   ];

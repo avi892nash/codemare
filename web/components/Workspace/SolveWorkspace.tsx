@@ -274,8 +274,11 @@ export function SolveWorkspace(props: SolveWorkspaceProps) {
       </>
     ) : null);
 
+  // The page's main landmark — except in build mode, where BuildStep wraps
+  // the workspace (and its queue bar) in one.
+  const Root = mode === 'build' ? 'div' : 'main';
   return (
-    <div className={s.root} data-mode={mode} style={layoutStyle}>
+    <Root className={s.root} data-mode={mode} style={layoutStyle}>
       {gate && <GateBanner gate={gate} currentSlug={currentSlug} solved={gateSolved} onExpire={() => setGateOver(true)} />}
       <div ref={splitRef} className={s.split}>
         <section className={`${s.pane} ${s.left}`} aria-label="Problem">
@@ -455,6 +458,6 @@ export function SolveWorkspace(props: SolveWorkspaceProps) {
           </>
         }
       />
-    </div>
+    </Root>
   );
 }

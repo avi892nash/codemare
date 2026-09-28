@@ -15,16 +15,24 @@ export interface Crumb {
  * marked aria-current="page". Long labels truncate with an ellipsis (the
  * full text stays in the title attribute). Server-safe.
  */
-export function Breadcrumb({ items, className, style }: { items: Crumb[]; className?: string; style?: CSSProperties }) {
+export function Breadcrumb({
+  items, className, style, label = 'Breadcrumb',
+}: {
+  items: Crumb[];
+  className?: string;
+  style?: CSSProperties;
+  /** Landmark name; only needs changing when a page shows more than one trail. */
+  label?: string;
+}) {
   return (
-    <nav aria-label="Breadcrumb" className={className} style={style}>
+    <nav aria-label={label} className={className} style={style}>
       <ol className={s.list}>
         {items.map((c, i) => {
           const last = i === items.length - 1;
           const inner = (
             <>
               {c.icon && <Icon name={c.icon} size={13} />}
-              {c.label}
+              <span className={s.label}>{c.label}</span>
             </>
           );
           return (

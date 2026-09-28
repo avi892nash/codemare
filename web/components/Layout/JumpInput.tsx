@@ -9,11 +9,13 @@ import s from './Navbar.module.css';
 /**
  * "Jump to problem" command input. ⌘K / Ctrl+K focuses it from anywhere;
  * Enter opens the catalog filtered by the query (`/problems?q=`), Esc clears
- * and leaves.
+ * and leaves — back to whatever had focus before ⌘K, so keyboard users keep
+ * their place.
  */
 export function JumpInput() {
   const router = useRouter();
   const ref = useRef<HTMLInputElement>(null);
+  const returnTo = useRef<HTMLElement | null>(null);
   const [q, setQ] = useState('');
   const [mod, setMod] = useState('⌘');
 
@@ -24,6 +26,8 @@ export function JumpInput() {
         const el = ref.current;
         if (!el || el.offsetParent === null) return; // hidden at this width
         e.preventDefault();
+        const prev = document.activeElement;
+        if (prev instanceof HTMLElement && prev !== el && prev !== document.body) returnTo.current = prev;
         el.focus();
         el.select();
       }
@@ -56,8 +60,17 @@ export function JumpInput() {
         onKeyDown={(e) => {
           if (e.key === 'Escape') {
             setQ('');
-            e.currentTarget.blur();
+            const back = returnTo.current;
+            returnTo.current = null;
+            if (back?.isConnected) back.focus();
+            else e.currentTarget.blur();
           }
+        }}
+        onBlur={() => {
+          // Left some other way (Tab, click): forget the ⌘K origin.
+          window.setTimeout(() => {
+            if (document.activeElement !== ref.current) returnTo.current = null;
+          }, 0);
         }}
         trailing={
           <span aria-hidden="true" className={s.jumpKbd}>

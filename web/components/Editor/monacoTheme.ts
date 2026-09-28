@@ -73,7 +73,10 @@ export function readTokenColors(scope: Element): TokenColors {
   const out = { ...FALLBACK };
   if (typeof document === 'undefined') return out;
   const probe = document.createElement('span');
-  probe.style.cssText = 'position:absolute;width:0;height:0;overflow:hidden;visibility:hidden;pointer-events:none';
+  // transition:none — a transition on `color` (from any stylesheet) would make
+  // getComputedStyle() return the previous token's value instead of this one.
+  probe.style.cssText =
+    'position:absolute;width:0;height:0;overflow:hidden;visibility:hidden;pointer-events:none;transition:none!important';
   scope.appendChild(probe);
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = 1;

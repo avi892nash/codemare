@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { ButtonLink } from '@/components/ui/Button';
 import { DifficultyPill } from '@/components/ui/DifficultyPill';
+import { Icon } from '@/components/ui/Icon';
 import { Pill } from '@/components/ui/Pill';
 import { EmptyState } from '@/components/states/EmptyState';
 import { hasRole } from '@/lib/server/rules/roles';
@@ -24,10 +25,12 @@ export default async function AuthorHome({ searchParams }: { searchParams: Promi
 
   return (
     <main className={`${s.page} scroll`}>
-      <div className={s.wrap} style={{ maxWidth: 1100 }}>
+      <div className={`${s.wrap} ${s.wrapList}`}>
         <header className={s.head}>
           <div>
-            <p className={s.eyebrow}>Author</p>
+            <p className={s.eyebrow}>
+              <Icon name="edit" size={13} /> Author
+            </p>
             <h1 className={s.title}>{scope === 'all' ? 'All questions' : 'My questions'}</h1>
             <p className={s.sub}>
               {rows.length === 0

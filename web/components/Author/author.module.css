@@ -4,49 +4,59 @@
 
 /* ─── Page frame ─────────────────────────────────────────────────── */
 .page {
+  position: relative;
   flex: 1;
   min-width: 0;
   overflow-y: auto;
   background: var(--bg-0);
 }
+/* The page shell (globals.css); the editor keeps a wider frame for its
+ * form + publish rail, the question list uses the standard width. */
 .wrap {
   max-width: 1320px;
   margin: 0 auto;
-  padding: 20px 28px 72px;
+  padding: var(--page-pad);
 }
+.wrapList { max-width: var(--page-max); }
 .head {
   display: flex;
   align-items: flex-end;
   flex-wrap: wrap;
   gap: 12px 20px;
-  margin: 12px 0 20px;
+  margin: 0 0 20px;
 }
+/* Same breadcrumb → header spacing as the learn and submission pages. */
+.wrap > nav:first-child + .head { margin-top: 28px; }
 .eyebrow {
-  margin: 0 0 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 10px;
   font-size: 11px;
   font-weight: 600;
-  letter-spacing: 1.4px;
+  letter-spacing: 0.9px;
   text-transform: uppercase;
   color: var(--fg-2);
 }
 .title {
   margin: 0;
-  font-size: 26px;
+  font-size: 28px;
   font-weight: 600;
-  letter-spacing: -0.4px;
+  letter-spacing: -0.5px;
   line-height: 1.2;
   color: var(--fg-0);
   overflow-wrap: anywhere;
 }
+@media (max-width: 720px) { .title { font-size: 23px; } }
 .titleMuted { color: var(--fg-3); }
 .sub {
-  margin: 6px 0 0;
-  font-size: 13px;
-  line-height: 1.5;
+  margin: 10px 0 0;
+  font-size: 14px;
+  line-height: 1.6;
   color: var(--fg-2);
 }
 .headActions { margin-left: auto; display: flex; align-items: center; gap: 8px; }
-.headMeta { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 8px; font-size: 12px; color: var(--fg-2); }
+.headMeta { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 10px; font-size: 12px; color: var(--fg-2); }
 
 .layout {
   display: grid;

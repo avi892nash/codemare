@@ -113,8 +113,10 @@
   align-items: center;
   gap: inherit;
 }
+/* opacity, not visibility: a loading button without an icon keeps its
+ * label in the accessibility tree, so it never loses its name. */
 .label[data-hidden='true'] {
-  visibility: hidden;
+  opacity: 0;
 }
 .spinnerOverlay {
   position: absolute;

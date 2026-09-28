@@ -3,14 +3,28 @@ import type { ReactNode } from 'react';
 import { Logomark } from '@/components/ui/Logomark';
 import s from './states.module.css';
 
+export interface StatePageProps {
+  /** Adds the logo bar and fills the viewport (root not-found / error / global-error). */
+  fullPage?: boolean;
+  /**
+   * Rendered inside something that already has its own <main> (the
+   * /dev/system sheet): no landmark, just the centered body.
+   */
+  embedded?: boolean;
+  children: ReactNode;
+}
+
 /**
- * Frame for full-page states rendered outside the workspace layout (root
- * not-found / error / global-error): a slim bar with the logo home link,
- * content centered below. Inline use (inside a layout) skips the bar.
+ * Frame for the shared 404 / 500 states. Full page (outside the workspace
+ * layout): a slim bar with the logo home link, content centered below.
+ * Inline (a not-found / error boundary inside the workspace layout): the
+ * page's <main> landmark, scrollable, content centered — so a boundary
+ * never leaves the page without a main region.
  */
-export function StatePage({ fullPage, children }: { fullPage?: boolean; children: ReactNode }) {
+export function StatePage({ fullPage, embedded, children }: StatePageProps) {
   const body = <div className={s.errorBody}>{children}</div>;
-  if (!fullPage) return body;
+  if (embedded) return body;
+  if (!fullPage) return <main className={`${s.inlineMain} scroll`}>{body}</main>;
   return (
     <div className={s.page}>
       <header className={s.pageBar}>

@@ -192,7 +192,9 @@
 .waitTitle { display: flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; color: var(--fg-1); }
 .waitTitle svg { color: var(--fg-2); }
 .waitWhy { font-size: 12px; line-height: 1.5; color: var(--fg-2); }
-.waitWhy a { color: var(--accent-hi); border-radius: 3px; }
+/* Links inside running text: color alone is not enough (1.2:1 against fg-2),
+ * so they carry the same underline as lesson prose links. */
+.waitWhy a { color: var(--accent-hi); text-decoration: underline; text-decoration-color: var(--accent-line); text-underline-offset: 3px; border-radius: 3px; }
 .plainList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; color: var(--fg-1); }
 .plainList a { color: inherit; text-decoration: none; border-radius: 3px; }
 .plainList a:hover { color: var(--fg-0); text-decoration: underline; text-underline-offset: 2px; }

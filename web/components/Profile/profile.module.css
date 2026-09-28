@@ -56,8 +56,8 @@
 .big { font-size: 28px; font-weight: 500; letter-spacing: -0.6px; color: var(--fg-0); line-height: 1.1; }
 .unit { font-size: 13px; color: var(--fg-2); }
 .sub { font-size: 12px; color: var(--fg-2); min-width: 0; overflow-wrap: anywhere; }
-.sub a { color: var(--accent-hi); text-decoration: none; border-radius: 3px; }
-.sub a:hover { text-decoration: underline; }
+.sub a { color: var(--accent-hi); text-decoration: underline; text-decoration-color: var(--accent-line); text-underline-offset: 3px; border-radius: 3px; }
+.sub a:hover { text-decoration-color: currentColor; }
 .diffRows { display: flex; flex-direction: column; gap: 6px; margin-top: 2px; }
 .diffRow { display: grid; grid-template-columns: 58px minmax(0, 1fr) auto; gap: 8px; align-items: center; font-size: 11.5px; color: var(--fg-2); }
 
@@ -102,6 +102,9 @@
   font-size: 13px;
   color: var(--fg-1);
 }
+/* The status pill keeps its own width (as in the submissions list) instead
+ * of stretching across the 44 px column. */
+.subRow > :first-child { justify-self: start; }
 .subTitle { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .subTitle a { color: var(--fg-0); text-decoration: none; border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .subTitle a:hover { text-decoration: underline; }

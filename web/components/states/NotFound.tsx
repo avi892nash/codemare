@@ -11,6 +11,8 @@ interface NotFoundProps {
   homeLabel?: string;
   /** Adds the logo bar and fills the viewport (root not-found). */
   fullPage?: boolean;
+  /** Inside a page that already has a <main> (see StatePage). */
+  embedded?: boolean;
 }
 
 /**
@@ -23,14 +25,17 @@ export function NotFound({
   homeHref = '/problems',
   homeLabel = 'Go to problems',
   fullPage = false,
+  embedded = false,
 }: NotFoundProps) {
+  // The page's h1 — or, embedded in the /dev/system sheet, a sub-heading.
+  const Heading = embedded ? 'h4' : 'h1';
   return (
-    <StatePage fullPage={fullPage}>
+    <StatePage fullPage={fullPage} embedded={embedded}>
       <div className={s.errorCard}>
         <div className={s.code} aria-hidden="true">
           404<span>.</span>
         </div>
-        <h1 className={s.title}>{title}</h1>
+        <Heading className={s.title}>{title}</Heading>
         <p className={s.desc}>{description}</p>
         <div className={s.actions}>
           <ButtonLink href={homeHref} variant="primary" icon="list">

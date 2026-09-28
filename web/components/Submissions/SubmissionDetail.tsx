@@ -11,9 +11,8 @@ import { MetricChip } from '@/components/ui/MetricChip';
 import { Pill } from '@/components/ui/Pill';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { LANGUAGE_LABEL } from '@/components/ui/highlight';
-import { fmtMem } from '@/components/ui/formatters';
 import type { SubmissionTestView, SubmissionView } from '@/lib/server/submissionHistory';
-import { SOLUTION_FILE, fmtAbsolute, fmtMicros, fmtRelative, fmtValue } from './format';
+import { SOLUTION_FILE, fmtAbsolute, fmtKb, fmtMicros, fmtRelative, fmtValue } from './format';
 import { subjectTitle } from './SubmissionRows';
 import { SubmissionStatus } from './SubmissionStatus';
 import s from './Submissions.module.css';
@@ -52,7 +51,7 @@ export function SubmissionDetail({ view, now }: { view: SubmissionView; now: Dat
   const title = subjectTitle(view.subject);
   const lang = LANGUAGE_LABEL[view.language];
   const runtime = fmtMicros(view.runtimeUs);
-  const memory = fmtMem(view.memoryKb);
+  const memory = fmtKb(view.memoryKb);
   const tone = toneOf(view.status);
   // A compile error (or a submission still judging) has nothing to measure.
   const hasMetrics = view.runtimeUs != null || view.memoryKb != null || view.totalTests > 0 || view.compileMs != null;
@@ -247,7 +246,7 @@ function HiddenTest({ test }: { test: SubmissionTestView }) {
 
 function VisibleTest({ test }: { test: SubmissionTestView }) {
   const rt = fmtMicros(test.runtimeUs);
-  const mem = fmtMem(test.memoryKb);
+  const mem = fmtKb(test.memoryKb);
   return (
     <details open={!test.passed}>
       <summary className={s.testHead}>

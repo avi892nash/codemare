@@ -53,7 +53,16 @@ export function Formula({ tex, label, caption, className, style }: FormulaProps)
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <div className="scroll" style={{ flex: 1, minWidth: 0, overflowX: 'auto', overflowY: 'hidden', padding: '2px 0' }}>
+        {/* Wide formulas scroll sideways on phones; a scroll container must be
+            reachable by keyboard (tabIndex) and named. A group, not a region:
+            pages hold many formulas and regions must have unique names. */}
+        <div
+          className="scroll focus-ring"
+          tabIndex={0}
+          role="group"
+          aria-label={label ? `Formula ${label}` : 'Formula'}
+          style={{ flex: 1, minWidth: 0, overflowX: 'auto', overflowY: 'hidden', padding: '2px 0', borderRadius: 'var(--r-sm)' }}
+        >
           {body}
         </div>
         {label && (

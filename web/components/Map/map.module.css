@@ -250,7 +250,9 @@
   border-radius: 999px;
   background: var(--bg-2);
 }
-.gateQ > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* position: relative contains the sr-only difficulty (absolutely positioned):
+ * otherwise it escapes the ellipsis and widens the page at 375 px. */
+.gateQ > span:last-child { position: relative; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .diffDot { width: 6px; height: 6px; border-radius: 999px; flex: none; }
 .diffDot[data-level='Easy'] { background: var(--ok); }
 .diffDot[data-level='Medium'] { background: var(--warn); }
