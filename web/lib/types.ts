@@ -6,8 +6,9 @@
  *   1. Domain vocabulary + the JSON column shapes of docs/spec/architecture.md
  *      §2.1. These mirror prisma/schema.prisma enums (string unions, so client
  *      components can use them without importing @prisma/client).
- *   2. The legacy compile-service shapes used by the old /p/[id] editor and
- *      /ide (kept verbatim until those screens are rebuilt).
+ *   2. The compile service's IDE-mode shapes (POST /v1/ide/execute), used by
+ *      /ide, runnable lesson snippets and library code. The /v1/run types
+ *      live next to their client in lib/compile.ts.
  */
 
 // ═══ 1. Domain vocabulary ═══════════════════════════════════════════════
@@ -148,71 +149,16 @@ export type BadgeCriteriaKind = BadgeCriteria['kind'];
 /** `checkpoint_questions.answer`: mcq → index into `choices`; short → accepted answer(s). */
 export type CheckpointAnswer = number | string | string[];
 
-// ═══ 2. Legacy compile-service shapes (/p/[id], /ide) ═══════════════════
+// ═══ 2. Compile-service IDE shapes (POST /v1/ide/execute) ═══════════════
 
 /**
- * The 4-language set of the legacy editor/IDE (their components key
- * `Record<Language, string>` tables on it). New code uses `SupportedLanguage`;
- * fold this into it when those screens are rebuilt.
+ * The original four-language set, still the `language` of IdeExecutionRequest
+ * (lib/compile.ts's IdeRunRequest widens it to all six). New code uses
+ * `SupportedLanguage`; fold this into it once nothing needs the narrower type.
  */
 export type Language = 'python' | 'javascript' | 'cpp' | 'java';
 
 export type SandboxStatus = 'OK' | 'TLE' | 'MLE' | 'RE' | 'CE' | 'XX';
-
-export interface TestCase {
-  input: unknown[];
-  expectedOutput: unknown;
-  hidden?: boolean;
-}
-
-export interface ProblemListItem {
-  id: string;
-  title: string;
-  difficulty: Difficulty;
-}
-
-export interface Problem extends ProblemListItem {
-  description: string;
-  examples: Example[];
-  constraints: string[];
-  starterCode: Record<Language, string>;
-  functionName: string;
-  testCases: TestCase[];
-}
-
-export interface ExecutionRequest {
-  problemId: string;
-  language: Language;
-  code: string;
-}
-
-export interface TestCaseResult {
-  input: unknown[];
-  expectedOutput: unknown;
-  actualOutput: unknown;
-  passed: boolean;
-  executionTime: number;
-  runMs?: number;
-  wallMs?: number;
-  memoryKb?: number;
-  error?: string;
-  hidden?: boolean;
-}
-
-export interface ExecutionResponse {
-  success: boolean;
-  testResults: TestCaseResult[];
-  totalPassed: number;
-  totalTests: number;
-  executionTime: number;
-  memoryUsed: number;
-  runMs?: number;
-  wallMs?: number;
-  memoryKb?: number;
-  compileMs?: number;
-  status?: SandboxStatus;
-  error?: string;
-}
 
 export interface IdeTestCase {
   input: string;
