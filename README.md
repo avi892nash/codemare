@@ -1,189 +1,134 @@
 # Codemare
 
-A µs-precision online judge for DSA practice. Multi-language (Python,
-JavaScript, C++, Java), with **algorithm-only timing** — `runMs` reflects the
-user function in microseconds, not interpreter startup or sandbox overhead.
+A DSA practice and learning platform. Learners solve problems in an in-browser
+editor, their code is judged in a sandbox with **microsecond CPU timing**, and
+they progress through a **tiered learning loop**: solving earns topic tokens,
+tokens unlock new topics through recipes, and gate exams open each tier. Dark
+first, with a light theme.
+
+## What's in it
+
+- **Practice** — a catalog of 30 problems (`/problems`) with URL-driven
+  filters, and an editor workspace (`/problems/[slug]`) in **Python,
+  JavaScript, TypeScript, C++, Java and Go**. Runs and submissions stream live
+  over SSE (queued → compiling → running → each test → verdict) into a results
+  hero with runtime in µs, memory, a "beats N%" percentile, and a per-test
+  breakdown that explains failures. A free-form `/ide` with custom stdin.
+- **The learning loop** — `/map` shows three tiers and ten topics with token
+  balances, unlock recipes and "what's blocking you"; unlocking spends tokens
+  from an append-only ledger that can never go negative. Gate exams
+  (`/map/gates/…`) open each tier, with cooldowns. `/queue` walks predict →
+  build steps that make learners write reusable components in dependency
+  order; `/me/library` shows what they've built. A five-level hint ladder
+  (nudge → solution) shows each hint's cost before it's revealed.
+- **Learn** — three tracks of original lessons (`/learn`) with runnable code,
+  step-through visualizations, callouts, formulas and checkpoint quizzes.
+- **Profile and badges** — `/u/[handle]` with stats, a year of activity and
+  17 badges.
+- **Authoring** — `/author` for authors and staff, with a publish checklist
+  that re-runs every reference solution through the judge.
+- **Algorithms library** — `/library`, deliberately hidden (staff-only unless
+  `FEATURE_LIBRARY_PUBLIC=true`, `noindex`, disallowed in `robots.txt`).
+- **Admin** — Directus over the `content` schema, with a custom recipe-editor
+  module, confined by Postgres roles to editing rows.
+- **Optional AI review** of accepted submissions (`FEATURE_AI_REVIEW`), never
+  in place of the tests.
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────┐         ┌────────────────────────────────┐
-│  web/  — Next.js 15 (App Router)    │         │  backend/  — Compile service   │
-│  ──────────────────────────────     │  HTTPS  │  ────────────────────────      │
-│  · React pages + server actions     │ ──────▶ │  POST /v1/execute              │
-│  · Tailwind + design tokens         │  X-     │  POST /v1/ide/execute          │
-│  · Auth.js (GitHub / Google)        │  Code-  │  Returns SandboxResult         │
-│  · Prisma → Postgres                │  mare-  │  isolate sandbox (Linux only)  │
-│    (User · Submission · Problem)    │  Token  │  No DB · no auth state         │
-│  · Monaco editor                    │ ──────▶ │  Stateless, horiz. scalable    │
-└─────────────────────────────────────┘         └────────────────────────────────┘
+browser ── Caddy (TLS) ──▶ web: Next.js 15 App Router ─────────────▶ Postgres 16
+                            RSC pages, server actions,                ├ content.*  (problems, topics,
+                            /api/run · /api/submit · /api/build       │             recipes, lessons…)
+                            (SSE), Auth.js, Prisma                    └ app.*      (users, token ledger,
+                                  │                                                submissions, progress…)
+                                  │ X-Codemare-Token                        ▲
+                                  ▼                                         │ rows only (Postgres roles)
+                          compile service (backend/)                  Directus ─ admin.<domain>
+                          /v1/run (+SSE), /v1/ide/execute
+                          isolate sandbox · CPU-clock µs timing
+                          no network · per-box memory/PID caps
 ```
 
-Two services, one shared secret. The compile service is a thin black box that
-takes `(language, code, input)` and returns timing + memory + status. The
-Next.js app holds all user state (auth, submissions, profile) and never
-exposes the compile-service token to the browser.
+- **`web/`** owns all user state and content (Prisma, two Postgres schemas,
+  real migrations). Only its server code writes `app.*`.
+- **`backend/`** is a stateless executor: the caller sends code plus tests,
+  it compiles and runs them in `isolate` and returns per-test results. On a
+  machine without isolate (e.g. macOS) it falls back to an unsandboxed local
+  adapter for development, and refuses to do so in production.
+- Everything runs on one VPS with Docker Compose, with nightly encrypted
+  backups to a Storage Box — see [`deploy/README.md`](deploy/README.md).
 
-## Key features
-
-- **Algorithm-only CPU timing.** Wrappers in the compile service measure each
-  user-function call with the thread's CPU clock (`time.thread_time_ns`,
-  `process.cpuUsage`, `CLOCK_THREAD_CPUTIME_ID`, `ThreadMXBean`), so `runMs`
-  is microsecond-precision, excludes interpreter cold-start, and does not
-  inflate when the host is busy — the same choice as Codeforces, ICPC and IOI
-  judges. Wall time is kept per test (`wallMs`) as a diagnostic.
-- **Single-core CPU pinning.** Every run box is bound to one host core
-  (`--core=N` round-robin by box id) so user code can't parallelise the
-  algorithm to win timing comparisons unfairly — CP-judge convention.
-- **Per-language pid caps.** C++/Python: 1. JavaScript: 16. Java: 64. Tight
-  enough to block user-spawned thread pools, loose enough for the runtime
-  itself (JVM internals etc.) to boot.
-- **Two-phase compile / run** for C++ and Java. `compileMs` and `runMs` are
-  tracked separately so compile time never counts against the user's budget.
-- **CP fairness defaults.** 10 s CPU, 256 MB memory, 50 PIDs, no network,
-  empty filesystem, fresh namespace stack per submission.
-
-## Languages
-
-Python · JavaScript · C++ · Java. Adding a language is ~10 lines in
-[`backend/src/services/sandbox/languageSpec.ts`](backend/src/services/sandbox/languageSpec.ts)
-plus an `apt-get install` in `deploy/install.sh`.
-
-All four languages work in both Problems mode and IDE mode. C++/Java
-Problems-mode harnesses are *generated* from each problem's typed
-`signature` (see decision 11 in `docs/DECISIONS.html`).
-
-**Why things are the way they are:** [docs/DECISIONS.html](docs/DECISIONS.html)
-— decision records, the life of a submission as a swimlane flow, the
-verdict decision tree, and the bugs that shaped the rules. It's a
-self-contained page with rendered diagrams: open it in a browser.
-
-## Layout
+## Repository layout
 
 ```
-backend/        Compile service (Express + isolate)
-  src/
-    services/sandbox/   types, languageSpec, metaParser, boxPool, isolateAdapter
-    services/           executionService, ideExecutionService, codeWrapperService
-    middleware/         internalAuth, errorHandler, rateLimit
-    routes/             problemRoutes, executionRoutes, ideRoutes
-    config/sandbox.ts   limits, isolate config
-  tests/                sandbox, queue, validation, wrapper (javac-compiles generated harnesses)
-  DEPLOYMENT.md         systemd + install.sh guide
-
-web/            Next.js app — user-facing
-  app/(workspace)/      catalog · problem detail · ide · auth · submissions · profile
-  components/           ui · Catalog · Problem · Editor · Results · IDE · Auth · Layout
-  lib/                  compile.ts (server-only HTTP client), prisma.ts, types.ts
-  prisma/schema.prisma  User, Account, Session, Problem, Submission
-  auth.ts               Auth.js: email/password (bcrypt) + optional GitHub/Google
-  middleware.ts         Login wall — everything except /auth requires a session
-  README.md             Detailed dev guide
-
-docs/           REPO-GUIDE.html (what is where: interactive map, reading paths, status board)
-                DECISIONS.html (why: decision records with diagrams) · authoring-v1.md (content platform plan)
-.github/        CI: unit tests · Linux e2e judge smoke in 4 languages · web build
-
-deploy/         Linux VM provisioning for the compile service
-  install.sh            apt-get isolate + node + python3 + jdk + g++; generates INTERNAL_TOKEN
-  release.sh            build locally, rsync to VM, systemctl restart
-  codemare-backend.service
+web/                Next.js app
+  app/(workspace)/  every page (problems, ide, submissions, learn, map, queue,
+                    me/library, u/[handle], author, library, sign-in pages)
+  app/api/          run · submit · build (SSE), hints, ai-review, auth
+  components/       ui/ (design system), states/, and one folder per feature
+  lib/server/       domain layer: ledger, recipes, unlocks, gates, hints,
+                    badges, runner… (unit-tested)
+  prisma/           schema, migrations, seed (data/ = all content as JSON)
+  e2e/              Playwright specs
+backend/            compile service (Express + isolate), node:test suite
+admin/              Directus content model as code + extensions
+deploy/             Compose runtime config, backups, runbook
+docs/spec/          architecture.md (the source of truth) + the product brief
 ```
 
-## Quick start — local dev (macOS, Linux, anywhere)
+## Running it locally
+
+Prerequisites: Node 20+, Postgres 16+, and — to judge every language — Python 3,
+a JDK (21), g++ and Go 1.22+.
 
 ```bash
-git clone https://github.com/avi892nash/codemare.git
-cd codemare
-npm install              # installs backend/ and web/ via workspaces
-npm run setup            # web/.env.local + Prisma client + (DB seed if configured)
-npm run dev              # starts both services
+npm install
+npm run setup          # creates web/.env.local (with a fresh AUTH_SECRET)
+createdb codemare      # then set DATABASE_URL in web/.env.local to point at it
+npm run setup          # again: Prisma client, migrations, seed
+npm run dev            # compile service :4000 + web :4001
 ```
 
-`npm run setup` is idempotent — safe to re-run. It writes `web/.env.local`
-with a fresh `AUTH_SECRET`, generates the Prisma client, and (if
-`DATABASE_URL` points at a reachable Postgres) pushes the schema and seeds
-**Two Sum** + **Reverse String** so the catalog has rows on first load.
-Without a DB the app still works; submissions just don't persist.
+Open http://localhost:4001 and create an account. `npm run setup` is safe to
+re-run; `/dev/system` shows the whole design system in both themes.
 
-Open `http://localhost:4001` for the web app. The backend boots on `:4000`.
-
-On a host **without** `isolate` (typical dev: macOS, Windows, a Linux box
-without isolate installed), the compile service starts in **`local`** mode:
-user code runs via `child_process.spawn` with no isolation. A loud yellow
-warning is printed on every boot so you don't mistake it for production
-behaviour. The wrapper-level `runMs` / `memoryKb` numbers for Python and
-JavaScript are still accurate — those are measured inside the user process.
-
-On Linux **with** `isolate` installed (production), the backend
-auto-detects it and uses it. No env var change needed. Set
-`SANDBOX_MODE=isolate` if you want to be explicit, or
-`NODE_ENV=production` to make missing isolate a hard failure.
-
-## Quick start — production
+## Tests
 
 ```bash
-# On a Linux VM (Ubuntu 22.04+ / Debian 12+)
-sudo bash deploy/install.sh                       # installs isolate + runtimes, generates INTERNAL_TOKEN
-deploy/release.sh user@your-vm                    # builds locally, rsyncs, systemctl restart
+npm test -w backend                     # compile service (node:test)
+npm test -w web                         # domain layer, seed, parsers (vitest)
+npm run typecheck && npm run lint -w web
 
-# Web app — Vercel or any Node host
-cd web
-# Vercel dashboard: set COMPILE_SERVICE_URL, INTERNAL_TOKEN (match /etc/codemare/env),
-#                   DATABASE_URL (Neon / Supabase / RDS),
-#                   AUTH_SECRET, AUTH_GITHUB_* / AUTH_GOOGLE_*
-vercel --prod
+# End to end: against any running build of the app
+cd web && PLAYWRIGHT_BASE_URL=http://localhost:4001 npx playwright test
 ```
 
-## API contract
+CI runs all of it on every push: backend tests, a six-language judge smoke,
+web migrations/seed/unit tests/build, and the full Playwright suite against a
+production build. To build for production next to a running dev server, use
+`NEXT_DIST_DIR=.next-prod npm run build -w web` so the two don't share `.next`.
 
-The compile service is internal; only the Next.js server should call it.
-Every authed endpoint requires `X-Codemare-Token` (timing-safe compared
-against `INTERNAL_TOKEN`).
+## Documentation
 
-```
-GET  /health                          → open
-GET  /v1/problems                     → ProblemListItem[]
-GET  /v1/problems/:id                 → Problem
-POST /v1/execute                      → ExecutionResponse, or { token } (202) if queued
-POST /v1/ide/execute                  → IdeExecutionResponse, or { token } (202) if queued
-GET  /v1/execute/:token               → poll a queued Problems submission
-GET  /v1/ide/execute/:token           → poll a queued IDE submission
-```
+- [`docs/spec/architecture.md`](docs/spec/architecture.md) — data model,
+  learning-loop rules, the runner and SSE protocol, routes, design language,
+  environment. Build against this.
+- [`docs/spec/implementation-prompt.md`](docs/spec/implementation-prompt.md) —
+  the product brief.
+- [`deploy/README.md`](deploy/README.md) — deployment, backups, Directus.
+- [`docs/DECISIONS.html`](docs/DECISIONS.html) and
+  [`docs/REPO-GUIDE.html`](docs/REPO-GUIDE.html) — decision records and an
+  interactive repo tour (open in a browser).
 
-`POST /v1/execute?wait=true` forces the synchronous path. The async token
-flow activates only when the compile service has `REDIS_URL` set; otherwise
-every submit is synchronous. The web client handles both transparently.
+## Known gaps
 
-`/api/*` is kept as a legacy alias for one release while the Vite SPA is
-retired.
-
-## What's done
-
-- Backend: Docker → isolate migration; per-language pid caps; single-core
-  pinning; algorithm-only timing for Python and JS; content-addressed compile
-  cache (C++/Java re-runs skip compilation); parallel IDE test cases;
-  internal-auth lockdown; optional Redis queue + worker pool for horizontal
-  scale; systemd + install.sh deploy story; generated C++/Java Problems-mode
-  harnesses; derived verdicts (WA/XX) and unordered compare; 43/43 unit tests.
-- Web: full design-language port; catalog + problem detail + Monaco editor
-  + Results panel; IDE mode + stdin/stdout test cases;
-  email/password auth (bcrypt + sign-up) plus OAuth, fail-closed login wall
-  via middleware; Prisma schema + submission persistence; submissions
-  history + profile page; transparent sync/async submission client.
-- Content: 10 problems (Two Sum, Reverse String + 8 interview classics),
-  each verified on the judge in all four languages.
-- Process: QA-gated releases; GitHub Actions CI on every push.
-
-## What's parked
-
-- Isolate smoke test on a Linux host (the one untested path; see release plan).
-- Password reset / email verification (needs an email provider).
-- Learn section (tracks / modules / lessons / quizzes / runnable code blocks).
-- Migrating the problem catalog from compile-service JSON into Postgres.
-- Multi-iteration median for sub-millisecond timing on tiny algorithms.
-- Live-Redis integration test (the queue's gating is unit-tested; the
-  enqueue→worker→poll path is verified manually against a real Redis).
+- The design project's artboards and `MVP Architecture.html` haven't been
+  synced into the repo yet (`/design-sync`); the spec in `docs/spec/` is the
+  working reconstruction, and screens follow the existing design system. When
+  the files arrive, reconcile against them.
+- Directus asks for a project owner to accept its license on first admin
+  login — a decision for the deployment's owner.
 
 ## License
 
