@@ -87,7 +87,7 @@ jobs:
         run: cat server.log
 
   web:
-    name: Web — typecheck, lint, build
+    name: Web — migrations, seed, unit tests, typecheck, lint, build
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -103,6 +103,9 @@ jobs:
           --health-timeout 5s --health-retries 10
     env:
       DATABASE_URL: postgresql://codemare:codemare@localhost:5432/codemare
+      # Unit tests TRUNCATE every table: they get their own database in the
+      # same Postgres service (created + migrated by the vitest global setup).
+      TEST_DATABASE_URL: postgresql://codemare:codemare@localhost:5432/codemare_test
       AUTH_SECRET: ci-only-not-a-real-secret
       # 64-hex dummy: next build runs with NODE_ENV=production, and the
       # compile client refuses placeholder tokens in production.
@@ -116,9 +119,19 @@ jobs:
           cache: npm
       - run: npm ci
       - working-directory: web
-        run: npx prisma db push --skip-generate
-      - working-directory: web
         run: npx prisma generate
+      - name: Apply migrations
+        working-directory: web
+        run: npx prisma migrate deploy
+      - name: Seed content twice (validates every file; must be idempotent)
+        working-directory: web
+        run: |
+          dir=prisma/seed/data
+          [ -d "$dir" ] || dir=prisma/seed/fixtures
+          npx tsx prisma/seed/index.ts --dir "$dir"
+          npx tsx prisma/seed/index.ts --dir "$dir"
+      - name: Unit tests (vitest)
+        run: npm test -w web
       - run: npm run typecheck -w web
       - run: npm run lint -w web
       - run: npm run build -w web

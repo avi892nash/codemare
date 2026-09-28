@@ -5,10 +5,14 @@
  *   1. copy .env.example → .env.local (only if missing)
  *   2. inject a fresh AUTH_SECRET so signing actually works
  *   3. `npx prisma generate` so the Prisma client is available
- *   4. if DATABASE_URL is reachable: `prisma db push` + seed Two Sum +
- *      Reverse String. If not: skip with a friendly message.
+ *   4. if DATABASE_URL is set: `prisma migrate deploy` (the schemas `app` +
+ *      `content`, incl. the ledger trigger and partial indexes), then seed
+ *      the content (prisma/seed/data, or the tiny fixture set when the real
+ *      content is absent). If the DB is unreachable: skip with a message.
  *
- * Safe to re-run. Idempotent — seeds upsert by slug.
+ * Safe to re-run: migrations apply once, the seed upserts by slug.
+ * The npm scripts used here load web/.env.local themselves
+ * (prisma/with-env.mjs), since Prisma's CLI only reads `.env`.
  */
 import { copyFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { execSync } from 'node:child_process';
@@ -20,6 +24,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const WEB_ROOT = join(here, '..');
 const ENV_EXAMPLE = join(WEB_ROOT, '.env.example');
 const ENV_LOCAL = join(WEB_ROOT, '.env.local');
+const SEED_DATA = join(WEB_ROOT, 'prisma', 'seed', 'data');
 
 const c = {
   dim: (s) => `\x1b[2m${s}\x1b[0m`,
@@ -55,32 +60,33 @@ try {
   console.log(c.warn('!') + ' prisma generate failed — see error above');
 }
 
-// ── 3. DB push + seed (best effort) ───────────────────────────────────
+// ── 3. Migrations + seed (best effort) ────────────────────────────────
 const envContent = readFileSync(ENV_LOCAL, 'utf8');
-const dbUrl = envContent.match(/^DATABASE_URL=(.+)$/m)?.[1]?.trim() ?? '';
+const dbUrl = process.env.DATABASE_URL ?? envContent.match(/^DATABASE_URL=(.+)$/m)?.[1]?.trim() ?? '';
 const placeholder = dbUrl === '' || /replace-me|user:pass@localhost/.test(dbUrl);
 
 if (placeholder) {
   console.log(
     c.warn('•') +
-      ' DATABASE_URL is the placeholder — skipping schema push + seed.\n' +
-      c.dim('  Set DATABASE_URL in web/.env.local to enable submissions history.\n') +
-      c.dim('  The app still works without it; runs just don’t persist.')
+      ' DATABASE_URL is the placeholder — skipping migrations + seed.\n' +
+      c.dim('  Set DATABASE_URL in web/.env.local, then re-run `npm run setup`.\n') +
+      c.dim('  The app still renders without it; nothing persists.')
   );
 } else {
-  console.log(c.dim('•') + ' pushing schema to the database…');
+  console.log(c.dim('•') + ' applying migrations…');
   try {
-    run('npx prisma db push --skip-generate', { stdio: ['ignore', 'ignore', 'inherit'] });
-    console.log(c.ok('✓') + ' schema is up to date');
+    run('npm run --silent db:deploy', { stdio: ['ignore', 'ignore', 'inherit'] });
+    console.log(c.ok('✓') + ' database schema is up to date');
   } catch {
-    console.log(c.warn('!') + ' prisma db push failed — DB may be unreachable. Skipping seed.');
+    console.log(c.warn('!') + ' prisma migrate deploy failed — DB may be unreachable. Skipping seed.');
     finish();
     process.exit(0);
   }
 
-  console.log(c.dim('•') + ' seeding problems…');
+  const real = existsSync(SEED_DATA);
+  console.log(c.dim('•') + (real ? ' seeding content…' : ' no prisma/seed/data yet — seeding the fixture set…'));
   try {
-    run('npx tsx prisma/seed.ts');
+    run(real ? 'npm run --silent seed' : 'npm run --silent seed:fixtures');
     console.log(c.ok('✓') + ' seed complete');
   } catch {
     console.log(c.warn('!') + ' seed failed — see error above');
@@ -92,5 +98,5 @@ finish();
 function finish() {
   console.log(c.bold('\nNext steps'));
   console.log('  ' + c.dim('# from the repo root'));
-  console.log('  npm run dev          # http://localhost:3001\n');
+  console.log('  npm run dev          # http://localhost:4001\n');
 }

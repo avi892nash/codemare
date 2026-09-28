@@ -12,14 +12,31 @@ export default async function SubmissionsPage() {
   const session = await auth();
   if (!session?.user?.id) redirect('/auth?next=/submissions');
 
-  const submissions = await prisma.submission
+  const rows = await prisma.submission
     .findMany({
-      where: { userId: session.user.id },
-      include: { problem: { select: { slug: true, title: true, difficulty: true } } },
+      where: { userId: session.user.id, questionId: { not: null } },
+      include: { question: { select: { slug: true, title: true, difficulty: true } } },
       orderBy: { createdAt: 'desc' },
       take: 100,
     })
     .catch(() => []);
+  const submissions: SubmissionRow[] = rows.flatMap((s) =>
+    s.question
+      ? [
+          {
+            id: s.id,
+            status: s.status === 'queued' || s.status === 'running' ? 'PND' : s.status,
+            language: s.language as SubmissionRow['language'],
+            runMs: s.runtimeUs == null ? null : Number(s.runtimeUs) / 1000,
+            memoryKb: s.memoryKb,
+            totalPassed: s.totalPassed,
+            totalTests: s.totalTests,
+            createdAt: s.createdAt,
+            problem: s.question,
+          },
+        ]
+      : []
+  );
 
   return (
     <main
@@ -49,7 +66,7 @@ export default async function SubmissionsPage() {
         {submissions.length === 0 ? (
           <EmptyState />
         ) : (
-          <SubmissionsTable submissions={submissions as SubmissionRow[]} />
+          <SubmissionsTable submissions={submissions} />
         )}
       </div>
     </main>

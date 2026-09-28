@@ -1,0 +1,55 @@
+{
+  "slug": "two-sum",
+  "title": "Two Sum",
+  "difficulty": "Easy",
+  "statement_md": "Given an integer array `nums` and an integer `target`, return the indices of the two numbers that add up to `target`.\n\nEvery input has exactly one solution, and the same element may not be used twice. Return the indices in any order.",
+  "examples": [
+    { "input": "nums = [2,7,11,15], target = 9", "output": "[0,1]", "explanation": "nums[0] + nums[1] = 9." },
+    { "input": "nums = [3,3], target = 6", "output": "[0,1]" }
+  ],
+  "constraints": ["2 <= nums.length <= 10^4", "-10^9 <= nums[i], target <= 10^9", "Exactly one valid answer exists."],
+  "function_name": "twoSum",
+  "signature": {
+    "params": [
+      { "name": "nums", "type": "int[]" },
+      { "name": "target", "type": "int" }
+    ],
+    "returns": "int[]"
+  },
+  "compare_mode": "unordered",
+  "starter_code": {
+    "python": "def twoSum(nums, target):\n    return []",
+    "javascript": "function twoSum(nums, target) {\n  return [];\n}",
+    "typescript": "function twoSum(nums: number[], target: number): number[] {\n  return [];\n}",
+    "cpp": "#include <vector>\nusing namespace std;\n\nvector<int> twoSum(vector<int>& nums, int target) {\n    return {};\n}",
+    "java": "class Solution {\n    public static int[] twoSum(int[] nums, int target) {\n        return new int[0];\n    }\n}",
+    "go": "func twoSum(nums []int, target int) []int {\n\treturn []int{}\n}"
+  },
+  "tests": [
+    { "input": [[2, 7, 11, 15], 9], "expected": [0, 1], "hidden": false },
+    { "input": [[3, 3], 6], "expected": [0, 1], "hidden": false },
+    {
+      "input": [[-3, 4, 3, 90], 0],
+      "expected": [0, 2],
+      "hidden": true,
+      "explain_on_fail": "Negative numbers have complements too: -3 pairs with 3."
+    },
+    { "input": [[1, 5, 3, 7, 8], 10], "expected": [2, 3], "hidden": true }
+  ],
+  "reference_solutions": {
+    "python": "def twoSum(nums, target):\n    seen = {}\n    for i, x in enumerate(nums):\n        if target - x in seen:\n            return [seen[target - x], i]\n        seen[x] = i\n    return []",
+    "javascript": "function twoSum(nums, target) {\n  const seen = new Map();\n  for (let i = 0; i < nums.length; i++) {\n    const j = seen.get(target - nums[i]);\n    if (j !== undefined) return [j, i];\n    seen.set(nums[i], i);\n  }\n  return [];\n}"
+  },
+  "topics": [{ "slug": "arrays", "weight": 1 }],
+  "tags": ["hash-map", "array"],
+  "companies": [],
+  "editorial_md": "Remember each value's index in a hash map. For every element, look up its complement `target - x` before storing it: one pass, O(n) time and O(n) space.",
+  "hints": [
+    { "level": "nudge", "body_md": "Every number needs exactly one partner. What would make finding that partner instant?" },
+    { "level": "concept", "body_md": "A hash map from value to index answers \"have I already seen `target - x`?\" in O(1)." },
+    {
+      "level": "pseudo",
+      "body_md": "```\nfor i, x in nums:\n    if target - x in seen: return [seen[target - x], i]\n    seen[x] = i\n```"
+    }
+  ]
+}
