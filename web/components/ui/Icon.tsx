@@ -1,9 +1,12 @@
 /* Codemare icons — lucide-style, hand-picked, inline.
- * Stroke-based; inherits currentColor.
- * Ported from the design bundle. */
+ * Stroke-based (24×24 grid, 1.75 stroke, round caps/joins); inherits currentColor.
+ * Ported from the design bundle; the second block was added with the UI kit.
+ *
+ * This is the shared icon vocabulary: content JSON (topics, badges, library
+ * areas) may only use these names — validate with `isIconName()`. */
 import type { CSSProperties, ReactNode } from 'react';
 
-const ICONS: Record<string, ReactNode> = {
+const ICONS = {
   // status
   check: <polyline points="20 6 9 17 4 12" />,
   x: (<><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></>),
@@ -67,9 +70,45 @@ const ICONS: Record<string, ReactNode> = {
   bolt: <path d="M13 2 4.09 12.97a1 1 0 0 0 .77 1.63H11l-1 7.4 8.91-10.97A1 1 0 0 0 18.14 9H13z" />,
   trend: (<><polyline points="3 17 9 11 13 15 21 7" /><polyline points="14 7 21 7 21 14" /></>),
   hash: (<><line x1="4" y1="9" x2="20" y2="9" /><line x1="4" y1="15" x2="20" y2="15" /><line x1="10" y1="3" x2="8" y2="21" /><line x1="16" y1="3" x2="14" y2="21" /></>),
-};
 
-export type IconName = keyof typeof ICONS | string;
+  // ── added by the UI kit ──
+  map: (<><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21 3 6" /><line x1="9" y1="3" x2="9" y2="18" /><line x1="15" y1="6" x2="15" y2="21" /></>),
+  route: (<><circle cx="6" cy="19" r="3" /><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15" /><circle cx="18" cy="5" r="3" /></>),
+  'book-open': (<><path d="M12 7v14" /><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z" /></>),
+  award: (<><circle cx="12" cy="8" r="6" /><path d="M15.48 12.89 17 22l-5-3-5 3 1.52-9.11" /></>),
+  coin: (<><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="5.5" /><path d="M12 9.5v5" /></>),
+  sun: (<><circle cx="12" cy="12" r="4" /><path d="M12 2v2" /><path d="M12 20v2" /><path d="m4.93 4.93 1.41 1.41" /><path d="m17.66 17.66 1.41 1.41" /><path d="M2 12h2" /><path d="M20 12h2" /><path d="m6.34 17.66-1.41 1.41" /><path d="m19.07 4.93-1.41 1.41" /></>),
+  moon: <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />,
+  'log-out': (<><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></>),
+  'git-branch': (<><line x1="6" y1="3" x2="6" y2="15" /><circle cx="18" cy="6" r="3" /><circle cx="6" cy="18" r="3" /><path d="M18 9a9 9 0 0 1-9 9" /></>),
+  grid: (<><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /></>),
+  edit: (<><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z" /><path d="m15 5 4 4" /></>),
+  trash: (<><path d="M3 6h18" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><line x1="10" y1="11" x2="10" y2="17" /><line x1="14" y1="11" x2="14" y2="17" /></>),
+  sort: (<><path d="m21 16-4 4-4-4" /><path d="M17 20V4" /><path d="m3 8 4-4 4 4" /><path d="M7 4v16" /></>),
+  repeat: (<><path d="m17 2 4 4-4 4" /><path d="M3 11v-1a4 4 0 0 1 4-4h14" /><path d="m7 22-4-4 4-4" /><path d="M21 13v1a4 4 0 0 1-4 4H3" /></>),
+  shield: <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" />,
+  puzzle: <path d="M19.44 7.85c-.05.32.06.65.29.88l1.57 1.57c.47.47.7 1.09.7 1.7s-.23 1.24-.7 1.71l-1.61 1.61a.98.98 0 0 1-.84.28c-.47-.07-.8-.48-.97-.93a2.5 2.5 0 1 0-3.21 3.21c.45.17.86.5.93.97a.98.98 0 0 1-.28.84l-1.61 1.61a2.4 2.4 0 0 1-1.7.7 2.4 2.4 0 0 1-1.71-.7l-1.57-1.57a1.03 1.03 0 0 0-.88-.29c-.49.07-.84.5-1.02.97a2.5 2.5 0 1 1-3.24-3.24c.46-.18.9-.53.97-1.02a1.03 1.03 0 0 0-.29-.88l-1.57-1.57A2.4 2.4 0 0 1 2 12c0-.62.24-1.23.7-1.7l1.53-1.53c.24-.24.58-.35.92-.3.51.08.88.53 1.07 1.01a2.5 2.5 0 1 0 3.26-3.26c-.48-.2-.93-.56-1.01-1.07-.05-.34.06-.68.3-.92L10.3 2.7A2.4 2.4 0 0 1 12 2c.62 0 1.23.24 1.7.7l1.57 1.57c.23.23.56.34.88.29.49-.07.84-.5 1.02-.97a2.5 2.5 0 1 1 3.24 3.24c-.46.18-.9.53-.97 1.02z" />,
+  network: (<><rect x="16" y="16" width="6" height="6" rx="1" /><rect x="2" y="16" width="6" height="6" rx="1" /><rect x="9" y="2" width="6" height="6" rx="1" /><path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3" /><path d="M12 12V8" /></>),
+  table: (<><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M3 9h18" /><path d="M3 15h18" /><path d="M12 3v18" /></>),
+  window: (<><rect x="2" y="4" width="20" height="16" rx="2" /><path d="M2 8h20" /><path d="M6 4v4" /><path d="M10 4v4" /></>),
+  'arrows-lr': (<><path d="M8 3 4 7l4 4" /><path d="M4 7h16" /><path d="m16 21 4-4-4-4" /><path d="M20 17H4" /></>),
+} satisfies Record<string, ReactNode>;
+
+/** Every icon in the shared vocabulary. */
+export type KnownIconName = keyof typeof ICONS;
+
+/**
+ * Accepts any known name (with autocomplete) and, for backward compatibility,
+ * any string — unknown names render nothing and warn once in development.
+ */
+export type IconName = KnownIconName | (string & {});
+
+/** Runtime list of the vocabulary — use it to validate content JSON. */
+export const ICON_NAMES = Object.keys(ICONS) as KnownIconName[];
+
+export function isIconName(value: unknown): value is KnownIconName {
+  return typeof value === 'string' && Object.prototype.hasOwnProperty.call(ICONS, value);
+}
 
 interface IconProps {
   name: IconName;
@@ -77,11 +116,20 @@ interface IconProps {
   strokeWidth?: number;
   className?: string;
   style?: CSSProperties;
+  /** Accessible name. Omit for decorative icons (the default: aria-hidden). */
+  label?: string;
 }
 
-export function Icon({ name, size = 16, strokeWidth = 1.75, className = '', style }: IconProps) {
-  const path = ICONS[name as keyof typeof ICONS];
-  if (!path) return null;
+const warned = new Set<string>();
+
+export function Icon({ name, size = 16, strokeWidth = 1.75, className = '', style, label }: IconProps) {
+  if (!isIconName(name)) {
+    if (process.env.NODE_ENV !== 'production' && !warned.has(name)) {
+      warned.add(name);
+      console.warn(`[Icon] unknown icon name "${name}" — see ICON_NAMES in components/ui/Icon.tsx`);
+    }
+    return null;
+  }
   return (
     <svg
       width={size}
@@ -94,9 +142,9 @@ export function Icon({ name, size = 16, strokeWidth = 1.75, className = '', styl
       strokeLinejoin="round"
       className={className}
       style={{ flex: 'none', ...style }}
-      aria-hidden="true"
+      {...(label ? { role: 'img', 'aria-label': label } : { 'aria-hidden': true })}
     >
-      {path}
+      {ICONS[name]}
     </svg>
   );
 }

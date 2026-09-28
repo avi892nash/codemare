@@ -1,0 +1,5 @@
+{
+  "private": true,
+  "description": "Marks the UI kit side-effect free (CSS excepted) so webpack can drop unused re-exports of the primitives barrel from client bundles.",
+  "sideEffects": ["*.css"]
+}
