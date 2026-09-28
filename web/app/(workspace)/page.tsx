@@ -1,44 +1,8 @@
-import { Suspense } from 'react';
-import { compile, CompileServiceError } from '@/lib/compile';
-import { CatalogList } from '@/components/Catalog/CatalogList';
-import { Icon } from '@/components/ui/Icon';
-import type { ProblemListItem } from '@/lib/types';
+import { redirect } from 'next/navigation';
+import { auth } from '@/auth';
 
-export const metadata = {
-  title: 'Problems · Codemare',
-};
-
-export default async function CatalogPage() {
-  let problems: ProblemListItem[] = [];
-  let error: string | null = null;
-  try {
-    problems = await compile.listProblems();
-  } catch (err) {
-    error =
-      err instanceof CompileServiceError
-        ? `compile service responded ${err.status}`
-        : err instanceof Error
-          ? err.message
-          : 'unknown error';
-  }
-
-  return (
-    <>
-      <Suspense fallback={<div style={{ padding: 20, color: 'var(--fg-3)' }}>Loading catalog…</div>}>
-        <CatalogList problems={problems} />
-      </Suspense>
-
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ textAlign: 'center', color: 'var(--fg-3)' }}>
-          <Icon name="layers" size={28} style={{ color: 'var(--fg-4)', marginBottom: 12 }} />
-          <p style={{ margin: 0, fontSize: 15, color: 'var(--fg-1)' }}>
-            {error ? 'Catalog unavailable' : 'No problem selected'}
-          </p>
-          <p style={{ margin: '4px 0 0', fontSize: 12.5 }}>
-            {error ?? 'Pick one from the list to get started.'}
-          </p>
-        </div>
-      </div>
-    </>
-  );
+/** `/` has no page of its own: the catalog when signed in, else sign-in. */
+export default async function Home() {
+  const session = await auth().catch(() => null);
+  redirect(session?.user ? '/problems' : '/signin');
 }

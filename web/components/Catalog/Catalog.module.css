@@ -1,0 +1,417 @@
+/* Catalog (/problems, artboards 01 + 08b). Shares the list-page frame with
+ * states/LoadingState's list skeleton: max 1100 px, 28 px / 24 px padding. */
+
+.main {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  background: var(--bg-0);
+}
+
+.page {
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 28px 24px 40px;
+}
+
+/* ── Header ─────────────────────────────────────────────── */
+.head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 20px;
+}
+.eyebrow {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  color: var(--fg-2);
+}
+.title {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -0.4px;
+  line-height: 1.15;
+}
+.sub {
+  margin: 6px 0 0;
+  max-width: 560px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--fg-2);
+}
+.solved {
+  flex: none;
+  width: 200px;
+}
+
+/* ── Sticky toolbar + column header ─────────────────────── */
+.sticky {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--bg-0);
+  padding-top: 8px;
+}
+
+.filters {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 12px;
+}
+.searchRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.searchForm {
+  flex: 1;
+  min-width: 0;
+}
+.toggle {
+  display: none;
+}
+.toggleCount {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--accent-bg);
+  color: var(--accent-hi);
+  line-height: 16px;
+}
+
+.panel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.divider {
+  width: 1px;
+  height: 18px;
+  margin: 0 4px;
+  background: var(--line-2);
+}
+.facet {
+  max-width: 200px;
+}
+
+.active {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 22px;
+  font-size: 12.5px;
+  color: var(--fg-2);
+}
+.metaCount {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+.metaCount strong {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  color: var(--fg-0);
+}
+.metaSpacer {
+  flex: 1;
+}
+
+.colHead {
+  display: grid;
+  grid-template-columns: var(--cat-cols);
+  grid-template-areas: var(--cat-areas);
+  column-gap: 12px;
+  align-items: center;
+  padding: 9px 14px;
+  border: 1px solid var(--line-2);
+  border-bottom-color: var(--line-1);
+  border-radius: var(--r-md) var(--r-md) 0 0;
+  background: var(--bg-2);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--fg-2);
+}
+
+/* ── Rows ───────────────────────────────────────────────── */
+.table {
+  /* Shared by the column header and the rows. */
+  --cat-cols: 24px minmax(0, 1fr) minmax(0, 240px) 84px 96px;
+  --cat-areas: 'status title topics diff acc';
+}
+
+.rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--line-2);
+  border-top: 0;
+  border-radius: 0 0 var(--r-md) var(--r-md);
+  background: var(--bg-1);
+  overflow: hidden;
+}
+.rows > li + li {
+  border-top: 1px solid var(--line-1);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: var(--cat-cols);
+  grid-template-areas: var(--cat-areas);
+  column-gap: 12px;
+  align-items: center;
+  min-height: 46px;
+  padding: 8px 14px;
+  color: var(--fg-0);
+  text-decoration: none;
+  transition: background 0.12s;
+}
+.row:hover {
+  background: var(--bg-2);
+}
+.row:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--accent);
+  background: var(--bg-2);
+}
+
+.cStatus {
+  grid-area: status;
+  display: inline-flex;
+}
+.cTitle {
+  grid-area: title;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  font-size: 13.5px;
+  font-weight: 500;
+}
+.titleText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.row[data-locked] .titleText {
+  color: var(--fg-1);
+}
+.lock {
+  flex: none;
+  color: var(--fg-2);
+}
+.cTopics {
+  grid-area: topics;
+  display: flex;
+  gap: 5px;
+  min-width: 0;
+  overflow: hidden;
+}
+.cDiff {
+  grid-area: diff;
+  display: inline-flex;
+}
+.cAcc {
+  grid-area: acc;
+  text-align: right;
+  font-size: 12.5px;
+  color: var(--fg-1);
+}
+.cAcc[data-empty] {
+  color: var(--fg-2);
+}
+.accWord {
+  /* Screen-reader only on wide screens; visible on phones (see below). */
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.colHead .cAcc {
+  font-size: inherit;
+  color: inherit;
+}
+
+.results {
+  display: block;
+}
+
+/* No column header above it (that only renders with rows). */
+.empty {
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-md);
+  background: var(--bg-1);
+}
+
+/* ── Pagination ─────────────────────────────────────────── */
+.pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 16px;
+}
+.pagerInfo {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--fg-2);
+}
+.pagerInfo span {
+  font-family: var(--font-mono);
+  color: var(--fg-1);
+}
+.pagerLinks {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.pages {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.gap {
+  padding: 0 6px;
+  color: var(--fg-2);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.pageOf {
+  display: none;
+  font-size: 12.5px;
+  color: var(--fg-2);
+}
+
+/* ── Responsive ─────────────────────────────────────────── */
+@media (max-width: 899px) {
+  .table {
+    --cat-cols: 24px minmax(0, 1fr) 84px 88px;
+    --cat-areas: 'status title diff acc';
+  }
+  .cTopics {
+    display: none;
+  }
+  .solved {
+    width: 160px;
+  }
+}
+
+@media (max-width: 639px) {
+  .page {
+    padding: 20px 16px 32px;
+  }
+  .head {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+  }
+  .title {
+    font-size: 24px;
+  }
+  .solved {
+    width: 100%;
+  }
+
+  /* The toolbar scrolls away on phones; the facets fold behind "Filters". */
+  .sticky {
+    position: static;
+    padding-top: 0;
+  }
+  .toggle {
+    display: inline-flex;
+  }
+  .panel {
+    display: none;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 12px;
+    border: 1px solid var(--line-2);
+    border-radius: var(--r-md);
+    background: var(--bg-1);
+  }
+  .panel[data-open] {
+    display: flex;
+  }
+  .divider {
+    display: none;
+  }
+  .facet {
+    max-width: none;
+    width: 100%;
+  }
+
+  .colHead {
+    display: none;
+  }
+  .rows {
+    border-top: 1px solid var(--line-2);
+    border-radius: var(--r-md);
+  }
+  .table {
+    --cat-cols: 20px minmax(0, 1fr) auto;
+    --cat-areas: 'status title diff' '. topics acc';
+  }
+  .row {
+    row-gap: 4px;
+    padding: 10px 12px;
+  }
+  .cTopics {
+    display: flex;
+  }
+  .cTopics > :nth-child(n + 2) {
+    display: none;
+  }
+  .cAcc {
+    font-size: 11.5px;
+    color: var(--fg-2);
+  }
+  .accWord {
+    position: static;
+    width: auto;
+    height: auto;
+    clip: auto;
+  }
+
+  .pages {
+    display: none;
+  }
+  .pageOf {
+    display: inline;
+  }
+  .pager {
+    justify-content: center;
+  }
+  .pagerInfo {
+    width: 100%;
+    text-align: center;
+  }
+}
