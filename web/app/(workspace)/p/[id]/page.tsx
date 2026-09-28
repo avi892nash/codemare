@@ -1,40 +1,18 @@
-import { notFound } from 'next/navigation';
-import { compile, CompileServiceError } from '@/lib/compile';
-import { CatalogList } from '@/components/Catalog/CatalogList';
-import { ProblemDescription } from '@/components/Problem/ProblemDescription';
-import { EditorWorkspace } from '@/components/Editor/EditorWorkspace';
+import { permanentRedirect } from 'next/navigation';
 
-export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  try {
-    const problem = await compile.getProblem(id);
-    return { title: `${problem.title} · Codemare` };
-  } catch {
-    return { title: 'Problem · Codemare' };
-  }
-}
-
-export default async function ProblemDetailPage({
+/** The old editor route: /p/<slug> → /problems/<slug> (spec §7), query string kept. */
+export default async function LegacyProblemRoute({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const { id } = await params;
-
-  let problem;
-  let catalog;
-  try {
-    [problem, catalog] = await Promise.all([compile.getProblem(id), compile.listProblems()]);
-  } catch (err) {
-    if (err instanceof CompileServiceError && err.status === 404) notFound();
-    throw err;
+  const [{ id }, search] = await Promise.all([params, searchParams]);
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(search)) {
+    for (const v of Array.isArray(value) ? value : value === undefined ? [] : [value]) query.append(key, v);
   }
-
-  return (
-    <>
-      <CatalogList problems={catalog} />
-      <ProblemDescription problem={problem} />
-      <EditorWorkspace problem={problem} />
-    </>
-  );
+  const qs = query.toString();
+  permanentRedirect(`/problems/${encodeURIComponent(id)}${qs ? `?${qs}` : ''}`);
 }

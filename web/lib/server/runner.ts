@@ -25,7 +25,8 @@ import { prisma } from './db';
 import { AccessDenied, DomainError, InvalidInput, NotFoundError, isDomainError } from './errors';
 import { assertCanAccessBuildStep, canAccessQuestion, whatsBlocking, type Blocker, type TopicRef } from './access';
 import { assertGateSubmissionAllowed } from './gates';
-import { assemblePrelude } from './components';
+import { assemblePrelude, getDependencyOrder } from './components';
+import { getHintLadder } from './hints';
 import { completeSubmission, createSubmission, markSubmissionRunning, type TestOutcome } from './submissions';
 import { onAcceptedSubmit, onBuildPassed } from './awards';
 import type { AwardedBadge } from './badges';
@@ -379,6 +380,72 @@ export async function prepareBuildRun(userId: string, input: BuildRunInput): Pro
       tests: cases.map((c) => ({ input: c.input, expected: c.expected, hidden: c.hidden })),
       limits: { ...DEFAULT_LIMITS },
     },
+  };
+}
+
+// ─── Build steps for the workspace ───────────────────────────────────────
+
+/**
+ * Everything <SolveWorkspace mode="build"> needs for one build step, shaped
+ * for its props (`problem` is a WorkspaceProblem). Checks access (throws
+ * AccessDenied / NotFoundError; InvalidInput for a predict step). Hidden
+ * tests stay on the server.
+ */
+export async function loadBuildStep(userId: string, buildStepId: string) {
+  await assertCanAccessBuildStep(userId, buildStepId);
+  const step = await prisma.buildStep.findUnique({
+    where: { id: buildStepId },
+    select: {
+      id: true,
+      kind: true,
+      title: true,
+      promptMd: true,
+      difficulty: true,
+      payload: true,
+      component: { select: { id: true, slug: true, title: true, functionName: true, signature: true, languages: true } },
+    },
+  });
+  if (!step) throw new NotFoundError('build step', buildStepId);
+  if (step.kind !== 'build') throw new InvalidInput('This is a predict step — there is nothing to build.');
+  const { component } = step;
+  const payload = parseJsonColumn(buildPayloadSchema, step.payload, `build_steps.payload (${step.id})`);
+  const signature = parseJsonColumn(signatureSchema, component.signature, `components.signature (${component.slug})`);
+  const languages = BUILD_LANGUAGES.filter((l) => component.languages.includes(l));
+
+  const [graph, latest, progress, ladder] = await Promise.all([
+    getDependencyOrder(component.id),
+    prisma.submission.findMany({
+      where: { userId, buildStepId, kind: 'build' },
+      orderBy: { createdAt: 'desc' },
+      distinct: ['language'],
+      select: { language: true, code: true },
+    }),
+    prisma.stepProgress.findUnique({ where: { userId_buildStepId: { userId, buildStepId } }, select: { status: true } }),
+    getHintLadder(userId, { buildStepId }),
+  ]);
+
+  return {
+    problem: {
+      id: step.id,
+      title: step.title,
+      difficulty: step.difficulty,
+      functionName: component.functionName,
+      signature,
+      languages: [...languages] as SupportedLanguage[],
+      starterCode: payload.starter_code,
+      samples: payload.tests.filter((t) => !t.hidden).map((t) => ({ input: t.input, expected: t.expected })),
+      timeLimitMs: DEFAULT_LIMITS.timeMs,
+      customInputs: false,
+    },
+    promptMd: step.promptMd,
+    build: {
+      componentSlug: component.slug,
+      componentTitle: component.title,
+      dependencies: graph.map((c) => ({ slug: c.slug, title: c.title })),
+    },
+    hints: ladder,
+    latestCode: Object.fromEntries(latest.map((s) => [s.language, s.code])) as Partial<Record<SupportedLanguage, string>>,
+    passed: progress?.status === 'passed',
   };
 }
 

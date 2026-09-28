@@ -1,0 +1,158 @@
+.statement {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.sectionTitle {
+  margin: 0 0 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.9px;
+  text-transform: uppercase;
+  color: var(--fg-2);
+}
+
+.example { margin: 0; }
+.exampleBody {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line-2);
+  border-left: 2px solid var(--line-3);
+  background: var(--bg-2);
+}
+.exampleRow {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  gap: 10px;
+  align-items: baseline;
+}
+.exampleKey {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--fg-2);
+}
+.exampleValue {
+  font-size: 12.5px;
+  color: var(--fg-0);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.exampleText {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--fg-1);
+}
+
+.constraints {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 12.5px;
+  color: var(--fg-1);
+}
+.constraints li::marker { color: var(--fg-3); }
+.constraints sup { font-size: 0.72em; line-height: 0; }
+
+.companies {
+  margin: 0;
+  font-size: 12px;
+  color: var(--fg-2);
+}
+.companies span { color: var(--fg-1); }
+
+/* ─── Locked question ────────────────────────────────────────── */
+.locked {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 56px 20px;
+  overflow-y: auto;
+}
+.lockedCard {
+  width: min(560px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px;
+  border-radius: var(--r-xl);
+  border: 1px solid var(--line-2);
+  background: var(--bg-1);
+}
+.lockedIcon {
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-md);
+  color: var(--warn-fg);
+  background: var(--warn-bg);
+  border: 1px solid color-mix(in oklab, var(--warn) 30%, transparent);
+}
+.lockedTitle {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.3px;
+  color: var(--fg-0);
+}
+.lockedLead {
+  margin: 4px 0 0;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--fg-1);
+}
+.blockers {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.blocker {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line-2);
+  background: var(--bg-2);
+}
+.blockerHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fg-0);
+}
+.blockerText {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--fg-1);
+}
+.items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
