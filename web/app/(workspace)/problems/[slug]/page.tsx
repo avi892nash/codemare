@@ -1,7 +1,10 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 import { notFound, redirect } from 'next/navigation';
 import { z } from 'zod';
 import { auth } from '@/auth';
+import { signInHref } from '@/components/Auth/routes';
+import { RelatedLessons } from '@/components/Learn/RelatedLessons';
 import { LockedQuestion } from '@/components/Problem/LockedQuestion';
 import { Markdown } from '@/components/Problem/Markdown';
 import { ProblemStatement } from '@/components/Problem/ProblemStatement';
@@ -60,7 +63,7 @@ export default async function ProblemPage({ params, searchParams }: { params: Pa
   const [{ slug }, search] = await Promise.all([params, searchParams]);
   const session = await auth();
   const userId = session?.user?.id;
-  if (!userId) redirect(`/auth?next=${encodeURIComponent(`/problems/${slug}`)}`);
+  if (!userId) redirect(signInHref(`/problems/${slug}`));
 
   const q = await prisma.question.findUnique({ where: { slug }, select: questionSelect });
   if (!q) notFound();
@@ -157,14 +160,21 @@ export default async function ProblemPage({ params, searchParams }: { params: Pa
         customInputs: Object.values(references).some((code) => !!code?.trim()),
       }}
       statement={
-        <ProblemStatement
-          statementMd={q.statementMd}
-          examples={examples}
-          constraints={constraints}
-          topics={q.topics.map((t) => t.topic)}
-          tags={q.tags}
-          companies={q.companies}
-        />
+        <>
+          <ProblemStatement
+            statementMd={q.statementMd}
+            examples={examples}
+            constraints={constraints}
+            topics={q.topics.map((t) => t.topic)}
+            tags={q.tags}
+            companies={q.companies}
+          />
+          {!gate && (
+            <Suspense fallback={null}>
+              <RelatedLessons questionSlug={q.slug} userId={userId} />
+            </Suspense>
+          )}
+        </>
       }
       editorial={q.editorialMd ? <Markdown>{q.editorialMd}</Markdown> : undefined}
       submissions={submissions}

@@ -6,7 +6,7 @@ out/
 node_modules/
 
 # Build
-build/
+/build/
 dist/
 
 # Environment

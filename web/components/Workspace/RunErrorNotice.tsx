@@ -1,5 +1,6 @@
 'use client';
 
+import { signInHref } from '@/components/Auth/routes';
 import { Button, ButtonLink } from '@/components/ui/Button';
 import { Icon, type IconName } from '@/components/ui/Icon';
 import type { RunRequestError } from '@/lib/client/runState';
@@ -74,7 +75,7 @@ export function RunErrorNotice({ error, onRetry }: { error: RunRequestError; onR
     icon = 'user';
     title = 'Signed out';
     action = (
-      <ButtonLink href={`/auth?next=${encodeURIComponent(typeof window !== 'undefined' ? window.location.pathname + window.location.search : '/')}`} size="sm" variant="primary" icon="user">
+      <ButtonLink href={signInHref(typeof window !== 'undefined' ? window.location.pathname + window.location.search : '/')} size="sm" variant="primary" icon="user">
         Sign in again
       </ButtonLink>
     );

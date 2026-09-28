@@ -70,8 +70,6 @@ test('the library is a plain 404 for learners and authors', async ({ page }) => 
 });
 
 test('robots.txt disallows the hidden routes', async ({ page }) => {
-  // Signed in: the app's middleware still walls /robots.txt off from signed-out
-  // visitors (see the fixme below).
   const user = await makeUser('learner', 'rob');
   await signIn(page, user.email);
   const res = await page.request.get('/robots.txt');
@@ -80,7 +78,7 @@ test('robots.txt disallows the hidden routes', async ({ page }) => {
   for (const path of ['/library', '/author', '/dev']) expect(body).toContain(`Disallow: ${path}`);
 });
 
-test.fixme('robots.txt is served to signed-out crawlers (needs /robots.txt excluded from the middleware matcher)', async ({ request }) => {
+test('robots.txt is served to signed-out crawlers', async ({ request }) => {
   const res = await request.get('/robots.txt', { maxRedirects: 0 });
   expect(res.status()).toBe(200);
 });

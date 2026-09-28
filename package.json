@@ -15,7 +15,7 @@
     "dev:web": "npm run dev -w web",
     "build": "npm run build -w backend && npm run build -w web",
     "test": "npm run test -w backend",
-    "typecheck": "tsc --noEmit -p backend && tsc --noEmit -p web",
+    "typecheck": "npm run typecheck -w backend && npm run typecheck -w web",
     "seed": "npm run seed -w web"
   },
   "devDependencies": {

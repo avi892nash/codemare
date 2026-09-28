@@ -37,7 +37,7 @@ export function ProfileMenu({ user, libraryVisible = false }: { user: NavUser; l
     link('Profile', profileHref, 'user'),
     link('My Library', '/me/library', 'puzzle'),
     ...(user.handle ? [link('Badges', `/u/${user.handle}/badges`, 'award')] : []),
-    ...(roleAtLeast(user.role, 'author') ? [link('Author', '/author/new', 'edit')] : []),
+    ...(roleAtLeast(user.role, 'author') ? [link('Author', '/author', 'edit')] : []),
     ...(libraryVisible ? [link('Library', '/library', 'book-open')] : []),
     { kind: 'separator' },
     { kind: 'action', label: 'Sign out', icon: 'log-out', onSelect: () => void signOut({ redirectTo: '/' }) },

@@ -7,14 +7,13 @@ import { expect, test, type Page } from '@playwright/test';
 
 /** Sign up a throwaway user through the UI. The only place that knows the auth page's path. */
 async function signUp(page: Page): Promise<void> {
-  const AUTH_PATH = '/auth';
   const id = `e2e_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
-  await page.goto(AUTH_PATH);
-  await page.getByText('Create an account').click();
-  await page.locator('input[type="email"]').fill(`${id}@test.dev`);
-  await page.locator('input[autocomplete="new-password"]').fill(`pw-${id}-Secure1`);
+  await page.goto('/signup');
+  await page.getByLabel('Username').fill(id);
+  await page.getByLabel('Email').fill(`${id}@test.dev`);
+  await page.getByLabel('Password', { exact: true }).fill(`pw-${id}-Secure1`);
   await page.getByRole('button', { name: 'Create account' }).click();
-  await page.waitForURL((url) => !url.pathname.startsWith(AUTH_PATH), { timeout: 30_000 });
+  await page.waitForURL((url) => url.pathname !== '/signup', { timeout: 30_000 });
 }
 
 async function setCode(page: Page, code: string): Promise<void> {

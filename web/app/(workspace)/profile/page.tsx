@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation';
+import { signInHref } from '@/components/Auth/routes';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 
@@ -9,7 +10,7 @@ import { prisma } from '@/lib/prisma';
 export default async function LegacyProfileRedirect() {
   const session = await auth();
   const id = session?.user?.id;
-  if (!id) redirect('/auth?next=/profile');
+  if (!id) redirect(signInHref('/profile'));
   let handle = session?.user?.handle || null;
   if (!handle) {
     const user = await prisma.user.findUnique({ where: { id }, select: { handle: true } });

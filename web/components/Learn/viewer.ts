@@ -1,5 +1,6 @@
 import 'server-only';
 import { redirect } from 'next/navigation';
+import { signInHref } from '@/components/Auth/routes';
 import { auth } from '@/auth';
 
 /**
@@ -10,6 +11,6 @@ import { auth } from '@/auth';
 export async function requireViewer(next: string): Promise<{ id: string; handle: string | null }> {
   const session = await auth();
   const id = session?.user?.id;
-  if (!id) redirect(`/auth?next=${encodeURIComponent(next)}`);
+  if (!id) redirect(signInHref(next));
   return { id, handle: session?.user?.handle || null };
 }
