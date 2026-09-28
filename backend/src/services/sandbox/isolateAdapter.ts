@@ -108,9 +108,21 @@ export function cpuPinning(): Pinning {
 
 // ── isolate plumbing ────────────────────────────────────────────────────────
 
+/**
+ * isolate itself (and taskset) get only PATH. Its keeper and proxy would
+ * otherwise inherit the service's environment — INTERNAL_TOKEN included —
+ * and the proxy is PID 1 of the box's PID namespace. The box cannot see it
+ * (isolate mounts /proc with hidepid=2), but the secret has no business
+ * there either. The program's own environment is built by isolateCommand.
+ */
+const ISOLATE_ENV = { PATH: process.env.PATH || '/usr/local/bin:/usr/bin:/bin' };
+
 function runIsolate(command: Command): Promise<{ stdout: string; stderr: string; exitCode: number }> {
   return new Promise((resolve, reject) => {
-    const child = spawn(command.file, command.args, { stdio: ['ignore', 'pipe', 'pipe'] });
+    const child = spawn(command.file, command.args, {
+      stdio: ['ignore', 'pipe', 'pipe'],
+      env: ISOLATE_ENV,
+    });
     let stdout = '';
     let stderr = '';
     // isolate's own output (the box path, fatal errors) — never the program's.
