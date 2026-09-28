@@ -59,6 +59,28 @@ interface SpawnOutcome {
   aborted: boolean;
 }
 
+/**
+ * The environment a learner's program (and its compiler) starts with. Never
+ * the server's own: that leaks host secrets to user code and leaks settings
+ * like FORCE_COLOR that change program output (ANSI codes then fail the
+ * judge). isolate clears the environment the same way in production.
+ */
+function childBaseEnv(cwd: string): Record<string, string> {
+  const env: Record<string, string> = {
+    PATH: process.env.PATH ?? '/usr/local/bin:/usr/bin:/bin',
+    HOME: cwd,
+    TMPDIR: cwd,
+    LANG: process.env.LANG || 'en_US.UTF-8',
+    PYTHONIOENCODING: 'utf-8',
+  };
+  // Toolchain locators only — never credentials.
+  for (const key of ['LC_ALL', 'JAVA_HOME', 'DEVELOPER_DIR', 'SDKROOT'] as const) {
+    const value = process.env[key];
+    if (value) env[key] = value;
+  }
+  return env;
+}
+
 function runProcess(
   argv: string[],
   cwd: string,
@@ -76,7 +98,7 @@ function runProcess(
     const child = spawn(cmd, args, {
       cwd,
       stdio: ['pipe', 'pipe', 'pipe'],
-      env: options.env ? { ...process.env, ...options.env } : process.env,
+      env: { ...childBaseEnv(cwd), ...options.env },
     });
 
     let stdout = '';
