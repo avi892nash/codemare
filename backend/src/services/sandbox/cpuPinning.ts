@@ -85,7 +85,7 @@ export function readAllowedCpus(statusText?: string): number[] | null {
       return null;
     }
   }
-  const m = /^Cpus_allowed_list:\s*(\S+)\s*$/m.exec(text);
+  const m = /^Cpus_allowed_list:[ \t]*(\S+)[ \t]*$/m.exec(text);
   if (!m) return null;
   const cpus = parseCpuList(m[1]);
   return cpus.length > 0 ? cpus : null;

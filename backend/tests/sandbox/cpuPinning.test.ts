@@ -39,6 +39,7 @@ test('readAllowedCpus takes the Cpus_allowed_list line of /proc/self/status', ()
   assert.deepEqual(readAllowedCpus(status), [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
   assert.deepEqual(readAllowedCpus('Cpus_allowed_list:\t2,4-5\n'), [2, 4, 5]);
   assert.equal(readAllowedCpus('Name:\tnode\n'), null);
+  assert.equal(readAllowedCpus('Cpus_allowed_list:\t\nMems_allowed_list:\t0\n'), null, 'never reads the next line');
 });
 
 test('ISOLATE_CPU_PINNING: round-robin (default) or off, nothing else', () => {
