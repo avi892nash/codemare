@@ -29,6 +29,15 @@ export interface GalleryItem {
 
 type Filter = 'all' | 'earned' | 'locked';
 
+const squash = (t: string) => t.toLowerCase().replace(/\(utc\)/g, '').replace(/[^a-z0-9]+/g, '');
+/** A description that only restates the criteria adds nothing next to it. */
+const restates = (a: string, b: string) => {
+  const [x, y] = [squash(a), squash(b)];
+  return !x || !y || x.includes(y) || y.includes(x);
+};
+
+const heldBy = (p: number | null) => (p === null ? '' : p === 0 ? ' · no learner has it yet' : ` · held by ${p}% of learners`);
+
 export const fmtBadgeDate = (iso: string) =>
   new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
 
@@ -152,7 +161,7 @@ export function BadgeGallery({ items, ownerName, isOwner }: { items: GalleryItem
         title={selected?.name ?? ''}
         description={
           selected
-            ? `${RARITY[selected.rarity].label} badge${selected.heldByPercent !== null ? ` · held by ${selected.heldByPercent}% of learners` : ''}`
+            ? `${RARITY[selected.rarity].label} badge${heldBy(selected.heldByPercent)}`
             : undefined
         }
         footer={
@@ -181,7 +190,7 @@ function FocusView({ badge, ownerName, isOwner }: { badge: GalleryItem; ownerNam
   return (
     <div className={s.focus}>
       <BadgeMedallion icon={badge.icon} rarity={badge.rarity} locked={locked} size={96} />
-      {badge.description && <p className={s.focusDesc}>{badge.description}</p>}
+      {badge.description && !restates(badge.description, badge.howTo) && <p className={s.focusDesc}>{badge.description}</p>}
       {locked ? (
         <div className={s.howto}>
           <span className={s.howtoLabel}>How to earn it</span>
