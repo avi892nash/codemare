@@ -58,6 +58,9 @@ export function GateCard({ gate, tier }: { gate: GateCardView; tier: { slug: str
         router.refresh();
         return;
       }
+      // The action's promise settles a moment before the router lets go of it; a navigation
+      // started in between would discard it. Wait a tick, then go.
+      await new Promise((r) => setTimeout(r, 0));
       router.push(`/map/gates/${encodeURIComponent(res.attemptId)}`);
     } catch {
       setError('Couldn’t reach the server. Try again.');
