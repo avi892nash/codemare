@@ -193,8 +193,10 @@ Used by recipe unlocks (reason `unlock`, ref `recipe`) and token-cost hints
   `missing = Σ max(0, quantity − qualifying_balance)` per item; cheapest recipe
   = min `missing`, tie → min total quantity → `ord`. Return per-item
   `{topic, have, need, min_difficulty}`.
-- A question is accessible iff **every** one of its topics is unlocked. Locked
-  questions still list in the catalog, with a lock and a link to `/map`.
+- A question is accessible iff **every** one of its topics is unlocked — or it
+  belongs to a gate the user has a running attempt for (gate questions are
+  always reachable during their attempt). Locked questions still list in the
+  catalog, with a lock and a link to `/map`.
 - Build steps are accessible iff the component's topic is unlocked.
 
 ### 3.5 Gates
@@ -364,6 +366,16 @@ Old routes `/p/[id]`, `/auth`, `/profile` redirect to their new homes.
   CE → `--info`, XX → `--fg-3`; always via `StatusPill` / `Pill`.
 - **Components**: reuse `web/components/ui/*`; never hand-roll a button,
   pill, input or tab.
+- **Icon names** (`IconName` in `components/ui/Icon.tsx`) — content JSON
+  (topics, badges, areas) may only use these. Existing: `check x circle
+  half-circle check-circle alert zap cpu memory clock search filter chev-down
+  chev-right chev-left chev-up play pause skip-back skip-forward graduation
+  sparkle target lightbulb info alert-circle gauge arrow-right arrow-down send
+  copy refresh settings user list book flame github google lock lock-open eye
+  eye-off plus minus close more external bookmark thumb msg trophy layers
+  history terminal code drag star bolt trend hash`. Added by the UI kit:
+  `map route book-open award coin sun moon log-out git-branch grid edit trash
+  sort repeat shield puzzle network table window arrows-lr`.
 - **A11y**: keyboard reachable, visible `focus-ring`, AA contrast in both
   themes, honor `prefers-reduced-motion`.
 - **Responsive**: editor ≥ 1024 px; catalog, learn, library, profile ≥ 375 px.
