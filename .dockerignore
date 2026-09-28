@@ -1,0 +1,15 @@
+# Fallback for builds with the repo root as context. web/, backend/ and admin/
+# images use their own allowlists (<Dockerfile>.dockerignore next to each).
+**/node_modules
+**/.next
+**/dist
+**/.env
+**/.env.*
+!**/.env.example
+.git
+.github
+.claude
+docs
+deploy/secrets
+**/*.log
+**/.DS_Store
