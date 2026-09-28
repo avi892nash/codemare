@@ -8,6 +8,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Pill } from '@/components/ui/Pill';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { TabPanel, Tabs } from '@/components/ui/Tabs';
+import { useMounted } from '@/components/ui/hooks';
 import type { BadgeRarity } from '@/lib/types';
 import { BadgeMedallion, RARITY } from './BadgeMedallion';
 import s from './badges.module.css';
@@ -51,7 +52,10 @@ export function BadgeGallery({ items, ownerName, isOwner }: { items: GalleryItem
   const pathname = usePathname() ?? '';
   const params = useSearchParams();
   const openSlug = params.get('badge');
-  const selected = useMemo(() => items.find((b) => b.slug === openSlug) ?? null, [items, openSlug]);
+  // Open only after hydration: the Modal portal mounts after hydration, and a
+  // dialog open on the very first render would miss its focus / inert setup.
+  const hydrated = useMounted();
+  const selected = useMemo(() => (hydrated ? (items.find((b) => b.slug === openSlug) ?? null) : null), [hydrated, items, openSlug]);
   const [filter, setFilter] = useState<Filter>('all');
   const tiles = useRef<Record<string, HTMLButtonElement | null>>({});
   const pushed = useRef(false);
