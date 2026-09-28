@@ -177,3 +177,80 @@ jobs:
       - run: npm run typecheck -w web
       - run: npm run lint -w web
       - run: npm run build -w web
+
+  # The whole product in a browser: build the web app, run it in production
+  # mode against the real compile service (local adapter) and a seeded
+  # Postgres, then drive every Playwright spec in web/e2e.
+  e2e:
+    name: E2E — Playwright against the production build
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: codemare
+          POSTGRES_PASSWORD: codemare
+          POSTGRES_DB: codemare
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready --health-interval 5s
+          --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://codemare:codemare@localhost:5432/codemare
+      AUTH_SECRET: ci-only-not-a-real-secret
+      INTERNAL_TOKEN: "0000000000000000000000000000000000000000000000000000000000000000"
+      COMPILE_SERVICE_URL: http://localhost:4000
+      PLAYWRIGHT_BASE_URL: http://localhost:4001
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+      - run: npm ci
+      - name: Build and start the compile service (local adapter)
+        run: |
+          npm run build -w backend
+          cd backend
+          SANDBOX_MODE=local PORT=4000 node dist/server.js > server.log 2>&1 &
+          for i in $(seq 1 60); do curl -sf http://localhost:4000/health > /dev/null && break; sleep 1; done
+          curl -sf http://localhost:4000/health
+      - name: Migrate and seed
+        working-directory: web
+        run: |
+          npx prisma generate
+          npx prisma migrate deploy
+          npx tsx prisma/seed/index.ts --dir prisma/seed/data
+      - name: Build and start the web app
+        run: |
+          npm run build -w web
+          cd web
+          npm run start > web.log 2>&1 &
+          for i in $(seq 1 60); do curl -s -o /dev/null http://localhost:4001/signin && break; sleep 1; done
+          curl -sf -o /dev/null http://localhost:4001/signin
+      - name: Install Chromium
+        working-directory: web
+        run: npx playwright install --with-deps chromium
+      - name: Playwright
+        working-directory: web
+        run: npx playwright test --reporter=line
+      - name: Logs and traces on failure
+        if: failure()
+        run: |
+          tail -200 backend/server.log || true
+          tail -200 web/web.log || true
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-results
+          path: web/e2e/.results/
+          retention-days: 7
