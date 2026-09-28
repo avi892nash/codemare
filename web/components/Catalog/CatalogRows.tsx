@@ -4,6 +4,7 @@ import { Icon } from '@/components/ui/Icon';
 import { Pill } from '@/components/ui/Pill';
 import { StatusDot } from '@/components/ui/StatusDot';
 import type { CatalogRow } from '@/lib/server/catalog';
+import { LinkPending } from './LinkPending';
 import s from './Catalog.module.css';
 
 const STATUS_TEXT = { solved: 'Solved', attempted: 'Attempted', todo: 'Not started' } as const;
@@ -52,7 +53,9 @@ export function CatalogRows({ rows }: { rows: CatalogRow[] }) {
               title={locked ? `${r.title} is locked. Unlock its topics on the map.` : undefined}
             >
               <span className={s.cStatus}>
-                <StatusDot status={r.status === 'todo' ? 'unsolved' : r.status} />
+                <LinkPending>
+                  <StatusDot status={r.status === 'todo' ? 'unsolved' : r.status} />
+                </LinkPending>
                 <span className="sr-only">{STATUS_TEXT[r.status]}:</span>
               </span>
               <span className={s.cTitle}>
