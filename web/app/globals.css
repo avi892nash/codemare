@@ -151,6 +151,21 @@
   --tk-nu: var(--err-fg);
 }
 
+/* ─── Page shell ─────────────────────────────────────────────────── */
+/* One container for every scrolling page — catalog, submissions, learn,
+ * profile, map/queue/My Library, author, library — so switching sections
+ * never moves the content edge. Page modules read these; their headers
+ * share one rhythm too (eyebrow 11/600 caps + icon, title 28/600 → 23 on
+ * phones, subtitle 14/1.6 fg-2, 10 px apart). */
+:root {
+  --page-max: 1120px;
+  --page-narrow: 860px;
+  --page-pad: 28px 32px 72px;
+}
+@media (max-width: 720px) {
+  :root { --page-pad: 18px 16px 56px; }
+}
+
 /* ─── Base ───────────────────────────────────────────────────────── */
 html, body { height: 100%; }
 body {

@@ -9,6 +9,7 @@ import { Pagination } from '@/components/Catalog/Pagination';
 import { catalogHref, catalogSearchString, hasActiveFilters, parseCatalogQuery } from '@/components/Catalog/query';
 import { EmptyState } from '@/components/states/EmptyState';
 import { ButtonLink } from '@/components/ui/Button';
+import { Icon } from '@/components/ui/Icon';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { listCatalog } from '@/lib/server/catalog';
 import s from '@/components/Catalog/Catalog.module.css';
@@ -40,7 +41,9 @@ export default async function ProblemsPage({ searchParams }: { searchParams: Sea
       <div className={s.page}>
         <header className={s.head}>
           <div>
-            <p className={s.eyebrow}>Practice</p>
+            <p className={s.eyebrow}>
+              <Icon name="list" size={13} /> Practice
+            </p>
             <h1 className={s.title}>Problems</h1>
             <p className={s.sub}>
               Curated problems, judged in a sandbox and timed to the microsecond. Locked ones open as you unlock

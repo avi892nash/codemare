@@ -74,7 +74,7 @@ export default async function LibraryArticlePage({ params }: { params: Params })
             { label: a.title },
           ]}
         />
-        <header style={{ marginTop: 14 }}>
+        <header style={{ marginTop: 28 }}>
           <p className={s.eyebrow}>
             Chapter {a.chapter.index} · {a.chapter.title} · article {a.position.index} of {a.position.total}
           </p>

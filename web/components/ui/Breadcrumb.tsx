@@ -32,7 +32,7 @@ export function Breadcrumb({
           const inner = (
             <>
               {c.icon && <Icon name={c.icon} size={13} />}
-              {c.label}
+              <span className={s.label}>{c.label}</span>
             </>
           );
           return (

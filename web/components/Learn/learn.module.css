@@ -1,23 +1,26 @@
 /* Learn section (L1–L3, L6–L8). Tokens only; dense tool-like scale. */
 
 /* ── page shell ─────────────────────────────────────────────── */
+/* position: relative keeps absolutely positioned bits (sr-only text) inside
+ * the scroller, so they can never widen the document. */
 .page {
+  position: relative;
   flex: 1;
   min-width: 0;
   overflow-y: auto;
   background: var(--bg-0);
 }
 .container {
-  max-width: 1120px;
+  max-width: var(--page-max);
   margin: 0 auto;
-  padding: 28px 32px 72px;
+  padding: var(--page-pad);
   display: flex;
   flex-direction: column;
   gap: 28px;
 }
-.narrow { max-width: 860px; }
+.narrow { max-width: var(--page-narrow); }
 @media (max-width: 720px) {
-  .container { padding: 18px 16px 56px; gap: 22px; }
+  .container { gap: 22px; }
 }
 
 /* ── headings ───────────────────────────────────────────────── */

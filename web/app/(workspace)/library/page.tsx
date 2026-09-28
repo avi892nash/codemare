@@ -26,7 +26,9 @@ export default async function LibraryIndexPage() {
     <main className={`${s.page} scroll`}>
       <div className={s.wrap}>
         <header>
-          <p className={s.eyebrow}>Library</p>
+          <p className={s.eyebrow}>
+            <Icon name="book-open" size={13} /> Library
+          </p>
           <h1 className={s.h1}>Algorithms library</h1>
           <p className={s.lede}>
             Reference notes on the ideas behind the problems: the intuition, the math, runnable C++, a step-by-step

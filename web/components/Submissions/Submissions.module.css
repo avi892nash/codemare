@@ -2,6 +2,7 @@
  * the catalog (max 1100 px, 28 px / 24 px padding). */
 
 .main {
+  position: relative;
   flex: 1;
   min-width: 0;
   overflow-y: auto;
@@ -9,16 +10,19 @@
 }
 .page {
   width: 100%;
-  max-width: 1100px;
+  max-width: var(--page-max);
   margin: 0 auto;
-  padding: 28px 24px 48px;
+  padding: var(--page-pad);
 }
 
 .eyebrow {
-  margin: 0 0 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 10px;
   font-size: 11px;
   font-weight: 600;
-  letter-spacing: 1.6px;
+  letter-spacing: 0.9px;
   text-transform: uppercase;
   color: var(--fg-2);
 }
@@ -26,13 +30,15 @@
   margin: 0;
   font-size: 28px;
   font-weight: 600;
-  letter-spacing: -0.4px;
-  line-height: 1.15;
+  letter-spacing: -0.5px;
+  line-height: 1.2;
+  color: var(--fg-0);
 }
 .sub {
-  margin: 6px 0 0;
-  font-size: 13px;
-  line-height: 1.55;
+  margin: 10px 0 0;
+  max-width: 680px;
+  font-size: 14px;
+  line-height: 1.6;
   color: var(--fg-2);
 }
 .head {
@@ -177,8 +183,9 @@
 }
 
 /* ── Detail ─────────────────────────────────────────────── */
+/* Breadcrumb → header: 28 px, as on every page with a trail. */
 .crumbs {
-  margin-bottom: 14px;
+  margin-bottom: 28px;
 }
 .detailHead {
   display: flex;
@@ -392,13 +399,13 @@ details[open] > summary .chev {
   }
 }
 
-@media (max-width: 639px) {
-  .page {
-    padding: 20px 16px 36px;
-  }
+@media (max-width: 720px) {
   .title {
     font-size: 23px;
   }
+}
+
+@media (max-width: 639px) {
   .select {
     max-width: none;
     flex: 1 1 140px;

@@ -21,10 +21,18 @@
   align-items: center;
   gap: 5px;
   max-width: 240px;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  min-width: 0;
   white-space: nowrap;
   border-radius: var(--r-sm);
+}
+.link > svg,
+.current > svg { flex: none; }
+/* The ellipsis lives on the text itself: text-overflow does nothing on the
+ * inline-flex crumb, whose text is an anonymous flex item. */
+.label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .link {
   color: var(--fg-2);

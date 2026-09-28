@@ -102,6 +102,9 @@
   font-size: 13px;
   color: var(--fg-1);
 }
+/* The status pill keeps its own width (as in the submissions list) instead
+ * of stretching across the 44 px column. */
+.subRow > :first-child { justify-self: start; }
 .subTitle { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .subTitle a { color: var(--fg-0); text-decoration: none; border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .subTitle a:hover { text-decoration: underline; }
