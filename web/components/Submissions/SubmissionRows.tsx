@@ -3,9 +3,8 @@ import { DifficultyPill } from '@/components/ui/DifficultyPill';
 import { LangMark } from '@/components/ui/LangMark';
 import { Pill } from '@/components/ui/Pill';
 import { LANGUAGE_LABEL } from '@/components/ui/highlight';
-import { fmtMem } from '@/components/ui/formatters';
 import type { SubmissionListRow, SubmissionSubject } from '@/lib/server/submissionHistory';
-import { fmtAbsolute, fmtMicros, fmtRelative } from './format';
+import { fmtAbsolute, fmtKb, fmtMicros, fmtRelative } from './format';
 import { SubmissionStatus } from './SubmissionStatus';
 import s from './Submissions.module.css';
 
@@ -66,7 +65,7 @@ export function SubmissionRows({ rows, now }: { rows: SubmissionListRow[]; now: 
             </span>
             <span className={s.cMem}>
               <span className={s.label}>Memory </span>
-              <Metric value={fmtMem(r.memoryKb)} />
+              <Metric value={fmtKb(r.memoryKb)} />
             </span>
             <span className={s.cKind}>
               <Pill tone="muted" size="xs" className="mono">
