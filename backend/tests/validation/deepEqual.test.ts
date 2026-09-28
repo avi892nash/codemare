@@ -75,3 +75,29 @@ test('deriveVerdict passes real sandbox statuses through untouched', () => {
   assert.equal(deriveVerdict('XX', 0, 5), 'XX');
   assert.equal(deriveVerdict(undefined, 0, 5), undefined);
 });
+
+test('unordered mode canonicalises children before sorting the parent', () => {
+  // Raw row order differs on both sides; only recursive canonicalisation
+  // lines [3, 1] up with [1, 3] and [0, 2] with [2, 0].
+  assert.equal(deepEqual([[3, 1], [0, 2]], [[1, 3], [2, 0]], 'unordered'), true);
+  assert.equal(deepEqual([[3, 1], [0, 2]], [[1, 3], [2, 1]], 'unordered'), false);
+});
+
+test('floatTolerance compares numbers within an absolute tolerance', () => {
+  assert.equal(deepEqual(0.1 + 0.2, 0.3), false);
+  assert.equal(deepEqual(0.1 + 0.2, 0.3, 'ordered', { floatTolerance: 1e-6 }), true);
+  assert.equal(deepEqual([1.0000001, 2], [1, 2], 'ordered', { floatTolerance: 1e-6 }), true);
+  assert.equal(deepEqual([1.1, 2], [1, 2], 'ordered', { floatTolerance: 1e-6 }), false);
+  // Unordered numeric arrays sort numerically, so near-equal values line up.
+  assert.equal(deepEqual([0.30000000000000004, 0.2], [0.2, 0.3], 'unordered', { floatTolerance: 1e-6 }), true);
+});
+
+test('validateResults judges against the problem’s expected value, not the harness echo', () => {
+  const testCases: TestCase[] = [{ input: [1], expectedOutput: 2, hidden: false }];
+  // A forged record claiming output == expected (its own echo) must not pass.
+  const forged = validateResults([{ output: 7, expected: 7, passed: true }], testCases);
+  assert.equal(forged[0].passed, false);
+  const missing = validateResults([undefined], testCases);
+  assert.equal(missing[0].passed, false);
+  assert.equal(missing[0].error, 'No result returned from executor');
+});

@@ -1,6 +1,7 @@
 import { executeSandboxed } from './sandboxService.js';
 import { wrapFunctionCode } from './codeWrapperService.js';
 import { deriveVerdict, validateResults } from './validationService.js';
+import { parseHarnessOutput } from './harnessProtocol.js';
 import {
   ExecutionRequest,
   ExecutionResponse,
@@ -78,11 +79,12 @@ export async function executeCode(
       };
     }
 
-    // Parse results from wrapped code output
-    let parsedResults;
-    try {
-      parsedResults = JSON.parse(sandbox.output);
-    } catch {
+    // Parse the harness's result records (harnessProtocol.ts). Anything else
+    // on stdout is the user's own output and is ignored.
+    const parsed = parseHarnessOutput(sandbox.output);
+    if (parsed.tests.size === 0 && !parsed.summary) {
+      // A clean exit that reported nothing: the program stopped before the
+      // harness ran (e.g. it called exit at import time).
       return {
         success: false,
         testResults: [],
@@ -94,14 +96,15 @@ export async function executeCode(
         wallMs: sandbox.wallMs,
         memoryKb: sandbox.memoryKb,
         compileMs: sandbox.compileMs,
-        status: sandbox.status,
-        error: 'Failed to parse test results',
+        status: 'RE',
+        error: 'Program exited before reporting any test results',
       };
     }
 
-    // Validate results
+    // Validate results (server-side re-check against the problem's own
+    // expected values).
     const testResults = validateResults(
-      parsedResults.results || [],
+      problem.testCases.map((_tc, i) => parsed.tests.get(i)),
       problem.testCases,
       problem.compareMode
     );
@@ -113,12 +116,12 @@ export async function executeCode(
     // sandbox's whole-process numbers (which include interpreter startup) only
     // if the wrapper didn't emit them — e.g. for the C++/Java stubs.
     const wrapperRunMs =
-      typeof parsedResults.totalRunNs === 'number'
-        ? parsedResults.totalRunNs / 1_000_000
+      typeof parsed.summary?.totalRunNs === 'number'
+        ? parsed.summary.totalRunNs / 1_000_000
         : undefined;
     const wrapperMemoryKb =
-      typeof parsedResults.peakBytes === 'number'
-        ? parsedResults.peakBytes / 1024
+      typeof parsed.summary?.peakBytes === 'number'
+        ? parsed.summary.peakBytes / 1024
         : undefined;
     const runMs = wrapperRunMs ?? sandbox.runMs;
     const memoryKb = wrapperMemoryKb ?? sandbox.memoryKb;
@@ -126,9 +129,7 @@ export async function executeCode(
     // The wrapper itself may declare failure via an `error` field — e.g. the
     // C++/Java stubs that report Problems mode isn't implemented yet. Surface
     // that to the response so the verdict banner shows a real message.
-    const wrapperError: string | undefined =
-      typeof parsedResults.error === 'string' ? parsedResults.error : undefined;
-
+    const wrapperError = parsed.summary?.error;
     return {
       success: totalPassed === totalTests && sandbox.status === 'OK' && !wrapperError,
       testResults,
