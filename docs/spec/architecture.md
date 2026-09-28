@@ -56,6 +56,11 @@ Prisma conventions: model names PascalCase singular; tables snake_case plural
 via `@@map`; columns snake_case via `@map`; every model has `@@schema("app")`
 or `@@schema("content")`. IDs are `cuid()` strings except `token_ledger`
 (bigserial). Timestamps `timestamptz`. Enums live in the schema that uses them.
+Every `content` table has a single-column `id` primary key — Directus only
+edits such tables — so the join tables carry a surrogate `id` and keep their
+natural pair as a unique constraint. Content ids have no database default:
+Prisma generates them, and Directus' content-integrity hook for rows created
+there.
 
 ### Shared enums
 - `Difficulty`: `Easy | Medium | Hard` (ordering Easy < Medium < Hard matters)
@@ -72,13 +77,13 @@ or `@@schema("content")`. IDs are `cuid()` strings except `token_ledger`
 | `unlock_recipes` | id, topic_id→topics, title, ord |
 | `recipe_items` | id, recipe_id→unlock_recipes (cascade), token_topic_id→topics, quantity (int > 0), min_difficulty (Difficulty, default Easy) |
 | `components` | id, topic_id→topics, slug (unique), title, summary_md, function_name, signature (json), languages (Language[]), ord |
-| `component_deps` | component_id→components, depends_on_id→components; PK both; acyclic (validated in seed + app) |
+| `component_deps` | id, component_id→components (cascade), depends_on_id→components; unique (component_id, depends_on_id); no self-dependency (CHECK); acyclic (validated in seed + app) |
 | `build_steps` | id, component_id→components, ord, kind (`predict`\|`build`), title, prompt_md, difficulty (default Easy), payload (json, §2.1) |
 | `questions` | id, slug (unique), title, difficulty, statement_md, examples (json), constraints (json string[]), function_name, signature (json), compare_mode (`ordered`\|`unordered`), starter_code (json {Language: code}), tests (json TestDef[]), reference_solutions (json {Language: code}, **never sent to learners**), tags (text[]), companies (text[]), editorial_md (nullable), status (`draft`\|`published`, default published for seeded), author_id→app.users (nullable), time_limit_ms (default 2000), memory_limit_mb (default 256), created_at, updated_at |
-| `question_topics` | question_id→questions (cascade), topic_id→topics, weight (float, default 1.0); PK both |
+| `question_topics` | id, question_id→questions (cascade), topic_id→topics, weight (float, > 0 by CHECK, default 1.0); unique (question_id, topic_id) |
 | `hints` | id, question_id (nullable), build_step_id (nullable) — exactly one set; level (`nudge`\|`concept`\|`pseudo`\|`line`\|`solution`), body_md, cost_kind (`score`\|`token`), cost_amount (int ≥ 0); unique (question_id, level) and (build_step_id, level) |
 | `gates` | id, tier_id→tiers (unique: the tier this gate opens), title, summary, pass_threshold (int), cooldown_hours (int, 12–24), time_limit_minutes (default 60) |
-| `gate_questions` | gate_id→gates, question_id→questions, ord; PK (gate_id, question_id) |
+| `gate_questions` | id, gate_id→gates (cascade), question_id→questions, ord; unique (gate_id, question_id) |
 | `badges` | id, slug (unique), name, description, icon (IconName), rarity (`common`\|`rare`\|`epic`\|`legendary`), criteria (json, §3.7), ord |
 | `tracks` | id, slug (unique), title, summary, level (`beginner`\|`intermediate`\|`advanced`), tier_id (nullable), est_hours, ord |
 | `learn_modules` | id, track_id→tracks (cascade), slug, title, summary, ord; unique (track_id, slug) |

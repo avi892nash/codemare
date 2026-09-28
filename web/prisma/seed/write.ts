@@ -1,12 +1,13 @@
 /**
  * Write a validated seed bundle to the content schema — idempotently, in one
  * transaction. Top-level entities upsert by slug (ids survive re-seeds, so
- * user progress keeps pointing at the same rows); owned sets (question
- * topics, recipe items, deps, gate questions, checkpoint questions) are
- * replaced; ordered children (recipes, build steps, modules, lessons,
- * chapters, articles, hints) upsert by their natural key and stale ones are
- * deleted — unless users already touched them, in which case they are kept
- * and reported as warnings.
+ * user progress keeps pointing at the same rows); owned sets are made equal
+ * to the files — join rows (question topics, deps, gate questions) by their
+ * natural pair, so their ids survive re-seeds too; recipe items and
+ * checkpoint questions are replaced; ordered children (recipes, build steps,
+ * modules, lessons, chapters, articles, hints) upsert by their natural key
+ * and stale ones are deleted — unless users already touched them, in which
+ * case they are kept and reported as warnings.
  */
 import { Prisma, type PrismaClient } from '@prisma/client';
 import { SeedError } from './load';
@@ -166,9 +167,13 @@ async function writeComponents(tx: Tx, seed: SeedBundle, topicIds: Ids, warnings
 
   for (const c of seed.loop.data.components) {
     const componentId = ids.get(c.slug)!;
-    await tx.componentDep.deleteMany({ where: { componentId } });
-    if (c.depends_on.length) {
-      await tx.componentDep.createMany({ data: c.depends_on.map((d) => ({ componentId, dependsOnId: ids.get(d)! })) });
+    const dependsOnIds = c.depends_on.map((d) => ids.get(d)!);
+    await tx.componentDep.deleteMany({ where: { componentId, dependsOnId: { notIn: dependsOnIds } } });
+    if (dependsOnIds.length) {
+      await tx.componentDep.createMany({
+        data: dependsOnIds.map((dependsOnId) => ({ componentId, dependsOnId })),
+        skipDuplicates: true, // edges that stay keep their row (and id)
+      });
     }
 
     const existing = await tx.buildStep.findMany({ where: { componentId }, orderBy: { ord: 'asc' } });
@@ -207,10 +212,15 @@ async function writeGates(tx: Tx, seed: SeedBundle, tierIds: Ids, questionIds: I
       timeLimitMinutes: g.time_limit_minutes,
     };
     const gate = await tx.gate.upsert({ where: { tierId }, create: { tierId, ...data }, update: data });
-    await tx.gateQuestion.deleteMany({ where: { gateId: gate.id } });
-    await tx.gateQuestion.createMany({
-      data: g.questions.map((slug, ord) => ({ gateId: gate.id, questionId: questionIds.get(slug)!, ord })),
-    });
+    const wanted = g.questions.map((slug, ord) => ({ questionId: questionIds.get(slug)!, ord }));
+    await tx.gateQuestion.deleteMany({ where: { gateId: gate.id, questionId: { notIn: wanted.map((w) => w.questionId) } } });
+    for (const w of wanted) {
+      await tx.gateQuestion.upsert({
+        where: { gateId_questionId: { gateId: gate.id, questionId: w.questionId } },
+        create: { gateId: gate.id, ...w },
+        update: { ord: w.ord },
+      });
+    }
   }
   return seed.loop.data.gates.length;
 }
@@ -241,10 +251,15 @@ async function writeQuestions(tx: Tx, seed: SeedBundle, topicIds: Ids, warnings:
     };
     const row = await tx.question.upsert({ where: { slug: q.slug }, create: { slug: q.slug, ...data }, update: data });
     ids.set(q.slug, row.id);
-    await tx.questionTopic.deleteMany({ where: { questionId: row.id } });
-    await tx.questionTopic.createMany({
-      data: q.topics.map((t) => ({ questionId: row.id, topicId: topicIds.get(t.slug)!, weight: t.weight })),
-    });
+    const topics = q.topics.map((t) => ({ topicId: topicIds.get(t.slug)!, weight: t.weight }));
+    await tx.questionTopic.deleteMany({ where: { questionId: row.id, topicId: { notIn: topics.map((t) => t.topicId) } } });
+    for (const t of topics) {
+      await tx.questionTopic.upsert({
+        where: { questionId_topicId: { questionId: row.id, topicId: t.topicId } },
+        create: { questionId: row.id, ...t },
+        update: { weight: t.weight },
+      });
+    }
     await syncHints(tx, { questionId: row.id }, q.hints, file, warnings, count);
   }
   return ids;
