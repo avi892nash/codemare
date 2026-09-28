@@ -235,7 +235,7 @@ describe('parseAttrs', () => {
 });
 
 describe('markdown rendering (the options the renderer ships with)', () => {
-  const render = (src: string) => renderToStaticMarkup(createElement(Markdown, { ...MARKDOWN_OPTIONS, children: src }));
+  const render = (src: string) => renderToStaticMarkup(createElement(Markdown, MARKDOWN_OPTIONS, src));
 
   it('renders GitHub-flavored markdown', () => {
     const html = render(md('| a | b |', '|---|---|', '| 1 | 2 |', '', '~~gone~~ and `code`'));

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  continueStep,
   learnSequence,
   neighbors,
   pickContinue,
@@ -135,6 +136,23 @@ describe('trackProgress', () => {
     };
     const rows = new Map(Array.from({ length: 199 }, (_, i) => done(`l${i}`, 1)));
     expect(trackProgress(big, rows, new Map()).percent).toBe(99);
+  });
+});
+
+describe('resume / continueStep', () => {
+  it('resumes the lesson opened last while it is the latest activity', () => {
+    // l1 done on day 1, l2 skipped, l3 opened on day 3: pick up l3, not l2.
+    const p = trackProgress(track, new Map([done('l1', 1), started('l3', 3)]), new Map());
+    expect(p.next).toMatchObject({ lessonSlug: 'hashing' });
+    expect(p.resume).toMatchObject({ kind: 'lesson', lessonSlug: 'two-ends' });
+    expect(continueStep(p)).toBe(p.resume);
+  });
+
+  it('falls back to the next step once something happened after the open lesson', () => {
+    const p = trackProgress(track, new Map([started('l3', 1), done('l1', 2)]), new Map());
+    expect(p.resume).toBeNull();
+    expect(continueStep(p)).toMatchObject({ lessonSlug: 'hashing' });
+    expect(trackProgress(track, new Map(), new Map()).resume).toBeNull();
   });
 });
 

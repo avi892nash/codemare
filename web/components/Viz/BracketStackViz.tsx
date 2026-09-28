@@ -22,7 +22,7 @@ export default function BracketStackViz() {
           <Cells
             values={CHARS}
             state={(i) =>
-              i === st.i ? (st.action === 'mismatch' ? 'err' : st.action === 'pop' ? 'ok' : 'active') : st.i !== null && i > st.i ? 'dim' : undefined
+              i === st.i ? (st.action === 'mismatch' ? 'err' : st.action === 'pop' ? 'ok' : 'active') : st.i !== null && i > st.i ? 'pending' : undefined
             }
           />
           <Labels n={CHARS.length} label={(i) => i} hot={(i) => i === st.i} />

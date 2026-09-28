@@ -40,7 +40,8 @@
   font-size: 13px;
   transition: background 0.18s ease, border-color 0.18s ease, opacity 0.18s ease, color 0.18s ease;
 }
-.cell[data-state='dim'] { opacity: 0.32; }
+.cell[data-state='dim'] { opacity: 0.4; }
+.cell[data-state='pending'] { color: var(--fg-2); border-style: dashed; }
 .cell[data-state='active'] { border-color: var(--accent); background: var(--accent-bg); color: var(--accent-hi); font-weight: 600; }
 .cell[data-state='window'] { border-color: var(--info); background: var(--info-bg); color: var(--info-fg); }
 .cell[data-state='ok'] { border-color: var(--ok); background: var(--ok-bg); color: var(--ok-fg); font-weight: 600; }
@@ -221,7 +222,7 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  min-height: 240px;
+  min-height: 360px;
   border: 1px solid var(--line-2);
   border-radius: var(--r-md);
   background: var(--bg-1);

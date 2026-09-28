@@ -58,9 +58,15 @@ export function validateSnippet(input: Partial<SnippetInput>): SnippetValidation
   return { ok: true, language, code, stdin };
 }
 
+/** Terminal escape sequences (colors, cursor moves) — Node colors console.log output in some sandboxes. */
+// eslint-disable-next-line no-control-regex
+const ANSI = /\u001b(?:\[[0-?]*[ -/]*[@-~]|\][^\u0007\u001b]*(?:\u0007|\u001b\\)|[@-Z\\-_])/g;
+
+/** Output as plain text: no escape sequences, capped in length. */
 function clip(s: string | undefined): string | undefined {
   if (!s) return s;
-  return s.length > MAX_SNIPPET_OUTPUT ? `${s.slice(0, MAX_SNIPPET_OUTPUT)}\n… output truncated` : s;
+  const text = s.replace(ANSI, '');
+  return text.length > MAX_SNIPPET_OUTPUT ? `${text.slice(0, MAX_SNIPPET_OUTPUT)}\n… output truncated` : text;
 }
 
 /**

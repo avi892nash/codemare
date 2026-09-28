@@ -88,6 +88,11 @@ export interface TrackProgress {
   started: boolean;
   /** First unfinished step in learning order (null when complete). */
   next: LearnStep | null;
+  /**
+   * The lesson the learner opened last, when it is still unfinished and
+   * nothing happened in the track after opening it — "where you left off".
+   */
+  resume: LearnStep | null;
   lastActivityAt: Date | null;
   /** When the last requirement was met (null unless complete). */
   completedAt: Date | null;
@@ -198,6 +203,16 @@ export function trackProgress(
   const units = lessonsTotal + checkpointsTotal;
   const doneUnits = lessonsDone + checkpointsPassed;
   const lastActivityAt = maxDate(activity);
+  let resume: LearnStep | null = null;
+  if (!complete && lastActivityAt) {
+    for (const [k, m] of track.modules.entries()) {
+      const hit = modules[k].lessons.find((l) => l.state === 'started' && lessonRows.get(l.lesson.id)?.startedAt.getTime() === lastActivityAt.getTime());
+      if (hit) {
+        resume = { kind: 'lesson', moduleSlug: m.slug, moduleTitle: m.title, lessonSlug: hit.lesson.slug, title: hit.lesson.title, estMinutes: hit.lesson.estMinutes };
+        break;
+      }
+    }
+  }
   return {
     modules,
     lessonsDone,
@@ -208,6 +223,7 @@ export function trackProgress(
     complete,
     started: lastActivityAt !== null,
     next,
+    resume,
     lastActivityAt,
     completedAt: complete ? maxDate(completions) : null,
     estMinutes,
@@ -226,9 +242,14 @@ export function pickContinue<T extends { progress: TrackProgress }>(tracks: read
   const unfinished = active
     .filter((t) => !t.progress.complete && t.progress.next)
     .sort((a, b) => b.progress.lastActivityAt!.getTime() - a.progress.lastActivityAt!.getTime());
-  if (unfinished.length > 0) return { track: unfinished[0], step: unfinished[0].progress.next! };
+  if (unfinished.length > 0) return { track: unfinished[0], step: continueStep(unfinished[0].progress)! };
   const fresh = tracks.find((t) => !t.progress.complete && t.progress.next);
   return fresh ? { track: fresh, step: fresh.progress.next! } : null;
+}
+
+/** Where "continue" goes: the lesson left open, else the next step in order. */
+export function continueStep(p: TrackProgress): LearnStep | null {
+  return p.resume ?? p.next;
 }
 
 /** URL of a learning step inside a track. */

@@ -499,6 +499,21 @@ export async function getRelatedLessons(questionSlug: string, userId?: string | 
   }));
 }
 
+/** Titles for page metadata: the track, and optionally one of its lessons or modules. */
+export async function getLearnTitles(
+  trackSlug: string,
+  item?: { lesson: string } | { module: string }
+): Promise<{ track: string; item: string | null } | null> {
+  const track = await prisma.track.findUnique({ where: { slug: trackSlug }, select: { id: true, title: true } });
+  if (!track) return null;
+  if (!item) return { track: track.title, item: null };
+  const row =
+    'lesson' in item
+      ? await prisma.lesson.findFirst({ where: { slug: item.lesson, module: { trackId: track.id } }, select: { title: true } })
+      : await prisma.learnModule.findFirst({ where: { slug: item.module, trackId: track.id }, select: { title: true } });
+  return { track: track.title, item: row?.title ?? null };
+}
+
 /** The lesson id for a (track, lesson) slug pair — used by the server actions. */
 export async function findLessonId(trackSlug: string, lessonSlug: string): Promise<string | null> {
   const l = await prisma.lesson.findFirst({

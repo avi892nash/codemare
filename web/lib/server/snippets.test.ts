@@ -71,6 +71,12 @@ describe('toRunResult', () => {
     expect(toRunResult({ ...ide(), testResults: [], error: 'boom' })).toEqual({ status: 'XX', error: 'boom' });
   });
 
+  it('strips terminal escape sequences (colored console.log output)', () => {
+    const colored = '[ \u001b[33m4\u001b[39m, \u001b[33m5\u001b[39m ]\n\u001b]0;title\u0007done\u001b[2K';
+    expect(toRunResult(ide({ actualOutput: colored })).stdout).toBe('[ 4, 5 ]\ndone');
+    expect(toRunResult(ide({ status: 'RE', error: '\u001b[31mTypeError\u001b[0m: x' })).stderr).toBe('TypeError: x');
+  });
+
   it('truncates huge output', () => {
     const r = toRunResult(ide({ actualOutput: 'y'.repeat(50_000) }));
     expect(r.stdout!.length).toBeLessThan(21_000);

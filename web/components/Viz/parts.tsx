@@ -5,7 +5,8 @@ import s from './viz.module.css';
  * aria-hidden: VisualizationFrame's narration (and the scrubber's
  * aria-valuetext) spells out every step for assistive tech. */
 
-export type CellState = 'dim' | 'active' | 'window' | 'ok' | 'warn' | 'err' | 'hole' | undefined;
+/** dim: ruled out · pending: not reached yet · active/window/ok/warn/err: tones · hole: empty slot. */
+export type CellState = 'dim' | 'pending' | 'active' | 'window' | 'ok' | 'warn' | 'err' | 'hole' | undefined;
 
 export function Cells({ values, state }: { values: ReadonlyArray<ReactNode>; state?: (i: number) => CellState }) {
   return (

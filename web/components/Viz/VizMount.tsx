@@ -20,18 +20,20 @@ function VizLoading() {
  * The registry: one `dynamic()` per visualization, each with a literal
  * import() so every visualization is its own chunk. A lesson downloads only
  * the visualizations it actually shows, and none of them ship in the main
- * bundle. They still render on the server (first frame visible without JS).
+ * bundle. Client-only (ssr: false): server-rendering them through
+ * next/dynamic shifts React's useId tree (the frame's speed <select>) and
+ * breaks hydration; the placeholder keeps the space so nothing jumps.
  */
 const REGISTRY: Record<VizId, ComponentType> = {
-  'binary-search': dynamic(() => import('./BinarySearchViz'), { loading: VizLoading }),
-  'two-pointers': dynamic(() => import('./TwoPointersViz'), { loading: VizLoading }),
-  'sliding-window': dynamic(() => import('./SlidingWindowViz'), { loading: VizLoading }),
-  'bfs-layers': dynamic(() => import('./BfsLayersViz'), { loading: VizLoading }),
-  'dp-table': dynamic(() => import('./DpTableViz'), { loading: VizLoading }),
-  'insertion-sort': dynamic(() => import('./InsertionSortViz'), { loading: VizLoading }),
-  'hash-map': dynamic(() => import('./HashMapViz'), { loading: VizLoading }),
-  'bracket-stack': dynamic(() => import('./BracketStackViz'), { loading: VizLoading }),
-  heap: dynamic(() => import('./HeapViz'), { loading: VizLoading }),
+  'binary-search': dynamic(() => import('./BinarySearchViz'), { ssr: false, loading: VizLoading }),
+  'two-pointers': dynamic(() => import('./TwoPointersViz'), { ssr: false, loading: VizLoading }),
+  'sliding-window': dynamic(() => import('./SlidingWindowViz'), { ssr: false, loading: VizLoading }),
+  'bfs-layers': dynamic(() => import('./BfsLayersViz'), { ssr: false, loading: VizLoading }),
+  'dp-table': dynamic(() => import('./DpTableViz'), { ssr: false, loading: VizLoading }),
+  'insertion-sort': dynamic(() => import('./InsertionSortViz'), { ssr: false, loading: VizLoading }),
+  'hash-map': dynamic(() => import('./HashMapViz'), { ssr: false, loading: VizLoading }),
+  'bracket-stack': dynamic(() => import('./BracketStackViz'), { ssr: false, loading: VizLoading }),
+  heap: dynamic(() => import('./HeapViz'), { ssr: false, loading: VizLoading }),
 };
 
 /** Renders the visualization registered under `id` (`:::viz{id=…}`). */

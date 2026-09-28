@@ -28,7 +28,7 @@ export default function HashMapViz() {
           </div>
           <Cells
             values={NUMS}
-            state={(i) => (st.answer?.includes(i) ? 'ok' : i === st.i ? 'active' : st.i !== null && i > st.i ? 'dim' : undefined)}
+            state={(i) => (st.answer?.includes(i) ? 'ok' : i === st.i ? 'active' : st.i !== null && i > st.i ? 'pending' : undefined)}
           />
           <Labels n={NUMS.length} label={(i) => i} hot={(i) => i === st.i} />
           <div className={s.panel}>
