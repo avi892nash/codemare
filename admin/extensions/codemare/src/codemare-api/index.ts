@@ -5,8 +5,9 @@
  * builds of build steps, with no hint penalties. Same computation as the
  * seed validator's affordability check, using the web app's award rules.
  *
- * It is an endpoint rather than plain item reads because question_topics has
- * a composite primary key, which Directus does not expose as a collection.
+ * It is an endpoint rather than plain item reads so the whole aggregate is
+ * one query per table, computed server-side with the award rules (the editor
+ * would otherwise page through every question topic and build step).
  * Access: signed-in users who may read unlock_recipes (the recipe editor's
  * audience); everything else gets 403.
  */

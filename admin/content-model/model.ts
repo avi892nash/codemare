@@ -173,6 +173,18 @@ const m2o = (field: string, template: string, extra: Meta = {}): FieldSpec => ({
   },
 });
 
+/**
+ * A join row's link to its parent. Directus sets it from the parent's O2M
+ * list, but its drawer would still show it as a required picker; hidden, the
+ * drawer only asks for what the row adds.
+ */
+const parentLink = (field: string, template: string): FieldSpec =>
+  m2o(field, template, { hidden: true, required: false, note: 'Set by the parent’s list.' });
+
+/** A join row's choice of an existing item — no "create new" from inside a join row. */
+const pick = (field: string, template: string, extra: Meta = {}): FieldSpec =>
+  m2o(field, template, { options: { template, enableCreate: false }, ...extra });
+
 const o2m = (field: string, template: string, extra: Meta = {}): FieldSpec => ({
   field,
   alias: true,
@@ -297,7 +309,7 @@ export const COLLECTIONS: CollectionSpec[] = [
     {
       icon: 'extension',
       display_template: '{{title}}',
-      note: 'Library functions learners build. Dependencies (component_deps) are edited in the seed files.',
+      note: 'Library functions learners build. A build runs with the learner’s own versions of every dependency prepended.',
     },
     [
       id(),
@@ -309,13 +321,33 @@ export const COLLECTIONS: CollectionSpec[] = [
       json('signature', 'Signature: { params: [{ name, type }], returns } (spec §2.1).'),
       enumMulti('languages', 'Language', { note: 'Languages this component can be built in (Java is not supported for builds).' }),
       order(),
+      o2m('depends_on', '{{depends_on_id.title}}', {
+        note: 'Components whose code is prepended when this one is built. Self-dependencies and cycles are rejected.',
+      }),
+      o2m('used_by', '{{component_id.title}}', { readonly: true, note: 'Components that depend on this one (edit them there).' }),
       o2m('build_steps', '{{ord}}. {{title}} ({{kind}})'),
+    ]
+  ),
+  collection(
+    'component_deps',
+    'cm_learning_loop',
+    6,
+    {
+      icon: 'account_tree',
+      display_template: '{{component_id.title}} → {{depends_on_id.title}}',
+      hidden: true,
+      note: 'Edit from a component (Depends on). Acyclic: the content-integrity hook rejects cycles.',
+    },
+    [
+      id(),
+      parentLink('component_id', '{{title}}'),
+      pick('depends_on_id', '{{title}}', { note: 'The component it depends on (built first, prepended to its builds).' }),
     ]
   ),
   collection(
     'build_steps',
     'cm_learning_loop',
-    6,
+    7,
     { icon: 'format_list_numbered', display_template: '{{component_id.title}} · {{ord}}. {{title}}' },
     [
       id(),
@@ -332,18 +364,23 @@ export const COLLECTIONS: CollectionSpec[] = [
   collection(
     'gates',
     'cm_learning_loop',
-    7,
+    8,
     {
       icon: 'door_front',
       display_template: '{{title}}',
-      note: 'One gate per tier above 0. Gate questions (gate_questions) are edited in the seed files.',
+      note: 'One gate per tier above 0, with its timed question set (drag to reorder).',
     },
     [
       id(),
       m2o('tier_id', 'Tier {{ord}} · {{title}}', { note: 'The tier this gate opens (one gate per tier).' }),
       text('title'),
       textarea('summary'),
-      integer('pass_threshold', { note: 'Gate questions to pass.' }),
+      integer('pass_threshold', {
+        options: { min: 1, step: 1 },
+        note: 'Gate questions to pass; at most the number of questions below.',
+        validation: { _and: [{ pass_threshold: { _gte: 1 } }] },
+        validation_message: 'At least 1 question must be passed.',
+      }),
       integer('cooldown_hours', {
         options: { min: 12, max: 24, step: 1 },
         note: '12–24 hours after a failed attempt.',
@@ -351,6 +388,22 @@ export const COLLECTIONS: CollectionSpec[] = [
         validation_message: 'Cooldown must be between 12 and 24 hours.',
       }),
       integer('time_limit_minutes'),
+      o2m('questions', '{{question_id.title}} ({{question_id.difficulty}})', {
+        note: 'Solved during one timed attempt; drag to reorder. Keep at least pass-threshold questions.',
+      }),
+    ]
+  ),
+  collection(
+    'gate_questions',
+    'cm_learning_loop',
+    9,
+    { icon: 'checklist', display_template: '{{gate_id.title}} · {{question_id.title}}', hidden: true, note: 'Edit from a gate (Questions).' },
+    [
+      id(),
+      parentLink('gate_id', '{{title}}'),
+      pick('question_id', '{{title}} ({{difficulty}})', { note: 'Always reachable during a running attempt of this gate, even if locked.' }),
+      // Not required in the form: a question added from its gate goes last (Directus sets max + 1).
+      integer('ord', { required: false, note: 'Position in the gate (ascending); set by dragging in the gate’s list.' }),
     ]
   ),
   collection(
@@ -376,7 +429,7 @@ export const COLLECTIONS: CollectionSpec[] = [
     {
       icon: 'quiz',
       display_template: '{{title}}',
-      note: 'Question topics and weights (question_topics) are edited in the seed files.',
+      note: 'Topics (with weights) decide which tokens a first accepted submit pays; hints form the ladder.',
     },
     [
       id(),
@@ -384,6 +437,11 @@ export const COLLECTIONS: CollectionSpec[] = [
       text('title'),
       enumSelect('difficulty', 'Difficulty'),
       enumSelect('status', 'PublishStatus', { note: 'Only published questions are listed to learners.' }),
+      o2m('topics', '{{topic_id.title}} × {{weight}}', {
+        note:
+          'First accepted submit pays each topic round(BASE × weight × (1 − hint penalty)) tokens, BASE Easy 1 · Medium 2 · Hard 3. ' +
+          'Learners need every topic unlocked to open the question.',
+      }),
       markdown('statement_md'),
       json('examples', 'Example[]: [{ input, output, explanation? }].'),
       json('constraints', 'string[] shown under the statement.'),
@@ -414,9 +472,26 @@ export const COLLECTIONS: CollectionSpec[] = [
     ]
   ),
   collection(
-    'hints',
+    'question_topics',
     'cm_questions',
     2,
+    { icon: 'sell', display_template: '{{question_id.title}} → {{topic_id.title}} × {{weight}}', hidden: true, note: 'Edit from a question (Topics).' },
+    [
+      id(),
+      parentLink('question_id', '{{title}}'),
+      pick('topic_id', '{{title}}', { note: 'A topic whose tokens the question pays; each topic at most once per question.' }),
+      decimal('weight', {
+        options: { min: 0, step: 0.1 },
+        note: 'Share of the solve award for this topic: 1 = the full award, 0.5 = half. Must be greater than 0.',
+        validation: { _and: [{ weight: { _gt: 0 } }] },
+        validation_message: 'Weight must be greater than 0.',
+      }),
+    ]
+  ),
+  collection(
+    'hints',
+    'cm_questions',
+    3,
     {
       icon: 'lightbulb',
       display_template: '{{level}} · {{question_id.title}}{{build_step_id.title}}',
@@ -567,6 +642,11 @@ export const RELATIONS: RelationSpec[] = [
   o2mRelation('unlock_recipes', 'topic_id', 'recipes'),
   o2mRelation('recipe_items', 'recipe_id', 'items', null),
   o2mRelation('build_steps', 'component_id', 'build_steps'),
+  o2mRelation('component_deps', 'component_id', 'depends_on', null),
+  // Read-only reverse list; `nullify` (NOT NULL) makes a stray API deselect fail instead of deleting edges.
+  { collection: 'component_deps', field: 'depends_on_id', meta: { one_field: 'used_by', sort_field: null, one_deselect_action: 'nullify' } },
+  o2mRelation('question_topics', 'question_id', 'topics', null),
+  o2mRelation('gate_questions', 'gate_id', 'questions'),
   o2mRelation('hints', 'question_id', 'hints', null),
   o2mRelation('hints', 'build_step_id', 'hints', null),
   o2mRelation('learn_modules', 'track_id', 'modules'),

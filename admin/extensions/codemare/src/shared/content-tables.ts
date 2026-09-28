@@ -5,10 +5,10 @@
  */
 
 /**
- * Tables Directus manages: every content table with a single-column primary
- * key. Directus ignores tables without one, so the composite-key join tables
- * question_topics, gate_questions and component_deps are not editable in
- * Directus (edit them through the seed files; see deploy/README.md).
+ * Tables Directus manages: every content table. Directus only manages tables
+ * with a single-column primary key, which is why the join tables
+ * (question_topics, gate_questions, component_deps) carry a surrogate `id`
+ * with their natural pair kept unique (migration 20260929090000).
  */
 export const CONTENT_COLLECTIONS = [
   'tiers',
@@ -17,9 +17,12 @@ export const CONTENT_COLLECTIONS = [
   'recipe_items',
   'components',
   'build_steps',
+  'component_deps',
   'questions',
+  'question_topics',
   'hints',
   'gates',
+  'gate_questions',
   'badges',
   'tracks',
   'learn_modules',
@@ -30,8 +33,6 @@ export const CONTENT_COLLECTIONS = [
   'library_articles',
 ] as const;
 export type ContentCollection = (typeof CONTENT_COLLECTIONS)[number];
-
-export const COMPOSITE_KEY_TABLES = ['question_topics', 'gate_questions', 'component_deps'] as const;
 
 export function isContentCollection(name: string): name is ContentCollection {
   return (CONTENT_COLLECTIONS as readonly string[]).includes(name);

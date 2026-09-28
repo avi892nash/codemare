@@ -77,7 +77,7 @@ there.
 | `unlock_recipes` | id, topic_id→topics, title, ord |
 | `recipe_items` | id, recipe_id→unlock_recipes (cascade), token_topic_id→topics, quantity (int > 0), min_difficulty (Difficulty, default Easy) |
 | `components` | id, topic_id→topics, slug (unique), title, summary_md, function_name, signature (json), languages (Language[]), ord |
-| `component_deps` | id, component_id→components (cascade), depends_on_id→components; unique (component_id, depends_on_id); no self-dependency (CHECK); acyclic (validated in seed + app) |
+| `component_deps` | id, component_id→components (cascade), depends_on_id→components; unique (component_id, depends_on_id); no self-dependency (CHECK); acyclic (validated in seed, app and the Directus hook) |
 | `build_steps` | id, component_id→components, ord, kind (`predict`\|`build`), title, prompt_md, difficulty (default Easy), payload (json, §2.1) |
 | `questions` | id, slug (unique), title, difficulty, statement_md, examples (json), constraints (json string[]), function_name, signature (json), compare_mode (`ordered`\|`unordered`), starter_code (json {Language: code}), tests (json TestDef[]), reference_solutions (json {Language: code}, **never sent to learners**), tags (text[]), companies (text[]), editorial_md (nullable), status (`draft`\|`published`, default published for seeded), author_id→app.users (nullable), time_limit_ms (default 2000), memory_limit_mb (default 256), created_at, updated_at |
 | `question_topics` | id, question_id→questions (cascade), topic_id→topics, weight (float, > 0 by CHECK, default 1.0); unique (question_id, topic_id) |

@@ -233,14 +233,29 @@ was identical to that of a database migrated without Directus (grants included).
   total, the recipe a new learner is pointed at ("cheapest") and how many
   qualifying tokens all published content pays out. A save is one nested write,
   applied in a single transaction.
+* **Join rows, edited from their parent** (the join collections themselves are
+  hidden from the navigation):
+  * *Question → Topics*: each row is a topic and its weight — the share of the
+    solve award that topic gets (1 = the full award). **Create New** opens a
+    drawer with a topic picker and the weight; click a row to change its
+    weight, the bin removes it. A topic appears at most once per question
+    (unique pair); the weight must be > 0.
+  * *Gate → Questions*: the gate's timed question set, drag to reorder (the
+    order is `ord`); new questions go last. A gate can never be left with
+    fewer questions than its pass threshold, whether by removing questions or
+    by raising the threshold.
+  * *Component → Depends on*: the components whose code is prepended to its
+    builds; *Used by* lists the reverse, read-only. Self-dependencies and
+    cycles are refused with the cycle spelled out (the web app's own graph
+    rules, as the seed validator uses).
 * The extension also: gives rows created in Directus Prisma-style cuid ids
-  (content ids have no database default), stores Postgres arrays (tags,
-  companies, languages, slugs lists) correctly, bumps `questions.updated_at`,
-  and re-checks the recipe rules server-side for any client.
-* **Not editable in Directus:** `question_topics`, `gate_questions` and
-  `component_deps` have composite primary keys, which Directus ignores. Edit them
-  through the seed files or the web authoring UI. `questions.author_id` points
-  into `app.users`, which Directus cannot read, so it is hidden.
+  (content ids have no database default; that includes the join rows),
+  stores Postgres arrays (tags, companies, languages, slugs lists) correctly,
+  bumps `questions.updated_at`, and re-checks the recipe, weight, dependency
+  and gate rules server-side for any client, as readable 400s (Postgres CHECK
+  violations would otherwise surface as a bare 500).
+* `questions.author_id` points into `app.users`, which Directus cannot read, so
+  it is hidden.
 * After a migration adds a content column, `directus-config` logs
   `column content.x.y is not in admin/content-model/model.ts` — add it there.
 * The seed is a bootstrap tool: once staff edit content in Directus, the
