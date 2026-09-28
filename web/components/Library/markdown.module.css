@@ -22,6 +22,10 @@
 
 .md ul,
 .md ol { padding-left: 22px; }
+/* Tailwind's preflight removes list markers globally; prose needs them back. */
+.md ul { list-style: disc; }
+.md ol { list-style: decimal; }
+.md ul ul { list-style: circle; }
 .md li { margin: 3px 0; }
 .md li::marker { color: var(--fg-3); }
 .md li > p { margin: 0; }

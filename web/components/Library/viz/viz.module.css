@@ -1,0 +1,193 @@
+/* Library visualizations — drawn inside the UI kit's VisualizationFrame.
+ * Tokens only (both themes); states are data attributes so colour is never
+ * the only signal (text/strike/labels accompany it). */
+
+.wrap { display: flex; flex-direction: column; align-items: center; gap: 14px; width: 100%; min-width: 0; }
+.row { display: flex; align-items: center; flex-wrap: wrap; justify-content: center; gap: 6px 14px; }
+.mono { font-family: var(--font-mono); }
+
+/* ─── Cells ──────────────────────────────────────────────────────── */
+.grid { display: grid; grid-template-columns: repeat(10, 34px); gap: 5px; }
+@media (max-width: 520px) { .grid { grid-template-columns: repeat(8, 30px); gap: 4px; } }
+.cells { display: flex; gap: 4px; }
+.cellCol { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.cell {
+  position: relative;
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r);
+  border: 1px solid var(--line-2);
+  background: var(--bg-2);
+  color: var(--fg-1);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  transition: background 0.2s, border-color 0.2s, color 0.2s, opacity 0.2s;
+}
+@media (max-width: 520px) { .cell { width: 30px; height: 30px; font-size: 12px; } }
+.cell[data-state='prime'] { background: var(--ok-bg); border-color: color-mix(in oklab, var(--ok) 45%, transparent); color: var(--ok-fg); font-weight: 600; }
+.cell[data-state='current'] { background: var(--accent-bg); border-color: var(--accent); color: var(--accent-hi); font-weight: 600; }
+.cell[data-state='fresh'] { background: var(--warn-bg); border-color: color-mix(in oklab, var(--warn) 45%, transparent); color: var(--warn-fg); text-decoration: line-through; }
+.cell[data-state='crossed'] { opacity: 0.45; text-decoration: line-through; color: var(--fg-2); }
+.cell[data-state='compare'] { background: var(--info-bg); border-color: color-mix(in oklab, var(--info) 50%, transparent); color: var(--info-fg); font-weight: 600; }
+.cell[data-state='match'] { background: var(--ok-bg); border-color: color-mix(in oklab, var(--ok) 45%, transparent); color: var(--ok-fg); }
+.cell[data-state='mismatch'] { background: var(--err-bg); border-color: color-mix(in oklab, var(--err) 45%, transparent); color: var(--err-fg); }
+.cell[data-state='window'] { background: color-mix(in oklab, var(--accent) 10%, var(--bg-2)); border: 1px dashed var(--accent); }
+.cell[data-state='dim'] { opacity: 0.5; }
+.cellSmall { height: 24px; font-size: 12px; background: transparent; border-color: transparent; color: var(--fg-2); }
+.cellSmall[data-state='new'] { color: var(--accent-hi); font-weight: 700; }
+.cellSmall[data-state='set'] { color: var(--fg-0); }
+.idx { font-family: var(--font-mono); font-size: 10.5px; color: var(--fg-3); width: 34px; text-align: center; }
+@media (max-width: 520px) { .idx { width: 30px; } }
+.rowLabel { width: 28px; flex: none; font-family: var(--font-mono); font-size: 11px; color: var(--fg-2); text-align: right; padding-right: 6px; }
+.marker { font-family: var(--font-mono); font-size: 10.5px; color: var(--accent-hi); height: 14px; width: 34px; text-align: center; }
+@media (max-width: 520px) { .marker { width: 30px; } }
+
+/* ─── Legend & key/value panels ──────────────────────────────────── */
+.legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 14px; font-size: 11.5px; color: var(--fg-2); }
+.legendItem { display: inline-flex; align-items: center; gap: 6px; }
+.swatch { width: 12px; height: 12px; border-radius: 3px; border: 1px solid var(--line-3); background: var(--bg-2); }
+.swatch[data-state='prime'], .swatch[data-state='done'] { background: var(--ok-bg); border-color: var(--ok); }
+.swatch[data-state='current'] { background: var(--accent-bg); border-color: var(--accent); }
+.swatch[data-state='fresh'] { background: var(--warn-bg); border-color: var(--warn); }
+.swatch[data-state='crossed'] { opacity: 0.45; }
+.swatch[data-state='queue'] { border: 1.5px dashed var(--accent); background: transparent; }
+.swatch[data-state='window'] { border: 1px dashed var(--accent); background: color-mix(in oklab, var(--accent) 10%, var(--bg-2)); }
+.swatch[data-state='compare'] { background: var(--info-bg); border-color: var(--info); }
+.swatch[data-state='mismatch'] { background: var(--err-bg); border-color: var(--err); }
+
+.panel {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 6px 14px;
+  align-items: baseline;
+  padding: 10px 14px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-md);
+  background: var(--bg-1);
+  font-size: 12.5px;
+  min-width: min(100%, 320px);
+}
+.key { font-size: 10.5px; font-weight: 600; letter-spacing: 0.8px; text-transform: uppercase; color: var(--fg-2); }
+.val { font-family: var(--font-mono); color: var(--fg-0); overflow-wrap: anywhere; }
+.valMuted { font-family: var(--font-mono); color: var(--fg-2); }
+.hot { color: var(--accent-hi); font-weight: 600; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--line-2);
+  background: var(--bg-2);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--fg-1);
+}
+.chip[data-state='hot'] { border-color: var(--accent); background: var(--accent-bg); color: var(--accent-hi); }
+.chip[data-state='done'] { border-color: color-mix(in oklab, var(--ok) 45%, transparent); background: var(--ok-bg); color: var(--ok-fg); }
+.chip[data-state='stale'] { opacity: 0.55; text-decoration: line-through; }
+
+/* ─── Bits (binary exponentiation) ───────────────────────────────── */
+.bits { display: flex; gap: 6px; }
+.bit {
+  width: 36px;
+  height: 40px;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  border-radius: var(--r);
+  border: 1px solid var(--line-2);
+  background: var(--bg-2);
+  font-family: var(--font-mono);
+  font-size: 15px;
+  color: var(--fg-1);
+}
+.bit small { font-size: 9.5px; color: var(--fg-3); }
+.bit[data-state='current'] { border-color: var(--accent); background: var(--accent-bg); color: var(--accent-hi); }
+.bit[data-state='done'] { opacity: 0.5; }
+
+/* ─── Fenwick coverage bars ──────────────────────────────────────── */
+.fenwick { display: grid; grid-template-columns: 34px repeat(8, 34px); column-gap: 4px; row-gap: 5px; }
+@media (max-width: 520px) { .fenwick { grid-template-columns: 30px repeat(8, 30px); } }
+.bar {
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 5px;
+  border: 1px solid var(--line-3);
+  background: var(--bg-3);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--fg-1);
+  white-space: nowrap;
+  overflow: hidden;
+  transition: background 0.2s, border-color 0.2s;
+}
+.bar[data-state='active'] { border-color: var(--accent); background: var(--accent-bg); color: var(--accent-hi); font-weight: 600; }
+.bar[data-state='used'] { border-color: color-mix(in oklab, var(--ok) 50%, transparent); background: var(--ok-bg); color: var(--ok-fg); }
+.bar[data-state='updated'] { border-color: color-mix(in oklab, var(--warn) 55%, transparent); background: var(--warn-bg); color: var(--warn-fg); }
+
+/* ─── Sets (DSU) ─────────────────────────────────────────────────── */
+.sets { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+.set {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line-2);
+  background: var(--bg-1);
+  transition: border-color 0.2s;
+}
+.set[data-state='hot'] { border-color: var(--accent); }
+.level { display: flex; gap: 5px; }
+.node {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line-3);
+  background: var(--bg-2);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--fg-1);
+}
+.node[data-root='true'] { border: 2px solid var(--accent); color: var(--fg-0); font-weight: 600; }
+.node[data-state='hot'] { background: var(--accent-bg); }
+.node[data-state='changed'] { background: var(--warn-bg); border-color: var(--warn); }
+.parentRow { display: flex; gap: 4px; }
+.parentCell { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.parentCell .cell { width: 30px; height: 28px; font-size: 12px; }
+
+/* ─── SVG graphs ─────────────────────────────────────────────────── */
+.svg { width: 100%; max-width: 520px; height: auto; overflow: visible; }
+.edge { stroke: var(--line-3); stroke-width: 1.5; fill: none; transition: stroke 0.2s, opacity 0.2s; }
+.edge[data-state='tree'] { stroke: var(--ok); stroke-width: 2.5; }
+.edge[data-state='active'] { stroke: var(--accent); stroke-width: 2.5; }
+.edge[data-state='removed'] { stroke-dasharray: 4 4; opacity: 0.45; }
+.edgeLabelBg { fill: var(--bg-0); }
+.edgeLabel { fill: var(--fg-2); font-family: var(--font-mono); font-size: 11px; }
+.edge[data-state='active'] + .edgeLabelGroup .edgeLabel { fill: var(--accent-hi); }
+.arrow { fill: var(--line-3); }
+.arrowOk { fill: var(--ok); }
+.vertex { fill: var(--bg-2); stroke: var(--line-3); stroke-width: 1.5; transition: fill 0.2s, stroke 0.2s; }
+.vertex[data-state='settled'], .vertex[data-state='done'] { fill: var(--ok-bg); stroke: var(--ok); }
+.vertex[data-state='current'] { fill: var(--accent-bg); stroke: var(--accent); stroke-width: 2.5; }
+.vertex[data-state='queued'] { stroke: var(--accent); stroke-dasharray: 3 3; }
+.vertexLabel { fill: var(--fg-0); font-family: var(--font-sans); font-size: 13px; font-weight: 600; text-anchor: middle; dominant-baseline: central; }
+.vertexSub { fill: var(--fg-2); font-family: var(--font-mono); font-size: 11px; text-anchor: middle; }
+.vertexSubHot { fill: var(--accent-hi); font-weight: 700; }
+.badge { fill: var(--bg-3); stroke: var(--line-3); }
+.badgeText { fill: var(--fg-1); font-family: var(--font-mono); font-size: 10.5px; text-anchor: middle; dominant-baseline: central; }
+.taskLabel { fill: var(--fg-0); font-family: var(--font-mono); font-size: 11.5px; text-anchor: middle; dominant-baseline: central; }
