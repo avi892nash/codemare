@@ -237,12 +237,20 @@ body {
 
 /* Honor the OS setting everywhere: no animated or transitioned motion. JS-driven
  * motion (VisualizationFrame autoplay) checks the same query via
- * useReducedMotion(). */
+ * useReducedMotion().
+ *
+ * Transitions are switched off (0s), not shortened: a non-zero duration on
+ * `*` turns the default `transition-property: all` on for every element, so
+ * every style change becomes a (tiny) transition and getComputedStyle()
+ * returns the *old* value right after a change. That broke code which reads
+ * styles back — the Monaco theme probe resolved every token to the page
+ * background and the editor text went invisible. */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
+    transition-duration: 0s !important;
+    transition-delay: 0s !important;
     scroll-behavior: auto !important;
   }
 }
