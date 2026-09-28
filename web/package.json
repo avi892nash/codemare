@@ -10,12 +10,17 @@
     "start": "next start -p 4001",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "seed": "tsx prisma/seed.ts",
     "test": "vitest run",
-    "test:e2e": "playwright test"
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "db:migrate": "node prisma/with-env.mjs prisma migrate dev",
+    "db:deploy": "node prisma/with-env.mjs prisma migrate deploy",
+    "db:reset": "node prisma/with-env.mjs prisma migrate reset",
+    "seed": "node prisma/with-env.mjs tsx prisma/seed/index.ts",
+    "seed:fixtures": "node prisma/with-env.mjs tsx prisma/seed/index.ts --dir prisma/seed/fixtures"
   },
   "prisma": {
-    "seed": "tsx prisma/seed.ts"
+    "seed": "tsx prisma/seed/index.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.128.0",

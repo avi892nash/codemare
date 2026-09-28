@@ -1,0 +1,20 @@
+[
+  {
+    "slug": "first-accept",
+    "name": "First Accept",
+    "description": "Get your first Accepted verdict.",
+    "icon": "check-circle",
+    "rarity": "common",
+    "criteria": { "kind": "first_accept" },
+    "ord": 0
+  },
+  {
+    "slug": "into-structures",
+    "name": "Into Structures",
+    "description": "Pass the Foundations gate and open the Structures tier.",
+    "icon": "lock-open",
+    "rarity": "rare",
+    "criteria": { "kind": "tier_open", "tier_ord": 1 },
+    "ord": 1
+  }
+]

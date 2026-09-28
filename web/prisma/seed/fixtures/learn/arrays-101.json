@@ -1,0 +1,49 @@
+{
+  "slug": "arrays-101",
+  "title": "Arrays 101",
+  "summary": "Scanning, hashing and two pointers: the moves every other topic builds on.",
+  "level": "beginner",
+  "tier": "foundations",
+  "est_hours": 1.5,
+  "ord": 0,
+  "modules": [
+    {
+      "slug": "scanning",
+      "title": "Scanning arrays",
+      "summary": "One pass, two ends, and when a hash map beats both.",
+      "lessons": [
+        {
+          "slug": "one-pass",
+          "title": "One pass is usually enough",
+          "est_minutes": 8,
+          "topic": "arrays",
+          "related_question_slugs": ["two-sum"],
+          "body_md": "Most array problems reward looking at every element **once** while remembering what you have already seen.\n\n```python run\nnums = [2, 7, 11, 15]\nseen = {}\nfor i, x in enumerate(nums):\n    seen[x] = i\nprint(seen)\n```\n\n:::callout{kind=complexity}\nOne pass with a hash map: O(n) time, O(n) extra space.\n:::\n\n:::question{slug=two-sum}"
+        },
+        {
+          "slug": "two-ends",
+          "title": "Two pointers on sorted input",
+          "est_minutes": 10,
+          "topic": "two-pointers",
+          "related_question_slugs": ["pair-sum-sorted"],
+          "body_md": "When the input is sorted, a pointer at each end tells you which way to move: a sum that is too small can only grow by advancing the left pointer.\n\n$$\ni < j,\\quad s = a_i + a_j\n$$\n\n:::callout{kind=pitfall}\nStop when the pointers meet: an element cannot pair with itself.\n:::\n\n:::question{slug=pair-sum-sorted}"
+        }
+      ],
+      "checkpoint": [
+        {
+          "kind": "mcq",
+          "prompt_md": "On average, looking up a key in a hash map takes:",
+          "choices": ["O(1)", "O(log n)", "O(n)"],
+          "answer": 0,
+          "explanation_md": "Hashing jumps straight to the bucket; only collisions cost extra."
+        },
+        {
+          "kind": "short",
+          "prompt_md": "Name the technique that walks a sorted array from both ends.",
+          "answer": ["two pointers", "two-pointers"],
+          "explanation_md": "Two pointers: each step discards one end that cannot be part of the answer."
+        }
+      ]
+    }
+  ]
+}

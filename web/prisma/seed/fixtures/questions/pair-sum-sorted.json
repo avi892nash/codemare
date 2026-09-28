@@ -1,0 +1,58 @@
+{
+  "slug": "pair-sum-sorted",
+  "title": "Pair Sum in a Sorted Array",
+  "difficulty": "Easy",
+  "statement_md": "Given an array `nums` sorted in non-decreasing order and an integer `target`, return `true` if two different positions hold values that sum to `target`, and `false` otherwise.",
+  "examples": [
+    { "input": "nums = [1,2,4,7], target = 9", "output": "true", "explanation": "2 + 7 = 9." },
+    { "input": "nums = [1,3,5], target = 2", "output": "false" }
+  ],
+  "constraints": ["0 <= nums.length <= 10^5", "nums is sorted in non-decreasing order"],
+  "function_name": "hasPairWithSum",
+  "signature": {
+    "params": [
+      { "name": "nums", "type": "int[]" },
+      { "name": "target", "type": "int" }
+    ],
+    "returns": "bool"
+  },
+  "starter_code": {
+    "python": "def hasPairWithSum(nums, target):\n    return False",
+    "javascript": "function hasPairWithSum(nums, target) {\n  return false;\n}",
+    "typescript": "function hasPairWithSum(nums: number[], target: number): boolean {\n  return false;\n}",
+    "cpp": "#include <vector>\nusing namespace std;\n\nbool hasPairWithSum(vector<int>& nums, int target) {\n    return false;\n}",
+    "java": "class Solution {\n    public static boolean hasPairWithSum(int[] nums, int target) {\n        return false;\n    }\n}",
+    "go": "func hasPairWithSum(nums []int, target int) bool {\n\treturn false\n}"
+  },
+  "tests": [
+    { "input": [[1, 2, 4, 7], 9], "expected": true, "hidden": false },
+    { "input": [[1, 3, 5], 2], "expected": false, "hidden": false },
+    { "input": [[], 0], "expected": false, "hidden": true, "explain_on_fail": "An empty array has no pairs." },
+    {
+      "input": [[2, 2], 4],
+      "expected": true,
+      "hidden": true,
+      "explain_on_fail": "Equal values at two different positions still form a pair."
+    },
+    { "input": [[3], 6], "expected": false, "hidden": true, "explain_on_fail": "A single element cannot pair with itself." }
+  ],
+  "reference_solutions": {
+    "python": "def hasPairWithSum(nums, target):\n    lo, hi = 0, len(nums) - 1\n    while lo < hi:\n        s = nums[lo] + nums[hi]\n        if s == target:\n            return True\n        if s < target:\n            lo += 1\n        else:\n            hi -= 1\n    return False",
+    "javascript": "function hasPairWithSum(nums, target) {\n  let lo = 0;\n  let hi = nums.length - 1;\n  while (lo < hi) {\n    const s = nums[lo] + nums[hi];\n    if (s === target) return true;\n    if (s < target) lo++;\n    else hi--;\n  }\n  return false;\n}"
+  },
+  "topics": [
+    { "slug": "two-pointers", "weight": 1 },
+    { "slug": "arrays", "weight": 0.5 }
+  ],
+  "tags": ["two-pointers", "sorting"],
+  "editorial_md": null,
+  "hints": [
+    { "level": "nudge", "body_md": "The array is sorted. What happens to the sum when you move the left end right, or the right end left?" },
+    {
+      "level": "concept",
+      "body_md": "Start one pointer at each end. Too small: advance the left one. Too big: retreat the right one.",
+      "cost_kind": "token",
+      "cost_amount": 1
+    }
+  ]
+}

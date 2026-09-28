@@ -1,0 +1,29 @@
+{
+  "slug": "searching",
+  "title": "Searching",
+  "summary": "Finding things fast in ordered data.",
+  "icon": "search",
+  "ord": 0,
+  "chapters": [
+    {
+      "slug": "binary-search",
+      "title": "Binary search",
+      "articles": [
+        {
+          "slug": "lower-bound",
+          "title": "Lower bound",
+          "summary": "The first position whose value is not less than a key.",
+          "difficulty": "Easy",
+          "reading_minutes": 6,
+          "idea_md": "Keep a half-open window `[lo, hi)` that always contains the answer. Probe the middle: if it is smaller than the key, the answer lies to its right; otherwise the middle itself may be the answer, so keep it.",
+          "formula": "mid = lo + \\lfloor (hi - lo) / 2 \\rfloor",
+          "code_cpp": "int lowerBound(const vector<int>& a, int key) {\n    int lo = 0, hi = (int)a.size();\n    while (lo < hi) {\n        int mid = lo + (hi - lo) / 2;\n        if (a[mid] < key) lo = mid + 1;\n        else hi = mid;\n    }\n    return lo;\n}",
+          "viz_id": "binary-search",
+          "applications_md": "Insert positions in sorted arrays, counting values in a range, and searching over a monotone answer space.",
+          "pitfall_md": "Computing `(lo + hi) / 2` can overflow on large indices; `lo + (hi - lo) / 2` cannot.",
+          "practice_question_slugs": ["pair-sum-sorted"]
+        }
+      ]
+    }
+  ]
+}
