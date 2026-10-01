@@ -111,7 +111,7 @@ export async function revealHint(userId: string, hintId: string): Promise<Reveal
     where: { id: hintId },
     select: { id: true, level: true, bodyMd: true, costKind: true, costAmount: true, questionId: true },
   });
-  if (!hint?.questionId) throw new NotFoundError('hint', hintId);
+  if (!hint) throw new NotFoundError('hint', hintId);
   const target: HintTarget = { questionId: hint.questionId };
   await assertTargetAccess(userId, target);
 

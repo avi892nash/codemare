@@ -129,7 +129,7 @@ function compareCurriculum(a: Item, b: Item): number {
 export async function userQuestionProgress(userId: string): Promise<Map<string, Exclude<CatalogStatus, 'todo'>>> {
   const groups = await prisma.submission.groupBy({
     by: ['questionId', 'kind', 'status'],
-    where: { userId, questionId: { not: null }, kind: { in: ['run', 'submit', 'gate'] } },
+    where: { userId, questionId: { not: null } },
     _count: { _all: true },
   });
   const progress = new Map<string, Exclude<CatalogStatus, 'todo'>>();

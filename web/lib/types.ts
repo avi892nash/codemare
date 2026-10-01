@@ -37,7 +37,7 @@ export const VERDICT_LABEL: Record<Verdict, string> = {
   XX: 'Internal Error',
 };
 export type SubmissionStatus = 'queued' | 'running' | Verdict;
-export type SubmissionKind = 'run' | 'submit' | 'build' | 'gate';
+export type SubmissionKind = 'run' | 'submit' | 'gate';
 
 export type CompareMode = 'ordered' | 'unordered';
 export type PublishStatus = 'draft' | 'published';

@@ -65,7 +65,7 @@ export async function POST(request: Request) {
       where: { id: body.data.hintId },
       select: { questionId: true },
     });
-    const target: HintTarget = { questionId: hint.questionId! };
+    const target: HintTarget = { questionId: hint.questionId };
     return Response.json({ reveal, ladder: await getHintLadder(userId, target) });
   } catch (e) {
     return fail(e);

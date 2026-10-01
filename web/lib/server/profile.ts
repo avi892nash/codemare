@@ -135,7 +135,7 @@ export async function loadBadgeStats(userId: string): Promise<BadgeProgressStats
   const [solves, days, uses, topicsUnlocked, tierUnlocks, gateAttempts, lessonsCompleted, learn, best] = await Promise.all([
     loadSolves(userId),
     loadSolveDays(userId),
-    prisma.hintUse.findMany({ where: { userId, questionId: { not: null } }, select: { questionId: true, createdAt: true } }),
+    prisma.hintUse.findMany({ where: { userId }, select: { questionId: true, createdAt: true } }),
     prisma.unlock.count({ where: { userId, kind: 'topic' } }),
     prisma.unlock.findMany({ where: { userId, kind: 'tier' }, select: { refId: true } }),
     prisma.gateAttempt.findMany({ where: { userId }, orderBy: { startedAt: 'asc' }, select: { gateId: true, passed: true } }),
