@@ -34,12 +34,11 @@ export interface NavSection {
   exact?: string[];
 }
 
+// The problem catalog has no tab: the logo opens it (`/` → /problems when
+// signed in), and so does the jump box (⌘K).
 export const NAV_SECTIONS: NavSection[] = [
-  // Old routes `/` and `/p/*` still belong to Problems until they redirect.
-  { key: 'problems', label: 'Problems', href: '/problems', icon: 'list', also: ['/p'], exact: ['/'] },
   { key: 'learn', label: 'Learn', href: '/learn', icon: 'graduation' },
   { key: 'map', label: 'Map', href: '/map', icon: 'map' },
-  { key: 'queue', label: 'Queue', href: '/queue', icon: 'layers' },
   { key: 'ide', label: 'IDE', href: '/ide', icon: 'terminal' },
   { key: 'submissions', label: 'Submissions', href: '/submissions', icon: 'history' },
 ];

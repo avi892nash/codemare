@@ -34,7 +34,7 @@ function normalize(u: NavbarUser): NavUser {
 
 /**
  * App shell top bar (L8). Section tabs are links with aria-current, active
- * by path prefix (legacy `/` and `/p/*` count as Problems). Below 768 px the
+ * by path prefix; the logo leads to the problem catalog. Below 768 px the
  * tabs collapse into a section menu. Right side: jump-to-problem (⌘K),
  * token balance, theme toggle, profile menu. Signed out: logo, theme, Sign in.
  */

@@ -36,7 +36,6 @@ export function ProfileMenu({ user, libraryVisible = false }: { user: NavUser; l
 
   const items: MenuItem[] = [
     link('Profile', profileHref, 'user'),
-    link('My Library', '/me/library', 'puzzle'),
     ...(user.handle ? [link('Badges', `/u/${user.handle}/badges`, 'award')] : []),
     ...(roleAtLeast(user.role, 'author') ? [link('Author', '/author', 'edit', true)] : []),
     ...(libraryVisible ? [link('Library', '/library', 'book-open', true)] : []),
