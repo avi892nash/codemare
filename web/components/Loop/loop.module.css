@@ -1,7 +1,6 @@
-/* Shared shell for the learning-loop pages (/map, /queue, /me/library,
- * gate attempts). Same page grammar as Learn and the profile: a scrolling
- * main, a centered column, an uppercase eyebrow, a 28 px title, stat tiles.
- * Tokens only. */
+/* Shared shell for the learning-loop pages (/map, gate attempts). Same
+ * page grammar as Learn and the profile: a scrolling main, a centered
+ * column, an uppercase eyebrow, a 28 px title, stat tiles. Tokens only. */
 
 /* position: relative keeps absolutely positioned bits (sr-only text) inside
  * the scroller, so they can never widen the document. */

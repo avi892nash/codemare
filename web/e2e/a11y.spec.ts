@@ -3,7 +3,7 @@
  * representative route per section, in both themes, no serious or critical
  * axe-core violations and exactly one <h1>; on phones (375 px) no
  * horizontal page scroll on the pages that must work there (catalog, learn,
- * profile, map, My Library, library). The editor-like pages (problem, IDE)
+ * profile, map, library). The editor-like pages (problem, IDE)
  * are checked at desktop width, where they are supported.
  *
  * axe-core is injected from cdnjs per page (not a dependency). A staff user
@@ -127,8 +127,6 @@ test('signed-in sections at desktop width: no serious axe violations and one h1,
     `/u/${user!.handle}`,
     `/u/${user!.handle}/badges`,
     '/map',
-    '/queue',
-    '/me/library',
     '/author',
     '/library',
     '/this-page-does-not-exist',
@@ -148,7 +146,7 @@ test('phone width (375 px): no horizontal page scroll where phones are supported
   await page.setViewportSize({ width: 375, height: 812 });
   await signIn(page, user!.email);
   await setTheme(page, 'dark');
-  for (const path of ['/problems', '/learn', '/learn/foundations', `/u/${user!.handle}`, '/map', '/me/library', '/library', '/submissions']) {
+  for (const path of ['/problems', '/learn', '/learn/foundations', `/u/${user!.handle}`, '/map', '/library', '/submissions']) {
     await open(page, path);
     expect(await horizontalOverflow(page), `${path} overflow at 375 px`).toBe(0);
     expect(await axeViolations(page), `${path} at 375 px`).toEqual([]);

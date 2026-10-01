@@ -481,7 +481,7 @@ function Overlays() {
       />
       <Sub>Toast — aria-live, pauses on hover/focus</Sub>
       <div className={s.row}>
-        <Button size="sm" onClick={() => toast('Saved to My Library')}>Default</Button>
+        <Button size="sm" onClick={() => toast('Draft saved')}>Default</Button>
         <Button size="sm" variant="success" onClick={() => toast({ title: 'Accepted', description: 'Beats 87% of Python submissions.', tone: 'ok' })}>Success</Button>
         <Button size="sm" onClick={() => toast({ title: 'Cooldown active', description: 'Next gate attempt in 11 h 42 m.', tone: 'warn' })}>Warning</Button>
         <Button size="sm" variant="danger" onClick={() => toast({ title: 'Run failed', description: 'The judge is unreachable. Try again shortly.', tone: 'err', action: { label: 'Retry', onClick: () => toast('Retrying…') } })}>Error</Button>

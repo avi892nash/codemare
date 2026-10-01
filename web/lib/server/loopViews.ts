@@ -1,22 +1,20 @@
 import 'server-only';
-import { BUILD_LANGUAGES, type Difficulty, type Signature, type SupportedLanguage } from '@/lib/types';
-import { canAccessBuildStep, getMapState, type MapTopic, type RecipeView } from './access';
-import { getLibrary } from './components';
+import type { Difficulty } from '@/lib/types';
+import { getMapState, type MapTopic, type RecipeView } from './access';
 import { prisma } from './db';
-import { AccessDenied, InvalidInput, NotFoundError } from './errors';
+import { NotFoundError } from './errors';
 import { getGateAttempt, getGateStatus, type GateState, type GateStatus } from './gates';
 import { getTopicBalances } from './ledger';
-import { isStepDone, loadEarnables, questionServesWant, type EarnableBuild, type EarnableQuestion } from './queue';
+import { scorePenaltyFrom } from './rules/hints';
 import { difficultyRank, meetsMinDifficulty, planDebits, type Balances } from './rules/recipes';
-import { parseJsonColumn, predictPayloadSchema } from './schemas';
+import { solveAward } from './rules/scoring';
 
 /**
- * View models for the learning-loop pages — /map (T1), the gate attempt
- * page, /queue's predict step (T2a) and /me/library (T3) — plus the navbar
- * token total. Every rule comes from the domain layer (getMapState,
- * planDebits, getGateAttempt, getLibrary, …); this module only joins and
- * shapes, and returns JSON-safe data (dates as ISO strings) so pages can
- * hand it straight to client components.
+ * View models for the learning-loop pages — /map (T1) and the gate attempt
+ * page — plus the navbar token total. Every rule comes from the domain layer
+ * (getMapState, planDebits, getGateAttempt, solveAward, …); this module only
+ * joins and shapes, and returns JSON-safe data (dates as ISO strings) so
+ * pages can hand it straight to client components.
  */
 
 const iso = (d: Date | null | undefined): string | null => (d ? d.toISOString() : null);
@@ -93,10 +91,13 @@ export interface RecipeCard {
   spend: SpendLine[] | null;
 }
 
-/** A way to earn a missing token: a question to solve or a build step to pass. */
-export type EarnOption =
-  | { kind: 'question'; slug: string; title: string; difficulty: Difficulty; amount: number }
-  | { kind: 'build'; stepId: string; title: string; componentTitle: string; difficulty: Difficulty; amount: number };
+/** A way to earn a missing token: a question to solve, and what its first accepted submit pays. */
+export interface EarnOption {
+  slug: string;
+  title: string;
+  difficulty: Difficulty;
+  amount: number;
+}
 
 export type TopicBlockerView =
   | {
@@ -156,14 +157,60 @@ export interface MapView {
 }
 
 const EARN_QUESTIONS = 3;
-const EARN_BUILDS = 1;
 
-/** Questions and builds that pay qualifying tokens of `topicId`, best first. */
-export function earnOptionsFor(
-  item: { topicId: string; minDifficulty: Difficulty },
-  earnables: { questions: readonly EarnableQuestion[]; builds: readonly EarnableBuild[] }
-): EarnOption[] {
-  const questions = earnables.questions
+/** A published question every topic of which is unlocked, whose first solve hasn't paid out yet. */
+export interface EarnableQuestion {
+  id: string;
+  slug: string;
+  title: string;
+  difficulty: Difficulty;
+  /** What the first accepted submit would pay now (hint penalty applied). */
+  award: { topicId: string; amount: number }[];
+}
+
+/** Tokens `q` pays that count for a recipe item: its topic, at or above the item's minimum difficulty. */
+export function questionServesWant(
+  q: Pick<EarnableQuestion, 'difficulty' | 'award'>,
+  item: { topicId: string; minDifficulty: Difficulty }
+): number {
+  if (!meetsMinDifficulty(q.difficulty, item.minDifficulty)) return 0;
+  return q.award.find((a) => a.topicId === item.topicId)?.amount ?? 0;
+}
+
+/**
+ * Questions the learner could earn tokens with right now: published, every
+ * topic unlocked, first solve not paid yet — with the award their hint
+ * penalty leaves.
+ */
+export async function loadEarnableQuestions(userId: string, unlockedTopicIds: ReadonlySet<string>): Promise<EarnableQuestion[]> {
+  const [questions, paid, hintUses] = await Promise.all([
+    prisma.question.findMany({
+      where: { status: 'published' },
+      select: { id: true, slug: true, title: true, difficulty: true, topics: { select: { topicId: true, weight: true } } },
+    }),
+    prisma.tokenLedger.findMany({
+      where: { userId, reason: 'solve', refType: 'question', amount: { gt: 0 } },
+      distinct: ['refId'],
+      select: { refId: true },
+    }),
+    prisma.hintUse.findMany({ where: { userId, costKind: 'score' }, select: { questionId: true, costKind: true, costAmount: true } }),
+  ]);
+  const paidIds = new Set(paid.map((p) => p.refId));
+  return questions
+    .filter((q) => !paidIds.has(q.id) && q.topics.length > 0 && q.topics.every((t) => unlockedTopicIds.has(t.topicId)))
+    .map((q) => ({
+      id: q.id,
+      slug: q.slug,
+      title: q.title,
+      difficulty: q.difficulty,
+      award: solveAward(q.difficulty, q.topics, scorePenaltyFrom(hintUses.filter((u) => u.questionId === q.id))),
+    }))
+    .filter((q) => q.award.length > 0);
+}
+
+/** Questions that pay qualifying tokens of `item.topicId`, most tokens first. */
+export function earnOptionsFor(item: { topicId: string; minDifficulty: Difficulty }, questions: readonly EarnableQuestion[]): EarnOption[] {
+  return questions
     .map((q) => ({ q, amount: questionServesWant(q, item) }))
     .filter((x) => x.amount > 0)
     .sort(
@@ -173,22 +220,7 @@ export function earnOptionsFor(
         a.q.title.localeCompare(b.q.title)
     )
     .slice(0, EARN_QUESTIONS)
-    .map(({ q, amount }): EarnOption => ({ kind: 'question', slug: q.slug, title: q.title, difficulty: q.difficulty, amount }));
-  const builds = earnables.builds
-    .filter((b) => b.topicId === item.topicId && !b.waiting && meetsMinDifficulty(b.difficulty, item.minDifficulty))
-    .sort((a, b) => b.amount - a.amount || a.componentTitle.localeCompare(b.componentTitle))
-    .slice(0, EARN_BUILDS)
-    .map(
-      (b): EarnOption => ({
-        kind: 'build',
-        stepId: b.stepId,
-        title: b.title,
-        componentTitle: b.componentTitle,
-        difficulty: b.difficulty,
-        amount: b.amount,
-      })
-    );
-  return [...questions, ...builds];
+    .map(({ q, amount }) => ({ slug: q.slug, title: q.title, difficulty: q.difficulty, amount }));
 }
 
 function gateCard(status: GateStatus, questions: GateCardView['questions'], previousTier: GateCardView['previousTier']): GateCardView {
@@ -266,8 +298,8 @@ export async function getMapView(userId: string, now: Date = new Date()): Promis
   const balances: Balances = Object.fromEntries(map.tiers.flatMap((t) => t.topics.map((topic) => [topic.id, topic.balance.byDifficulty])));
   const unlocked = new Set(map.tiers.flatMap((t) => t.topics.filter((topic) => topic.status === 'unlocked').map((topic) => topic.id)));
 
-  const [earnables, gates, recipeTitles] = await Promise.all([
-    loadEarnables(userId, unlocked),
+  const [earnable, gates, recipeTitles] = await Promise.all([
+    loadEarnableQuestions(userId, unlocked),
     prisma.gate.findMany({
       select: {
         id: true,
@@ -318,7 +350,7 @@ export async function getMapView(userId: string, now: Date = new Date()): Promis
             ready: cheapest.ready,
             items: cheapest.items.map((it) => ({
               ...it,
-              earn: it.missing > 0 ? earnOptionsFor({ topicId: it.topic.id, minDifficulty: it.minDifficulty }, earnables) : [],
+              earn: it.missing > 0 ? earnOptionsFor({ topicId: it.topic.id, minDifficulty: it.minDifficulty }, earnable) : [],
             })),
           };
         } else if (t.blocker?.kind === 'no_recipe') {
@@ -444,200 +476,4 @@ export async function getGateAttemptView(userId: string, attemptId: string, now:
     gateState: status.state,
     superseded: !!newest && newest.id !== attempt.id && newest.startedAt.getTime() > attempt.startedAt.getTime(),
   };
-}
-
-// ─── /queue: the predict step (T2a) ──────────────────────────────────────
-
-export interface PredictStepView {
-  stepId: string;
-  title: string;
-  promptMd: string;
-  difficulty: Difficulty;
-  language: SupportedLanguage;
-  code: string;
-  question: string;
-  /** Multiple choice; null → free answer. */
-  choices: string[] | null;
-  /** Once answered: their answer and the reveal. Never present before — the answer stays on the server. */
-  result: { answer: string; correct: boolean; expected: string; explanationMd: string } | null;
-}
-
-/**
- * A predict step for the queue: the snippet and the question, without the
- * answer until the learner has predicted. Throws AccessDenied (topic
- * locked), NotFoundError, InvalidInput (a build step).
- */
-export async function getPredictStepView(userId: string, stepId: string): Promise<PredictStepView> {
-  const access = await canAccessBuildStep(userId, stepId);
-  if (!access.ok) throw new AccessDenied('topic_locked', 'Unlock this component’s topic on the map first.');
-  const [step, progress] = await Promise.all([
-    prisma.buildStep.findUnique({
-      where: { id: stepId },
-      select: { id: true, kind: true, title: true, promptMd: true, difficulty: true, payload: true },
-    }),
-    prisma.stepProgress.findUnique({
-      where: { userId_buildStepId: { userId, buildStepId: stepId } },
-      select: { status: true, answer: true, correct: true },
-    }),
-  ]);
-  if (!step) throw new NotFoundError('build step', stepId);
-  if (step.kind !== 'predict') throw new InvalidInput('not a predict step');
-  const payload = parseJsonColumn(predictPayloadSchema, step.payload, `build_steps.payload (${stepId})`);
-  const answered = progress && progress.status !== 'seen' && typeof progress.answer === 'string';
-  return {
-    stepId: step.id,
-    title: step.title,
-    promptMd: step.promptMd,
-    difficulty: step.difficulty,
-    language: payload.language,
-    code: payload.code,
-    question: payload.question,
-    choices: payload.choices ?? null,
-    result: answered
-      ? {
-          answer: progress.answer as string,
-          correct: progress.correct === true,
-          expected: payload.answer,
-          explanationMd: payload.explanation_md,
-        }
-      : null,
-  };
-}
-
-// ─── /me/library (T3) ────────────────────────────────────────────────────
-
-export interface LibraryVersionView {
-  versionId: string;
-  /** 1-based, per component and language, oldest first. */
-  number: number;
-  language: SupportedLanguage;
-  passed: boolean;
-  createdAt: string;
-  submissionId: string;
-}
-
-export interface LibraryComponentView {
-  id: string;
-  slug: string;
-  title: string;
-  summaryMd: string;
-  functionName: string;
-  signature: Signature;
-  topic: TopicLite & { unlocked: boolean };
-  built: boolean;
-  /** Latest passing version per language, in the build-language order. */
-  latest: { language: SupportedLanguage; versionId: string; number: number; createdAt: string; code: string; submissionId: string | null }[];
-  /** Every version, newest first. */
-  history: LibraryVersionView[];
-  dependsOn: { slug: string; title: string; built: boolean }[];
-  usedBy: { slug: string; title: string; built: boolean }[];
-  steps: { passed: number; total: number };
-  /** Where to rebuild it in the queue (its first build step). */
-  rebuildStepId: string | null;
-  /** Its first step not done yet, for "Build it" links. */
-  nextStepId: string | null;
-}
-
-export interface MyLibraryView {
-  built: LibraryComponentView[];
-  /** Components not built yet, in map order. */
-  unbuilt: LibraryComponentView[];
-  totals: { built: number; total: number; versions: number; languages: SupportedLanguage[] };
-}
-
-/**
- * The learner's components: latest passing code per language, version
- * history, what each depends on and what depends on it (spec §4 prelude
- * order is the dependency order shown), and where to rebuild it.
- */
-export async function getMyLibraryView(userId: string): Promise<MyLibraryView> {
-  const [library, versions, steps, progress] = await Promise.all([
-    getLibrary(userId),
-    prisma.componentVersion.findMany({
-      where: { userId },
-      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
-      select: { id: true, componentId: true, language: true, passed: true, createdAt: true, submissionId: true },
-    }),
-    prisma.buildStep.findMany({ select: { id: true, componentId: true, ord: true, kind: true } }),
-    prisma.stepProgress.findMany({ where: { userId }, select: { buildStepId: true, status: true } }),
-  ]);
-  const status = new Map(progress.map((p) => [p.buildStepId, p.status]));
-  const builtIds = new Set(library.filter((c) => c.built).map((c) => c.id));
-
-  const numbered = new Map<string, LibraryVersionView[]>();
-  const counter = new Map<string, number>();
-  for (const v of versions) {
-    const key = `${v.componentId}\u0000${v.language}`;
-    const n = (counter.get(key) ?? 0) + 1;
-    counter.set(key, n);
-    const list = numbered.get(v.componentId) ?? [];
-    list.push({
-      versionId: v.id,
-      number: n,
-      language: v.language,
-      passed: v.passed,
-      createdAt: v.createdAt.toISOString(),
-      submissionId: v.submissionId,
-    });
-    numbered.set(v.componentId, list);
-  }
-
-  const views = library.map((c): LibraryComponentView => {
-    const history = [...(numbered.get(c.id) ?? [])].reverse();
-    const numberOf = new Map(history.map((h) => [h.versionId, h]));
-    const own = steps.filter((s) => s.componentId === c.id).sort((a, b) => a.ord - b.ord);
-    const pending = own.find((s) => !isStepDone(s.kind, status.get(s.id)));
-    return {
-      id: c.id,
-      slug: c.slug,
-      title: c.title,
-      summaryMd: c.summaryMd,
-      functionName: c.functionName,
-      signature: c.signature,
-      topic: c.topic,
-      built: c.built,
-      latest: BUILD_LANGUAGES.flatMap((language) => {
-        const v = c.versions[language];
-        if (!v) return [];
-        const meta = numberOf.get(v.versionId);
-        return [
-          {
-            language,
-            versionId: v.versionId,
-            number: meta?.number ?? 1,
-            createdAt: v.createdAt.toISOString(),
-            code: v.code,
-            submissionId: meta?.submissionId ?? null,
-          },
-        ];
-      }),
-      history,
-      dependsOn: c.dependsOn.map((d) => ({ slug: d.slug, title: d.title, built: builtIds.has(d.id) })),
-      usedBy: library
-        .filter((other) => other.dependsOn.some((d) => d.id === c.id))
-        .map((other) => ({ slug: other.slug, title: other.title, built: other.built })),
-      steps: c.steps,
-      rebuildStepId: own.find((s) => s.kind === 'build')?.id ?? null,
-      nextStepId: pending?.id ?? null,
-    };
-  });
-
-  const languages = BUILD_LANGUAGES.filter((l) => views.some((v) => v.latest.some((x) => x.language === l)));
-  return {
-    built: views.filter((v) => v.built),
-    unbuilt: views.filter((v) => !v.built),
-    totals: {
-      built: views.filter((v) => v.built).length,
-      total: views.length,
-      versions: versions.length,
-      languages: [...languages],
-    },
-  };
-}
-
-// ─── helpers shared with pages ───────────────────────────────────────────
-
-/** A component's signature as one line: `prefixSums(nums: int[]) → int[]`. */
-export function signatureLine(functionName: string, signature: Signature): string {
-  return `${functionName}(${signature.params.map((p) => `${p.name}: ${p.type}`).join(', ')}) → ${signature.returns}`;
 }

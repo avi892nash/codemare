@@ -1,10 +1,10 @@
 /**
- * The client-side state of one run / submit / build stream (lib/sse.ts
- * RunEvent), as a pure reducer so it can be unit-tested without React.
+ * The client-side state of one run / submit stream (lib/sse.ts RunEvent),
+ * as a pure reducer so it can be unit-tested without React.
  */
 import type { RunEvent, TestEventData, VerdictEventData } from '@/lib/sse';
 
-export type RunKind = 'run' | 'submit' | 'build';
+export type RunKind = 'run' | 'submit';
 
 /**
  * idle → connecting → queued → [compiling] → running → done
@@ -18,10 +18,10 @@ export const ACTIVE_PHASES: ReadonlySet<RunPhaseState> = new Set(['connecting', 
 export interface RunRequestError {
   /** HTTP status; null for network / stream failures. */
   status: number | null;
-  /** The API's machine code (`access_denied`, `missing_dependencies`, `rate_limited`, …). */
+  /** The API's machine code (`access_denied`, `rate_limited`, `judge_unavailable`, …). */
   code: string | null;
   message: string;
-  /** The full JSON error body (403 blockers, 409 `missing`, 429 `retryAfterSec`). */
+  /** The full JSON error body (403 blockers, 429 `retryAfterSec`). */
   body: Record<string, unknown> | null;
 }
 

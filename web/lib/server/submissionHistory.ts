@@ -18,11 +18,8 @@ import { getSubmissionDetail } from './submissions';
  *                         pass/fail.
  */
 
-/** What a submission was for. */
-export type SubmissionSubject =
-  | { type: 'question'; slug: string; title: string; difficulty: Difficulty }
-  | { type: 'build'; componentSlug: string; componentTitle: string; stepTitle: string }
-  | { type: 'none' };
+/** What a submission was for: its question (`none` once the question is gone). */
+export type SubmissionSubject = { type: 'question'; slug: string; title: string; difficulty: Difficulty } | { type: 'none' };
 
 export interface SubmissionListRow {
   id: string;
@@ -50,25 +47,14 @@ export interface SubmissionList {
 
 const subjectSelect = {
   question: { select: { slug: true, title: true, difficulty: true } },
-  buildStep: { select: { title: true, component: { select: { slug: true, title: true } } } },
 } satisfies Prisma.SubmissionSelect;
 
 type SubjectRow = Prisma.SubmissionGetPayload<{ select: typeof subjectSelect }>;
 
 function toSubject(row: SubjectRow): SubmissionSubject {
-  if (row.question) {
-    const { slug, title, difficulty } = row.question;
-    return { type: 'question', slug, title, difficulty };
-  }
-  if (row.buildStep) {
-    return {
-      type: 'build',
-      componentSlug: row.buildStep.component.slug,
-      componentTitle: row.buildStep.component.title,
-      stepTitle: row.buildStep.title,
-    };
-  }
-  return { type: 'none' };
+  if (!row.question) return { type: 'none' };
+  const { slug, title, difficulty } = row.question;
+  return { type: 'question', slug, title, difficulty };
 }
 
 function whereFor(userId: string, q: SubmissionQuery): Prisma.SubmissionWhereInput {
@@ -198,7 +184,6 @@ export async function getSubmissionView(viewerId: string, submissionId: string):
       userId: true,
       user: { select: { handle: true, name: true } },
       question: { select: { slug: true, title: true, difficulty: true, signature: true } },
-      buildStep: { select: { title: true, component: { select: { slug: true, title: true, signature: true } } } },
     },
   });
   if (!meta) return null;
@@ -211,7 +196,7 @@ export async function getSubmissionView(viewerId: string, submissionId: string):
 
   const detail = await getSubmissionDetail(meta.userId, submissionId);
   if (!detail) return null;
-  const names = paramNames(meta.question?.signature ?? meta.buildStep?.component.signature);
+  const names = paramNames(meta.question?.signature);
 
   return {
     id: detail.id,

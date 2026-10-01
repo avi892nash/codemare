@@ -1,6 +1,6 @@
 import 'server-only';
 import { z } from 'zod';
-import { BUILD_LANGUAGES, LANGUAGES, VERDICT_LABEL, type SubmissionKind, type SupportedLanguage, type Verdict } from '@/lib/types';
+import { LANGUAGES, VERDICT_LABEL, type SubmissionKind, type SupportedLanguage, type Verdict } from '@/lib/types';
 import {
   compile as defaultCompile,
   CompileServiceError,
@@ -23,35 +23,26 @@ import {
 import { argumentsError } from '@/lib/client/signature';
 import { prisma } from './db';
 import { AccessDenied, DomainError, InvalidInput, NotFoundError, isDomainError } from './errors';
-import { assertCanAccessBuildStep, canAccessQuestion, whatsBlocking, type Blocker, type TopicRef } from './access';
+import { canAccessQuestion, whatsBlocking, type Blocker, type TopicRef } from './access';
 import { assertGateSubmissionAllowed } from './gates';
-import { assemblePrelude, getDependencyOrder } from './components';
-import { getHintLadder } from './hints';
 import { completeSubmission, createSubmission, markSubmissionRunning, type TestOutcome } from './submissions';
-import { onAcceptedSubmit, onBuildPassed } from './awards';
+import { onAcceptedSubmit } from './awards';
 import type { AwardedBadge } from './badges';
 import { sanitizeTestOutcome } from './rules/testResults';
-import {
-  buildPayloadSchema,
-  codeByLanguageSchema,
-  jsonValueSchema,
-  parseJsonColumn,
-  signatureSchema,
-  testDefSchema,
-} from './schemas';
+import { codeByLanguageSchema, jsonValueSchema, parseJsonColumn, signatureSchema, testDefSchema } from './schemas';
 
 /**
- * The judge pipeline behind POST /api/run, /api/submit and /api/build
- * (spec §3.2, §3.4, §3.5, §4):
+ * The judge pipeline behind POST /api/run and /api/submit (spec §3.2, §3.4,
+ * §3.5, §4):
  *
- *   handleRunRequest   session → rate limit → body (zod, ≤ 64 KB source)
- *     prepare…Run      access (DomainErrors → HTTP before the stream starts),
- *                      tests, prelude, custom-input expectations
- *     runStreamResponse text/event-stream with a heartbeat; aborts the
- *                      compile service when the browser goes away
- *       streamRun      createSubmission → markSubmissionRunning →
- *                      relay compile-service events (hidden tests stripped)
- *                      → completeSubmission → awards → `verdict`
+ *   handleRunRequest     session → rate limit → body (zod, ≤ 64 KB source)
+ *     prepareQuestionRun access (DomainErrors → HTTP before the stream
+ *                        starts), tests, custom-input expectations
+ *     runStreamResponse  text/event-stream with a heartbeat; aborts the
+ *                        compile service when the browser goes away
+ *       streamRun        createSubmission → markSubmissionRunning →
+ *                        relay compile-service events (hidden tests stripped)
+ *                        → completeSubmission → awards → `verdict`
  *
  * Hidden tests never leave the server with input / expected / actual, and
  * their error text is reduced to the error's kind — a program can print a
@@ -65,8 +56,6 @@ export const MAX_SOURCE_BYTES = 64 * 1024;
 export const MAX_BODY_BYTES = 512 * 1024;
 export const MAX_CUSTOM_INPUTS = 8;
 const HEARTBEAT_MS = 15_000;
-/** Build steps carry no limits of their own; questions default to the same. */
-const DEFAULT_LIMITS = { timeMs: 2000, memoryMb: 256 } as const;
 const REFERENCE_ORDER: readonly SupportedLanguage[] = ['python', 'javascript', 'typescript', 'go', 'cpp', 'java'];
 
 // ─── Errors ──────────────────────────────────────────────────────────────
@@ -133,8 +122,7 @@ export interface PreparedRun {
   kind: SubmissionKind;
   language: SupportedLanguage;
   code: string;
-  questionId: string | null;
-  buildStepId: string | null;
+  questionId: string;
   gateAttemptId: string | null;
   cases: RunCase[];
   request: RunRequest;
@@ -149,12 +137,6 @@ export interface QuestionRunInput {
   customInputs?: unknown[][];
   /** `submit` inside a gate attempt → a `gate` submission. */
   attemptId?: string;
-}
-
-export interface BuildRunInput {
-  buildStepId: string;
-  language: SupportedLanguage;
-  code: string;
 }
 
 export interface RunnerDeps {
@@ -319,7 +301,6 @@ export async function prepareQuestionRun(userId: string, input: QuestionRunInput
     language: input.language,
     code: input.code,
     questionId: q.id,
-    buildStepId: null,
     gateAttemptId,
     cases,
     request: {
@@ -331,121 +312,6 @@ export async function prepareQuestionRun(userId: string, input: QuestionRunInput
       tests: cases.map((c) => ({ input: c.input, expected: c.expected, hidden: c.hidden })),
       limits,
     },
-  };
-}
-
-/**
- * A build-step run: the step's tests with the learner's latest passing
- * version of every dependency as the prelude. Throws AccessDenied,
- * NotFoundError, InvalidInput (predict step / language), MissingDependencies (409).
- */
-export async function prepareBuildRun(userId: string, input: BuildRunInput): Promise<PreparedRun> {
-  await assertCanAccessBuildStep(userId, input.buildStepId);
-  const step = await prisma.buildStep.findUnique({
-    where: { id: input.buildStepId },
-    select: {
-      id: true,
-      kind: true,
-      payload: true,
-      component: { select: { id: true, slug: true, functionName: true, signature: true, languages: true } },
-    },
-  });
-  if (!step) throw new NotFoundError('build step', input.buildStepId);
-  if (step.kind !== 'build') throw new InvalidInput('This is a predict step — there is nothing to build.');
-  const { component } = step;
-  if (!(BUILD_LANGUAGES as readonly string[]).includes(input.language) || !component.languages.includes(input.language)) {
-    throw new InvalidInput(`${component.slug} can’t be built in ${input.language}.`);
-  }
-  const payload = parseJsonColumn(buildPayloadSchema, step.payload, `build_steps.payload (${step.id})`);
-  const signature = parseJsonColumn(signatureSchema, component.signature, `components.signature (${component.slug})`);
-  const { prelude } = await assemblePrelude(userId, component.id, input.language);
-  const cases = payload.tests.map(toCase);
-
-  return {
-    userId,
-    kind: 'build',
-    language: input.language,
-    code: input.code,
-    questionId: null,
-    buildStepId: step.id,
-    gateAttemptId: null,
-    cases,
-    request: {
-      language: input.language,
-      code: input.code,
-      ...(prelude.length > 0 ? { prelude } : {}),
-      functionName: component.functionName,
-      signature,
-      compareMode: payload.compare_mode ?? 'ordered',
-      tests: cases.map((c) => ({ input: c.input, expected: c.expected, hidden: c.hidden })),
-      limits: { ...DEFAULT_LIMITS },
-    },
-  };
-}
-
-// ─── Build steps for the workspace ───────────────────────────────────────
-
-/**
- * Everything <SolveWorkspace mode="build"> needs for one build step, shaped
- * for its props (`problem` is a WorkspaceProblem). Checks access (throws
- * AccessDenied / NotFoundError; InvalidInput for a predict step). Hidden
- * tests stay on the server.
- */
-export async function loadBuildStep(userId: string, buildStepId: string) {
-  await assertCanAccessBuildStep(userId, buildStepId);
-  const step = await prisma.buildStep.findUnique({
-    where: { id: buildStepId },
-    select: {
-      id: true,
-      kind: true,
-      title: true,
-      promptMd: true,
-      difficulty: true,
-      payload: true,
-      component: { select: { id: true, slug: true, title: true, functionName: true, signature: true, languages: true } },
-    },
-  });
-  if (!step) throw new NotFoundError('build step', buildStepId);
-  if (step.kind !== 'build') throw new InvalidInput('This is a predict step — there is nothing to build.');
-  const { component } = step;
-  const payload = parseJsonColumn(buildPayloadSchema, step.payload, `build_steps.payload (${step.id})`);
-  const signature = parseJsonColumn(signatureSchema, component.signature, `components.signature (${component.slug})`);
-  const languages = BUILD_LANGUAGES.filter((l) => component.languages.includes(l));
-
-  const [graph, latest, progress, ladder] = await Promise.all([
-    getDependencyOrder(component.id),
-    prisma.submission.findMany({
-      where: { userId, buildStepId, kind: 'build' },
-      orderBy: { createdAt: 'desc' },
-      distinct: ['language'],
-      select: { language: true, code: true },
-    }),
-    prisma.stepProgress.findUnique({ where: { userId_buildStepId: { userId, buildStepId } }, select: { status: true } }),
-    getHintLadder(userId, { buildStepId }),
-  ]);
-
-  return {
-    problem: {
-      id: step.id,
-      title: step.title,
-      difficulty: step.difficulty,
-      functionName: component.functionName,
-      signature,
-      languages: [...languages] as SupportedLanguage[],
-      starterCode: payload.starter_code,
-      samples: payload.tests.filter((t) => !t.hidden).map((t) => ({ input: t.input, expected: t.expected })),
-      timeLimitMs: DEFAULT_LIMITS.timeMs,
-      customInputs: false,
-    },
-    promptMd: step.promptMd,
-    build: {
-      componentSlug: component.slug,
-      componentTitle: component.title,
-      dependencies: graph.map((c) => ({ slug: c.slug, title: c.title })),
-    },
-    hints: ladder,
-    latestCode: Object.fromEntries(latest.map((s) => [s.language, s.code])) as Partial<Record<SupportedLanguage, string>>,
-    passed: progress?.status === 'passed',
   };
 }
 
@@ -536,7 +402,6 @@ export async function streamRun(
     language: run.language,
     code: run.code,
     questionId: run.questionId,
-    buildStepId: run.buildStepId,
     gateAttemptId: run.gateAttemptId,
   });
   emit({ event: 'queued', data: { submissionId, totalTests: run.cases.length } });
@@ -636,20 +501,13 @@ export async function streamRun(
     submissionId,
     ...(completed.error ? { error: completed.error } : {}),
   };
-  if (run.kind === 'build') verdict.componentVersionId = completed.componentVersionId;
 
-  if (completed.status === 'OK') {
+  if (completed.status === 'OK' && (run.kind === 'submit' || run.kind === 'gate')) {
     try {
-      if (run.kind === 'submit' || run.kind === 'gate') {
-        const awards = await onAcceptedSubmit(run.userId, submissionId);
-        verdict.tokensAwarded = awards.tokensAwarded;
-        verdict.badgesAwarded = awards.badgesAwarded.map(slimBadge);
-        if (run.kind === 'submit') verdict.percentile = awards.percentile;
-      } else if (run.kind === 'build') {
-        const awards = await onBuildPassed(run.userId, submissionId);
-        verdict.tokensAwarded = awards.tokensAwarded;
-        verdict.badgesAwarded = awards.badgesAwarded.map(slimBadge);
-      }
+      const awards = await onAcceptedSubmit(run.userId, submissionId);
+      verdict.tokensAwarded = awards.tokensAwarded;
+      verdict.badgesAwarded = awards.badgesAwarded.map(slimBadge);
+      if (run.kind === 'submit') verdict.percentile = awards.percentile;
     } catch (e) {
       // Awards are idempotent and never block the verdict.
       console.error('[runner] awarding failed:', e);
@@ -720,7 +578,7 @@ export function runStreamResponse(
 
 // ─── Route plumbing ──────────────────────────────────────────────────────
 
-export type RunRoute = 'run' | 'submit' | 'build';
+export type RunRoute = 'run' | 'submit';
 
 const idSchema = z.string().trim().min(1).max(100);
 const languageSchema = z.enum(LANGUAGES);
@@ -741,14 +599,6 @@ export const submitBodySchema = z
     language: languageSchema,
     code: z.string(),
     attemptId: idSchema.optional(),
-  })
-  .strict();
-
-export const buildBodySchema = z
-  .object({
-    buildStepId: idSchema,
-    language: languageSchema,
-    code: z.string(),
   })
   .strict();
 
@@ -812,10 +662,10 @@ function zodMessage(error: z.ZodError): string {
 }
 
 /**
- * The whole of POST /api/run | /api/submit | /api/build: 401 without a
- * user, 429 over the shared per-user budget, 413 over 64 KB of source,
- * 400/403/404/409 from validation and the domain — all before the stream —
- * then a text/event-stream of RunEvents.
+ * The whole of POST /api/run | /api/submit: 401 without a user, 429 over the
+ * shared per-user budget, 413 over 64 KB of source, 400/403/404/409 from
+ * validation and the domain — all before the stream — then a
+ * text/event-stream of RunEvents.
  */
 export async function handleRunRequest(
   request: Request,
@@ -840,7 +690,7 @@ export async function handleRunRequest(
 
   const body = await readBody(request);
   if (!body.ok) return body.response;
-  const schema = route === 'run' ? runBodySchema : route === 'submit' ? submitBodySchema : buildBodySchema;
+  const schema = route === 'run' ? runBodySchema : submitBodySchema;
   const parsed = schema.safeParse(body.value);
   if (!parsed.success) return json(400, { error: 'invalid_input', message: zodMessage(parsed.error) });
   const input = parsed.data;
@@ -852,10 +702,7 @@ export async function handleRunRequest(
 
   let prepared: PreparedRun;
   try {
-    prepared =
-      route === 'build'
-        ? await prepareBuildRun(userId, input as z.infer<typeof buildBodySchema>)
-        : await prepareQuestionRun(userId, { kind: route, ...(input as z.infer<typeof runBodySchema>) }, deps);
+    prepared = await prepareQuestionRun(userId, { kind: route, ...(input as z.infer<typeof runBodySchema>) }, deps);
   } catch (e) {
     return errorResponse(e);
   }

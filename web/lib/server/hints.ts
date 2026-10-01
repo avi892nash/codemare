@@ -1,7 +1,7 @@
 import 'server-only';
 import type { HintCostKind, HintLevel } from '@/lib/types';
 import { prisma, withUserLock, type Db } from './db';
-import { canAccessBuildStep, canAccessQuestion, type TopicRef } from './access';
+import { canAccessQuestion, type TopicRef } from './access';
 import { AccessDenied, HintLocked, NotFoundError } from './errors';
 import { getBalances, getScorePenalty, spend, type Debit } from './ledger';
 import { ladderState, unrevealedBelow, type HintTarget } from './rules/hints';
@@ -14,9 +14,9 @@ export type { HintTarget };
  * The hint ladder (spec §3.6): nudge → concept → pseudo → line → solution.
  * A level is revealable once every lower level is revealed. The cost is
  * shown before reveal:
- *   score — % penalty on the question's / step's future token award
- *   token — `cost_amount` tokens of the question's highest-weight topic (or
- *           the component's topic), spent via the ledger
+ *   score — % penalty on the question's future token award
+ *   token — `cost_amount` tokens of the question's highest-weight topic,
+ *           spent via the ledger
  * The first reveal writes hint_uses; re-viewing is free.
  */
 
@@ -53,44 +53,29 @@ export interface RevealResult {
   penalty: number;
 }
 
-function targetWhere(target: HintTarget) {
-  return 'questionId' in target ? { questionId: target.questionId } : { buildStepId: target.buildStepId };
-}
-
-/** The topic whose tokens pay for token-cost hints on `target`. */
+/** The topic whose tokens pay for token-cost hints on `target`: the question's highest-weight topic. */
 async function tokenTopicFor(target: HintTarget, db: Db): Promise<TopicRef | null> {
-  const select = { id: true, slug: true, title: true, icon: true } as const;
-  if ('questionId' in target) {
-    const rows = await db.questionTopic.findMany({
-      where: { questionId: target.questionId },
-      select: { weight: true, topic: { select } },
-    });
-    rows.sort((a, b) => b.weight - a.weight || a.topic.slug.localeCompare(b.topic.slug));
-    return rows[0]?.topic ?? null;
-  }
-  const step = await db.buildStep.findUnique({
-    where: { id: target.buildStepId },
-    select: { component: { select: { topic: { select } } } },
+  const rows = await db.questionTopic.findMany({
+    where: { questionId: target.questionId },
+    select: { weight: true, topic: { select: { id: true, slug: true, title: true, icon: true } } },
   });
-  return step?.component.topic ?? null;
+  rows.sort((a, b) => b.weight - a.weight || a.topic.slug.localeCompare(b.topic.slug));
+  return rows[0]?.topic ?? null;
 }
 
 async function assertTargetAccess(userId: string, target: HintTarget): Promise<void> {
-  const access =
-    'questionId' in target
-      ? await canAccessQuestion(userId, target.questionId)
-      : await canAccessBuildStep(userId, target.buildStepId);
+  const access = await canAccessQuestion(userId, target.questionId);
   if (!access.ok) throw new AccessDenied(access.reason, 'Unlock this first to see its hints.');
 }
 
-/** The ladder for a question or build step: every rung's cost and state. */
+/** The ladder for a question: every rung's cost and state. */
 export async function getHintLadder(userId: string, target: HintTarget): Promise<HintLadder> {
   const [hints, uses, penalty, tokenTopic] = await Promise.all([
     prisma.hint.findMany({
-      where: targetWhere(target),
+      where: { questionId: target.questionId },
       select: { id: true, level: true, bodyMd: true, costKind: true, costAmount: true },
     }),
-    prisma.hintUse.findMany({ where: { userId, ...targetWhere(target) }, select: { hintId: true } }),
+    prisma.hintUse.findMany({ where: { userId, questionId: target.questionId }, select: { hintId: true } }),
     getScorePenalty(userId, target),
     tokenTopicFor(target, prisma),
   ]);
@@ -124,18 +109,18 @@ export async function getHintLadder(userId: string, target: HintTarget): Promise
 export async function revealHint(userId: string, hintId: string): Promise<RevealResult> {
   const hint = await prisma.hint.findUnique({
     where: { id: hintId },
-    select: { id: true, level: true, bodyMd: true, costKind: true, costAmount: true, questionId: true, buildStepId: true },
+    select: { id: true, level: true, bodyMd: true, costKind: true, costAmount: true, questionId: true },
   });
-  if (!hint) throw new NotFoundError('hint', hintId);
-  const target: HintTarget = hint.questionId ? { questionId: hint.questionId } : { buildStepId: hint.buildStepId! };
+  if (!hint?.questionId) throw new NotFoundError('hint', hintId);
+  const target: HintTarget = { questionId: hint.questionId };
   await assertTargetAccess(userId, target);
 
   const { alreadyRevealed, debits } = await withUserLock(userId, async (tx) => {
     const used = await tx.hintUse.findUnique({ where: { userId_hintId: { userId, hintId } }, select: { id: true } });
     if (used) return { alreadyRevealed: true, debits: [] as Debit[] };
 
-    const ladder = await tx.hint.findMany({ where: targetWhere(target), select: { id: true, level: true } });
-    const revealed = await tx.hintUse.findMany({ where: { userId, ...targetWhere(target) }, select: { hintId: true } });
+    const ladder = await tx.hint.findMany({ where: { questionId: target.questionId }, select: { id: true, level: true } });
+    const revealed = await tx.hintUse.findMany({ where: { userId, questionId: target.questionId }, select: { hintId: true } });
     const missing = unrevealedBelow(ladder, new Set(revealed.map((r) => r.hintId)), hintId);
     if (missing.length > 0) throw new HintLocked(missing);
 
@@ -154,8 +139,7 @@ export async function revealHint(userId: string, hintId: string): Promise<Reveal
       data: {
         userId,
         hintId,
-        questionId: hint.questionId,
-        buildStepId: hint.buildStepId,
+        questionId: target.questionId,
         costKind: hint.costKind,
         costAmount: hint.costAmount,
       },

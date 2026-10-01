@@ -5,7 +5,6 @@ import { requireViewer } from '@/components/Learn/viewer';
 import { ActivityHeatmap } from '@/components/Profile/ActivityHeatmap';
 import {
   BadgesPanel,
-  ComponentsPanel,
   LearnPanel,
   Panel,
   ProfileHeader,
@@ -56,7 +55,6 @@ export default async function ProfilePage({ params }: { params: Promise<Params> 
         <div className={s.stack}>
           <BadgesPanel view={view} />
           <TokensPanel view={view} />
-          <ComponentsPanel view={view} />
         </div>
       </div>
     </PageShell>

@@ -21,10 +21,6 @@ export type Difficulty = (typeof DIFFICULTIES)[number];
 export const LANGUAGES = ['python', 'javascript', 'typescript', 'cpp', 'java', 'go'] as const;
 export type SupportedLanguage = (typeof LANGUAGES)[number];
 
-/** Component builds (My Library) exclude Java in v1 (spec §0.4). */
-export const BUILD_LANGUAGES = ['python', 'javascript', 'typescript', 'cpp', 'go'] as const;
-export type BuildLanguage = (typeof BUILD_LANGUAGES)[number];
-
 /** Ordered: learner < author < staff < admin. */
 export const ROLES = ['learner', 'author', 'staff', 'admin'] as const;
 export type Role = (typeof ROLES)[number];
@@ -45,7 +41,6 @@ export type SubmissionKind = 'run' | 'submit' | 'build' | 'gate';
 
 export type CompareMode = 'ordered' | 'unordered';
 export type PublishStatus = 'draft' | 'published';
-export type BuildStepKind = 'predict' | 'build';
 export type BadgeRarity = 'common' | 'rare' | 'epic' | 'legendary';
 export type TrackLevel = 'beginner' | 'intermediate' | 'advanced';
 export type CheckpointKind = 'mcq' | 'short';
@@ -63,7 +58,7 @@ export const DEFAULT_HINT_SCORE_COST: Record<HintLevel, number> = {
   solution: 100,
 };
 
-/** Tokens per solve/build before weight and hint penalty, spec §3.2. */
+/** Tokens per solve before weight and hint penalty, spec §3.2. */
 export const BASE_TOKENS: Record<Difficulty, number> = { Easy: 1, Medium: 2, Hard: 3 };
 
 /**
@@ -91,13 +86,13 @@ export const SIGNATURE_BASE_TYPES = ['int', 'long', 'double', 'bool', 'string', 
 export type SignatureBaseType = (typeof SIGNATURE_BASE_TYPES)[number];
 export type SignatureType = SignatureBaseType | `${SignatureBaseType}[]` | `${SignatureBaseType}[][]`;
 
-/** `questions.signature`, `components.signature`. */
+/** `questions.signature`. */
 export interface Signature {
   params: { name: string; type: SignatureType }[];
   returns: SignatureType;
 }
 
-/** One element of `questions.tests` / `BuildPayload.tests`. `input` is the argument list. */
+/** One element of `questions.tests`. `input` is the argument list. */
 export interface TestDef {
   input: unknown[];
   expected: unknown;
@@ -112,24 +107,6 @@ export interface Example {
   explanation?: string;
 }
 
-/** `build_steps.payload` when kind = 'predict'. */
-export interface PredictPayload {
-  language: SupportedLanguage;
-  code: string;
-  question: string;
-  /** Present → multiple choice (`answer` is one of the choices); absent → free text. */
-  choices?: string[];
-  answer: string;
-  explanation_md: string;
-}
-
-/** `build_steps.payload` when kind = 'build'. */
-export interface BuildPayload {
-  starter_code: Partial<Record<SupportedLanguage, string>>;
-  tests: TestDef[];
-  compare_mode?: CompareMode;
-}
-
 /** `badges.criteria` (spec §2.1). Semantics in lib/server/rules/badges.ts. */
 export type BadgeCriteria =
   | { kind: 'first_accept' }
@@ -137,7 +114,6 @@ export type BadgeCriteria =
   | { kind: 'solves_difficulty'; difficulty: Difficulty; n: number }
   | { kind: 'streak_days'; n: number }
   | { kind: 'no_hint_solves'; n: number }
-  | { kind: 'components_built'; n: number }
   | { kind: 'topics_unlocked'; n: number }
   | { kind: 'tier_open'; tier_ord: number }
   | { kind: 'gate_first_try' }

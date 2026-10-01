@@ -40,11 +40,11 @@ describe('runReducer', () => {
   });
 
   it('maps HTTP errors, keeping the JSON body', () => {
-    expect(requestError(409, { error: 'missing_dependencies', message: 'Build these first: a', missing: ['a'] })).toEqual({
-      status: 409,
-      code: 'missing_dependencies',
-      message: 'Build these first: a',
-      body: { error: 'missing_dependencies', message: 'Build these first: a', missing: ['a'] },
+    expect(requestError(429, { error: 'rate_limited', message: 'Slow down', retryAfterSec: 7 })).toEqual({
+      status: 429,
+      code: 'rate_limited',
+      message: 'Slow down',
+      body: { error: 'rate_limited', message: 'Slow down', retryAfterSec: 7 },
     });
     expect(requestError(401, null).message).toMatch(/sign in/i);
     expect(requestError(502, 'x').message).toMatch(/server/);
@@ -119,7 +119,7 @@ describe('linkErrorLines', () => {
     expect(segments.find((s) => s.line)).toMatchObject(ref);
   });
 
-  it('leaves dependency and harness files alone', () => {
+  it('leaves prelude and harness files alone', () => {
     expect(linkErrorLines('prelude_1.py:3 harness.py:9').every((s) => s.line === undefined)).toBe(true);
   });
 });

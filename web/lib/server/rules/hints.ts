@@ -4,8 +4,8 @@
 import { HINT_LEVELS, type HintCostKind, type HintLevel } from '@/lib/types';
 import { capPenalty } from './scoring';
 
-/** What a hint belongs to: exactly one of a question or a build step. */
-export type HintTarget = { questionId: string } | { buildStepId: string };
+/** What a hint belongs to: a question. */
+export type HintTarget = { questionId: string };
 
 export function hintLevelRank(level: HintLevel): number {
   return HINT_LEVELS.indexOf(level);

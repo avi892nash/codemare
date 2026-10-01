@@ -90,7 +90,7 @@ export async function makeGate(
   });
 }
 
-/** Hints for a question or build step; returns them keyed by level. */
+/** Hints for a question; returns them keyed by level. */
 export async function makeHints(
   target: HintTarget,
   hints: { level: HintLevel; costKind?: HintCostKind; costAmount?: number }[]
@@ -109,50 +109,6 @@ export async function makeHints(
     });
   }
   return out as Record<HintLevel, { id: string }>;
-}
-
-export async function makeComponent(opts: {
-  topicId: string;
-  slug?: string;
-  ord?: number;
-  languages?: SupportedLanguage[];
-  dependsOn?: string[];
-}) {
-  const slug = opts.slug ?? `component-${next()}`;
-  return prisma.component.create({
-    data: {
-      topicId: opts.topicId,
-      slug,
-      title: slug,
-      summaryMd: '',
-      functionName: 'f',
-      signature: { params: [], returns: 'int' },
-      languages: opts.languages ?? ['python', 'javascript'],
-      ord: opts.ord ?? 0,
-      deps: { create: (opts.dependsOn ?? []).map((dependsOnId) => ({ dependsOnId })) },
-    },
-  });
-}
-
-export async function makeBuildStep(
-  componentId: string,
-  opts: { kind?: 'predict' | 'build'; difficulty?: Difficulty; ord?: number } = {}
-) {
-  const kind = opts.kind ?? 'build';
-  return prisma.buildStep.create({
-    data: {
-      componentId,
-      ord: opts.ord ?? 0,
-      kind,
-      title: 'step',
-      promptMd: '',
-      difficulty: opts.difficulty ?? 'Easy',
-      payload:
-        kind === 'build'
-          ? { starter_code: { python: 'def f():\n    return 0' }, tests: [{ input: [], expected: 0, hidden: false }] }
-          : { language: 'python', code: 'print(1)', question: 'Output?', choices: ['1', '2'], answer: '1', explanation_md: '' },
-    },
-  });
 }
 
 /** Credit tokens directly (reason admin). */
@@ -175,9 +131,8 @@ export async function makeSubmission(
   userId: string,
   opts: {
     questionId?: string;
-    buildStepId?: string;
     gateAttemptId?: string;
-    kind?: 'run' | 'submit' | 'build' | 'gate';
+    kind?: 'run' | 'submit' | 'gate';
     status?: 'OK' | 'WA' | 'queued';
     language?: SupportedLanguage;
     runtimeUs?: number;
@@ -190,7 +145,6 @@ export async function makeSubmission(
       userId,
       kind: opts.kind ?? 'submit',
       questionId: opts.questionId,
-      buildStepId: opts.buildStepId,
       gateAttemptId: opts.gateAttemptId,
       language: opts.language ?? 'python',
       code: opts.code ?? 'pass',

@@ -132,11 +132,10 @@ export type LearnTrackSummary = Awaited<ReturnType<typeof loadLearnProgress>>[nu
 
 /** Every stat a badge criterion can be measured against (see rules/badges.ts). */
 export async function loadBadgeStats(userId: string): Promise<BadgeProgressStats> {
-  const [solves, days, uses, built, topicsUnlocked, tierUnlocks, gateAttempts, lessonsCompleted, learn, best] = await Promise.all([
+  const [solves, days, uses, topicsUnlocked, tierUnlocks, gateAttempts, lessonsCompleted, learn, best] = await Promise.all([
     loadSolves(userId),
     loadSolveDays(userId),
     prisma.hintUse.findMany({ where: { userId, questionId: { not: null } }, select: { questionId: true, createdAt: true } }),
-    prisma.componentVersion.findMany({ where: { userId, passed: true }, distinct: ['componentId'], select: { componentId: true } }),
     prisma.unlock.count({ where: { userId, kind: 'topic' } }),
     prisma.unlock.findMany({ where: { userId, kind: 'tier' }, select: { refId: true } }),
     prisma.gateAttempt.findMany({ where: { userId }, orderBy: { startedAt: 'asc' }, select: { gateId: true, passed: true } }),
@@ -162,7 +161,6 @@ export async function loadBadgeStats(userId: string): Promise<BadgeProgressStats
     solvesByDifficulty: byDifficulty,
     longestStreak: longestStreak(days),
     noHintSolves: noHint,
-    componentsBuilt: built.length,
     topicsUnlocked,
     openTierOrds: tiers.map((t) => t.ord),
     gateFirstTry: [...firstAttempt.values()].some((p) => p === true),
@@ -182,8 +180,8 @@ export interface RecentSubmission {
   language: SupportedLanguage;
   runtimeUs: number | null;
   createdAt: Date;
-  /** What was run: a question, or a component build step. */
-  target: { kind: 'question'; slug: string; title: string; difficulty: Difficulty } | { kind: 'build'; title: string } | null;
+  /** The question that was run (null once it is unpublished or deleted). */
+  target: { kind: 'question'; slug: string; title: string; difficulty: Difficulty } | null;
 }
 
 export interface EarnedBadge {
@@ -206,7 +204,6 @@ export interface ProfileView {
   badges: { earned: EarnedBadge[]; total: number };
   recent: RecentSubmission[];
   learn: LearnTrackSummary[];
-  components: { slug: string; title: string; languages: SupportedLanguage[]; builtAt: Date }[];
 }
 
 const JUDGED: SubmissionStatus[] = ['OK', 'WA', 'TLE', 'MLE', 'RE', 'CE'];
@@ -218,7 +215,7 @@ export async function getProfile(handle: string, viewerId: string | null, now = 
   const today = utcDay(now);
   const from = new Date(Date.parse(`${today}T00:00:00Z`) - 364 * DAY_MS);
 
-  const [solves, catalog, verdicts, fastest, days, activity, tokens, gallery, recent, learn, versions] = await Promise.all([
+  const [solves, catalog, verdicts, fastest, days, activity, tokens, gallery, recent, learn] = await Promise.all([
     loadSolves(userId),
     prisma.question.groupBy({ by: ['difficulty'], where: { status: 'published' }, _count: { _all: true } }),
     prisma.submission.groupBy({
@@ -247,15 +244,9 @@ export async function getProfile(handle: string, viewerId: string | null, now = 
         runtimeUs: true,
         createdAt: true,
         question: { select: { slug: true, title: true, difficulty: true, status: true } },
-        buildStep: { select: { title: true, component: { select: { title: true } } } },
       },
     }),
     loadLearnProgress(userId),
-    prisma.componentVersion.findMany({
-      where: { userId, passed: true },
-      orderBy: { createdAt: 'asc' },
-      select: { language: true, createdAt: true, component: { select: { slug: true, title: true, ord: true } } },
-    }),
   ]);
 
   const byDifficulty: Record<Difficulty, number> = { Easy: 0, Medium: 0, Hard: 0 };
@@ -264,13 +255,6 @@ export async function getProfile(handle: string, viewerId: string | null, now = 
   for (const c of catalog) catalogCounts[c.difficulty] = c._count._all;
   const judged = verdicts.reduce((n, v) => n + v._count._all, 0);
   const accepted = verdicts.find((v) => v.status === 'OK')?._count._all ?? 0;
-
-  const components = new Map<string, { slug: string; title: string; languages: SupportedLanguage[]; builtAt: Date }>();
-  for (const v of versions) {
-    const c = components.get(v.component.slug) ?? { slug: v.component.slug, title: v.component.title, languages: [], builtAt: v.createdAt };
-    if (!c.languages.includes(v.language)) c.languages.push(v.language);
-    components.set(v.component.slug, c);
-  }
 
   const earned = gallery
     .filter((b) => b.awardedAt)
@@ -300,12 +284,9 @@ export async function getProfile(handle: string, viewerId: string | null, now = 
       target:
         r.question && r.question.status === 'published'
           ? { kind: 'question', slug: r.question.slug, title: r.question.title, difficulty: r.question.difficulty }
-          : r.buildStep
-            ? { kind: 'build', title: `${r.buildStep.component.title} · ${r.buildStep.title}` }
-            : null,
+          : null,
     })),
     learn,
-    components: [...components.values()],
   };
 }
 

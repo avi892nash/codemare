@@ -1,16 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { computePercentile, onAcceptedSubmit, onBuildPassed } from './awards';
+import { computePercentile, onAcceptedSubmit } from './awards';
 import { InvalidInput } from './errors';
 import { completeSubmission, createSubmission, getSubmissionDetail, markSubmissionRunning } from './submissions';
 import { prisma, setupTestDatabase } from './test/db';
-import {
-  balanceOf,
-  makeBuildStep,
-  makeComponent,
-  makeSubmission,
-  makeUser,
-  makeWorld,
-} from './test/factories';
+import { balanceOf, makeSubmission, makeUser, makeWorld } from './test/factories';
 
 setupTestDatabase();
 
@@ -22,8 +15,9 @@ const tests = [
 describe('submission lifecycle', () => {
   it('validates the kind ↔ reference pairing', async () => {
     const user = await makeUser();
-    await expect(createSubmission({ userId: user.id, kind: 'submit', language: 'python', code: '' })).rejects.toBeInstanceOf(InvalidInput);
-    await expect(createSubmission({ userId: user.id, kind: 'build', language: 'python', code: '' })).rejects.toBeInstanceOf(InvalidInput);
+    await expect(createSubmission({ userId: user.id, kind: 'submit', language: 'python', code: '', questionId: '' })).rejects.toBeInstanceOf(
+      InvalidInput
+    );
     await expect(
       createSubmission({ userId: user.id, kind: 'gate', language: 'python', code: '', questionId: 'q' })
     ).rejects.toBeInstanceOf(InvalidInput);
@@ -61,24 +55,6 @@ describe('submission lifecycle', () => {
     const sub = await prisma.submission.findUniqueOrThrow({ where: { id } });
     expect(sub.runtimeUs).toBe(250n);
     await expect(completeSubmission(id, { status: 'OK', tests })).rejects.toBeInstanceOf(InvalidInput);
-  });
-
-  it('records a component version for every build (passed = verdict OK)', async () => {
-    const w = await makeWorld();
-    const user = await makeUser();
-    const component = await makeComponent({ topicId: w.arrays.id });
-    const step = await makeBuildStep(component.id);
-    const a = await createSubmission({ userId: user.id, kind: 'build', language: 'python', code: 'v1', buildStepId: step.id });
-    const b = await createSubmission({ userId: user.id, kind: 'build', language: 'python', code: 'v2', buildStepId: step.id });
-    const failed = await completeSubmission(a.id, { status: 'WA', tests: [{ ...tests[0], passed: false }] });
-    const passed = await completeSubmission(b.id, { status: 'OK', tests });
-    const versions = await prisma.componentVersion.findMany({ orderBy: { createdAt: 'asc' } });
-    expect(versions.map((v) => [v.code, v.passed, v.componentId])).toEqual([
-      ['v1', false, component.id],
-      ['v2', true, component.id],
-    ]);
-    expect(failed.componentVersionId).toBe(versions[0].id);
-    expect(passed.componentVersionId).toBe(versions[1].id);
   });
 
   it('shows a submission only to its owner, without hidden test data', async () => {
@@ -149,31 +125,5 @@ describe('percentile', () => {
     // Population {a: 900, b: 700, d: 300} → 2 of 3 slower.
     expect(await computePercentile(mine.id)).toBe(66.67);
     expect((await prisma.submission.findUniqueOrThrow({ where: { id: mine.id } })).percentile).toBe(66.67);
-  });
-});
-
-describe('onBuildPassed', () => {
-  it('pays the step once and marks it passed', async () => {
-    const w = await makeWorld();
-    const user = await makeUser();
-    const component = await makeComponent({ topicId: w.strings.id });
-    const step = await makeBuildStep(component.id, { difficulty: 'Hard' });
-    const s1 = await makeSubmission(user.id, { kind: 'build', buildStepId: step.id });
-    const s2 = await makeSubmission(user.id, { kind: 'build', buildStepId: step.id });
-
-    expect((await onBuildPassed(user.id, s1.id)).tokensAwarded).toEqual([{ topic: 'strings', title: 'strings', amount: 3 }]);
-    expect((await onBuildPassed(user.id, s2.id)).tokensAwarded).toEqual([]);
-    const progress = await prisma.stepProgress.findUniqueOrThrow({
-      where: { userId_buildStepId: { userId: user.id, buildStepId: step.id } },
-    });
-    expect(progress.status).toBe('passed');
-    expect(await balanceOf(user.id, w.strings.id)).toBe(3);
-  });
-
-  it('only accepts passing build submissions', async () => {
-    const w = await makeWorld();
-    const user = await makeUser();
-    const s = await makeSubmission(user.id, { questionId: w.q1.id });
-    await expect(onBuildPassed(user.id, s.id)).rejects.toBeInstanceOf(InvalidInput);
   });
 });

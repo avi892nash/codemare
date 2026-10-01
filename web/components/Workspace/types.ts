@@ -7,10 +7,9 @@ import type { HintLadder } from '@/lib/server/hints';
 
 /**
  * question — a catalog question: Run (samples + custom inputs) and Submit.
- * build    — a component build step (/queue): one action, judged by /api/build.
  * gate     — a question inside a running gate attempt: Submit counts for the gate.
  */
-export type WorkspaceMode = 'question' | 'build' | 'gate';
+export type WorkspaceMode = 'question' | 'gate';
 
 /** A visible (sample) test. Hidden tests never reach the browser. */
 export interface SampleTest {
@@ -19,9 +18,9 @@ export interface SampleTest {
 }
 
 export interface WorkspaceProblem {
-  /** Question id (question / gate) or build-step id (build). */
+  /** Question id. */
   id: string;
-  /** Question slug (question / gate) — marks the current gate question. */
+  /** Question slug — marks the current gate question. */
   slug?: string;
   title: string;
   difficulty: Difficulty;
@@ -59,13 +58,6 @@ export interface GateContext {
   questions: { slug: string; title: string; solved: boolean }[];
   /** Where the learner goes to finish or leave the attempt. */
   backHref: string;
-}
-
-export interface BuildContext {
-  componentSlug: string;
-  componentTitle: string;
-  /** Transitive dependencies whose latest passing version is prepended. */
-  dependencies: { slug: string; title: string }[];
 }
 
 /** The hint ladder as `getHintLadder` returns it (JSON-safe). */

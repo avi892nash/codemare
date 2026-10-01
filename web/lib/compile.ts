@@ -117,7 +117,7 @@ export interface RunTestSpec {
 export interface RunRequest {
   language: SupportedLanguage;
   code: string;
-  /** Dependency sources placed before `code` (same language; never Java). */
+  /** Sources placed before `code` (same language; never Java) — the service's generic prelude; the web app sends none. */
   prelude?: string[];
   functionName: string;
   /** Required for cpp, java and go. */

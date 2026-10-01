@@ -24,7 +24,7 @@ type TabKey = 'description' | 'editorial' | 'submissions' | 'hints';
 interface StatementPaneProps {
   mode: WorkspaceMode;
   problem: WorkspaceProblem;
-  /** Eyebrow above the title (e.g. "Build · Prefix sums"). */
+  /** Eyebrow above the title (e.g. a breadcrumb). */
   eyebrow?: ReactNode;
   statement: ReactNode;
   editorial?: ReactNode;
@@ -36,8 +36,8 @@ interface StatementPaneProps {
 
 /**
  * The left pane: title row, then Description · Editorial · Submissions ·
- * Hints. A gate hides the editorial and hints (and a build shows its
- * prompt and hints). Panels mount on first open and stay mounted.
+ * Hints. A gate hides the editorial and hints. Panels mount on first open
+ * and stay mounted.
  */
 export function StatementPane({ mode, problem, eyebrow, statement, editorial, submissions, hints, solved, bestPercentile }: StatementPaneProps) {
   const tabsId = useId();
@@ -45,9 +45,9 @@ export function StatementPane({ mode, problem, eyebrow, statement, editorial, su
   const [visited, setVisited] = useState<ReadonlySet<TabKey>>(new Set(['description']));
   const [spoilers, setSpoilers] = useState(false);
 
-  const tabs: TabItem[] = [{ value: 'description', label: mode === 'build' ? 'Prompt' : 'Description', icon: 'book' }];
+  const tabs: TabItem[] = [{ value: 'description', label: 'Description', icon: 'book' }];
   if (mode === 'question' && editorial) tabs.push({ value: 'editorial', label: 'Editorial', icon: 'book-open' });
-  if (mode !== 'build' && submissions) tabs.push({ value: 'submissions', label: 'Submissions', icon: 'history', count: submissions.length || undefined });
+  if (submissions) tabs.push({ value: 'submissions', label: 'Submissions', icon: 'history', count: submissions.length || undefined });
   if (mode !== 'gate' && hints) tabs.push({ value: 'hints', label: 'Hints', icon: 'lightbulb' });
 
   const select = (v: string) => {

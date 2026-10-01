@@ -18,11 +18,9 @@ export * from './ledger';
 export * from './access';
 export * from './gates';
 export * from './hints';
-export * from './components';
 export * from './submissions';
 export * from './awards';
 export * from './badges';
-export * from './steps';
 export * from './learn';
 export * from './users';
 

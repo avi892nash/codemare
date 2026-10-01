@@ -4,11 +4,10 @@ import { CompileServiceError } from '@/lib/compile';
 import { consume, SUBMISSION_PER_USER } from '@/lib/rateLimit';
 import { readSseEvents, type RunEvent, type TestEventData, type VerdictEventData } from '@/lib/sse';
 import type { Difficulty, TestDef } from '@/lib/types';
-import { AccessDenied, InvalidInput, MissingDependencies, NotFoundError } from './errors';
+import { AccessDenied, InvalidInput, NotFoundError } from './errors';
 import { finishGate, startGate } from './gates';
 import {
   handleRunRequest,
-  prepareBuildRun,
   prepareQuestionRun,
   QuestionLocked,
   redactHiddenError,
@@ -18,8 +17,6 @@ import {
 import { prisma, setupTestDatabase } from './test/db';
 import {
   balanceOf,
-  makeBuildStep,
-  makeComponent,
   makeGate,
   makeTier,
   makeTopic,
@@ -479,69 +476,6 @@ describe('gate submissions', () => {
   });
 });
 
-// ─── builds ──────────────────────────────────────────────────────────────
-
-describe('builds', () => {
-  async function buildWorld() {
-    const w = await world();
-    const base = await makeComponent({ topicId: w.arrays.id, slug: `base-${++seq}`, languages: ['python', 'go'] });
-    const top = await makeComponent({ topicId: w.arrays.id, slug: `top-${++seq}`, languages: ['python', 'go'], dependsOn: [base.id] });
-    const baseStep = await makeBuildStep(base.id, { difficulty: 'Medium' });
-    const topStep = await makeBuildStep(top.id);
-    const predict = await makeBuildStep(top.id, { kind: 'predict', ord: 1 });
-    return { ...w, base, top, baseStep, topStep, predict };
-  }
-
-  it('409s with the missing dependencies, then builds with the passing version as prelude', async () => {
-    const { user, base, baseStep, topStep, arrays } = await buildWorld();
-    const err = await prepareBuildRun(user.id, { buildStepId: topStep.id, language: 'python', code: 'def f(): return 0' }).catch((e) => e);
-    expect(err).toBeInstanceOf(MissingDependencies);
-    expect(err.status).toBe(409);
-    expect(err.toJSON()).toMatchObject({ missing: [base.slug] });
-
-    const { client, streamed } = fakeCompile(allPass);
-    const built = await collect(await prepareBuildRun(user.id, { buildStepId: baseStep.id, language: 'python', code: 'BASE' }), client);
-    expect(built.verdict).toMatchObject({ status: 'OK', tokensAwarded: [{ topic: arrays.slug, amount: 2 }] });
-    expect(built.verdict?.componentVersionId).toBeTruthy();
-    expect(streamed[0].prelude).toBeUndefined();
-    const version = await prisma.componentVersion.findFirstOrThrow({ where: { userId: user.id, componentId: base.id } });
-    expect(version).toMatchObject({ passed: true, code: 'BASE', language: 'python' });
-    expect(await prisma.stepProgress.findFirst({ where: { userId: user.id, buildStepId: baseStep.id } })).toMatchObject({ status: 'passed' });
-
-    const again = await collect(await prepareBuildRun(user.id, { buildStepId: baseStep.id, language: 'python', code: 'BASE2' }), client);
-    expect(again.verdict?.tokensAwarded).toEqual([]);
-
-    const top = await prepareBuildRun(user.id, { buildStepId: topStep.id, language: 'python', code: 'TOP' });
-    expect(top.request.prelude).toEqual(['BASE2']);
-    expect(top.request).toMatchObject({ functionName: 'f', tests: [{ input: [], expected: 0, hidden: false }] });
-    // Other languages need their own passing version.
-    await expect(prepareBuildRun(user.id, { buildStepId: topStep.id, language: 'go', code: 'x' })).rejects.toBeInstanceOf(MissingDependencies);
-  });
-
-  it('refuses predict steps, languages the component does not offer, and locked topics', async () => {
-    const { user, predict, baseStep, graphs } = await buildWorld();
-    await expect(prepareBuildRun(user.id, { buildStepId: predict.id, language: 'python', code: 'x' })).rejects.toThrow(/predict step/);
-    await expect(prepareBuildRun(user.id, { buildStepId: baseStep.id, language: 'cpp', code: 'x' })).rejects.toThrow(/can’t be built in cpp/);
-    await expect(prepareBuildRun(user.id, { buildStepId: baseStep.id, language: 'java', code: 'x' })).rejects.toBeInstanceOf(InvalidInput);
-    const lockedComponent = await makeComponent({ topicId: graphs.id });
-    const lockedStep = await makeBuildStep(lockedComponent.id);
-    await expect(prepareBuildRun(user.id, { buildStepId: lockedStep.id, language: 'python', code: 'x' })).rejects.toMatchObject({ status: 403 });
-  });
-
-  it('a failing build records a failed version and earns nothing', async () => {
-    const { user, base, baseStep, arrays } = await buildWorld();
-    const { client } = fakeCompile((req) => [
-      { event: 'test', data: result(0, false, { actual: 1 }) },
-      { event: 'verdict', data: { status: 'WA', totalPassed: 0, totalTests: req.tests.length, runUs: 1, memoryKb: 1 } },
-    ]);
-    const { verdict } = await collect(await prepareBuildRun(user.id, { buildStepId: baseStep.id, language: 'python', code: 'x' }), client);
-    expect(verdict?.status).toBe('WA');
-    expect(verdict?.tokensAwarded).toBeUndefined();
-    expect(await prisma.componentVersion.findFirstOrThrow({ where: { componentId: base.id } })).toMatchObject({ passed: false });
-    expect(await balanceOf(user.id, arrays.id)).toBe(0);
-  });
-});
-
 // ─── redaction ───────────────────────────────────────────────────────────
 
 describe('redactHiddenError', () => {
@@ -586,22 +520,13 @@ describe('handleRunRequest', () => {
     expect(huge.status).toBe(413);
   });
 
-  it('403 / 404 / 409 as JSON before any stream', async () => {
+  it('403 / 404 as JSON before any stream', async () => {
     const { locked, user } = await world();
     const res = await handleRunRequest(post({ questionId: locked.id, language: 'python', code: 'x' }), 'submit', user.id);
     expect(res.status).toBe(403);
     expect(res.headers.get('content-type')).toMatch(/json/);
     expect(await res.json()).toMatchObject({ reason: 'topic_locked', mapUrl: '/map' });
     expect((await handleRunRequest(post({ questionId: 'missing', language: 'python', code: 'x' }), 'submit', user.id)).status).toBe(404);
-
-    const tier0 = await prisma.tier.findFirstOrThrow({ where: { ord: 0 } });
-    const topic = await makeTopic(tier0.id);
-    const dep = await makeComponent({ topicId: topic.id });
-    const comp = await makeComponent({ topicId: topic.id, dependsOn: [dep.id] });
-    const step = await makeBuildStep(comp.id);
-    const build = await handleRunRequest(post({ buildStepId: step.id, language: 'python', code: 'x' }), 'build', user.id);
-    expect(build.status).toBe(409);
-    expect(await build.json()).toMatchObject({ error: 'missing_dependencies', missing: [dep.slug] });
   });
 
   it('429 once the shared per-user budget is spent', async () => {

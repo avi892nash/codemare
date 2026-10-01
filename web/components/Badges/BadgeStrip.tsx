@@ -7,8 +7,6 @@ import s from './badges.module.css';
 export function badgeCta(criteria: BadgeCriteria | null): { href: string; label: string } | null {
   if (!criteria) return null;
   switch (criteria.kind) {
-    case 'components_built':
-      return { href: '/queue', label: 'Open the build queue' };
     case 'topics_unlocked':
     case 'tier_open':
     case 'gate_first_try':

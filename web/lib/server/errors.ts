@@ -98,35 +98,6 @@ export class TierLocked extends DomainError {
   }
 }
 
-/** A dependency has no passing version in the requested language (spec §4: HTTP 409). */
-export class MissingDependencies extends DomainError {
-  readonly code = 'missing_dependencies';
-  readonly status = 409;
-  constructor(
-    /** Component slugs, in build order. */
-    readonly missing: string[]
-  ) {
-    super(`Build these first: ${missing.join(', ')}`);
-    this.name = 'MissingDependencies';
-  }
-  toJSON() {
-    return { ...super.toJSON(), missing: this.missing };
-  }
-}
-
-/** The component dependency graph has a cycle (bad content). */
-export class DependencyCycle extends DomainError {
-  readonly code = 'dependency_cycle';
-  readonly status = 500;
-  constructor(readonly cycle: string[]) {
-    super(`Component dependency cycle: ${cycle.join(' → ')}`);
-    this.name = 'DependencyCycle';
-  }
-  toJSON() {
-    return { ...super.toJSON(), cycle: this.cycle };
-  }
-}
-
 /** Lower hint levels must be revealed first. */
 export class HintLocked extends DomainError {
   readonly code = 'hint_locked';

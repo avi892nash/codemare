@@ -1,6 +1,6 @@
 /**
- * Pure award math (spec §3.2, §3.6, §3.8): token amounts for solves and
- * builds, the score-hint penalty, and the runtime percentile.
+ * Pure award math (spec §3.2, §3.6, §3.8): token amounts for solves, the
+ * score-hint penalty, and the runtime percentile.
  */
 import { BASE_TOKENS, type Difficulty } from '@/lib/types';
 
@@ -27,11 +27,6 @@ export function solveAward(
   return topics
     .map((t) => ({ topicId: t.topicId, amount: roundAward(BASE_TOKENS[difficulty] * t.weight * factor) }))
     .filter((t) => t.amount > 0);
-}
-
-/** Tokens for a build step's first pass: `round(BASE[difficulty] × (1 − penalty/100))` (0 → none). */
-export function buildAward(difficulty: Difficulty, penalty: number): number {
-  return Math.max(0, roundAward(BASE_TOKENS[difficulty] * (1 - capPenalty(penalty) / 100)));
 }
 
 /**

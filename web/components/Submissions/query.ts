@@ -3,7 +3,7 @@
  *
  *   status    OK | WA | TLE | MLE | RE | CE | XX | pending (queued or running)
  *   language  python | javascript | typescript | cpp | java | go
- *   kind      submit | run | build | gate
+ *   kind      submit | run | gate
  *   page      1-based, 20 per page, newest first
  */
 import { LANGUAGES, VERDICTS, type SubmissionKind, type SupportedLanguage, type Verdict } from '@/lib/types';
@@ -11,7 +11,7 @@ import { LANGUAGES, VERDICTS, type SubmissionKind, type SupportedLanguage, type 
 export const SUBMISSIONS_PATH = '/submissions';
 export const SUBMISSIONS_PAGE_SIZE = 20;
 
-export const SUBMISSION_KINDS = ['submit', 'run', 'build', 'gate'] as const satisfies readonly SubmissionKind[];
+export const SUBMISSION_KINDS = ['submit', 'run', 'gate'] as const satisfies readonly SubmissionKind[];
 
 export type SubmissionStatusFilter = Verdict | 'pending';
 export const STATUS_FILTERS: readonly SubmissionStatusFilter[] = [...VERDICTS, 'pending'];

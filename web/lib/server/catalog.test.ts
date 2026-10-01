@@ -123,7 +123,7 @@ describe('listCatalog', () => {
     await makeSubmission(user.id, { questionId: w.twoSum.id, kind: 'submit', status: 'WA' });
     await makeSubmission(user.id, { questionId: w.twoSum.id, kind: 'submit', status: 'OK' });
     await makeSubmission(user.id, { questionId: w.anagram.id, kind: 'submit', status: 'WA' });
-    // An accepted *run* is only an attempt; builds don't touch question status.
+    // An accepted *run* is only an attempt.
     await makeSubmission(user.id, { questionId: w.maxSub.id, kind: 'run', status: 'OK' });
     await makeSubmission(other.id, { questionId: w.islands.id, kind: 'submit', status: 'OK' });
 

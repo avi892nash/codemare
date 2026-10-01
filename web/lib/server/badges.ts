@@ -5,10 +5,10 @@ import { STAT_FOR_CRITERIA, criteriaMet, longestStreak, type BadgeStatKey, type 
 import { badgeCriteriaSchema } from './schemas';
 
 /**
- * Badges (spec §3.7). `evaluateBadges` runs after: accepted submit, passing
- * build, unlock, gate finish, lesson complete, checkpoint pass (the services
- * for those events call it and return what it awarded). Awards are
- * idempotent (unique (user_id, badge_id)) and never revoked.
+ * Badges (spec §3.7). `evaluateBadges` runs after: accepted submit, unlock,
+ * gate finish, lesson complete, checkpoint pass (the services for those
+ * events call it and return what it awarded). Awards are idempotent (unique
+ * (user_id, badge_id)) and never revoked.
  */
 
 export interface AwardedBadge {
@@ -95,14 +95,6 @@ const loaders: Record<BadgeStatKey, StatLoader> = {
       (s) => !uses.some((u) => u.questionId === s.questionId && u.createdAt < s.firstSolvedAt)
     ).length;
     return { noHintSolves: n };
-  },
-  async componentsBuilt({ userId, db }) {
-    const rows = await db.componentVersion.findMany({
-      where: { userId, passed: true },
-      distinct: ['componentId'],
-      select: { componentId: true },
-    });
-    return { componentsBuilt: rows.length };
   },
   async topicsUnlocked({ userId, db }) {
     return { topicsUnlocked: await db.unlock.count({ where: { userId, kind: 'topic' } }) };
