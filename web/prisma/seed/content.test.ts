@@ -3,24 +3,19 @@
  * content directory exists: prisma/seed/data (after the content lands), or
  * SEED_DIR. Seeds it into the test database, checks every JSON column parses
  * where the services read it, then plays the whole loop as a fresh learner —
- * gates, solves, builds, cheapest unlocks — until every topic is unlocked.
+ * gates, solves, cheapest unlocks — until every topic is unlocked. Solving
+ * questions is the only way to earn tokens, so this is also the proof that
+ * the content's recipes are affordable.
  */
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
-import { canAccessBuildStep, canAccessQuestion, getMapState, unlockTopic } from '../../lib/server/access';
-import { onAcceptedSubmit, onBuildPassed } from '../../lib/server/awards';
+import { canAccessQuestion, getMapState, unlockTopic } from '../../lib/server/access';
+import { onAcceptedSubmit } from '../../lib/server/awards';
 import { evaluateBadges } from '../../lib/server/badges';
-import { getDependencyOrder, getLibrary } from '../../lib/server/components';
 import { finishGate, startGate } from '../../lib/server/gates';
 import { getHintLadder } from '../../lib/server/hints';
-import {
-  buildPayloadSchema,
-  parseJsonColumn,
-  predictPayloadSchema,
-  signatureSchema,
-  testDefSchema,
-} from '../../lib/server/schemas';
+import { parseJsonColumn, signatureSchema, testDefSchema } from '../../lib/server/schemas';
 import { completeSubmission, createSubmission } from '../../lib/server/submissions';
 import { prisma, resetDatabase } from '../../lib/server/test/db';
 import { DEFAULT_SEED_DIR, runSeed } from './run';
@@ -39,25 +34,18 @@ describe.skipIf(!existsSync(dir))(`seed content (${dir})`, () => {
       parseJsonColumn(signatureSchema, q.signature, `${q.slug}.signature`);
       for (const t of q.tests as unknown[]) parseJsonColumn(testDefSchema, t, `${q.slug}.tests`);
     }
-    for (const s of await prisma.buildStep.findMany()) {
-      if (s.kind === 'build') parseJsonColumn(buildPayloadSchema, s.payload, `build step ${s.id}`);
-      else parseJsonColumn(predictPayloadSchema, s.payload, `build step ${s.id}`);
-    }
-    for (const c of await prisma.component.findMany()) await getDependencyOrder(c.id);
 
     const user = await prisma.user.create({ data: { email: 'player@test.dev', handle: 'player' } });
     expect(await evaluateBadges(user.id)).toEqual([]);
     expect(warn).not.toHaveBeenCalled();
-    expect((await getLibrary(user.id)).length).toBe(await prisma.component.count());
     for (const q of await prisma.question.findMany({ select: { id: true } })) {
       const ladder = await getHintLadder(user.id, { questionId: q.id });
       if (ladder.rungs.length) expect(ladder.rungs[0]).toMatchObject({ level: 'nudge', revealable: true });
     }
 
-    // Play: pass each gate, then solve / build everything reachable and
-    // spend the cheapest ready recipe until nothing changes.
+    // Play: pass each gate, then solve everything reachable and spend the
+    // cheapest ready recipe until nothing changes.
     const solved = new Set<string>();
-    const built = new Set<string>();
     const tiers = await prisma.tier.findMany({ orderBy: { ord: 'asc' }, include: { gate: { include: { questions: true } } } });
     for (const tier of tiers) {
       if (tier.gate) {
@@ -86,14 +74,6 @@ describe.skipIf(!existsSync(dir))(`seed content (${dir})`, () => {
           await completeSubmission(s.id, accepted);
           await onAcceptedSubmit(user.id, s.id);
           solved.add(q.id);
-          progress = true;
-        }
-        for (const step of await prisma.buildStep.findMany({ where: { kind: 'build' }, select: { id: true } })) {
-          if (built.has(step.id) || !(await canAccessBuildStep(user.id, step.id)).ok) continue;
-          const s = await createSubmission({ userId: user.id, kind: 'build', language: 'python', code: '', buildStepId: step.id });
-          await completeSubmission(s.id, accepted);
-          await onBuildPassed(user.id, s.id);
-          built.add(step.id);
           progress = true;
         }
         const map = await getMapState(user.id);

@@ -79,7 +79,7 @@ function loadDir<S extends z.ZodTypeAny>(
   return { items, problems };
 }
 
-/** `loop.json` (required): tiers, topics, recipes, components, gates. */
+/** `loop.json` (required): tiers, topics, recipes, gates. */
 export function loadLoop(dir: string): { loop: Sourced<LoopFile> | null; problems: string[] } {
   if (!existsSync(join(dir, 'loop.json'))) return { loop: null, problems: ['loop.json: missing (required)'] };
   const { value, problems } = parseFile(dir, 'loop.json', loopFileSchema);

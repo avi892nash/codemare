@@ -24,7 +24,7 @@ import sys
 import tempfile
 from concurrent.futures import ThreadPoolExecutor
 
-from common import HERE, Report, load_loop, load_questions, parse_type
+from common import HERE, Report, load_questions, parse_type
 
 # Same include set as the backend C++ harness.
 CPP_INCLUDES = '\n'.join(f'#include <{h}>' for h in (
@@ -175,14 +175,6 @@ def main():
         inputs = smallest_test(q['tests'])['input']
         for lang, stub in q['starter_code'].items():
             items.append((f'q-{q["slug"]}', lang, stub, q['function_name'], params, q['signature']['returns'], inputs))
-    for c in load_loop()['components']:
-        params = [(p['name'], p['type']) for p in c['signature']['params']]
-        for step in c['build_steps']:
-            if step['kind'] != 'build':
-                continue
-            inputs = smallest_test(step['payload']['tests'])['input']
-            for lang, stub in step['payload']['starter_code'].items():
-                items.append((f'c-{c["slug"]}', lang, stub, c['function_name'], params, c['signature']['returns'], inputs))
 
     repo = os.path.normpath(os.path.join(HERE, '..', '..', '..', '..'))
     tools = {

@@ -44,7 +44,7 @@ function portable(v: unknown): unknown {
 async function content() {
   const slugOrder = { orderBy: { slug: 'asc' as const } };
   const slugOf = { select: { slug: true } };
-  const [tiers, topics, questions, components, gates, badges, tracks, areas] = await Promise.all([
+  const [tiers, topics, questions, gates, badges, tracks, areas] = await Promise.all([
     prisma.tier.findMany(slugOrder),
     prisma.topic.findMany({
       ...slugOrder,
@@ -61,13 +61,6 @@ async function content() {
       include: {
         topics: { orderBy: { topic: { slug: 'asc' } }, include: { topic: slugOf } },
         hints: { orderBy: { level: 'asc' } },
-      },
-    }),
-    prisma.component.findMany({
-      ...slugOrder,
-      include: {
-        deps: { orderBy: { dependsOn: { slug: 'asc' } }, include: { dependsOn: slugOf } },
-        buildSteps: { orderBy: { ord: 'asc' }, include: { hints: { orderBy: { level: 'asc' } } } },
       },
     }),
     prisma.gate.findMany({
@@ -89,7 +82,7 @@ async function content() {
       include: { chapters: { orderBy: { ord: 'asc' }, include: { articles: { orderBy: { ord: 'asc' } } } } },
     }),
   ]);
-  return portable({ tiers, topics, questions, components, gates, badges, tracks, areas });
+  return portable({ tiers, topics, questions, gates, badges, tracks, areas });
 }
 
 /** What staff might change in Directus after the first seed — every kind of row and child. */
@@ -124,12 +117,6 @@ async function editLikeStaff(): Promise<void> {
   });
   await prisma.recipeItem.update({ where: { id: fluency.items[0].id }, data: { quantity: 5 } });
   await prisma.unlockRecipe.delete({ where: { id: practice.id } });
-  // components: the dependency reversed (swap-at has none in the files), build steps retitled
-  const siftDown = await prisma.component.findUniqueOrThrow({ where: { slug: 'sift-down' } });
-  const swapAt = await prisma.component.findUniqueOrThrow({ where: { slug: 'swap-at' } });
-  await prisma.componentDep.deleteMany({ where: { componentId: siftDown.id } });
-  await prisma.componentDep.create({ data: { componentId: swapAt.id, dependsOnId: siftDown.id } });
-  await prisma.buildStep.updateMany({ where: { componentId: siftDown.id }, data: { title: 'Staff step' } });
   // gates: the questions reordered
   const gate = await prisma.gate.findFirstOrThrow({ include: { questions: { orderBy: { ord: 'asc' } } } });
   const [first, second] = gate.questions;
@@ -186,7 +173,6 @@ describe('insert-missing', () => {
       tiers: 2,
       topics: 3,
       questions: 2,
-      components: 2,
       gates: 1,
       badges: 2,
       tracks: 1,
@@ -203,8 +189,6 @@ describe('insert-missing', () => {
       ['two-pointers', 0.5],
     ]);
     expect(twoSum.hints.map((h) => h.level).sort()).toEqual(['concept', 'nudge']);
-    const deps = await prisma.componentDep.findMany({ include: { component: true, dependsOn: true } });
-    expect(deps.map((d) => [d.component.slug, d.dependsOn.slug])).toEqual([['swap-at', 'sift-down']]);
   });
 
   it('creates a new slug with what it owns, pointing at the rows that exist', async () => {
@@ -226,24 +210,17 @@ describe('insert-missing', () => {
         ],
       },
     });
-    seed.loop.data.components.push({
-      ...structuredClone(seed.loop.data.components[1]),
-      slug: 'heap-push',
-      title: 'Heap push',
-      depends_on: ['sift-down', 'swap-at'],
-    });
     seed.badges!.data.push({ ...structuredClone(seed.badges!.data[0]), slug: 'second-accept', name: 'Again' });
     expect(validateSeed(seed).errors).toEqual([]);
 
     const summary = await writeSeed(prisma, seed, { mode: 'insert-missing' });
-    expect(summary.counts).toEqual({ questions: 1, hints: 5, components: 1, 'build steps': 1, badges: 1 });
+    expect(summary.counts).toEqual({ questions: 1, hints: 3, badges: 1 });
     expect(summary.warnings).toEqual([]);
 
     // Everything that existed is untouched…
     const after = await contentRows();
     for (const [table, rows] of Object.entries(before)) expect(after[table]).toEqual(expect.arrayContaining(rows));
     expect(await prisma.question.findUniqueOrThrow({ where: { slug: 'two-sum' } })).toMatchObject({ title: 'Two Sum (staff)' });
-    expect(await prisma.componentDep.count({ where: { component: { slug: 'sift-down' } } })).toBe(0);
 
     // …and the new rows came with their children, linked to the existing rows.
     const added = await prisma.question.findUniqueOrThrow({
@@ -255,12 +232,6 @@ describe('insert-missing', () => {
       ['two-pointers', 1],
     ]);
     expect(added.hints).toHaveLength(3);
-    const heapPush = await prisma.component.findUniqueOrThrow({
-      where: { slug: 'heap-push' },
-      include: { deps: { include: { dependsOn: true } }, buildSteps: { include: { hints: true } } },
-    });
-    expect(heapPush.deps.map((d) => d.dependsOn.slug).sort()).toEqual(['sift-down', 'swap-at']);
-    expect(heapPush.buildSteps.map((s) => [s.title, s.hints.length])).toEqual([['Build siftDown', 2]]);
     expect(await prisma.badge.findUnique({ where: { slug: 'second-accept' } })).not.toBeNull();
   });
 
@@ -326,7 +297,7 @@ describe('upsert', () => {
 
     const summary = await runSeed({ dir: FIXTURES_DIR, prisma });
     expect(summary.mode).toBe('upsert');
-    expect(await content()).toEqual(seeded); // incl. swap-at's staff dependency removed (it has none in the files)
+    expect(await content()).toEqual(seeded);
     const after = await joinIds();
     expect(after.questionTopics).toEqual(expect.arrayContaining(seededIds.questionTopics));
     expect(after.questionTopics).toHaveLength(seededIds.questionTopics.length); // the staff-added topic is gone

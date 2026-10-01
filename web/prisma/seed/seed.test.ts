@@ -15,7 +15,7 @@ const fixtures = (): SeedBundle => structuredClone(loadSeedDir(FIXTURES_DIR));
 const errorsOf = (seed: SeedBundle) => validateSeed(seed).errors;
 
 async function snapshot() {
-  const [tiers, topics, questions, recipes, items, hints, steps, deps, gateQs, badges, lessons, checkpoints, articles] =
+  const [tiers, topics, questions, recipes, items, hints, gateQs, badges, lessons, checkpoints, articles] =
     await Promise.all([
       prisma.tier.findMany({ orderBy: { slug: 'asc' } }),
       prisma.topic.findMany({ orderBy: { slug: 'asc' } }),
@@ -25,15 +25,13 @@ async function snapshot() {
       prisma.unlockRecipe.findMany({ orderBy: { id: 'asc' } }),
       prisma.recipeItem.count(),
       prisma.hint.findMany({ orderBy: { id: 'asc' } }),
-      prisma.buildStep.findMany({ orderBy: { id: 'asc' } }),
-      prisma.componentDep.findMany({ orderBy: { componentId: 'asc' } }),
       prisma.gateQuestion.findMany({ orderBy: { ord: 'asc' } }),
       prisma.badge.findMany({ orderBy: { slug: 'asc' } }),
       prisma.lesson.findMany({ orderBy: { slug: 'asc' } }),
       prisma.checkpointQuestion.count(),
       prisma.libraryArticle.findMany({ orderBy: { slug: 'asc' } }),
     ]);
-  return { tiers, topics, questions, recipes, items, hints, steps, deps, gateQs, badges, lessons, checkpoints, articles };
+  return { tiers, topics, questions, recipes, items, hints, gateQs, badges, lessons, checkpoints, articles };
 }
 
 describe('fixtures', () => {
@@ -43,10 +41,10 @@ describe('fixtures', () => {
 
   it('seed idempotently: a second run changes nothing (ids included)', async () => {
     const first = await runSeed({ dir: FIXTURES_DIR, prisma });
-    expect(first.counts).toMatchObject({ tiers: 2, topics: 3, questions: 2, components: 2, gates: 1, badges: 2, tracks: 1 });
+    expect(first.counts).toMatchObject({ tiers: 2, topics: 3, questions: 2, gates: 1, badges: 2, tracks: 1 });
     const before = await snapshot();
     expect(before.questions.map((q) => q.status)).toEqual(['published', 'published']);
-    expect(before.hints).toHaveLength(9);
+    expect(before.hints).toHaveLength(5);
 
     const second = await runSeed({ dir: FIXTURES_DIR, prisma });
     expect(second.counts).toEqual(first.counts);
@@ -107,16 +105,6 @@ describe('validation errors', () => {
     expect(errorsOf(seed)).toEqual([expect.stringMatching(/topics\[\d\]: unknown topic "no-such-topic"/)]);
   });
 
-  it('rejects cyclic component dependencies', () => {
-    const seed = fixtures();
-    seed.loop.data.components[0].depends_on = ['sift-down']; // swap-at → sift-down → swap-at
-    expect(errorsOf(seed)).toEqual([expect.stringContaining('component dependency cycle: sift-down → swap-at → sift-down')]);
-
-    const self = fixtures();
-    self.loop.data.components[0].depends_on = ['swap-at'];
-    expect(errorsOf(self)).toEqual([expect.stringContaining('"swap-at": depends on itself')]);
-  });
-
   it('rejects hint ladders with gaps or duplicates', () => {
     const seed = fixtures();
     const q = seed.questions.find((x) => x.data.slug === 'two-sum')!.data;
@@ -150,16 +138,16 @@ describe('validation errors', () => {
   });
 
   it('rejects recipes the content can never pay for', () => {
-    // Fixtures pay out 3 arrays tokens in total (two questions + one build step), none Hard.
+    // Fixtures pay out 2 arrays tokens in total (one from each question), none Hard.
     const greedy = fixtures();
     greedy.loop.data.recipes = [
-      { topic: 'heaps', title: 'a lot', items: [{ topic: 'arrays', quantity: 4, min_difficulty: 'Easy' }] },
+      { topic: 'heaps', title: 'a lot', items: [{ topic: 'arrays', quantity: 3, min_difficulty: 'Easy' }] },
       { topic: 'heaps', title: 'too hard', items: [{ topic: 'arrays', quantity: 1, min_difficulty: 'Hard' }] },
     ];
-    expect(errorsOf(greedy)).toEqual([expect.stringContaining('no recipe fits in the tokens all questions and build steps pay out')]);
+    expect(errorsOf(greedy)).toEqual([expect.stringContaining('no recipe fits in the tokens all published questions pay out')]);
 
     const ok = fixtures();
-    ok.loop.data.recipes = [{ topic: 'heaps', title: 'just enough', items: [{ topic: 'arrays', quantity: 3, min_difficulty: 'Easy' }] }];
+    ok.loop.data.recipes = [{ topic: 'heaps', title: 'just enough', items: [{ topic: 'arrays', quantity: 2, min_difficulty: 'Easy' }] }];
     expect(validateSeed(ok)).toEqual({ errors: [], warnings: [] });
   });
 
@@ -172,13 +160,6 @@ describe('validation errors', () => {
       expect.stringContaining('tests[0].input has 1 argument(s); the signature takes 2'),
       expect.stringContaining('Go stubs must not have a package clause'),
     ]);
-  });
-
-  it('rejects build starter code for a language the component is not built in', () => {
-    const seed = fixtures();
-    const step = seed.loop.data.components[1].build_steps[0];
-    if (step.kind === 'build') step.payload.starter_code.cpp = 'int x;';
-    expect(errorsOf(seed)).toEqual([expect.stringContaining('starter_code.cpp: "sift-down" is not built in cpp')]);
   });
 
   it('rejects dangling learn and library references and per-track lesson slug clashes', () => {

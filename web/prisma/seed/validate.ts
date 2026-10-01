@@ -4,25 +4,22 @@
  *
  * Errors (seeding refuses to run):
  *   · duplicate slugs / tier ords; not exactly one free tier (ord 0)
- *   · unknown references: tier, topic, component, question slugs anywhere
+ *   · unknown references: tier, topic, question slugs anywhere
  *   · a topic in a tier > 0 without a recipe, or one that can never be
  *     unlocked: its recipes need tokens of topics that are still locked, or
- *     more tokens than all published questions and build steps pay out
- *     (warning: the cheapest recipes of all topics together exceed that)
+ *     more tokens than all published questions pay out (warning: the
+ *     cheapest recipes of all topics together exceed that)
  *   · a tier > 0 without a gate, a gate on the free tier, a gate question
  *     missing from questions/, pass_threshold above the question count
- *   · component dependency cycles (incl. self-dependency)
  *   · hint ladders with duplicate levels or gaps (must climb from nudge)
  *   · test inputs whose length differs from the signature's params
- *   · build starter code for a language the component is not built in
  *   · Go stubs with a `package` clause or imports (the harness adds them)
  *   · lesson slugs repeated within a track (routes are /learn/[track]/[lesson])
  */
 import type { Difficulty } from '../../lib/types';
-import { findCycle, graphFromEdges } from '../../lib/server/rules/graph';
 import { ladderGaps } from '../../lib/server/rules/hints';
 import { balancesFromRows, planDebits, type Requirement } from '../../lib/server/rules/recipes';
-import { buildAward, solveAward } from '../../lib/server/rules/scoring';
+import { solveAward } from '../../lib/server/rules/scoring';
 import type { Hint, SeedBundle } from './types';
 
 export interface SeedReport {
@@ -110,40 +107,6 @@ export function validateSeed(seed: SeedBundle): SeedReport {
     if (!q.tests.some((t) => !t.hidden)) warnings.push(`${file}: no visible test, so "Run" has nothing to run`);
   }
 
-  // ── components ──
-  unique('component slug', L.components.map((c) => c.slug), lf);
-  const componentSlugs = new Set(L.components.map((c) => c.slug));
-  L.components.forEach((c, i) => {
-    const where = `${lf}: components[${i}] "${c.slug}"`;
-    if (!topicBySlug.has(c.topic)) errors.push(`${where}: unknown topic "${c.topic}"`);
-    unique('dependency', c.depends_on, where);
-    for (const d of c.depends_on) {
-      if (d === c.slug) errors.push(`${where}: depends on itself`);
-      else if (!componentSlugs.has(d)) errors.push(`${where}: depends_on: unknown component "${d}"`);
-    }
-    if (c.build_steps.length === 0) warnings.push(`${where}: has no build steps`);
-    c.build_steps.forEach((s, j) => {
-      const sw = `${where} build_steps[${j}]`;
-      checkHints(sw, s.hints);
-      if (s.kind !== 'build') return;
-      for (const lang of Object.keys(s.payload.starter_code)) {
-        if (!(c.languages as string[]).includes(lang)) {
-          errors.push(`${sw}: starter_code.${lang}: "${c.slug}" is not built in ${lang}`);
-        }
-      }
-      checkTests(sw, s.payload.tests, c.signature.params.length);
-      checkGo(`${sw}: starter_code.go`, s.payload.starter_code.go);
-    });
-  });
-  const cycle = findCycle(
-    graphFromEdges(
-      L.components.flatMap((c) =>
-        c.depends_on.filter((d) => d !== c.slug && componentSlugs.has(d)).map((d) => ({ from: c.slug, dependsOn: d }))
-      )
-    )
-  );
-  if (cycle) errors.push(`${lf}: component dependency cycle: ${cycle.join(' → ')}`);
-
   // ── gates ──
   unique('gate for tier', L.gates.map((g) => g.tier), lf);
   L.gates.forEach((g, i) => {
@@ -188,18 +151,13 @@ export function validateSeed(seed: SeedBundle): SeedReport {
   }
 
   // ── affordability: can the content pay out enough tokens at all? ──
-  // Supply = every token the published questions and build steps can pay
-  // (no hint penalties), per topic and source difficulty.
+  // Supply = every token the published questions can pay (first accepted
+  // submits, no hint penalties), per topic and source difficulty.
   const supplyRows: { topicId: string; difficulty: Difficulty; amount: number }[] = [];
   for (const { data: q } of seed.questions) {
     if (q.status !== 'published') continue;
     for (const a of solveAward(q.difficulty, q.topics.map((t) => ({ topicId: t.slug, weight: t.weight })), 0)) {
       supplyRows.push({ topicId: a.topicId, difficulty: q.difficulty, amount: a.amount });
-    }
-  }
-  for (const c of L.components) {
-    for (const s of c.build_steps) {
-      if (s.kind === 'build') supplyRows.push({ topicId: c.topic, difficulty: s.difficulty, amount: buildAward(s.difficulty, 0) });
     }
   }
   const supply = balancesFromRows(supplyRows);
@@ -213,7 +171,7 @@ export function validateSeed(seed: SeedBundle): SeedReport {
     const affordable = reqs.filter((items) => planDebits(supply, items).ok);
     if (affordable.length === 0) {
       errors.push(
-        `${lf}: topic "${t.slug}" can never be unlocked: no recipe fits in the tokens all questions and build steps pay out`
+        `${lf}: topic "${t.slug}" can never be unlocked: no recipe fits in the tokens all published questions pay out`
       );
       continue;
     }
