@@ -25,7 +25,7 @@ export interface Topic extends TopicInfo {
 
 export interface SupplyInfo {
   supply: Balances;
-  counts: Record<string, { questions: number; builds: number }>;
+  counts: Record<string, { questions: number }>;
 }
 
 export interface EditorData {

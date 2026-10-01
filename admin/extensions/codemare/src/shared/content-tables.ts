@@ -7,17 +7,14 @@
 /**
  * Tables Directus manages: every content table. Directus only manages tables
  * with a single-column primary key, which is why the join tables
- * (question_topics, gate_questions, component_deps) carry a surrogate `id`
- * with their natural pair kept unique (migration 20260929090000).
+ * (question_topics, gate_questions) carry a surrogate `id` with their natural
+ * pair kept unique (migration 20260929090000).
  */
 export const CONTENT_COLLECTIONS = [
   'tiers',
   'topics',
   'unlock_recipes',
   'recipe_items',
-  'components',
-  'build_steps',
-  'component_deps',
   'questions',
   'question_topics',
   'hints',
@@ -45,18 +42,8 @@ export function isContentCollection(name: string): name is ContentCollection {
  */
 export const ARRAY_COLUMNS: Readonly<Record<string, readonly string[]>> = {
   questions: ['tags', 'companies'],
-  components: ['languages'],
   lessons: ['related_question_slugs'],
   library_articles: ['practice_question_slugs'],
-};
-
-/**
- * Arrays of an enum type (content."Language"[]). node-postgres has no parser
- * for their dynamic type oid and returns the raw '{a,b}' text, so the read
- * hook parses them back into arrays.
- */
-export const ENUM_ARRAY_COLUMNS: Readonly<Record<string, readonly string[]>> = {
-  components: ['languages'],
 };
 
 /**

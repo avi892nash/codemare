@@ -182,7 +182,7 @@ export function checkTopicRecipes(input: CheckInput): Issue[] {
     add('error', `This change would make ${titleList(lost)} impossible to unlock: their recipes rely on ${topic.title}.`);
   }
 
-  // Affordability against what all published questions and build steps pay out.
+  // Affordability against what all published questions pay out.
   if (supply && topic.tierOrd > 0) {
     let affordable = 0;
     draft.forEach((r, i) => {

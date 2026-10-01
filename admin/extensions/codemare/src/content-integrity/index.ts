@@ -6,16 +6,13 @@
  *   · ids: content ids have no database default (Prisma generates cuids in
  *     the client), so creates without an id get a Prisma-format cuid. That
  *     includes the join tables' surrogate ids.
- *   · Postgres arrays: Directus types text[] / enum[] columns as `unknown`
- *     and JSON-encodes arrays on write; they are converted to array literals.
- *     Enum arrays come back from node-postgres as '{a,b}' text and are parsed.
+ *   · Postgres arrays: Directus types text[] columns as `unknown` and
+ *     JSON-encodes arrays on write; they are converted to array literals.
  *   · questions.updated_at: Prisma's @updatedAt is client-side only.
  *   · recipes: quantity must be a whole number ≥ 1 (a CHECK constraint too,
  *     reported here as a readable 400) and an item may not spend the tokens
  *     of the topic its recipe unlocks.
  *   · question topics: weight > 0 (a CHECK constraint too).
- *   · component dependencies: no self-dependency (a CHECK constraint too) and
- *     no cycles — the web app's own graph rules, as the seed validator uses.
  *   · gates: never fewer questions than `pass_threshold` (the seed
  *     validator's rule), whether questions are removed or the threshold raised.
  *
@@ -24,22 +21,10 @@
  */
 import { defineHook } from '@directus/extensions-sdk';
 import { InvalidPayloadError } from '@directus/errors';
-import {
-  ARRAY_COLUMNS,
-  ENUM_ARRAY_COLUMNS,
-  UPDATED_AT_COLUMNS,
-  isContentCollection,
-} from '../shared/content-tables';
+import { ARRAY_COLUMNS, UPDATED_AT_COLUMNS, isContentCollection } from '../shared/content-tables';
 import { cuid } from '../shared/cuid';
-import {
-  WEIGHT_MESSAGE,
-  dependencyProblem,
-  gateQuestionCountAfter,
-  gateThresholdProblem,
-  isValidWeight,
-  type DepEdge,
-} from '../shared/join-checks';
-import { parsePgArrayLiteral, toPgArrayLiteral } from '../shared/pg-array';
+import { WEIGHT_MESSAGE, gateQuestionCountAfter, gateThresholdProblem, isValidWeight } from '../shared/join-checks';
+import { toPgArrayLiteral } from '../shared/pg-array';
 
 type Row = Record<string, unknown>;
 // The knex transaction Directus hands to filters; typed loosely on purpose.
@@ -76,25 +61,6 @@ function ownTokensError(): Error {
 
 function assertWeight(payload: Row): void {
   if ('weight' in payload && !isValidWeight(payload.weight)) throw invalid(WEIGHT_MESSAGE);
-}
-
-/** Rejects `edge` if it is a self-dependency or closes a cycle; `exceptId` is the row being rewritten. */
-async function assertDependency(db: Db, edge: Partial<DepEdge>, exceptId?: string): Promise<void> {
-  const { componentId, dependsOnId } = edge;
-  // A dependency on a component created in the same request cannot close a cycle.
-  if (typeof componentId !== 'string' || typeof dependsOnId !== 'string') return;
-  const rows: { id: string; component_id: string; depends_on_id: string }[] = await db('component_deps').select(
-    'id',
-    'component_id',
-    'depends_on_id'
-  );
-  const others = rows
-    .filter((r) => r.id !== exceptId)
-    .map((r) => ({ componentId: r.component_id, dependsOnId: r.depends_on_id }));
-  const components: { id: string; title: string }[] = await db('components').select('id', 'title');
-  const titles = new Map(components.map((c) => [c.id, c.title]));
-  const problem = dependencyProblem({ componentId, dependsOnId }, others, (id) => titles.get(id) ?? id);
-  if (problem) throw invalid(problem);
 }
 
 async function gateQuestionIds(db: Db, gateId: string): Promise<string[]> {
@@ -139,12 +105,6 @@ export default defineHook(({ filter }) => {
       if (topicId && payload.token_topic_id === topicId) throw ownTokensError();
     }
     if (collection === 'question_topics') assertWeight(payload);
-    if (collection === 'component_deps') {
-      await assertDependency(db, {
-        componentId: payload.component_id as string,
-        dependsOnId: payload.depends_on_id as string,
-      });
-    }
     if (collection === 'gates') {
       assertGate({ title: String(payload.title ?? 'new gate'), passThreshold: payload.pass_threshold }, [], payload.questions);
     }
@@ -184,20 +144,6 @@ export default defineHook(({ filter }) => {
 
     if (collection === 'question_topics') assertWeight(payload);
 
-    if (collection === 'component_deps' && ('component_id' in payload || 'depends_on_id' in payload)) {
-      for (const key of keys) {
-        const current = await db('component_deps').select('component_id', 'depends_on_id').where({ id: key }).first();
-        await assertDependency(
-          db,
-          {
-            componentId: ('component_id' in payload ? payload.component_id : current?.component_id) as string,
-            dependsOnId: ('depends_on_id' in payload ? payload.depends_on_id : current?.depends_on_id) as string,
-          },
-          key
-        );
-      }
-    }
-
     if (collection === 'gates' && ('pass_threshold' in payload || 'questions' in payload)) {
       for (const key of keys) {
         const gate = await db('gates').select('title', 'pass_threshold').where({ id: key }).first();
@@ -218,17 +164,5 @@ export default defineHook(({ filter }) => {
       await assertGatesKeepQuestions(context.database as Db, (keys as unknown[]).map(String));
     }
     return keys;
-  });
-
-  filter('items.read', (records, meta) => {
-    const columns = ENUM_ARRAY_COLUMNS[meta.collection as string];
-    if (!columns || !Array.isArray(records)) return records;
-    for (const record of records as Row[]) {
-      for (const column of columns) {
-        const value = record?.[column];
-        if (typeof value === 'string') record[column] = parsePgArrayLiteral(value) ?? value;
-      }
-    }
-    return records;
   });
 });

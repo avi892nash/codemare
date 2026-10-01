@@ -1,20 +1,21 @@
 /**
  * GET /codemare/recipe-supply — the tokens all published content pays out,
  * per topic and source difficulty: first accepted solves of published
- * questions (split across question_topics by weight) and first passing
- * builds of build steps, with no hint penalties. Same computation as the
- * seed validator's affordability check, using the web app's award rules.
+ * questions (split across question_topics by weight), with no hint
+ * penalties. Solving questions is the only way to earn tokens. Same
+ * computation as the seed validator's affordability check, using the web
+ * app's award rules.
  *
  * It is an endpoint rather than plain item reads so the whole aggregate is
- * one query per table, computed server-side with the award rules (the editor
- * would otherwise page through every question topic and build step).
+ * one query, computed server-side with the award rules (the editor would
+ * otherwise page through every question topic).
  * Access: signed-in users who may read unlock_recipes (the recipe editor's
  * audience); everything else gets 403.
  */
 import { defineEndpoint } from '@directus/extensions-sdk';
 import { ForbiddenError } from '@directus/errors';
 import type { Accountability } from '@directus/types';
-import { balancesFromRows, buildAward, solveAward, type Difficulty } from '../shared/rules';
+import { balancesFromRows, solveAward, type Difficulty } from '../shared/rules';
 
 interface QuestionTopicRow {
   question_id: string;
@@ -23,12 +24,7 @@ interface QuestionTopicRow {
   difficulty: Difficulty;
 }
 
-interface BuildRow {
-  topic_id: string;
-  difficulty: Difficulty;
-}
-
-type Counts = Record<string, { questions: number; builds: number }>;
+type Counts = Record<string, { questions: number }>;
 
 export default defineEndpoint({
   id: 'codemare',
@@ -49,11 +45,6 @@ export default defineEndpoint({
           .from('question_topics as qt')
           .join('questions as q', 'q.id', 'qt.question_id')
           .where('q.status', 'published');
-        const buildRows: BuildRow[] = await database
-          .select('c.topic_id', 's.difficulty')
-          .from('build_steps as s')
-          .join('components as c', 'c.id', 's.component_id')
-          .where('s.kind', 'build');
 
         const byQuestion = new Map<string, QuestionTopicRow[]>();
         for (const row of questionRows) {
@@ -64,10 +55,6 @@ export default defineEndpoint({
 
         const rows: { topicId: string; difficulty: Difficulty; amount: number }[] = [];
         const counts: Counts = {};
-        const bump = (topicId: string, kind: 'questions' | 'builds') => {
-          counts[topicId] ??= { questions: 0, builds: 0 };
-          counts[topicId][kind]++;
-        };
         for (const topics of byQuestion.values()) {
           const difficulty = topics[0].difficulty;
           const awards = solveAward(
@@ -76,12 +63,10 @@ export default defineEndpoint({
             0
           );
           for (const a of awards) rows.push({ topicId: a.topicId, difficulty, amount: a.amount });
-          for (const t of topics) bump(t.topic_id, 'questions');
-        }
-        for (const b of buildRows) {
-          const amount = buildAward(b.difficulty, 0);
-          if (amount > 0) rows.push({ topicId: b.topic_id, difficulty: b.difficulty, amount });
-          bump(b.topic_id, 'builds');
+          for (const t of topics) {
+            counts[t.topic_id] ??= { questions: 0 };
+            counts[t.topic_id].questions++;
+          }
         }
 
         res.json({ data: { supply: balancesFromRows(rows), counts } });

@@ -126,18 +126,6 @@ const enumSelect = (field: string, enumName: string, extra: Meta = {}): FieldSpe
   },
 });
 
-const enumMulti = (field: string, enumName: string, extra: Meta = {}): FieldSpec => ({
-  field,
-  meta: {
-    interface: 'select-multiple-checkbox',
-    options: { choices: choices(enumValues(enumName)) },
-    display: 'labels',
-    display_options: { choices: choices(enumValues(enumName)) },
-    width: 'full',
-    ...extra,
-  },
-});
-
 const tags = (field: string, note: string): FieldSpec => ({
   field,
   meta: {
@@ -303,68 +291,9 @@ export const COLLECTIONS: CollectionSpec[] = [
     ]
   ),
   collection(
-    'components',
-    'cm_learning_loop',
-    5,
-    {
-      icon: 'extension',
-      display_template: '{{title}}',
-      note: 'Library functions learners build. A build runs with the learner’s own versions of every dependency prepended.',
-    },
-    [
-      id(),
-      m2o('topic_id', '{{title}}'),
-      slug(),
-      text('title'),
-      markdown('summary_md'),
-      text('function_name', { options: { font: 'monospace' } }),
-      json('signature', 'Signature: { params: [{ name, type }], returns } (spec §2.1).'),
-      enumMulti('languages', 'Language', { note: 'Languages this component can be built in (Java is not supported for builds).' }),
-      order(),
-      o2m('depends_on', '{{depends_on_id.title}}', {
-        note: 'Components whose code is prepended when this one is built. Self-dependencies and cycles are rejected.',
-      }),
-      o2m('used_by', '{{component_id.title}}', { readonly: true, note: 'Components that depend on this one (edit them there).' }),
-      o2m('build_steps', '{{ord}}. {{title}} ({{kind}})'),
-    ]
-  ),
-  collection(
-    'component_deps',
-    'cm_learning_loop',
-    6,
-    {
-      icon: 'account_tree',
-      display_template: '{{component_id.title}} → {{depends_on_id.title}}',
-      hidden: true,
-      note: 'Edit from a component (Depends on). Acyclic: the content-integrity hook rejects cycles.',
-    },
-    [
-      id(),
-      parentLink('component_id', '{{title}}'),
-      pick('depends_on_id', '{{title}}', { note: 'The component it depends on (built first, prepended to its builds).' }),
-    ]
-  ),
-  collection(
-    'build_steps',
-    'cm_learning_loop',
-    7,
-    { icon: 'format_list_numbered', display_template: '{{component_id.title}} · {{ord}}. {{title}}' },
-    [
-      id(),
-      m2o('component_id', '{{title}}'),
-      order(),
-      enumSelect('kind', 'BuildStepKind'),
-      text('title'),
-      markdown('prompt_md'),
-      enumSelect('difficulty', 'Difficulty', { note: 'Sets the token award of a build step.' }),
-      json('payload', 'predict: { language, code, question, choices?, answer, explanation_md } · build: { starter_code, tests, compare_mode? } (spec §2.1).'),
-      o2m('hints', '{{level}} ({{cost_kind}} {{cost_amount}})'),
-    ]
-  ),
-  collection(
     'gates',
     'cm_learning_loop',
-    8,
+    5,
     {
       icon: 'door_front',
       display_template: '{{title}}',
@@ -396,7 +325,7 @@ export const COLLECTIONS: CollectionSpec[] = [
   collection(
     'gate_questions',
     'cm_learning_loop',
-    9,
+    6,
     { icon: 'checklist', display_template: '{{gate_id.title}} · {{question_id.title}}', hidden: true, note: 'Edit from a gate (Questions).' },
     [
       id(),
@@ -494,13 +423,12 @@ export const COLLECTIONS: CollectionSpec[] = [
     3,
     {
       icon: 'lightbulb',
-      display_template: '{{level}} · {{question_id.title}}{{build_step_id.title}}',
-      note: 'Set exactly one of question / build step.',
+      display_template: '{{level}} · {{question_id.title}}',
+      note: 'One rung of a question’s hint ladder; edit them from the question (Hints).',
     },
     [
       id(),
-      m2o('question_id', '{{title}}', { required: false }),
-      m2o('build_step_id', '{{title}}', { required: false }),
+      m2o('question_id', '{{title}}', { note: 'The question this hint belongs to.' }),
       enumSelect('level', 'HintLevel'),
       markdown('body_md'),
       enumSelect('cost_kind', 'HintCostKind', { note: 'score: % off the future award · token: tokens spent.' }),
@@ -628,6 +556,16 @@ export const COLLECTIONS: CollectionSpec[] = [
   }
 }
 
+/**
+ * Collections the model no longer has: the Queue's components, their
+ * dependencies and build steps, whose tables migration
+ * 20261002000000_remove_queue dropped. Directus keeps a dropped table's
+ * collection meta (it would linger as an empty folder) and its permissions;
+ * apply.ts deletes both once the table is gone. Meta only: it never asks
+ * Directus to drop a table that still exists.
+ */
+export const RETIRED_COLLECTIONS: readonly string[] = ['components', 'component_deps', 'build_steps'];
+
 // ── relations (meta for the foreign keys Prisma created) ─────────────────────
 
 const o2mRelation = (collection: string, field: string, oneField: string, sortField: string | null = 'ord'): RelationSpec => ({
@@ -641,14 +579,9 @@ export const RELATIONS: RelationSpec[] = [
   { collection: 'topics', field: 'tier_id', meta: { one_field: 'topics', sort_field: null, one_deselect_action: 'nullify' } },
   o2mRelation('unlock_recipes', 'topic_id', 'recipes'),
   o2mRelation('recipe_items', 'recipe_id', 'items', null),
-  o2mRelation('build_steps', 'component_id', 'build_steps'),
-  o2mRelation('component_deps', 'component_id', 'depends_on', null),
-  // Read-only reverse list; `nullify` (NOT NULL) makes a stray API deselect fail instead of deleting edges.
-  { collection: 'component_deps', field: 'depends_on_id', meta: { one_field: 'used_by', sort_field: null, one_deselect_action: 'nullify' } },
   o2mRelation('question_topics', 'question_id', 'topics', null),
   o2mRelation('gate_questions', 'gate_id', 'questions'),
   o2mRelation('hints', 'question_id', 'hints', null),
-  o2mRelation('hints', 'build_step_id', 'hints', null),
   o2mRelation('learn_modules', 'track_id', 'modules'),
   o2mRelation('lessons', 'module_id', 'lessons'),
   o2mRelation('checkpoint_questions', 'module_id', 'checkpoint_questions'),
