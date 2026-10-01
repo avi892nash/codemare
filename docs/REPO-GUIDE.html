@@ -171,17 +171,17 @@
 
 <div class="wrap">
   <header class="masthead">
-    <div class="eyebrow">Onboarding · codemare · as of 29 Sep 2026</div>
+    <div class="eyebrow">Onboarding · codemare · as of 2 Oct 2026</div>
     <h1>Codemare Repo Guide</h1>
     <p class="dek">What is where, right now, and how it fits together. Click through the repo map, follow a reading path, and check the status board before you touch anything. For <em>why</em> things are shaped this way, the companion page is <a href="DECISIONS.html">Codemare Decisions</a>; for the rules themselves, <code>docs/spec/architecture.md</code>.</p>
     <div class="facts">
       <div class="fact"><b>6</b><span>languages judged</span></div>
       <div class="fact"><b>30</b><span>problems · 3 tiers · 10 topics</span></div>
-      <div class="fact"><b>37</b><span>tables in 2 schemas</span></div>
-      <div class="fact"><b>714</b><span>unit tests (web · backend · admin)</span></div>
+      <div class="fact"><b>32</b><span>tables in 2 schemas</span></div>
+      <div class="fact"><b>656</b><span>unit tests (web · backend · admin)</span></div>
       <div class="fact"><b>43</b><span>Playwright tests</span></div>
       <div class="fact"><b>6</b><span>CI jobs per push</span></div>
-      <div class="fact"><b>203</b><span>commits, Nov 2025 →</span></div>
+      <div class="fact"><b>211</b><span>commits, Nov 2025 →</span></div>
     </div>
   </header>
 
@@ -208,7 +208,7 @@
         <p class="lede">Codemare is a DSA practice and learning platform. Learners solve problems in an in-browser editor in Python, JavaScript, TypeScript, C++, Java or Go; a sandboxed judge times their function on the CPU clock to the microsecond; and a tiered learning loop turns solves into topic tokens that unlock new topics through recipes, with timed gate exams opening each tier. Around that sit three Learn tracks, profiles and badges, question authoring, a hidden algorithms library and a Directus admin.</p>
         <p>The repository is an <strong>npm workspaces monorepo</strong> with one root lockfile. Two workspaces deploy; the rest supports them:</p>
         <ul>
-          <li><code>web/</code> — the Next.js 15 app the browser talks to: every page, the <code>/api/run|submit|build</code> streams, server actions, Auth.js, and the domain layer (<code>web/lib/server</code>) over Prisma and two Postgres schemas. It is the only writer of <code>app.*</code>.</li>
+          <li><code>web/</code> — the Next.js 15 app the browser talks to: every page, the <code>/api/run|submit</code> streams, server actions, Auth.js, and the domain layer (<code>web/lib/server</code>) over Prisma and two Postgres schemas. It is the only writer of <code>app.*</code>.</li>
           <li><code>backend/</code> — the compile service: a stateless pure executor. The caller sends code plus tests; it compiles and runs them in <code>isolate</code> and streams per-test results and a verdict. No database, no users.</li>
           <li><code>admin/</code> — Directus configuration as code and one extension (the recipe editor), a standalone package outside the workspaces.</li>
           <li><code>deploy/</code> and <code>docker-compose.prod.yml</code> — the one-VPS Compose stack: Caddy, Postgres roles, backups, the runbook.</li>
@@ -219,7 +219,7 @@
 
       <section id="s2">
         <h2><span class="n">2</span>Repo map</h2>
-        <p>Every tracked file (609) and directory (137) as <code>git ls-files</code> lists them at <code>79c7592</code>. Click a folder to open it and a file to read what it does, or filter by path or description. The 30 question files share one entry; <code>node_modules</code>, <code>.next</code> and <code>dist</code> are not tracked, so they are not here. <em>Legacy</em> marks files that still exist but nothing current depends on.</p>
+        <p>Every tracked file (588) and directory (132) as <code>git ls-files</code> lists them at <code>a49c21e</code>. Click a folder to open it and a file to read what it does, or filter by path or description. The 30 question files share one entry; <code>node_modules</code>, <code>.next</code> and <code>dist</code> are not tracked, so they are not here. <em>Legacy</em> marks files that still exist but nothing current depends on.</p>
         <div class="map">
           <div class="map-left">
             <div class="tree-tools">
@@ -304,7 +304,7 @@ npm run dev            # compile service :4000 + web :4001</code></pre>
           <tbody>
             <tr><td>UI</td><td>React 18 · Next.js 15.5 App Router, server components by default · CSS modules on the design tokens, light Tailwind for layout · Monaco 0.55 via <code>@monaco-editor/react</code>, loaded lazily · Inter and JetBrains Mono through <code>next/font</code></td><td><code>web/app</code>, <code>web/components</code></td></tr>
             <tr><td>Auth</td><td>Auth.js v5 (beta.31) · Credentials with bcryptjs (cost 12) plus optional GitHub/Google · JWT sessions carrying id, role and handle · an Edge-safe config for the middleware</td><td><code>web/auth.ts</code>, <code>web/auth.config.ts</code>, <code>web/middleware.ts</code></td></tr>
-            <tr><td>Data</td><td>Postgres 16 · Prisma 5.22 with <code>multiSchema</code> (<code>content</code>, <code>app</code>) · three real migrations, including SQL-only guards</td><td><code>web/prisma</code></td></tr>
+            <tr><td>Data</td><td>Postgres 16 · Prisma 5.22 with <code>multiSchema</code> (<code>content</code>, <code>app</code>) · four real migrations, including SQL-only guards</td><td><code>web/prisma</code></td></tr>
             <tr><td>Domain</td><td>Plain functions over Prisma; the pure rules separate and unit-tested; typed <code>DomainError</code>s carry their HTTP status</td><td><code>web/lib/server</code></td></tr>
             <tr><td>Content</td><td>JSON validated with zod plus cross-file checks, written in one transaction in <code>upsert</code> or <code>insert-missing</code> mode; a stdlib-only Python verification suite</td><td><code>web/prisma/seed</code></td></tr>
             <tr><td>Run protocol</td><td>Server-Sent Events end to end (compile service → web → browser) through one isomorphic parser</td><td><code>web/lib/sse.ts</code>, <code>web/lib/compile.ts</code></td></tr>
@@ -323,14 +323,14 @@ npm run dev            # compile service :4000 + web :4001</code></pre>
         <p>One Prisma schema, two Postgres schemas. <strong><code>content.*</code></strong> is what staff edit in Directus and the seed writes: questions, the learning loop, badges, Learn and the Library. <strong><code>app.*</code></strong> is everything a user does, written only by the web app's server code. The arrows are the foreign keys that cross the boundary — nearly all of them point from a user's record to the content it is about.</p>
         <figure class="fig">
           <div class="scroll">
-          <svg viewBox="0 0 860 665" role="img" aria-label="Entity diagram. Left, the content schema: learning loop (tiers, topics, unlock recipes, recipe items, gates, gate questions), questions (questions, question topics, hints), components (components, component deps, build steps), badges, learn (tracks, modules, lessons, checkpoint questions) and library (areas, chapters, articles). Right, the app schema: identity (users and the Auth.js tables), economy (token ledger, unlocks, hint uses), judging (submissions, test results, component versions, AI reviews) and progress (gate attempts, step progress, badge awards, lesson progress, checkpoint attempts, library progress). Arrows run from each app table to the content row it references; questions.author_id points back to users.">
+          <svg viewBox="0 0 860 631" role="img" aria-label="Entity diagram. Left, the content schema: learning loop (tiers, topics, unlock recipes, recipe items, gates, gate questions), questions (questions, question topics, hints), badges, learn (tracks, modules, lessons, checkpoint questions) and library (areas, chapters, articles). Right, the app schema: identity (users and the Auth.js tables), economy (token ledger, unlocks, hint uses), judging (submissions, test results, AI reviews) and progress (gate attempts, badge awards, lesson progress, checkpoint attempts, library progress). Arrows run from each app table to the content row it references; questions.author_id points back to users.">
             <defs>
               <marker id="g2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker>
               <marker id="g2a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path class="mk-accent" d="M0 0L10 5L0 10z"/></marker>
             </defs>
-            <rect class="panel" x="10" y="10" width="370" height="645" rx="3"/>
+            <rect class="panel" x="10" y="10" width="370" height="611" rx="3"/>
             <text x="26" y="32"><tspan class="b">content.*</tspan><tspan class="sm" dx="10">edited in Directus · seeded by Prisma</tspan></text>
-            <rect class="panel" x="480" y="10" width="370" height="645" rx="3"/>
+            <rect class="panel" x="480" y="10" width="370" height="611" rx="3"/>
             <text x="496" y="32"><tspan class="b">app.*</tspan><tspan class="sm" dx="10">written only by web server code</tspan></text>
 
             <!-- content groups -->
@@ -347,28 +347,22 @@ npm run dev            # compile service :4000 + web :4001</code></pre>
             <text class="title" x="36" y="216">Questions</text>
             <text class="mono" x="36" y="236">questions · tests, references</text>
             <text class="mono" x="36" y="253">question_topics · weight &gt; 0</text>
-            <text class="mono" x="36" y="270">hints → question | build step</text>
+            <text class="mono" x="36" y="270">hints → question · ladder level</text>
 
-            <rect class="box" x="24" y="298" width="342" height="92" rx="3"/>
-            <text class="title" x="36" y="318">Components</text>
-            <text class="mono" x="36" y="338">components → topic · languages</text>
-            <text class="mono" x="36" y="355">component_deps · acyclic</text>
-            <text class="mono" x="36" y="372">build_steps · predict | build</text>
+            <rect class="box" x="24" y="298" width="342" height="58" rx="3"/>
+            <text class="title" x="36" y="318">Badges</text>
+            <text class="mono" x="36" y="338">badges · rarity, criteria (json)</text>
 
-            <rect class="box" x="24" y="400" width="342" height="58" rx="3"/>
-            <text class="title" x="36" y="420">Badges</text>
-            <text class="mono" x="36" y="440">badges · rarity, criteria (json)</text>
+            <rect class="box" x="24" y="366" width="342" height="109" rx="3"/>
+            <text class="title" x="36" y="386">Learn</text>
+            <text class="mono" x="36" y="406">tracks → tier (optional)</text>
+            <text class="mono" x="36" y="423">learn_modules → track</text>
+            <text class="mono" x="36" y="440">lessons → module · body_md</text>
+            <text class="mono" x="36" y="457">checkpoint_questions → module</text>
 
-            <rect class="box" x="24" y="468" width="342" height="109" rx="3"/>
-            <text class="title" x="36" y="488">Learn</text>
-            <text class="mono" x="36" y="508">tracks → tier (optional)</text>
-            <text class="mono" x="36" y="525">learn_modules → track</text>
-            <text class="mono" x="36" y="542">lessons → module · body_md</text>
-            <text class="mono" x="36" y="559">checkpoint_questions → module</text>
-
-            <rect class="box" x="24" y="587" width="342" height="58" rx="3"/>
-            <text class="title" x="36" y="607">Library (hidden)</text>
-            <text class="mono" x="36" y="627">library_areas → chapters → articles</text>
+            <rect class="box" x="24" y="485" width="342" height="58" rx="3"/>
+            <text class="title" x="36" y="505">Library (hidden)</text>
+            <text class="mono" x="36" y="525">library_areas → chapters → articles</text>
 
             <!-- app groups -->
             <rect class="box" x="494" y="46" width="342" height="92" rx="3"/>
@@ -383,83 +377,77 @@ npm run dev            # compile service :4000 + web :4001</code></pre>
             <text class="mono" x="506" y="205">unlocks · topic | tier, via recipe</text>
             <text class="mono" x="506" y="222">hint_uses · first reveal + cost</text>
 
-            <rect class="box" x="494" y="250" width="342" height="109" rx="3"/>
+            <rect class="box" x="494" y="250" width="342" height="92" rx="3"/>
             <text class="title" x="506" y="270">Judging</text>
             <text class="mono" x="506" y="290">submissions · kind, status, µs</text>
             <text class="mono" x="506" y="307">test_results → submission</text>
-            <text class="mono" x="506" y="324">component_versions</text>
-            <text class="mono" x="506" y="341">ai_reviews → submission</text>
+            <text class="mono" x="506" y="324">ai_reviews → submission</text>
 
-            <rect class="box" x="494" y="369" width="342" height="143" rx="3"/>
-            <text class="title" x="506" y="389">Progress</text>
-            <text class="mono" x="506" y="409">gate_attempts · deadline, cooldown</text>
-            <text class="mono" x="506" y="426">step_progress · seen → passed</text>
-            <text class="mono" x="506" y="443">badge_awards</text>
-            <text class="mono" x="506" y="460">lesson_progress</text>
-            <text class="mono" x="506" y="477">checkpoint_attempts</text>
-            <text class="mono" x="506" y="494">library_progress</text>
+            <rect class="box" x="494" y="352" width="342" height="126" rx="3"/>
+            <text class="title" x="506" y="372">Progress</text>
+            <text class="mono" x="506" y="392">gate_attempts · deadline, cooldown</text>
+            <text class="mono" x="506" y="409">badge_awards</text>
+            <text class="mono" x="506" y="426">lesson_progress</text>
+            <text class="mono" x="506" y="443">checkpoint_attempts</text>
+            <text class="mono" x="506" y="460">library_progress</text>
 
-            <rect class="box dashed" x="494" y="524" width="342" height="121" rx="3"/>
-            <text class="title" x="506" y="544">Guards in SQL (migration 2)</text>
-            <text class="sm" x="506" y="563">token_ledger: UPDATE and DELETE raise (trigger)</text>
-            <text class="sm" x="506" y="580">earns: partial unique index where amount &gt; 0</text>
-            <text class="sm" x="506" y="597">CHECK amount ≠ 0 · quantity &gt; 0 · weight &gt; 0</text>
-            <text class="sm" x="506" y="614">CHECK cooldown 12–24 h · no self-dependency</text>
-            <text class="sm" x="506" y="631">one running gate attempt per user and gate</text>
+            <rect class="box dashed" x="494" y="490" width="342" height="121" rx="3"/>
+            <text class="title" x="506" y="510">Guards in SQL (migration 2)</text>
+            <text class="sm" x="506" y="529">token_ledger: UPDATE and DELETE raise (trigger)</text>
+            <text class="sm" x="506" y="546">earns: partial unique index where amount &gt; 0</text>
+            <text class="sm" x="506" y="563">CHECK amount ≠ 0 · quantity &gt; 0 · weight &gt; 0</text>
+            <text class="sm" x="506" y="580">CHECK cooldown 12–24 h · hint cost ≥ 0</text>
+            <text class="sm" x="506" y="597">one running gate attempt per user and gate</text>
 
             <!-- cross-schema references: app row → content row -->
             <path class="edge thin" d="M494 188 C 430 188 430 103 366 103" marker-end="url(#g2)"/>
             <path class="edge thin" d="M494 205 C 430 205 430 120 366 120" marker-end="url(#g2)"/>
             <path class="edge thin" d="M494 222 C 430 222 430 270 366 270" marker-end="url(#g2)"/>
             <path class="edge thin" d="M494 290 C 430 290 430 236 366 236" marker-end="url(#g2)"/>
-            <path class="edge thin" d="M494 290 C 430 290 430 372 366 372" marker-end="url(#g2)"/>
-            <path class="edge thin" d="M494 324 C 430 324 430 338 366 338" marker-end="url(#g2)"/>
-            <path class="edge thin" d="M494 409 C 420 409 440 154 366 154" marker-end="url(#g2)"/>
-            <path class="edge thin" d="M494 426 C 430 426 430 372 366 372" marker-end="url(#g2)"/>
-            <path class="edge thin" d="M494 443 C 430 443 430 440 366 440" marker-end="url(#g2)"/>
-            <path class="edge thin" d="M494 460 C 430 460 430 542 366 542" marker-end="url(#g2)"/>
-            <path class="edge thin" d="M494 477 C 430 477 430 525 366 525" marker-end="url(#g2)"/>
-            <path class="edge thin" d="M494 494 C 430 494 430 627 366 627" marker-end="url(#g2)"/>
+            <path class="edge thin" d="M494 392 C 420 392 440 154 366 154" marker-end="url(#g2)"/>
+            <path class="edge thin" d="M494 409 C 430 409 430 338 366 338" marker-end="url(#g2)"/>
+            <path class="edge thin" d="M494 426 C 430 426 430 440 366 440" marker-end="url(#g2)"/>
+            <path class="edge thin" d="M494 443 C 430 443 430 423 366 423" marker-end="url(#g2)"/>
+            <path class="edge thin" d="M494 460 C 430 460 430 525 366 525" marker-end="url(#g2)"/>
             <path class="edge accent dashed" d="M366 236 C 440 236 420 86 494 86" marker-end="url(#g2a)"/>
           </svg>
           </div>
-          <figcaption>Solid arrows: an app table's reference into content (the ledger's topic, an unlock's recipe, a hint use's hint, a submission's question or build step, a gate attempt's gate, and so on). The dashed teal arrow is the one reference the other way: <code>questions.author_id → users</code>, which Directus cannot read and hides. Content ids are cuids with no database default; the ledger's id is a bigserial.</figcaption>
+          <figcaption>Solid arrows: an app table's reference into content (the ledger's topic, an unlock's recipe, a hint use's hint, a submission's question, a gate attempt's gate, and so on). The dashed teal arrow is the one reference the other way: <code>questions.author_id → users</code>, which Directus cannot read and hides. Content ids are cuids with no database default; the ledger's id is a bigserial.</figcaption>
         </figure>
 
-        <h3><code>content.*</code> — 20 tables</h3>
+        <h3><code>content.*</code> — 17 tables</h3>
         <div class="table-wrap"><table>
           <thead><tr><th>Table</th><th>Holds</th></tr></thead>
           <tbody>
             <tr><td><code>tiers</code></td><td>Tier order (<code>ord</code> 0 is the free tier), slug, title, summary.</td></tr>
             <tr><td><code>topics</code></td><td>The ten topics, each in one tier, with an icon from the shared vocabulary.</td></tr>
             <tr><td><code>unlock_recipes</code>, <code>recipe_items</code></td><td>A topic's alternative ways to unlock; an item is token topic × quantity (&gt; 0) × minimum source difficulty.</td></tr>
-            <tr><td><code>components</code>, <code>component_deps</code>, <code>build_steps</code></td><td>Reusable functions learners build (not in Java), their acyclic dependencies, and the predict/build steps that teach them (JSON payloads).</td></tr>
             <tr><td><code>questions</code></td><td>Statement, examples, constraints, signature, compare mode, starter code, tests and reference solutions (JSON; the references never reach a learner), status, limits, optional author.</td></tr>
             <tr><td><code>question_topics</code></td><td>Question × topic with a weight: its share of the solve award. Composite questions span tiers.</td></tr>
-            <tr><td><code>hints</code></td><td>Five levels per question or build step (exactly one), each costing score or tokens.</td></tr>
+            <tr><td><code>hints</code></td><td>Five levels per question, each costing score or tokens.</td></tr>
             <tr><td><code>gates</code>, <code>gate_questions</code></td><td>The timed exam that opens a tier: pass threshold, 12–24 h cooldown, time limit; its ordered questions.</td></tr>
-            <tr><td><code>badges</code></td><td>17 badges with rarity and JSON criteria.</td></tr>
+            <tr><td><code>badges</code></td><td>15 badges with rarity and JSON criteria.</td></tr>
             <tr><td><code>tracks</code>, <code>learn_modules</code>, <code>lessons</code>, <code>checkpoint_questions</code></td><td>Learn: tracks → modules → lessons (markdown with directives) and each module's quiz.</td></tr>
             <tr><td><code>library_areas</code>, <code>library_chapters</code>, <code>library_articles</code></td><td>The hidden algorithms library.</td></tr>
           </tbody>
         </table></div>
 
-        <h3><code>app.*</code> — 17 tables</h3>
+        <h3><code>app.*</code> — 15 tables</h3>
         <div class="table-wrap"><table>
           <thead><tr><th>Table</th><th>Holds</th></tr></thead>
           <tbody>
             <tr><td><code>users</code></td><td>Email, handle (<code>[a-z0-9_]{3,24}</code>, CHECKed), role (learner &lt; author &lt; staff &lt; admin), bcrypt hash (null for OAuth-only).</td></tr>
             <tr><td><code>accounts</code>, <code>sessions</code>, <code>verification_tokens</code></td><td>Auth.js adapter tables. Password-reset tokens live in <code>verification_tokens</code> as <code>reset:&lt;email&gt;</code>, stored as a SHA-256.</td></tr>
-            <tr><td><code>token_ledger</code></td><td>Append-only rows of (topic, source difficulty, ±amount, reason, ref). Balances are sums; spends are negative rows.</td></tr>
+            <tr><td><code>token_ledger</code></td><td>Append-only rows of (topic, source difficulty, ±amount, reason, ref). Balances are sums; spends are negative rows. Rows with reason <code>build</code> are earnings from the removed Queue: kept, and still counted.</td></tr>
             <tr><td><code>unlocks</code></td><td>A topic unlocked through a recipe, or a tier opened by its gate; unique per user.</td></tr>
-            <tr><td><code>submissions</code>, <code>test_results</code></td><td>Every run, submit, build and gate submission with status, CPU µs, peak KB, compile ms and percentile; per-test results (hidden ones without input, expected or output).</td></tr>
-            <tr><td><code>component_versions</code></td><td>Each build of a component in a language, passed or not; the latest passing one is what later builds prepend.</td></tr>
-            <tr><td><code>step_progress</code>, <code>hint_uses</code></td><td>Queue progress per build step; the first reveal of each hint with the cost paid.</td></tr>
+            <tr><td><code>submissions</code>, <code>test_results</code></td><td>Every run, submit and gate submission with status, CPU µs, peak KB, compile ms and percentile; per-test results (hidden ones without input, expected or output).</td></tr>
+            <tr><td><code>hint_uses</code></td><td>The first reveal of each hint with the cost paid.</td></tr>
             <tr><td><code>gate_attempts</code></td><td>Start, deadline, finish, passed count, result and next eligible time; at most one running per user and gate.</td></tr>
             <tr><td><code>badge_awards</code>, <code>lesson_progress</code>, <code>checkpoint_attempts</code>, <code>library_progress</code></td><td>Badges earned (once each), lessons started and completed, quiz attempts with answers, articles read.</td></tr>
             <tr><td><code>ai_reviews</code></td><td>Optional AI reviews of accepted submissions, with the model and token usage.</td></tr>
           </tbody>
         </table></div>
+        <p>Removed on 2 October 2026 with the Queue (migration <code>20261002000000_remove_queue</code>, <a href="DECISIONS.html#d38">decision 38</a>): <code>components</code>, <code>component_deps</code>, <code>build_steps</code>, <code>component_versions</code> and <code>step_progress</code>.</p>
       </section>
 
       <section id="s6">
@@ -485,8 +473,6 @@ npm run dev            # compile service :4000 + web :4001</code></pre>
             <tr><td><code>/learn/[track]/complete</code></td><td>Track completion.</td><td>login</td></tr>
             <tr><td><code>/map</code></td><td>Tiers, gates, topics, balances, recipes, what's blocking you; unlock and start-gate flows.</td><td>login</td></tr>
             <tr><td><code>/map/gates/[attemptId]</code></td><td>A gate attempt: countdown, progress, problems, Finish.</td><td>login; your own attempt, else 404</td></tr>
-            <tr><td><code>/queue</code></td><td>Predict and build steps in dependency order; <code>?step=</code> focuses one.</td><td>login; step access</td></tr>
-            <tr><td><code>/me/library</code></td><td>Your built components and how they connect.</td><td>login</td></tr>
             <tr><td><code>/author</code>, <code>/author/new</code>, <code>/author/[id]/edit</code></td><td>Write, verify and publish questions.</td><td>role ≥ author (DB), own questions unless staff; else 404; noindex</td></tr>
             <tr><td><code>/library</code>, <code>/library/[area]</code>, <code>/library/[area]/[article]</code></td><td>The hidden algorithms library.</td><td>staff+ (DB) unless <code>FEATURE_LIBRARY_PUBLIC</code>; else 404; noindex; robots Disallow</td></tr>
             <tr><td><code>/dev/system</code></td><td>Every UI-kit component in both themes.</td><td>development only (404 in production)</td></tr>
@@ -499,10 +485,9 @@ npm run dev            # compile service :4000 + web :4001</code></pre>
           <thead><tr><th>Route</th><th>What it does</th><th>Guard</th></tr></thead>
           <tbody>
             <tr><td><code>/api/auth/[...nextauth]</code></td><td>Auth.js: sign-in, callback, session, csrf, signout.</td><td>public (outside the middleware)</td></tr>
-            <tr><td><code>POST /api/run</code></td><td><code>{questionId, language, code, customInputs?, attemptId?}</code>: visible tests plus up to 8 custom inputs, streamed; persisted as a <code>run</code>, earns nothing.</td><td rowspan="3">session (401) · 30/min per user, shared (429) · 512 KB body, 64 KB source (413) · zod (400) · access: 403 with blockers, 404 · then SSE</td></tr>
+            <tr><td><code>POST /api/run</code></td><td><code>{questionId, language, code, customInputs?, attemptId?}</code>: visible tests plus up to 8 custom inputs, streamed; persisted as a <code>run</code>, earns nothing.</td><td rowspan="2">session (401) · 30/min per user, shared (429) · 512 KB body, 64 KB source (413) · zod (400) · access: 403 with blockers, 404 · then SSE</td></tr>
             <tr><td><code>POST /api/submit</code></td><td><code>{questionId, language, code, attemptId?}</code>: every test, hidden ones redacted; tokens, badges, percentile.</td></tr>
-            <tr><td><code>POST /api/build</code></td><td><code>{buildStepId, language, code}</code>: the step's tests with your dependencies prepended; 409 <code>{missing: [slug]}</code> when one is unbuilt.</td></tr>
-            <tr><td><code>GET · POST /api/hints</code></td><td>The ladder for <code>?questionId=</code> or <code>?buildStepId=</code>; reveal <code>{hintId}</code> (order enforced, tokens spent atomically, 409 with the shortfall).</td><td>session; access to the question or step</td></tr>
+            <tr><td><code>GET · POST /api/hints</code></td><td>The ladder for <code>?questionId=</code>; reveal <code>{hintId}</code> (order enforced, tokens spent atomically, 409 with the shortfall).</td><td>session; access to the question</td></tr>
             <tr><td><code>GET · POST /api/ai-review</code></td><td>Stored reviews of a submission; request one <code>{submissionId, depth?}</code>.</td><td>session; your own accepted submit; 404 unless <code>FEATURE_AI_REVIEW</code> + key; 12/h</td></tr>
           </tbody>
         </table></div>
@@ -515,7 +500,6 @@ npm run dev            # compile service :4000 + web :4001</code></pre>
             <tr><td><code>(workspace)/ide/actions.ts</code></td><td><code>runIdeCode</code></td><td>session; zod; 64 KB; the shared judge budget</td></tr>
             <tr><td><code>(workspace)/learn/actions.ts</code></td><td><code>runSnippet</code>, <code>startLessonAction</code>, <code>completeLessonAction</code>, <code>submitCheckpointAction</code></td><td>session; content resolved by slug; snippets share the judge budget</td></tr>
             <tr><td><code>(workspace)/map/actions.ts</code></td><td><code>unlockTopicAction</code>, <code>startGateAction</code>, <code>finishGateAction</code></td><td>session; the domain rules (advisory lock, eligibility, cooldown)</td></tr>
-            <tr><td><code>(workspace)/queue/actions.ts</code></td><td><code>markStepSeenAction</code>, <code>submitPredictionAction</code></td><td>session; step access</td></tr>
             <tr><td><code>(workspace)/author/actions.ts</code></td><td><code>saveDraftAction</code>, <code>publishAction</code>, <code>unpublishAction</code>, <code>deleteDraftAction</code>, <code>runReferenceAction</code></td><td>role ≥ author (DB) and ownership; publishing re-runs every reference solution; reference runs share the judge budget</td></tr>
             <tr><td><code>(workspace)/library/actions.ts</code></td><td><code>markReadAction</code>, <code>runCppAction</code></td><td>library access re-checked; C++ runs share the judge budget</td></tr>
           </tbody>
@@ -544,11 +528,11 @@ npm run dev            # compile service :4000 + web :4001</code></pre>
           <div class="rail"><b>Internal token</b><code class="where">backend/src/middleware/internalAuth.ts · web/lib/compile.ts</code>Timing-safe compare; production refuses a missing or placeholder value on either side. Never in the browser, never inside a box (isolate itself is started with <code>PATH</code> only).</div>
           <div class="rail"><b>Login wall, fail-closed</b><code class="where">web/middleware.ts · web/components/Auth/routes.ts</code>JWT decoded on the Edge; signed-out API calls get 401 JSON; any auth error is treated as signed out; <code>?next=</code> accepts same-origin paths only.</div>
           <div class="rail"><b>Roles</b><code class="where">author/viewer.ts · library/viewer.ts · submissionHistory.ts</code>The role rides in the JWT for navigation; authoring, the library and other people's submissions re-read it from the database. Denied is the same 404 as unknown.</div>
-          <div class="rail"><b>Rate limits</b><code class="where">web/lib/rateLimit.ts</code>Login 10/15 min per IP and 5 per email; sign-up 5/h per IP; reset flows per IP and email; one judge budget of 30/min per user shared by run, submit, build, IDE, snippets and reference runs; AI review 12/h. The compile service keeps only a 6000/min circuit breaker.</div>
+          <div class="rail"><b>Rate limits</b><code class="where">web/lib/rateLimit.ts</code>Login 10/15 min per IP and 5 per email; sign-up 5/h per IP; reset flows per IP and email; one judge budget of 30/min per user shared by run, submit, IDE, snippets and reference runs; AI review 12/h. The compile service keeps only a 6000/min circuit breaker.</div>
           <div class="rail"><b>Size caps</b><code class="where">web/lib/server/runner.ts · backend/src/services/runValidation.ts</code>Web: 64 KB source, 512 KB body, 8 custom inputs. Compile service: 64 KB code, 256 KB prelude, 200 tests, 4 MB of tests, 6 MB body, limits capped at 10 s and 512 MB; the compile cache holds at most 256 entries and <code>COMPILE_CACHE_MAX_MB</code> (1 GiB) on disk and in memory.</div>
           <div class="rail"><b>Hidden tests stay hidden</b><code class="where">web/lib/server/runner.ts · rules/testResults.ts</code>No input, expected or output leaves the server; a hidden test's error is cut to its exception class. For Python, JS, TS and Go the expected values never enter the box.</div>
           <div class="rail"><b>Ledger guards in the database</b><code class="where">web/prisma/migrations/…_integrity_guards</code>An append-only trigger, an earn-once partial unique index, <code>amount ≠ 0</code>; spends re-read balances under a per-user advisory lock and write nothing on a shortfall.</div>
-          <div class="rail"><b>Directus confined by Postgres</b><code class="where">deploy/postgres/db-init.sql · content-integrity hook</code>The <code>directus</code> role has row DML on <code>content.*</code> only: no DDL, no <code>app.*</code>. The hook re-checks recipe, weight, cycle and gate rules for every client.</div>
+          <div class="rail"><b>Directus confined by Postgres</b><code class="where">deploy/postgres/db-init.sql · content-integrity hook</code>The <code>directus</code> role has row DML on <code>content.*</code> only: no DDL, no <code>app.*</code>. The hook re-checks recipe, weight and gate rules for every client.</div>
           <div class="rail"><b>Hidden library</b><code class="where">library/viewer.ts · web/app/robots.ts</code>Staff only unless the flag is on; the 404 matches an unknown URL; noindex on every page, a robots Disallow, no links from anywhere.</div>
           <div class="rail"><b>Untrusted markdown</b><code class="where">web/lib/lesson-markdown · Problem/Markdown.tsx</code>CMS-edited content renders through <code>rehype-sanitize</code> with no raw HTML, an http(s)/mailto/relative URL allowlist, allow-listed directive attributes and bidi characters stripped from code.</div>
           <div class="rail"><b>Secrets</b><code class="where">deploy/.env · deploy/secrets/</code>Mode 600 and git-ignored; generated with <code>openssl rand</code>; reset tokens stored as hashes, passwords as bcrypt; backups encrypted by restic before they leave the VPS.</div>
@@ -558,13 +542,13 @@ npm run dev            # compile service :4000 + web :4001</code></pre>
 
       <section id="s8">
         <h2><span class="n">8</span>Tests and CI</h2>
-        <p>Counts are from running each suite at <code>79c7592</code> on 29 Sep 2026 (the Playwright count from <code>npx playwright test --list</code>).</p>
+        <p>Counts are from running each suite at <code>a49c21e</code> on 2 Oct 2026 (Playwright against a production build).</p>
         <div class="table-wrap"><table>
           <thead><tr><th>Layer</th><th>Size</th><th>What it covers</th><th>Run</th></tr></thead>
           <tbody>
-            <tr><td>Web unit + DB (vitest)</td><td>41 files · 522 tests</td><td>The pure rules (the debit planner is cross-checked against a brute-force allocator); every domain service against a migrated Postgres test database, trigger and partial indexes included (20 parallel spends never overdraw); the seed's validation, modes and idempotency; the real content played end to end as a fresh learner; lesson markdown against hostile input; SSE framing; the runner with a fake compile client.</td><td><code>npm test -w web</code></td></tr>
+            <tr><td>Web unit + DB (vitest)</td><td>38 files · 468 tests</td><td>The pure rules (the debit planner is cross-checked against a brute-force allocator); every domain service against a migrated Postgres test database, trigger and partial indexes included (20 parallel spends never overdraw); the seed's validation, modes and idempotency; the real content played end to end as a fresh learner; lesson markdown against hostile input; SSE framing; the runner with a fake compile client.</td><td><code>npm test -w web</code></td></tr>
             <tr><td>Backend (<code>node:test</code>)</td><td>17 files · 163 tests</td><td>The exact isolate command line per language and phase, the CPU plan, bounded box output, the harness protocol, generators compiled and run for real (<code>javac</code>, <code>go build</code>), and <code>/v1/run</code> plus <code>/v1/run/stream</code> end to end through the local adapter in all six languages. One test (the cpuset CLI) runs on Linux only.</td><td><code>npm test -w backend</code></td></tr>
-            <tr><td>Admin (vitest)</td><td>3 files · 29 tests</td><td>Recipe and join-row checks, the Postgres array codec, cuids, the enum parser, the recipe save payload.</td><td><code>npm --prefix admin test</code></td></tr>
+            <tr><td>Admin (vitest)</td><td>3 files · 25 tests</td><td>Recipe and join-row checks, Postgres array literals, cuids, the enum parser, the recipe save payload.</td><td><code>npm --prefix admin test</code></td></tr>
             <tr><td>Playwright</td><td>11 specs · 43 tests</td><td>Every feature through the UI against a running app and compile service: auth, catalog, editor, IDE, submissions, learn, profile, authoring, the hidden library, the sign-up → solve → submit → gate → unlock journey, and an accessibility gate (axe, one <code>h1</code>, no sideways scroll) on a route per section in both themes.</td><td><code>cd web &amp;&amp; PLAYWRIGHT_BASE_URL=… npx playwright test</code></td></tr>
             <tr><td>Isolate smoke</td><td>26 checks</td><td>The production image, privileged: six languages, verdicts, the compile cache, fork/memory/output bombs, no network, no host files, one CPU per box, the syscall filter.</td><td><code>node backend/tests/isolate/smoke.mjs</code></td></tr>
             <tr><td>Content verification</td><td>4 Python scripts</td><td>Shapes and references, every reference solution against every test, starters compiling verbatim, and the token economy simulated over every unlock order.</td><td><code>python3 web/prisma/seed/verify/verify_all.py</code></td></tr>
@@ -591,7 +575,7 @@ npm run dev            # compile service :4000 + web :4001</code></pre>
             <rect class="box" x="200" y="124" width="640" height="34" rx="3"/>
             <text x="214" y="146"><tspan class="b">infra</tspan> — compose config against .env.example · admin tests and typecheck</text>
             <rect class="box" x="200" y="162" width="640" height="34" rx="3"/>
-            <text x="214" y="184"><tspan class="b">web</tspan> — migrate · seed twice · 522 vitest tests · typecheck · lint · build</text>
+            <text x="214" y="184"><tspan class="b">web</tspan> — migrate · seed twice · 468 vitest tests · typecheck · lint · build</text>
             <rect class="box hi" x="200" y="200" width="640" height="34" rx="3"/>
             <text x="214" y="222"><tspan class="b">e2e</tspan> — next start + compile service + seeded Postgres → 43 Playwright tests</text>
           </svg>
@@ -607,8 +591,9 @@ npm run dev            # compile service :4000 + web :4001</code></pre>
             <h4><i></i>Done and verified</h4>
             <ul>
               <li>Judging in six languages through <code>/v1/run</code> and SSE, with µs CPU timing and per-test results</li>
-              <li>The learning loop: ledger, recipes, unlocks, gates with cooldowns, the hint ladder, the queue, My Library</li>
-              <li>Learn (3 tracks, 23 lessons), profiles, 17 badges, authoring with a re-verified publish, the hidden library</li>
+              <li>The learning loop: ledger, recipes, unlocks, gates with cooldowns, the hint ladder</li>
+              <li>The Queue and My Library removed at the owner's request (decision 38): migration, Directus clean-up, and the economy re-simulated with questions as the only earn — no dead ends</li>
+              <li>Learn (3 tracks, 23 lessons), profiles, 15 badges, authoring with a re-verified publish, the hidden library</li>
               <li>Directus confined by Postgres roles, with editable join tables and the two seed modes</li>
               <li>Sandbox hardening proven in the production image (the 26-check smoke runs in CI); the compile cache bounded by bytes as well as entries</li>
               <li>The legacy compile-service surface removed: the web app and the compile service speak only <code>/v1/run</code>, <code>/v1/run/stream</code> and IDE mode</li>
@@ -625,6 +610,7 @@ npm run dev            # compile service :4000 + web :4001</code></pre>
               <li>Java's <code>runUs</code> counts only the calling thread; work handed to other threads is untimed</li>
               <li>amd64 builds of the web, Directus and backup images, and a real Storage Box, are untested (local verification ran on Apple silicon with an SFTP stand-in; CI builds only the backend image)</li>
               <li>Rate limits are in-process (one web instance); the Redis queue does not serve <code>/v1/run</code></li>
+              <li>Directus keeps inert field and relation meta of the Queue's dropped tables; tidying them is an optional SQL step (<code>deploy/README.md</code> §7.3)</li>
               <li>The brief's LCP &lt; 2 s is met with throttling applied on localhost (about 1.4 s) but not in Lighthouse's simulation (about 2.6 s); confirm it on the deployed VPS</li>
             </ul>
           </div>
@@ -688,31 +674,31 @@ docker compose --env-file deploy/.env -f docker-compose.prod.yml exec backup cod
 <script>
 (function () {
   // ---- repo map ---------------------------------------------------------
-  // [name, role, description, children?] — generated from `git ls-files` at 79c7592;
+  // [name, role, description, children?] — generated from `git ls-files` at a49c21e;
   // a fourth element marks a directory.
   var TREE = [[".github","CI","GitHub configuration: the CI workflow.",[["workflows","CI","Workflows (one: ci.yml).",[["ci.yml","CI","Six jobs on every push to master and every PR: backend lint/build/unit tests; a six-language /v1/run smoke; the isolate smoke in the production image; compose and Directus admin checks; web migrations, seed, vitest, typecheck, lint, build; Playwright against a production build."]]]]],
-["admin","Admin","Directus over content.*: the content model as code and one extension bundle (recipe editor, content-integrity hook, supply endpoint). A standalone npm package, deliberately not a workspace.",[["content-model","Admin","The Directus content model as data, applied through the REST API: meta only, never DDL.",[["apply.ts","Admin","Applies model.ts to a running Directus idempotently (unchanged entries are skipped); the directus-config one-shot runs it on every deploy and warns about content columns missing from the model."],
-["directus.ts","Admin","Minimal Directus REST client (Node fetch) for apply.ts."],
-["model.ts","Admin","Collections, fields, interfaces, relations (incl. the O2M editors for question topics, gate questions and component deps), folders and the Content Editor role."],
+["admin","Admin","Directus over content.*: the content model as code and one extension bundle (recipe editor, content-integrity hook, supply endpoint). A standalone npm package, deliberately not a workspace.",[["content-model","Admin","The Directus content model as data, applied through the REST API: meta only, never DDL.",[["apply.ts","Admin","Applies model.ts to a running Directus idempotently (unchanged entries are skipped); the directus-config one-shot runs it on every deploy, warns about content columns missing from the model, and deletes the meta and permissions of retired collections whose tables are gone."],
+["directus.ts","Admin","Minimal Directus REST client (Node fetch) for apply.ts: get, post, patch, delete."],
+["model.ts","Admin","Collections, fields, interfaces, relations (incl. the O2M editors for question topics and gate questions), folders, the Content Editor role, and the retired collections apply.ts cleans up."],
 ["prisma-enums.ts","Admin","Reads enum values straight from web/prisma/schema.prisma, so Directus dropdowns offer exactly what Postgres accepts."],
 ["shims.d.ts","Types","Types *.prisma imports as strings (esbuild bundles the schema as text)."]]],
-["extensions","Admin","Directus extensions.",[["codemare","Admin","One bundle: the recipe-editor module (app side), the content-integrity hook and the /codemare endpoint (API side).",[["src","Admin","Extension sources.",[["codemare-api","Admin","The /codemare custom endpoint.",[["index.ts","Admin","GET /codemare/recipe-supply: the tokens all published content pays out per topic and difficulty (the seed validator’s affordability math, using the web app’s award rules)."]]],
-["content-integrity","Security","Server-side guards on every Directus write.",[["index.ts","Security","Filters every write Directus makes to content.*: Prisma-style cuid ids, Postgres array literals, questions.updated_at, and the recipe, weight, dependency-cycle and gate-threshold rules as readable 400s."]]],
+["extensions","Admin","Directus extensions.",[["codemare","Admin","One bundle: the recipe-editor module (app side), the content-integrity hook and the /codemare endpoint (API side).",[["src","Admin","Extension sources.",[["codemare-api","Admin","The /codemare custom endpoint.",[["index.ts","Admin","GET /codemare/recipe-supply: the tokens all published questions pay out per topic and difficulty (the seed validator’s affordability math, using the web app’s award rules)."]]],
+["content-integrity","Security","Server-side guards on every Directus write.",[["index.ts","Security","Filters every write Directus makes to content.*: Prisma-style cuid ids, Postgres array literals, questions.updated_at, and the recipe, weight and gate-threshold rules as readable 400s."]]],
 ["recipe-editor","Admin","T4: the recipe editor module.",[["data.ts","Admin","Reads and writes through the Directus API, so permissions, hooks, activity and revisions apply as for any edit."],
 ["draft.ts","Admin","Saved rows ↔ editable drafts, and the single nested PATCH that saves a topic’s recipes in one transaction. Pure."],
 ["index.ts","Admin","Module registration: /admin/recipe-editor[/<topic id>], lock icon."],
 ["RecipeEditor.vue","UI","Pick a topic, then add, remove and reorder its recipes and items with live validation and a cost preview (token totals, the cheapest recipe, what content pays out)."]]],
 ["shared","Admin","Pure code shared by the hook, the module and the apply script.",[["content-tables.ts","Admin","Facts Directus cannot learn from Postgres on its own: the content tables and their array columns."],
 ["cuid.ts","Admin","Prisma-format cuid ids for rows created in Directus (content ids have no database default)."],
-["join-checks.ts","Rule","Question topics (weight > 0), component deps (no self-dependency, no cycles) and gate questions (never fewer than the pass threshold). Mirrors the seed validator."],
-["pg-array.ts","Admin","Encodes and parses one-dimensional Postgres array literals."],
+["join-checks.ts","Rule","Question topics (weight > 0) and gate questions (never fewer than the pass threshold). Mirrors the seed validator."],
+["pg-array.ts","Admin","Encodes one-dimensional Postgres array literals."],
 ["recipe-checks.ts","Rule","Validation and cost preview for one topic’s recipes: errors that block a save, warnings, the cheapest recipe. Mirrors the seed validator."],
-["rules.ts","Rule","Re-exports the web app’s pure token and dependency-graph rules into the bundle."]]],
+["rules.ts","Rule","Re-exports the web app’s pure token rules into the bundle."]]],
 ["shims.d.ts","Types","Types *.vue imports."]]],
 ["extension.config.js","Config","Build config: maps the web app’s @/ alias so the bundle reuses web/lib rules instead of re-implementing them."],
 ["package.json","Config","The Directus bundle manifest: recipe-editor module, content-integrity hook, codemare endpoint."]]]]],
-["test","Test","vitest: 29 tests in 3 files over the pure checks and helpers (CI job infra).",[["helpers.test.ts","Test","Postgres array codec, cuid shape, the schema enum parser, the recipe save payload."],
-["join-checks.test.ts","Test","Weights, self-dependencies and cycles, gate thresholds under nested edits."],
+["test","Test","vitest: 29 tests in 3 files over the pure checks and helpers (CI job infra).",[["helpers.test.ts","Test","Postgres array literals, cuid shape, the schema enum parser, the recipe save payload."],
+["join-checks.test.ts","Test","Weights and gate thresholds under nested edits."],
 ["recipe-checks.test.ts","Test","Recipe errors, warnings and the cost preview."]]],
 [".npmrc","Config","Skips peer auto-install: the Directus extensions SDK pins a vite that its Vue plugin’s peer range excludes."],
 ["Dockerfile","Ops","codemare/directus: the pinned directus/directus:12.4.1 image plus the built extension bundle and the content-model apply script."],
@@ -841,8 +827,6 @@ docker compose --env-file deploy/.env -f docker-compose.prod.yml exec backup cod
 ["actions.ts","Server action","unlockTopicAction, startGateAction, finishGateAction; expected failures come back as the DomainError’s JSON (e.g. the shortfall per token topic)."],
 ["loading.tsx","Boundary","Skeleton for /map (safe: it never navigates by query string)."],
 ["page.tsx","Page","/map: every tier with its gate, every topic with balances, recipes and what’s blocking it."]]],
-["me","Page","The signed-in learner’s own pages.",[["library","Page","My Library (T3).",[["loading.tsx","Boundary","Skeleton for /me/library."],
-["page.tsx","Page","/me/library: your built components, their versions and how they connect."]]]]],
 ["p","Legacy","The old editor route.",[["[id]","Legacy","Redirects to /problems/[slug].",[["page.tsx","Legacy","/p/<slug> → /problems/<slug>, query string kept."]]]]],
 ["problems","Page","Catalog (01) and editor (02/03).",[["[slug]","Page","One question: statement, editor, results.",[["error.tsx","Boundary","The editor’s error boundary: a retry of just this segment; users only see the digest."],
 ["not-found.tsx","Boundary","Unknown slug, or someone else’s draft."],
@@ -850,8 +834,6 @@ docker compose --env-file deploy/.env -f docker-compose.prod.yml exec backup cod
 ["error.tsx","Boundary","Error boundary for the catalog."],
 ["page.tsx","Page","/problems: URL-driven filters, curriculum order, locks, acceptance rates, pagination. No route-level loading.tsx (decision 30)."]]],
 ["profile","Legacy","The old /profile route.",[["page.tsx","Legacy","/profile → /u/<handle>."]]],
-["queue","Page","The queue (T2a/T2b).",[["actions.ts","Server action","markStepSeenAction, submitPredictionAction."],
-["page.tsx","Page","/queue: predict and build steps in dependency order, ?step= to focus one, suggestions. No route-level loading.tsx."]]],
 ["reset","Page","Choose a new password.",[["page.tsx","Page","/reset?token=: choose a new password (single-use, 30-minute link)."]]],
 ["signin","Page","Sign in (07a).",[["page.tsx","Page","/signin: email and password plus whichever OAuth providers are configured; ?error= messages."]]],
 ["signup","Page","Sign up (07b).",[["page.tsx","Page","/signup: create an account."]]],
@@ -866,8 +848,7 @@ docker compose --env-file deploy/.env -f docker-compose.prod.yml exec backup cod
 ["page.tsx","Page","/ → /problems when signed in, else /signin."]]],
 ["api","Route handler","JSON and SSE endpoints. All but /api/auth sit behind the middleware (401 JSON when signed out), and each re-reads the session.",[["ai-review","Route handler","Optional AI review.",[["route.ts","Route handler","GET/POST /api/ai-review: the stored or a new AI review of your own accepted submission; 404 unless FEATURE_AI_REVIEW and a key are set; 12 per hour."]]],
 ["auth","Auth","Auth.js.",[["[...nextauth]","Auth","Auth.js’s catch-all route.",[["route.ts","Auth","Auth.js handlers: sign-in, callback, session, csrf, signout."]]]]],
-["build","Route handler","Build-step runs.",[["route.ts","Route handler","POST /api/build: a build step with your dependencies as the prelude; 409 missing_dependencies; an SSE stream."]]],
-["hints","Route handler","The hint ladder.",[["route.ts","Route handler","GET the ladder for a question or build step; POST reveals a hint (order enforced, tokens spent atomically)."]]],
+["hints","Route handler","The hint ladder.",[["route.ts","Route handler","GET the ladder for a question; POST reveals a hint (order enforced, tokens spent atomically)."]]],
 ["run","Route handler","Runs.",[["route.ts","Route handler","POST /api/run: visible tests plus up to 8 custom inputs (expected values from the reference solution); an SSE stream; earns nothing."]]],
 ["submit","Route handler","Submissions.",[["route.ts","Route handler","POST /api/submit: every test, hidden ones redacted; persists, awards tokens and badges, computes the percentile; an SSE stream."]]]]],
 ["auth","Server action","Auth server actions (outside the route group; no page here).",[["actions.ts","Server action","signUp, requestPasswordReset, resetPassword, rate-limited per IP (and per email for reset requests)."]]],
@@ -932,10 +913,10 @@ docker compose --env-file deploy/.env -f docker-compose.prod.yml exec backup cod
 ["IdeView.tsx","UI","The playground: editor, language, cases, ⌘/Ctrl+Enter to run, drafts per language."],
 ["TestCaseManager.tsx","UI","Up to ten stdin cases in an accordion (the row header is role=button, so its remove button is valid HTML)."]]],
 ["Layout","UI","The app shell (L8).",[["JumpInput.tsx","UI","“Jump to problem”: ⌘/Ctrl+K focuses it, Enter opens /problems?q=."],
-["nav-model.ts","UI","Pure nav data shared by the server layout and the client navbar."],
+["nav-model.ts","UI","Pure nav data shared by the server layout and the client navbar; the catalog has no tab (the logo and ⌘K open it)."],
 ["Navbar.module.css","Style","Navbar and its responsive collapse."],
-["Navbar.tsx","UI","Section tabs (a menu below 768 px), the jump box, the token chip, theme toggle and profile menu."],
-["ProfileMenu.tsx","UI","The avatar menu: profile, My Library, badges, Author (≥ author), Library (only when visible), sign out."]]],
+["Navbar.tsx","UI","Section tabs (Learn, Map, IDE, Submissions; a menu below 768 px), the logo that opens the catalog, the jump box, the token chip, theme toggle and profile menu."],
+["ProfileMenu.tsx","UI","The avatar menu: profile, badges, Author (≥ author), Library (only when visible), sign out."]]],
 ["Learn","UI","Learn pages (L1–L8).",[["CheckpointQuiz.tsx","UI","The quiz: answers stay on the client until submit; grading and answers live on the server."],
 ["CheckpointReview.tsx","UI","Score, pass/fail and per-question explanations, rendered from the stored attempt."],
 ["learn.module.css","Style","Learn pages."],
@@ -978,9 +959,6 @@ docker compose --env-file deploy/.env -f docker-compose.prod.yml exec backup cod
 ["TierSection.tsx","UI","One tier: header, the gate that opens it, its topics."],
 ["TopicActions.tsx","UI","The unlock flow: pick a recipe, see the exact debits, confirm; a shortfall comes back itemized."],
 ["TopicCard.tsx","UI","One topic: state, balance by bucket, what’s blocking it, recipes with have/need per item."]]],
-["MyLibrary","UI","My Library (T3).",[["ComponentCard.tsx","UI","A built component: latest passing code per language, dependencies and dependents, version history, rebuild link."],
-["LanguageTabs.tsx","UI","One tab per language a component was built in."],
-["library.module.css","Style","My Library layout."]]],
 ["Problem","UI","Problem statement pieces.",[["LockedQuestion.tsx","UI","What a locked question renders instead of the editor: what blocks each topic, and the way to the map."],
 ["Markdown.module.css","Style","Statement prose."],
 ["Markdown.tsx","UI","Sanitized GFM with fenced code through the kit’s CodeBlock; server-rendered for statements, lazy in the browser for hints."],
@@ -989,12 +967,6 @@ docker compose --env-file deploy/.env -f docker-compose.prod.yml exec backup cod
 ["Profile","UI","The profile page (06).",[["ActivityHeatmap.tsx","UI","The 365-day heatmap as an ARIA grid (roving tabindex, arrow keys by week and day)."],
 ["profile.module.css","Style","Profile layout."],
 ["ProfileSections.tsx","UI","Header, stat tiles, panels, recent submissions, tokens and learn progress."]]],
-["Queue","UI","The queue (T2a/T2b).",[["BuildStep.tsx","UI","T2b: the workspace in build mode under a queue bar that names the dependencies it will call."],
-["PredictStep.tsx","UI","T2a: read the snippet, answer, then see whether you were right and why."],
-["queue.module.css","Style","Queue layout."],
-["QueueList.tsx","UI","The step list: up next, waiting on a dependency, done, locked."],
-["stepRefresh.ts","UI","Pins the open step into the URL only once no router action is in flight, then refreshes (a production-only router race)."],
-["Suggestions.tsx","UI","After the build steps: an open gate, then the questions that pay what the map is waiting for."]]],
 ["Results","UI","Run results (03).",[["AiReview.module.css","Style","AI review panel."],
 ["AiReview.tsx","UI","Optional AI review of an accepted submission, quick then deeper; advisory only."],
 ["JudgeOutput.tsx","UI","Compiler and runtime output; references to the learner’s own lines become buttons that move the cursor there."],
@@ -1083,10 +1055,10 @@ docker compose --env-file deploy/.env -f docker-compose.prod.yml exec backup cod
 ["TwoPointersViz.tsx","UI","Two pointers closing in."],
 ["viz.module.css","Style","Visualization drawings."],
 ["VizMount.tsx","UI","Mounts the visualization registered for an id, as a client-only dynamic import."]]],
-["Workspace","UI","The solving surface shared by questions, gate attempts and build steps.",[["CasesPanel.tsx","UI","Learner-added inputs, one JSON value per parameter, checked against the signature while typing."],
+["Workspace","UI","The solving surface of questions and gate attempts.",[["CasesPanel.tsx","UI","Learner-added inputs, one JSON value per parameter, checked against the signature while typing."],
 ["GateBanner.tsx","UI","The gate strip over the workspace: countdown, progress against the threshold, the other gate questions."],
-["RunErrorNotice.tsx","UI","Why a run never started, with the way out: the map (403), the queue (409), sign-in (401), retry."],
-["SolveWorkspace.tsx","UI","Statement · editor · console in resizable columns (stacked below 1024 px), in question, gate or build mode; drafts per problem and language; ⌘/Ctrl+Enter runs, ⌘/Ctrl+Shift+Enter submits."],
+["RunErrorNotice.tsx","UI","Why a run never started, with the way out: the map (403), sign-in (401), retry."],
+["SolveWorkspace.tsx","UI","Statement · editor · console in resizable columns (stacked below 1024 px), in question or gate mode; drafts per problem and language; ⌘/Ctrl+Enter runs, ⌘/Ctrl+Shift+Enter submits."],
 ["StatementPane.tsx","UI","Statement, editorial, hints and submissions tabs; the ladder loads when its tab opens."],
 ["SubmissionsList.tsx","UI","Your recent submissions of this problem."],
 ["types.ts","Types","The workspace’s serializable props, so a server component can hand them straight over."],
@@ -1101,29 +1073,27 @@ docker compose --env-file deploy/.env -f docker-compose.prod.yml exec backup cod
 ["ide.spec.ts","Test","stdin cases, per-case runtime, the diff, Go (1 test)."],
 ["learn.spec.ts","Test","Home, a lesson with a snippet and a visualization, a checkpoint with review, track completion and its badges (5 tests)."],
 ["library.spec.ts","Test","The plain 404 below staff, noindex, robots.txt, a staff reader through index → area → article (4 tests)."],
-["loop.spec.ts","Test","The required journey: sign up → solve → submit → pass the gate → unlock → predict and build in the queue → My Library (1 test)."],
+["loop.spec.ts","Test","The required journey: sign up → solve → submit → pass the gate → unlock (1 test)."],
 ["profile.spec.ts","Test","The /profile redirect, stats, the keyboard heatmap, someone else’s profile, the badge modal (5 tests)."],
 ["submissions.spec.ts","Test","History filters and pagination, the detail page, who may see a submission, the empty state, 375 px (5 tests)."]]],
-["lib","Library","Shared code: the compile-service client, SSE, rate limits, mail, lesson markdown, client helpers and the domain layer.",[["client","Client","Browser-side helpers for the editor, queue and IDE. Pure where possible.",[["client.test.ts","Test","The run-state reducer, drafts, metric formatting, judge-output line links, signature helpers (15 tests)."],
+["lib","Library","Shared code: the compile-service client, SSE, rate limits, mail, lesson markdown, client helpers and the domain layer.",[["client","Client","Browser-side helpers for the editor and IDE. Pure where possible.",[["client.test.ts","Test","The run-state reducer, drafts, metric formatting, judge-output line links, signature helpers (15 tests)."],
 ["drafts.ts","Client","Per-problem, per-language drafts in localStorage, guarded so private mode cannot break the editor."],
 ["format.ts","Client","Formats CPU µs, KB, ms and percentiles the way the results hero shows them."],
 ["languages.ts","Client","Display names, Monaco ids and file names per language; turns “solution.cpp:4:14” in judge output into links to the learner’s lines."],
-["runState.ts","Client","The state of one run/submit/build stream as a pure reducer: phases only move forward, tests stay ordered by idx."],
+["runState.ts","Client","The state of one run/submit stream as a pure reducer: phases only move forward, tests stay ordered by idx."],
 ["signature.ts","Client","Value ↔ text for custom inputs, with the judge’s own type rules, so a bad input is caught before anything runs."],
-["useRunStream.ts","Client","POSTs to /api/run|submit|build and follows the SSE stream; errors before the stream keep their JSON body."]]],
+["useRunStream.ts","Client","POSTs to /api/run|submit and follows the SSE stream; errors before the stream keep their JSON body."]]],
 ["lesson-markdown","Security","Lesson markdown (spec §6.2): the directive pre-pass and the sanitizing render options.",[["config.ts","Security","react-markdown options: GFM, rehype-sanitize with a narrowed schema, and a URL transform that lets through only relative, http(s) and mailto links."],
 ["content.test.ts","Test","The shipped lessons against the markdown contract: known directives, registered visualizations, real question slugs (16 tests)."],
 ["parse.test.ts","Test","Directive parsing, including hostile input (34 tests)."],
 ["parse.ts","Rule","Splits a lesson into markdown and typed blocks (run, callout, formula, viz, question); attributes allow-listed, bidi and control characters stripped from code."],
 ["viz.test.ts","Test","Visualization step generators against reference implementations (10 tests)."]]],
-["server","Domain","The domain layer: every learning-loop rule as plain functions over Prisma (server-only), tested against a real Postgres. UI never re-implements a rule.",[["rules","Rule","Pure rules with no database: token math, awards, gates, hints, graphs, badges, progress, grading.",[["activity.test.ts","Test","Heatmap days, streaks, badge progress (8 tests)."],
+["server","Domain","The domain layer: every learning-loop rule as plain functions over Prisma (server-only), tested against a real Postgres. UI never re-implements a rule.",[["rules","Rule","Pure rules with no database: token math, awards, gates, hints, badges, progress, grading.",[["activity.test.ts","Test","Heatmap days, streaks, badge progress (8 tests)."],
 ["activity.ts","Rule","UTC-day activity, streaks, acceptance rate, progress toward a badge."],
 ["badges.ts","Rule","Badge criteria (§2.1) and criteriaMet."],
 ["checkpoints.ts","Rule","Checkpoint grading (mcq by index, short answers normalized)."],
 ["gates.test.ts","Test","Deadline, cooldown, eligibility, pass (9 tests)."],
 ["gates.ts","Rule","Gate math: deadline, cooldown end, eligibility, pass decision."],
-["graph.test.ts","Test","Cycles, closure, topological order (10 tests)."],
-["graph.ts","Rule","Component dependency graph: cycle detection, transitive closure, topological order."],
 ["handles.ts","Rule","Handle rules: lowercase [a-z0-9_]{3,24}, generated from a name or email."],
 ["hints.test.ts","Test","Ladder state, gaps, penalties (6 tests)."],
 ["hints.ts","Rule","Ladder order and revealability, the score penalty, ladder gaps."],
@@ -1133,7 +1103,7 @@ docker compose --env-file deploy/.env -f docker-compose.prod.yml exec backup cod
 ["recipes.test.ts","Test","Debit planning cross-checked against a brute-force allocator; cheapest-recipe ordering (20 tests)."],
 ["recipes.ts","Rule","Token math: bucket and qualifying balances, recipe progress, the cheapest recipe, ascending debit planning."],
 ["roles.ts","Rule","Role order: learner < author < staff < admin."],
-["scoring.test.ts","Test","Solve and build awards, penalties, percentile (9 tests)."],
+["scoring.test.ts","Test","Solve awards, penalties, percentile (8 tests)."],
 ["scoring.ts","Rule","Awards: round(BASE × weight × (1 − penalty%)) with BASE 1/2/3, and the “beats N%” percentile."],
 ["testResults.ts","Rule","Per-test shaping: hidden tests never carry input/expected/actual; explain_on_fail only on failures; OK only if every test passed."]]],
 ["test","Test","Test database plumbing and row factories.",[["database-url.ts","Test","The test database: TEST_DATABASE_URL, else DATABASE_URL renamed to codemare_test; the name must end in _test."],
@@ -1141,52 +1111,47 @@ docker compose --env-file deploy/.env -f docker-compose.prod.yml exec backup cod
 ["factories.ts","Test","Minimal valid rows with unique slugs for DB tests."],
 ["global-setup.ts","Test","Creates the test database if needed and runs prisma migrate deploy, so the trigger and partial indexes are under test."],
 ["server-only.ts","Test","Stand-in for the server-only package outside an RSC build."]]],
-["access.test.ts","Test","Recipe unlocks, the cheapest recipe, tier-closed blockers, map state, question and build-step access (18 tests)."],
-["access.ts","Domain","Unlocks and access (§3.4): unlockTopic, whatsBlocking, getMapState, canAccessQuestion (incl. the running-gate exception and drafts), build-step access."],
+["access.test.ts","Test","Recipe unlocks, the cheapest recipe, tier-closed blockers, map state, question access (17 tests)."],
+["access.ts","Domain","Unlocks and access (§3.4): unlockTopic, whatsBlocking, getMapState, canAccessQuestion (incl. the running-gate exception and drafts)."],
 ["aiReview.test.ts","Test","Prompt order and cache_control, model choice, the flag-off path, the stored flow with a fake client (7 tests)."],
 ["aiReview.ts","Domain","Optional AI review of an accepted submission: stable instructions first and cached, Haiku by default, a deeper review on request; stored with token usage."],
 ["author.model.test.ts","Test","The pure authoring rules, incl. stubs reproducing all 30 seeded starters byte for byte (20 tests)."],
 ["author.test.ts","Test","Save, publish (re-verified on a fake judge), ownership and roles (19 tests)."],
 ["author.ts","Domain","Authoring: viewer role read fresh from the database, ownership, zod validation, drafts, and publishing that re-runs every reference solution through /v1/run."],
 ["awards.ts","Domain","What an accepted verdict earns: tokens, badges and the percentile, for the SSE verdict event."],
-["badges.test.ts","Test","Every criteria kind through its hook; idempotent awards (10 tests)."],
-["badges.ts","Domain","evaluateBadges after solves, builds, unlocks, gates, lessons and checkpoints; idempotent, never revoked."],
+["badges.test.ts","Test","Every criteria kind through its hook; idempotent awards (9 tests)."],
+["badges.ts","Domain","evaluateBadges after solves, unlocks, gates, lessons and checkpoints; idempotent, never revoked."],
 ["catalog.test.ts","Test","Filters, facet counts, curriculum order, locks (10 tests)."],
 ["catalog.ts","Domain","The /problems read model: published questions, filters with honest facet counts, curriculum order, per-user status and locks, acceptance."],
-["components.test.ts","Test","The dependency graph, latest passing versions, preludes and missing dependencies (7 tests)."],
-["components.ts","Domain","Components and the build prelude: the learner’s latest passing version of every transitive dependency, in topological order; 409 when one is missing."],
 ["db.ts","Domain","Db/Tx types and withUserLock: pg_advisory_xact_lock(hashtextextended(user_id, 0)) around balance-changing work."],
 ["errors.ts","Domain","Typed DomainErrors (code + HTTP status), e.g. InsufficientTokens with per-topic shortfalls."],
 ["gates.test.ts","Test","Thresholds, cooldowns, lazy deadline finishes, gate submissions (11 tests)."],
 ["gates.ts","Domain","Gates (§3.5): status and eligibility, start, explicit and lazy finish stamped at the deadline, cooldowns, the gate-submission guard."],
-["hints.test.ts","Test","Ladder order, score penalties vs token spends (9 tests)."],
+["hints.test.ts","Test","Ladder order, score penalties vs token spends (8 tests)."],
 ["hints.ts","Domain","The hint ladder (§3.6): state with costs up front, ordered reveal, a score penalty or a token spend on the highest-weight topic."],
 ["index.ts","Domain","The domain layer’s public barrel (@/lib/server)."],
 ["learn.ts","Domain","Lesson completion, checkpoint submission and library progress; each evaluates badges."],
 ["learnViews.test.ts","Test","Learn read models: answers never selected before grading (12 tests)."],
 ["learnViews.ts","Domain","Read models for the learn pages: home, track, lesson, checkpoint (no answers), graded review, completion, related lessons."],
-["ledger.test.ts","Test","Idempotent earns (incl. concurrent), penalties, bucket order, InsufficientTokens writing nothing, 20 parallel spends never overdrawing (17 tests)."],
-["ledger.ts","Domain","The token ledger (§3.1–3.3): bucket balances, idempotent earnForSolve/earnForBuild, and spend under the advisory lock."],
+["ledger.test.ts","Test","Idempotent earns (incl. concurrent), penalties, bucket order, InsufficientTokens writing nothing, 20 parallel spends never overdrawing, the removed Queue’s build earnings still counting (16 tests)."],
+["ledger.ts","Domain","The token ledger (§3.1–3.3): bucket balances, idempotent earnForSolve, and spend under the advisory lock."],
 ["library.test.ts","Test","Access, drafts, progress and the snippet runner (14 tests)."],
 ["library.ts","Domain","The hidden Library: access (staff+ or the flag, read fresh from the database), index, areas, articles, progress, runnable C++."],
-["loopViews.test.ts","Test","Map, gate, queue and library view models (13 tests)."],
-["loopViews.ts","Domain","View models for /map, the gate attempt page, predict steps (the answer never leaves before answering), My Library, and the navbar token total."],
+["loopViews.test.ts","Test","Map, gate and navbar view models, incl. the map’s earn options (9 tests)."],
+["loopViews.ts","Domain","View models for /map (with the questions that pay what a recipe misses), the gate attempt page and the navbar token total."],
 ["passwordReset.test.ts","Test","Hashed single-use tokens, throttles, identical answers for unknown emails (13 tests)."],
 ["passwordReset.ts","Domain","Password reset: SHA-256 of a random token in verification_tokens (reset:<email>), 30 minutes, single use, consumed in a transaction."],
 ["profile.test.ts","Test","Public profile and badge gallery (7 tests)."],
 ["profile.ts","Domain","The public profile (no email, no code) and the badge gallery with progress."],
-["queue.test.ts","Test","Queue ordering and suggestions (20 tests)."],
-["queue.ts","Domain","The queue: steps of components in unlocked topics, dependencies first, then suggestions that pay down the cheapest missing recipe."],
-["runner.test.ts","Test","The whole run pipeline with a fake compile client: errors before the stream, redaction, persistence, awards, cancellation (35 tests)."],
-["runner.ts","Domain","The judge pipeline behind /api/run|submit|build: session, rate limit, body caps, access, then the relayed SSE stream with hidden tests redacted, persistence and awards."],
+["runner.test.ts","Test","The whole run pipeline with a fake compile client: errors before the stream, redaction, persistence, awards, cancellation (32 tests)."],
+["runner.ts","Domain","The judge pipeline behind /api/run|submit: session, rate limit, body caps, access, then the relayed SSE stream with hidden tests redacted, persistence and awards."],
 ["schemas.ts","Rule","zod schemas for the JSON columns (§2.1), used by the seed and by services reading them back."],
 ["snippets.test.ts","Test","Runnable lesson snippets (10 tests)."],
 ["snippets.ts","Domain","Runnable lesson snippets: one program, one stdin, via IDE mode; counts against the shared per-user budget."],
-["steps.ts","Domain","Build-step progress for the queue: seen → predicted or passed."],
 ["submissionHistory.test.ts","Test","History filters and the detail view’s redaction (8 tests)."],
 ["submissionHistory.ts","Domain","The /submissions list and detail (owner or staff+; hidden tests reduced to pass/fail on the server)."],
-["submissions.test.ts","Test","Submission lifecycle and percentile (10 tests)."],
-["submissions.ts","Domain","Submission lifecycle: createSubmission (queued) → markSubmissionRunning → completeSubmission (test results, component versions for builds)."],
+["submissions.test.ts","Test","Submission lifecycle and percentile (7 tests)."],
+["submissions.ts","Domain","Submission lifecycle: createSubmission (queued) → markSubmissionRunning → completeSubmission (verdict, totals, test results)."],
 ["unlocks.ts","Domain","Unlock state: tier 0 always open, tier N open with a tier unlock row, topics unlocked by a recipe spend."],
 ["users.ts","Domain","User creation with a guaranteed unique handle."]]],
 ["authRoutes.test.ts","Test","decideRoute and safeNextPath, open-redirect tricks included (21 tests)."],
@@ -1197,7 +1162,7 @@ docker compose --env-file deploy/.env -f docker-compose.prod.yml exec backup cod
 ["mailer.ts","Service link","Password-reset mail through Resend’s HTTP API with plain fetch; printed to the server log when RESEND_API_KEY or MAIL_FROM is unset."],
 ["password.ts","Auth","bcryptjs hash and verify (cost 12) and the password rules."],
 ["prisma.ts","Data","The PrismaClient singleton (survives dev hot reloads)."],
-["rateLimit.ts","Security","In-memory sliding-window limiter: login, sign-up, and the per-user judge budget (30 a minute) shared by run, submit, build, IDE, snippets and reference runs."],
+["rateLimit.ts","Security","In-memory sliding-window limiter: login, sign-up, and the per-user judge budget (30 a minute) shared by run, submit, IDE, snippets and reference runs."],
 ["sse.test.ts","Test","SSE framing edge cases: CRLF, lone CR, split chunks, comments (10 tests)."],
 ["sse.ts","Service link","SSE framing in both directions and the web run protocol’s event types; isomorphic, shared by route handlers, the compile client and the browser hook."],
 ["submissionsFormat.test.ts","Test","Submission formatting and URL contract (7 tests)."],
@@ -1206,6 +1171,7 @@ docker compose --env-file deploy/.env -f docker-compose.prod.yml exec backup cod
 ["prisma","Data","Schema, migrations and the content seed.",[["migrations","Data","Real migrations, applied with prisma migrate deploy on every start. Never db push: it would drop the SQL-only guards.",[["20260928094803_init","Data","The baseline.",[["migration.sql","Data","The baseline: both schemas, 37 tables, enums, indexes and foreign keys."]]],
 ["20260928094820_integrity_guards","Security","Guards Prisma cannot express.",[["migration.sql","Security","What Prisma cannot express: the ledger’s append-only trigger, the earn-once partial unique index, CHECKs, one running gate attempt per user and gate."]]],
 ["20260929090000_join_table_surrogate_ids","Data","Editable join tables.",[["migration.sql","Data","Surrogate ids for question_topics, gate_questions and component_deps (so Directus can edit them), a deterministic backfill, and CHECK (weight > 0)."]]],
+["20261002000000_remove_queue","Data","The Queue’s removal (decision 38).",[["migration.sql","Data","One implicit transaction: deletes the Queue’s rows (build-step hints and their reveals, build submissions, component versions, step progress, the components_built badges and their awards), turns the hints’ one-target CHECKs into question_id NOT NULL, then drops components, component_deps, build_steps, component_versions and step_progress, the build_step_id columns, the BuildStepKind and StepStatus enums and the build submission kind. The ledger’s build rows stay."]]],
 ["migration_lock.toml","Generated","Prisma’s provider lock (postgresql)."]]],
 ["seed","Seed","The typed, validated seed: loaders, cross-file validation, two write modes, tests, and the content.",[["data","Content","All shipped content, as JSON (spec §6.1).",[["learn","Content","Three tracks: 9 modules, 23 lessons, 38 checkpoint questions, all original.",[["foundations.json","Content","Foundations: 3 modules, 7 lessons."],
 ["graphs-and-optimization.json","Content","Graphs & Optimization: 3 modules, 9 lessons."],
@@ -1215,8 +1181,8 @@ docker compose --env-file deploy/.env -f docker-compose.prod.yml exec backup cod
 ["number-theory.json","Content","Sieve, smallest-prime-factor table, binary exponentiation, extended Euclid."],
 ["strings.json","Content","Prefix function (KMP), Z-function."]]],
 ["questions","Content","30 questions: 12 Easy, 12 Medium, 6 Hard; 4 composites pay tokens in two topics.",[["*.json · 30 files","Content","One question per file (two-sum.json, course-schedule.json, …): statement, examples, constraints, typed signature, compare mode, starter code in all six languages, 8–15 tests (at least 3 hidden, an explain_on_fail on each), Python and JavaScript reference solutions, weighted topics, tags, companies, an editorial and a five-rung hint ladder. Expected values were produced by running the Python reference."]]],
-["badges.json","Content","17 badges with their criteria."],
-["loop.json","Content","The loop: 3 tiers, 10 topics, 16 recipes, 11 components with 22 predict/build steps, 2 gates."]]],
+["badges.json","Content","15 badges with their criteria."],
+["loop.json","Content","The loop: 3 tiers, 10 topics, 16 recipes, 2 gates."]]],
 ["fixtures","Seed","A tiny complete dataset for tests and fresh clones (npm run seed:fixtures -w web).",[["learn","Seed","One fixture track.",[["arrays-101.json","Seed","A fixture track."]]],
 ["library","Seed","One fixture library area.",[["searching.json","Seed","A fixture library area."]]],
 ["questions","Seed","Two fixture questions.",[["pair-sum-sorted.json","Seed","A fixture question."],
@@ -1224,31 +1190,30 @@ docker compose --env-file deploy/.env -f docker-compose.prod.yml exec backup cod
 ["badges.json","Seed","Fixture badges."],
 ["loop.json","Seed","A fixture loop."]]],
 ["verify","Content","Stdlib-only Python checks for the content: python3 web/prisma/seed/verify/verify_all.py.",[[".gitignore","Config","Ignores __pycache__."],
-["check_schema.py","Content","Shapes, cross-file references, test counts and typing, hint ladders, acyclic deps, icons."],
+["check_schema.py","Content","Shapes, cross-file references, test counts and typing, hint ladders, icons."],
 ["common.py","Content","Shared loaders and helpers."],
 ["compile_starters.py","Content","C++/Java/Go/TypeScript stubs compile verbatim."],
-["component_refs.json","Content","Reference solutions for component build steps (the build payloads themselves are learner-facing)."],
-["run_references.py","Content","Python and JavaScript references against every test; predict snippets’ printed output."],
-["simulate_loop.py","Content","The token economy played by a greedy learner and by an exhaustive search over unlock orders: no dead ends."],
+["run_references.py","Content","Python and JavaScript references against every test."],
+["simulate_loop.py","Content","The token economy, questions only, played by a greedy learner and by an exhaustive search over unlock orders: no dead ends."],
 ["verify_all.py","Content","Runs the four checks; exits non-zero on any failure."]]],
-["content.test.ts","Test","Seeds the real content and plays the whole loop as a fresh learner until every topic is unlocked (1 test)."],
+["content.test.ts","Test","Seeds the real content and plays the whole loop as a fresh learner, questions only, until every topic is unlocked (1 test)."],
 ["index.ts","Entry","The seed CLI: --dir, --mode upsert|insert-missing (or SEED_MODE)."],
 ["load.ts","Seed","zod-validated loaders per domain; every problem in every file reported at once."],
 ["mode.ts","Seed","The two seed modes and how one is chosen."],
 ["modes.test.ts","Test","insert-missing leaves staff edits byte-identical; upsert reverts them; a tier-ord clash is refused (8 tests)."],
 ["run.ts","Seed","Load → validate → write in one transaction; nothing is written unless the whole directory is valid."],
-["seed.test.ts","Test","Validation errors and idempotency, ids included (17 tests)."],
+["seed.test.ts","Test","Validation errors and idempotency, ids included (15 tests)."],
 ["types.ts","Seed","The input contract for every seed file (spec §6.1)."],
-["validate.ts","Seed","Cross-file checks: unknown or duplicate slugs, cycles, ladder gaps, gates, recipes that can never be afforded, arity, Go package clauses."],
+["validate.ts","Seed","Cross-file checks: unknown or duplicate slugs, ladder gaps, gates, recipes the published questions can never pay for, arity, Go package clauses."],
 ["write.ts","Seed","Writes a validated bundle in one transaction: upsert (the files win) or insert-missing (the database wins)."]]],
-["schema.prisma","Data","The data model (spec §2): 20 content tables and 17 app tables with multiSchema and snake_case mapping."],
+["schema.prisma","Data","The data model (spec §2): 17 content tables and 15 app tables with multiSchema and snake_case mapping."],
 ["with-env.mjs","Config","Runs a command with web/.env.local loaded (Prisma’s CLI reads only .env)."]]],
 ["public","Asset","Static files.",[["logo.svg","Asset","The logomark, also the favicon."]]],
 ["scripts","Dev","Developer scripts.",[["setup.mjs","Dev","npm run setup: web/.env.local with a fresh AUTH_SECRET, the Prisma client, then migrations and the seed when DATABASE_URL is real. Safe to re-run."]]],
 ["README.md","Docs","The web workspace: what lives where, its scripts, environment and tests (the root README has the quick start)."],
 [".env.example","Config","Template for web/.env.local (npm run setup copies it and writes a fresh AUTH_SECRET)."],
 [".eslintrc.json","Config","next/core-web-vitals."],
-[".gitignore","Config","Ignores .next, .next-prod and env files; /build/ is anchored so app/api/build stays tracked."],
+[".gitignore","Config","Ignores .next, .next-prod and env files; /build/ is anchored to the web root."],
 ["auth.config.ts","Auth","The Edge-safe half of Auth.js: JWT strategy, pages, and the id/role/handle mapping. Shared by middleware.ts and auth.ts."],
 ["auth.ts","Auth","Full Auth.js: Credentials (bcrypt, login rate limits), optional GitHub and Google, the Prisma adapter, handle generation, role refresh on update."],
 ["Dockerfile","Ops","codemare/web: the Next.js standalone build, the Prisma engines, and the seed bundled into one CommonJS file; runs as node."],
@@ -1377,7 +1342,7 @@ docker compose --env-file deploy/.env -f docker-compose.prod.yml exec backup cod
       ['backend/src/models/Run.ts', 'The contract as types: RunRequest in, RunTestResult per test, RunVerdict at the end.'],
       ['backend/src/services/runValidation.ts', 'Everything that is the caller’s mistake, refused before any sandbox work.'],
       ['backend/src/services/runService.ts', 'The spine: assemble, compile, run, parse, compare, derive the verdict.'],
-      ['backend/src/services/sourceAssembly.ts', 'Preludes: how a learner’s earlier components are placed before their code, and why Java is refused.'],
+      ['backend/src/services/sourceAssembly.ts', 'Preludes: sources placed before the code with their error lines mapped back, and why Java is refused — a generic feature the web app no longer uses.'],
       ['backend/src/services/typescript.ts', 'TypeScript as transpile-only JavaScript.'],
       ['backend/src/services/codeWrapperService.ts', 'How a bare function becomes a self-timing program; read the Python harness, then the C++ and Go generators.'],
       ['backend/src/services/harnessProtocol.ts', 'One marked line per test: why learner prints can no longer forge a verdict.'],
@@ -1391,7 +1356,7 @@ docker compose --env-file deploy/.env -f docker-compose.prod.yml exec backup cod
     ],
     web: [
       ['docs/spec/architecture.md', 'Sections 2–4: the data model, the learning-loop rules, the web run protocol.'],
-      ['web/prisma/schema.prisma', 'Both schemas, 37 tables.'],
+      ['web/prisma/schema.prisma', 'Both schemas, 32 tables.'],
       ['web/prisma/migrations/20260928094820_integrity_guards/migration.sql', 'The guards that live in SQL because Prisma cannot express them.'],
       ['web/lib/server/rules/recipes.ts', 'Token math without a database: balances, the cheapest recipe, ascending debits.'],
       ['web/lib/server/ledger.ts', 'Earning once and spending under the user’s advisory lock.'],
@@ -1401,7 +1366,7 @@ docker compose --env-file deploy/.env -f docker-compose.prod.yml exec backup cod
       ['web/lib/server/runner.ts', 'From Submit to a stored verdict: checks before the stream, redaction in it, awards after it.'],
       ['web/lib/sse.ts', 'The event types the browser receives.'],
       ['web/lib/client/useRunStream.ts', 'The browser side of the stream.'],
-      ['web/components/Workspace/SolveWorkspace.tsx', 'One solving surface for questions, gates and build steps.'],
+      ['web/components/Workspace/SolveWorkspace.tsx', 'One solving surface for questions and gate attempts.'],
       ['web/middleware.ts', 'The login wall, and why it fails closed.'],
       ['web/auth.config.ts', 'The Edge-safe half of Auth.js.'],
       ['web/app/(workspace)/map/page.tsx', 'A server-rendered page over the domain layer: the tier map.']

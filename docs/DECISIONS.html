@@ -220,7 +220,7 @@
     <h1>Codemare Decisions</h1>
     <p class="dek">Why Codemare is shaped the way it is: every decision with the alternatives it beat, the path a submission takes, the contracts between the parts, and the bugs that set the rules.</p>
     <div class="meta">
-      <span>203 commits · Nov 2025 → Sep 2026</span>
+      <span>211 commits · Nov 2025 → Oct 2026</span>
       <span>grounded in <code>git log</code> and the merge messages</span>
       <span>companion to README.md and docs/spec/architecture.md</span>
     </div>
@@ -244,7 +244,7 @@
       <!-- ============================================================ 1 -->
       <section id="s1">
         <h2><span class="n">1</span>What Codemare is, and how the goal moved</h2>
-        <p class="lede">Today: a DSA practice and learning platform. Learners solve problems in an in-browser editor in Python, JavaScript, TypeScript, C++, Java or Go; a sandboxed judge times <em>the function alone</em> on the CPU clock, in microseconds; and a tiered learning loop turns first solves into topic tokens, tokens into unlocked topics through recipes, and timed gate exams into open tiers. Three Learn tracks, profiles and 17 badges, question authoring, a hidden algorithms library and a Directus admin sit around it, all on one VPS.</p>
+        <p class="lede">Today: a DSA practice and learning platform. Learners solve problems in an in-browser editor in Python, JavaScript, TypeScript, C++, Java or Go; a sandboxed judge times <em>the function alone</em> on the CPU clock, in microseconds; and a tiered learning loop turns first solves into topic tokens, tokens into unlocked topics through recipes, and timed gate exams into open tiers. Three Learn tracks, profiles and 15 badges, question authoring, a hidden algorithms library and a Directus admin sit around it, all on one VPS.</p>
         <p>The goal moved four times, and each move explains a chunk of the codebase.</p>
 
         <figure class="fig">
@@ -287,6 +287,7 @@
           <li><strong>The design files never arrived.</strong> The brief builds from <code>/design/tokens.css</code>, <code>MVP Architecture.html</code> and the screen artboards; none were in the repository. Rather than stall, the build ran against a reconstructed spec, <code>docs/spec/architecture.md</code>, with the already-ported design system as canonical, and wrote down every place it departs from the brief (<a href="#d15">decision 15</a>).</li>
           <li><strong>It was built by agents working in parallel</strong>: five phases, each a set of agents in their own git worktrees with strict file ownership, an integrator verifying and merging every branch, and CI as the final word (<a href="#d36">decision 36</a>). From the spec commit (<code>4ce8b73</code>, 14:58) to the last merge (<code>5f8c924</code>, 03:55 the next night): 128 commits, 16 merges, about thirteen hours.</li>
         </ul>
+        <p>Then the owner used it. On 2 October 2026 they tested the running site and judged one piece of the brief — the Queue, where learners predicted and built reusable components into My Library — not a usable feature, so it was taken out again, tables and all (<a href="#d38">decision 38</a>).</p>
       </section>
 
       <!-- ============================================================ 2 -->
@@ -316,7 +317,7 @@
             <rect class="box hi" x="312" y="38" width="218" height="118" rx="3"/>
             <text class="title" x="421" y="62" text-anchor="middle">web — Next.js 15</text>
             <text class="sm" x="421" y="82" text-anchor="middle">RSC pages · server actions</text>
-            <text class="sm" x="421" y="100" text-anchor="middle">/api/run · submit · build (SSE)</text>
+            <text class="sm" x="421" y="100" text-anchor="middle">/api/run · /api/submit (SSE)</text>
             <text class="sm" x="421" y="118" text-anchor="middle">Auth.js · Edge-safe middleware</text>
             <text class="sm" x="421" y="136" text-anchor="middle">domain layer over Prisma</text>
             <polyline class="edge" points="276,170 294,170 294,97 312,97" marker-end="url(#a1)"/>
@@ -457,7 +458,7 @@
             <line class="edge" x1="640" y1="71" x2="655" y2="71" marker-end="url(#a2)"/>
           </svg>
           </div>
-          <figcaption>The judge never sees a user, and the browser never sees a hidden test. Everything that can fail cheaply fails before the stream opens, as plain JSON: 401 without a session, 429 over the per-user budget, 413 over 64 KB, 403 with what is blocking each locked topic, 404, 409 for a build whose dependencies aren't built. If the browser disconnects, the web aborts the compile-service stream and closes the submission as <span class="pill xx">XX</span> “Cancelled”.</figcaption>
+          <figcaption>The judge never sees a user, and the browser never sees a hidden test. Everything that can fail cheaply fails before the stream opens, as plain JSON: 401 without a session, 429 over the per-user budget, 413 over 64 KB, 403 with what is blocking each locked topic, 404. If the browser disconnects, the web aborts the compile-service stream and closes the submission as <span class="pill xx">XX</span> “Cancelled”.</figcaption>
         </figure>
 
         <h3>Inside the backend</h3>
@@ -531,36 +532,37 @@
             <tr><td>05</td><td><a href="#d5">Compile cache and parallel IDE cases</a></td><td><span class="st amended">amended</span></td></tr>
             <tr><td>06</td><td><a href="#d6">Split into two services with an internal token</a></td><td><span class="st amended">amended by 17</span></td></tr>
             <tr><td>07</td><td><a href="#d7">An optional Redis queue, not a mandatory one</a></td><td><span class="st amended">amended by 17</span></td></tr>
-            <tr><td>08</td><td><a href="#d8">Next.js App Router with server actions</a></td><td><span class="st amended">amended by 17</span></td></tr>
+            <tr><td>08</td><td><a href="#d8">Next.js App Router with server actions</a></td><td><span class="st amended">amended by 17, 38</span></td></tr>
             <tr><td>09</td><td><a href="#d9">Auth: email/password, JWT sessions, a login wall</a></td><td><span class="st amended">amended by 31</span></td></tr>
             <tr><td>10</td><td><a href="#d10">Remove what doesn't serve the mission</a></td><td><span class="st amended">amended</span></td></tr>
             <tr><td>11</td><td><a href="#d11">Generate harnesses from a typed signature</a></td><td><span class="st amended">amended by 18, 19</span></td></tr>
             <tr><td>12</td><td><a href="#d12">Verdicts are derived, never echoed</a></td><td><span class="st">current</span></td></tr>
             <tr><td>13</td><td><a href="#d13">Order-insensitive judging via <code>compareMode</code></a></td><td><span class="st">current</span></td></tr>
             <tr><td>14</td><td><a href="#d14">Process: dev → QA → manager agents</a></td><td><span class="st superseded">superseded by 35, 36</span></td></tr>
-            <tr><td>15</td><td><a href="#d15">Build against a reconstructed spec</a></td><td><span class="st new">new · Sep 2026</span></td></tr>
-            <tr><td>16</td><td><a href="#d16">Keep our compile service instead of Judge0</a></td><td><span class="st new">new · Sep 2026</span></td></tr>
-            <tr><td>17</td><td><a href="#d17">The compile service becomes a pure executor, over SSE</a></td><td><span class="st new">new · Sep 2026</span></td></tr>
+            <tr><td>15</td><td><a href="#d15">Build against a reconstructed spec</a></td><td><span class="st amended">amended by 38</span></td></tr>
+            <tr><td>16</td><td><a href="#d16">Keep our compile service instead of Judge0</a></td><td><span class="st amended">amended by 38</span></td></tr>
+            <tr><td>17</td><td><a href="#d17">The compile service becomes a pure executor, over SSE</a></td><td><span class="st amended">amended by 38</span></td></tr>
             <tr><td>18</td><td><a href="#d18">One marked line per test, judged against the caller's answers</a></td><td><span class="st new">new · Sep 2026</span></td></tr>
-            <tr><td>19</td><td><a href="#d19">TypeScript in-process; Go with a warm standard library</a></td><td><span class="st new">new · Sep 2026</span></td></tr>
+            <tr><td>19</td><td><a href="#d19">TypeScript in-process; Go with a warm standard library</a></td><td><span class="st amended">amended by 38</span></td></tr>
             <tr><td>20</td><td><a href="#d20">Hidden tests never leave the server</a></td><td><span class="st new">new · Sep 2026</span></td></tr>
-            <tr><td>21</td><td><a href="#d21">Two Postgres schemas, real migrations, guards in SQL</a></td><td><span class="st new">new · Sep 2026</span></td></tr>
-            <tr><td>22</td><td><a href="#d22">An append-only token ledger, bucketed by difficulty</a></td><td><span class="st new">new · Sep 2026</span></td></tr>
-            <tr><td>23</td><td><a href="#d23">Unlock recipes, tiers and gates</a></td><td><span class="st new">new · Sep 2026</span></td></tr>
-            <tr><td>24</td><td><a href="#d24">The hint ladder: score costs and token costs</a></td><td><span class="st new">new · Sep 2026</span></td></tr>
-            <tr><td>25</td><td><a href="#d25">Component builds prepend their dependencies</a></td><td><span class="st new">new · Sep 2026</span></td></tr>
-            <tr><td>26</td><td><a href="#d26">Directus edits rows; Postgres roles enforce it</a></td><td><span class="st new">new · Sep 2026</span></td></tr>
-            <tr><td>27</td><td><a href="#d27">Two seed modes</a></td><td><span class="st new">new · Sep 2026</span></td></tr>
+            <tr><td>21</td><td><a href="#d21">Two Postgres schemas, real migrations, guards in SQL</a></td><td><span class="st amended">amended by 38</span></td></tr>
+            <tr><td>22</td><td><a href="#d22">An append-only token ledger, bucketed by difficulty</a></td><td><span class="st amended">amended by 38</span></td></tr>
+            <tr><td>23</td><td><a href="#d23">Unlock recipes, tiers and gates</a></td><td><span class="st amended">amended by 38</span></td></tr>
+            <tr><td>24</td><td><a href="#d24">The hint ladder: score costs and token costs</a></td><td><span class="st amended">amended by 38</span></td></tr>
+            <tr><td>25</td><td><a href="#d25">Component builds prepend their dependencies</a></td><td><span class="st amended">amended by 38</span></td></tr>
+            <tr><td>26</td><td><a href="#d26">Directus edits rows; Postgres roles enforce it</a></td><td><span class="st amended">amended by 38</span></td></tr>
+            <tr><td>27</td><td><a href="#d27">Two seed modes</a></td><td><span class="st amended">amended by 38</span></td></tr>
             <tr><td>28</td><td><a href="#d28">One VPS: Docker Compose, Caddy, restic backups</a></td><td><span class="st new">new · Sep 2026</span></td></tr>
             <tr><td>29</td><td><a href="#d29">Sandbox hardening: what every box gets</a></td><td><span class="st new">new · Sep 2026</span></td></tr>
-            <tr><td>30</td><td><a href="#d30">No route-level <code>loading.tsx</code> on query-navigated routes</a></td><td><span class="st amended">amended by 37</span></td></tr>
+            <tr><td>30</td><td><a href="#d30">No route-level <code>loading.tsx</code> on query-navigated routes</a></td><td><span class="st amended">amended by 37, 38</span></td></tr>
             <tr><td>31</td><td><a href="#d31">An Edge-safe Auth.js config for the middleware</a></td><td><span class="st new">new · Sep 2026</span></td></tr>
-            <tr><td>32</td><td><a href="#d32">Throttle where identity exists</a></td><td><span class="st new">new · Sep 2026</span></td></tr>
+            <tr><td>32</td><td><a href="#d32">Throttle where identity exists</a></td><td><span class="st amended">amended by 38</span></td></tr>
             <tr><td>33</td><td><a href="#d33">AI review after the verdict, never instead of it</a></td><td><span class="st new">new · Sep 2026</span></td></tr>
             <tr><td>34</td><td><a href="#d34">The hidden Library: a 404 like any other</a></td><td><span class="st new">new · Sep 2026</span></td></tr>
             <tr><td>35</td><td><a href="#d35">Six CI jobs; a production build is the final word</a></td><td><span class="st new">new · Sep 2026</span></td></tr>
             <tr><td>36</td><td><a href="#d36">How it was built: phased agents, an integrator, CI</a></td><td><span class="st new">new · Sep 2026</span></td></tr>
-            <tr><td>37</td><td><a href="#d37">Accessibility and first paint, measured and gated</a></td><td><span class="st new">new · Sep 2026</span></td></tr>
+            <tr><td>37</td><td><a href="#d37">Accessibility and first paint, measured and gated</a></td><td><span class="st amended">amended by 38</span></td></tr>
+            <tr><td>38</td><td><a href="#d38">Remove the Queue and My Library</a></td><td><span class="st new">new · Oct 2026</span></td></tr>
           </tbody>
         </table></div>
 
@@ -712,8 +714,9 @@
         </article>
 
         <article class="dr" id="d8">
-          <div class="eyebrow">Decision 08 · <span class="st amended">amended by 17</span></div>
+          <div class="eyebrow">Decision 08 · <span class="st amended">amended by 17, 38</span></div>
           <h3>Next.js App Router with server actions</h3>
+          <p class="note amended"><span class="tag">Amended</span><code>/api/build</code> went with the Queue on 2 October 2026 (<a href="#d38">decision 38</a>), and with it the 409 a run could answer before its stream; <code>/api/run</code> and <code>/api/submit</code> are the streaming route handlers. The Queue’s server actions (<code>markStepSeenAction</code>, <code>submitPredictionAction</code>) are gone too.</p>
           <p class="note amended"><span class="tag">Amended</span>Runs no longer go through a server action: <code>/api/run</code>, <code>/api/submit</code> and <code>/api/build</code> are route handlers, because they stream (SSE) and must answer 401/403/409/413/429 as JSON before the stream opens. <code>/api/hints</code> and <code>/api/ai-review</code> are JSON route handlers. Server actions remain for everything that returns once. The old <code>runSolution</code> action is gone.</p>
           <dl class="drg">
             <dt>Situation</dt><dd><p>The Vite SPA would have needed its own API layer to hold sessions and call the compile service without leaking the token.</p></dd>
@@ -936,8 +939,9 @@
         <!-- ==================================== new records, Sep 2026 -->
 
         <article class="dr" id="d15">
-          <div class="eyebrow">Decision 15 · <span class="st new">new</span></div>
+          <div class="eyebrow">Decision 15 · <span class="st amended">amended by 38</span></div>
           <h3>Build against a reconstructed spec; the design files never arrived</h3>
+          <p class="note amended"><span class="tag">Amended</span>One deviation is moot: “no Java in component builds” went with the component builds themselves on 2 October 2026 (<a href="#d38">decision 38</a>); spec deviation 0.4 now reads that questions support all six languages. The spec marks what was removed and when.</p>
           <dl class="drg">
             <dt>Context</dt><dd><p>The brief (<code>docs/spec/implementation-prompt.md</code>, verbatim from the design project) says to build from <code>/design</code>: <code>tokens.css</code> for every color, <code>MVP Architecture.html</code> for the data model, ledger rules, gates and infrastructure ("follow it exactly"), and the screen artboards. None of them were in the repository.</p></dd>
             <dt>Options</dt><dd><ul><li>Wait for the files to be synced (<code>/design-sync</code>).</li><li>Build screens from the brief's prose and let each agent interpret it.</li><li>Reconstruct the architecture document once, make it the single written contract, and reconcile when the files arrive.</li></ul></dd>
@@ -948,8 +952,9 @@
         </article>
 
         <article class="dr" id="d16">
-          <div class="eyebrow">Decision 16 · <span class="st new">new</span></div>
+          <div class="eyebrow">Decision 16 · <span class="st amended">amended by 38</span></div>
           <h3>Keep our compile service instead of self-hosting Judge0</h3>
+          <p class="note amended"><span class="tag">Amended</span>The dependency prelude is still part of the compile service (a generic executor feature), but nothing sends one since the Queue’s component builds were removed (<a href="#d38">decision 38</a>).</p>
           <dl class="drg">
             <dt>Context</dt><dd><p>The brief's stack names self-hosted Judge0 for execution. Codemare already had a compile service on <code>isolate</code> — the same sandbox Judge0 wraps — with CPU-clock timing of the function alone, per-language PID caps, one CPU per box, a compile cache and an optional queue (decisions 01–07).</p></dd>
             <dt>Options</dt><dd><ul><li>Judge0: another server with its own workers and database on the one VPS; whole programs judged against stdin/stdout, the process timed rather than the function.</li><li>Extend our service.</li></ul></dd>
@@ -959,8 +964,9 @@
         </article>
 
         <article class="dr" id="d17">
-          <div class="eyebrow">Decision 17 · <span class="st new">new</span> · supersedes the backend catalog</div>
+          <div class="eyebrow">Decision 17 · <span class="st amended">amended by 38</span> · supersedes the backend catalog</div>
           <h3>The compile service becomes a pure executor: code and tests in, SSE out</h3>
+          <p class="note amended"><span class="tag">Amended</span>Build steps with preludes are no longer among the runs it judges: they went with the Queue on 2 October 2026 (<a href="#d38">decision 38</a>). The optional <code>prelude</code> stays in the contract.</p>
           <dl class="drg">
             <dt>Context</dt><dd><p>Content was moving into Postgres (21) and authors would write questions the compile service had never seen. The service still read problems from <code>backend/src/data/problems/*.json</code> by id (<code>/v1/problems</code>, <code>/v1/execute</code>), answered with one JSON document, and polled when queued.</p></dd>
             <dt>Decision</dt><dd><p><code>POST /v1/run</code> takes everything from the caller — code, an optional prelude, the function name, the signature, the compare mode, the tests with their expected values and hidden flags, and limits — and keeps no state about questions. <code>POST /v1/run/stream</code> is the same run as Server-Sent Events: <code>queued</code> (only while waiting for a box), <code>compiling</code> (only for a real compile), <code>running</code>, one <code>test</code> per test in index order, then <code>verdict</code>; a heartbeat every 15 s; a disconnect aborts the run. Validation is strict because the endpoint is now a trust boundary for data as well as code: 64 KB of code, 256 KB of prelude, 1–200 tests within 4 MB, every value checked against the signature (an <code>int</code> is 32-bit), unknown keys refused so a misspelt option can't be silently ignored — all a 400 before any stream opens. The web app relays the stream to the browser in its own protocol (<a href="#s5">section 5</a>).</p></dd>
@@ -981,8 +987,9 @@
         </article>
 
         <article class="dr" id="d19">
-          <div class="eyebrow">Decision 19 · <span class="st new">new</span></div>
+          <div class="eyebrow">Decision 19 · <span class="st amended">amended by 38</span></div>
           <h3>TypeScript transpiled in-process; Go compiled against a warm standard library</h3>
+          <p class="note amended"><span class="tag">Amended</span>“Five for component builds” no longer applies: component builds were removed with the Queue on 2 October 2026 (<a href="#d38">decision 38</a>). Questions keep all six languages.</p>
           <dl class="drg">
             <dt>Context</dt><dd><p>The brief asks for Python, JS/TS, Java, C++ and Go; the service had four. TypeScript needs a compiler. Go builds are slow without a cache: since Go 1.20 the standard library isn't shipped precompiled, so a cold <code>go build</code> recompiles <code>runtime</code>, <code>fmt</code>, … — about 3 s on a laptop and far more in a one-CPU box, against ~0.2 s warm.</p></dd>
             <dt>Decision</dt><dd><ul>
@@ -1006,8 +1013,9 @@
         </article>
 
         <article class="dr" id="d21">
-          <div class="eyebrow">Decision 21 · <span class="st new">new</span></div>
+          <div class="eyebrow">Decision 21 · <span class="st amended">amended by 38</span></div>
           <h3>Two Postgres schemas, real migrations, guards in SQL</h3>
+          <p class="note amended"><span class="tag">Amended</span>A fourth migration, <code>20261002000000_remove_queue</code>, removed the Queue (<a href="#d38">decision 38</a>): 17 content tables and 15 app tables remain. The hint CHECK “exactly one of question or build step” became <code>question_id NOT NULL</code> on <code>hints</code> and <code>hint_uses</code>, and the no-self-dependency CHECK went with <code>component_deps</code>. The web suite is 468 tests now.</p>
           <dl class="drg">
             <dt>Context</dt><dd><p>The brief wants <code>content.*</code> (edited by staff) and <code>app.*</code> (written by the API only). Before this, Prisma held <code>User</code>, <code>Problem</code> and <code>Submission</code> in <code>public</code>, changed with <code>db push</code>.</p></dd>
             <dt>Decision</dt><dd><p>Prisma <code>multiSchema</code> with <code>@@schema</code> on every model: 20 content tables, 17 app tables, snake_case through <code>@map</code>, cuid ids (the ledger's is a bigserial). Real migrations, never <code>db push</code>: the baseline, then one that adds what Prisma cannot express — the ledger's append-only trigger, the earn-once partial unique index, CHECKs (ledger amount ≠ 0, the handle format, recipe quantity &gt; 0, a hint with exactly one target, a 12–24 h cooldown, no self-dependency) and "one running gate attempt per user and gate" — and a third that gives the join tables surrogate ids (26). Only web server code writes <code>app.*</code>, and every rule lives in <code>web/lib/server</code> as plain functions over Prisma, with the pure rules separate in <code>lib/server/rules</code>.</p></dd>
@@ -1017,8 +1025,9 @@
         </article>
 
         <article class="dr" id="d22">
-          <div class="eyebrow">Decision 22 · <span class="st new">new</span></div>
+          <div class="eyebrow">Decision 22 · <span class="st amended">amended by 38</span></div>
           <h3>An append-only token ledger, bucketed by source difficulty</h3>
+          <p class="note amended"><span class="tag">Amended</span>Builds no longer pay: the Queue was removed on 2 October 2026 (<a href="#d38">decision 38</a>), so the first accepted submit of a question is the only earn. Build earnings already in the ledger stay — it is append-only — and still count in balances; the <code>build</code> and <code>build_step</code> enum values stay for those rows.</p>
           <dl class="drg">
             <dt>Context</dt><dd><p>Solving earns topic tokens; recipes and some hints spend them; a recipe can ask for "2 Stack tokens from Medium or harder". A balance must never go negative — not under concurrent requests, not when a verdict is replayed.</p></dd>
             <dt>Decision</dt><dd><ul>
@@ -1100,8 +1109,9 @@
         </article>
 
         <article class="dr" id="d23">
-          <div class="eyebrow">Decision 23 · <span class="st new">new</span></div>
+          <div class="eyebrow">Decision 23 · <span class="st amended">amended by 38</span></div>
           <h3>Unlock recipes, tiers and gates</h3>
+          <p class="note amended"><span class="tag">Amended</span>With the Queue gone (<a href="#d38">decision 38</a>) the map shows only the questions that would pay what is missing, and the economy was re-simulated with questions as the only source of tokens: every tier opens and every topic unlocks, with no dead end in 876 reachable states (504 when every affordable token-cost hint is bought). No recipe had to change.</p>
           <dl class="drg">
             <dt>Context</dt><dd><p>Progression should resist grinding one easy topic, never dead-end, and always tell the learner exactly what to do next.</p></dd>
             <dt>Decision</dt><dd><ul>
@@ -1175,8 +1185,9 @@
         </article>
 
         <article class="dr" id="d24">
-          <div class="eyebrow">Decision 24 · <span class="st new">new</span></div>
+          <div class="eyebrow">Decision 24 · <span class="st amended">amended by 38</span></div>
           <h3>The hint ladder: score costs and token costs, shown before reveal</h3>
+          <p class="note amended"><span class="tag">Amended</span>Hints belong to questions only since build steps were removed with the Queue (<a href="#d38">decision 38</a>); the “(or build step’s)” and “the component’s topic for a build” cases below no longer exist, and their 110 hints were deleted.</p>
           <dl class="drg">
             <dt>Context</dt><dd><p>Hints help learning but shouldn't be free wins. The brief: show the cost before the reveal, and log it.</p></dd>
             <dt>Decision</dt><dd><p>Five rungs, each revealable only after every lower rung that exists; the cost shows up front and a reveal needs an explicit confirmation that spells out the consequence. Two kinds of cost:</p>
@@ -1197,8 +1208,9 @@
         </article>
 
         <article class="dr" id="d25">
-          <div class="eyebrow">Decision 25 · <span class="st new">new</span></div>
+          <div class="eyebrow">Decision 25 · <span class="st amended">amended by 38</span></div>
           <h3>Component builds prepend their dependencies (and why not Java)</h3>
+          <p class="note amended"><span class="tag">Amended</span>Removed on 2 October 2026 at the owner’s request, with the Queue and My Library (<a href="#d38">decision 38</a>): no component builds, no learner preludes, no 409 <code>missing_dependencies</code>. What remains is the compile service’s generic <code>prelude</code> (<code>sourceAssembly.ts</code>, Java still refused), which nothing sends. This record now describes history.</p>
           <dl class="drg">
             <dt>Context</dt><dd><p>In the queue, learners build reusable components — <code>prefix-sums</code>, <code>lower-bound</code>, <code>gcd</code> — and later components call earlier ones. The brief: "the runner assembles the learner's latest passing version of each dependency, then the submission, then the tests."</p></dd>
             <dt>Decision</dt><dd><p>A build runs with a prelude: the learner's latest passing version of every transitive dependency, in topological order, in the same language; a missing one is a 409 <code>{missing: [slug]}</code> before any stream. The compile service assembles it (<code>sourceAssembly.ts</code>).</p></dd>
@@ -1237,8 +1249,9 @@
         </article>
 
         <article class="dr" id="d26">
-          <div class="eyebrow">Decision 26 · <span class="st new">new</span></div>
+          <div class="eyebrow">Decision 26 · <span class="st amended">amended by 38</span></div>
           <h3>Directus edits rows; Postgres roles enforce it</h3>
+          <p class="note amended"><span class="tag">Amended</span>The components, component dependencies and build steps left the content model with the Queue (<a href="#d38">decision 38</a>), and with them the dependency-cycle check. The apply script now also retires a dropped table’s collection meta and permissions (meta only, once the table is gone).</p>
           <dl class="drg">
             <dt>Context</dt><dd><p>Staff need an admin — the brief says Directus over <code>content.*</code> plus a recipe-editor module. But Prisma owns all DDL for <code>app.*</code> and <code>content.*</code>, and Directus, left to itself, creates its tables in the search path and alters tables from its data-model screen; either would break <code>prisma migrate</code> or drift the schema.</p></dd>
             <dt>Decision</dt><dd><p>Confinement by Postgres, not by convention: <code>deploy/postgres/db-init.sql</code> converges the roles on every <code>up</code>.</p>
@@ -1257,8 +1270,9 @@
         </article>
 
         <article class="dr" id="d27">
-          <div class="eyebrow">Decision 27 · <span class="st new">new</span></div>
+          <div class="eyebrow">Decision 27 · <span class="st amended">amended by 38</span></div>
           <h3>Two seed modes: the files or the database is the source of truth</h3>
+          <p class="note amended"><span class="tag">Amended</span><code>loop.json</code> has no components since the Queue was removed (<a href="#d38">decision 38</a>), so recipes are the only positional children left, and component dependencies are no longer an owned set.</p>
           <dl class="drg">
             <dt>Context</dt><dd><p>All content ships as JSON under <code>web/prisma/seed/data</code> and is seeded in one validated transaction. Re-running the seed upserted every row from the files, silently reverting whatever staff had edited in Directus — so seeding on start was only safe on the first deploy.</p></dd>
             <dt>Decision</dt><dd><ul>
@@ -1373,9 +1387,10 @@
         </article>
 
         <article class="dr" id="d30">
-          <div class="eyebrow">Decision 30 · <span class="st amended">amended by 37</span></div>
+          <div class="eyebrow">Decision 30 · <span class="st amended">amended by 37, 38</span></div>
           <h3>No route-level <code>loading.tsx</code> on routes that navigate by query string</h3>
           <p class="note amended"><span class="tag">Amended</span>The rule stands. The editor, <code>/problems/[slug]</code>, has since lost its <code>loading.tsx</code> as well, for a different reason: its skeleton delayed the first real paint by at least 300 ms (<a href="#d37">decision 37</a>). Only <code>/map</code> and <code>/me/library</code> keep one.</p>
+          <p class="note amended"><span class="tag">Amended</span><code>/queue</code> and <code>/me/library</code> were removed on 2 October 2026 (<a href="#d38">decision 38</a>); <code>/map</code> is the only route with a <code>loading.tsx</code> now.</p>
           <dl class="drg">
             <dt>Context</dt><dd><p>Under <code>next start</code>, every catalog filter, “Clear filters” and the submissions pagination silently did nothing: the RSC fetch returned 200 with the right payload, but no history entry was written and the UI never updated. Under <code>next dev</code> all of it worked, because dev doesn't prefetch.</p></dd>
             <dt>Decision</dt><dd><p>Pinned down by elimination — <code>/learn</code>, without a <code>loading.tsx</code>, navigated by query fine; removing <code>/problems/loading.tsx</code> alone fixed <code>/problems</code>; Next 15.5.26 still behaves this way — and written into spec §8: in production builds Next 15.5's router never commits a same-path, query-only navigation under a route-level loading boundary, so routes that navigate by query string (<code>/problems</code>, <code>/submissions</code>, <code>/queue</code>) have none, and show skeletons with in-page <code>&lt;Suspense&gt;</code>. <code>/problems/[slug]</code>, <code>/map</code> and <code>/me/library</code> keep theirs because nothing navigates within them by query.</p></dd>
@@ -1396,8 +1411,9 @@
         </article>
 
         <article class="dr" id="d32">
-          <div class="eyebrow">Decision 32 · <span class="st new">new</span></div>
+          <div class="eyebrow">Decision 32 · <span class="st amended">amended by 38</span></div>
           <h3>Throttle where identity exists</h3>
+          <p class="note amended"><span class="tag">Amended</span><code>/api/build</code> no longer exists (<a href="#d38">decision 38</a>); the shared budget covers run, submit, the IDE, lesson snippets, library C++ runs and reference runs.</p>
           <dl class="drg">
             <dt>Context</dt><dd><p>Load-testing the compile service showed its execute limiter — 10 requests per minute per source IP — was a platform-wide cap: its only caller is the web server, so every learner shared one IP (<a href="#l-ratelimit">section 6</a>).</p></dd>
             <dt>Decision</dt><dd><p>The compile service keeps only a generous circuit breaker against a runaway caller (<code>EXECUTION_RATE_LIMIT_MAX</code>, default 6000 per minute per process). The real limits live in the web app, where the session is: one budget of 30 judge runs per minute per user, shared by <code>/api/run</code>, <code>/api/submit</code>, <code>/api/build</code>, the IDE, lesson snippets, library C++ runs and authors' reference runs; the auth entry points per IP and per email; AI reviews 12 per hour.</p></dd>
@@ -1532,8 +1548,9 @@
         </article>
 
         <article class="dr" id="d37">
-          <div class="eyebrow">Decision 37 · <span class="st new">new</span></div>
+          <div class="eyebrow">Decision 37 · <span class="st amended">amended by 38</span></div>
           <h3>Accessibility and first paint, measured and gated</h3>
+          <p class="note amended"><span class="tag">Amended</span><code>/me/library</code> was removed with the Queue (<a href="#d38">decision 38</a>): only <code>/map</code> keeps a skeleton, and the accessibility gate no longer visits <code>/queue</code> or <code>/me/library</code>.</p>
           <dl class="drg">
             <dt>Context</dt><dd><p>Every feature had tests; nobody had yet looked at the product whole. The first audit found 92 axe violations (4 critical, 28 serious) on 17 of 46 route states, five page containers of different widths, the same runtime printed two different ways, and an editor whose problem statement — its largest paint — appeared 3.3 s into a simulated mobile load.</p></dd>
             <dt>Decision</dt><dd><ul>
@@ -1544,6 +1561,24 @@
             </ul></dd>
             <dt>Consequences</dt><dd><p>axe now reports nothing, of any severity, on any audited view. With throttling applied, LCP went from 1.86 to 1.41 s on <code>/problems</code> and from 2.25 to 1.43 s on the editor; <code>/problems</code> downloads 11 KB of CSS in 3 files instead of 25 KB in 5, and all 184 screenshots are pixel-identical before and after. Lighthouse's simulated LCP stays above 2 s on localhost, because the simulation charges already-downloaded JavaScript and both fonts to the first paint. An unknown slug now answers with a real 404 (<a href="#l-200">section 6</a>). <code>/map</code> and <code>/me/library</code> keep their skeletons: neither is an LCP target, and both give navigation feedback.</p></dd>
             <dt>Evidence</dt><dd><p><code>6bc9e62</code>, <code>cf279e6</code>, <code>6bb9b0b</code>, <code>87dc62d</code>, <code>41328e1</code>, <code>ee87ae1</code>, <code>41ab193</code>, <code>76fe57a</code>; merged in <code>3e9fe42</code> with 43 of 43 Playwright tests passing against a production build.</p></dd>
+          </dl>
+        </article>
+
+        <article class="dr" id="d38">
+          <div class="eyebrow">Decision 38 · <span class="st new">new</span></div>
+          <h3>Remove the Queue and My Library</h3>
+          <dl class="drg">
+            <dt>Context</dt><dd><p>The brief's learning loop had a second half: in <code>/queue</code>, every unlocked topic brought reusable functions — <em>components</em>, such as <code>prefix-sums</code> → <code>range-sum</code> or <code>gcd</code> → <code>lcm</code> — each taught by a <em>predict</em> step (read a snippet, pick its output) and a <em>build</em> step (write the function, with the earlier components prepended as a prelude, decision 25). A passing build paid tokens and recorded a version in My Library (<code>/me/library</code>). On 2 October 2026 the owner tested the running site — the human look decision 36 said was still owed — and judged that the Queue does not serve as a usable feature. The top bar had already lost its Problems and Queue tabs, and the profile menu its My Library link, that morning (<code>7179746</code>).</p></dd>
+            <dt>Options</dt><dd><ul><li>Rework the Queue into something usable.</li><li>Hide it: keep the tables and code, drop the links.</li><li>Remove it completely, schema included, keeping only what other parts use.</li></ul></dd>
+            <dt>Decision</dt><dd><p>Remove it completely. Gone: <code>/queue</code> and its server actions, <code>/me/library</code>, <code>POST /api/build</code>; the workspace's build mode, the missing-dependencies notice, the profile's components panel and the map's build links; the domain modules for the queue, steps, components and the dependency graph, build awards, build-step access and hints, component versions, the <code>components_built</code> badge criteria and the two badges that used it; the content's 11 components with 22 steps and 110 step hints; their checks in the seed validator and the verification scripts; the Directus collections, the cycle hook and build steps in the recipe supply; and, in migration <code>20261002000000_remove_queue</code>, five tables, three columns, two enums and the <code>build</code> submission kind. Kept on purpose: the compile service's generic <code>prelude</code> (it is an executor feature, and <code>backend/</code> was not touched), the ledger's <code>build</code> / <code>build_step</code> values and rows (the ledger is append-only, so earned tokens stay earned), and the map's “what's blocking you”, which now lists only questions.</p></dd>
+            <dt>Consequences</dt><dd><ul>
+              <li><strong>Economy</strong>: solving questions is the only way to earn. Re-simulated before anything was removed: with questions only, a greedy learner opens every tier and unlocks every topic, and the exhaustive search over unlock orders finds no dead end in 876 reachable states (504 when every affordable token-cost hint is bought). The seed's affordability check now counts questions only, and the content test plays the real content to the last topic without a single build. No recipe changed.</li>
+              <li><strong>Badges</strong>: 15 instead of 17; First Build and Toolsmith are deleted with their awards, because badge criteria are parsed when read back and a leftover <code>components_built</code> row would have no way to be earned.</li>
+              <li><strong>Data</strong>: the migration deletes the Queue's rows first — hints and hint reveals of build steps, build submissions (their test results cascade), component versions, step progress, the two badges and their awards — then replaces the hints' one-target CHECKs with <code>question_id NOT NULL</code> and drops the tables, columns and enums, in one transaction. On a copy of the dev database it removed 110 hints, 17 build submissions with 136 test results, 2 badges with 16 awards, and 11 components, 5 dependencies, 22 steps, 17 component versions and 42 step-progress rows with their tables; the 128 ledger rows, 17 of them build earnings, and every balance were unchanged, and every read model (map, profile, badges, submissions, catalog, gates, hints) worked for all 65 users.</li>
+              <li><strong>Admin</strong>: <code>directus-config</code> deletes the dropped collections' meta and permissions once their tables are gone; Directus keeps their field and relation rows, inert, which <code>deploy/README.md</code> shows how to tidy.</li>
+              <li><strong>Tests</strong>: web 522 → 468 tests (41 → 38 files), admin 29 → 25, Playwright 43 → 43 — the journey now ends at the unlock, and the accessibility gate no longer visits the two routes, which answer 404.</li>
+            </ul></dd>
+            <dt>Evidence</dt><dd><p><code>ae40442</code> (content), <code>61c5b45</code> (Directus), <code>7d3b04b</code> (web app), <code>1ed8efc</code> (migration), <code>a49c21e</code> (spec and READMEs), then this record; the migration was applied to an empty database (no drift from the schema) and to the copy above, and checked against Directus 12.4.1 before and after.</p></dd>
           </dl>
         </article>
       </section>
@@ -1567,12 +1602,12 @@ reference_solutions          { python, javascript }            never sent to lea
 topics[]                     { slug, weight }                  → content.question_topics
 tags[], companies[], editorial_md
 hints[]                      { level, body_md, cost_kind: score | token, cost_amount }</code></pre>
-        <p>The other files: <code>loop.json</code> (tiers, topics, recipes, components with their build steps, gates), <code>badges.json</code>, <code>learn/&lt;track&gt;.json</code> and <code>library/&lt;area&gt;.json</code>. The seed validates every file with zod and then the cross-file rules (unknown slugs, cycles, ladder gaps, unaffordable recipes, arity), writes nothing unless everything is valid, then writes in one transaction in one of two modes (decision 27). Rows land in the <code>content.*</code> tables drawn in the <a href="REPO-GUIDE.html#s5">repo guide</a>; JSON columns keep the shapes of spec §2.1 and are parsed with the same zod schemas when read back.</p>
+        <p>The other files: <code>loop.json</code> (tiers, topics, recipes, gates), <code>badges.json</code>, <code>learn/&lt;track&gt;.json</code> and <code>library/&lt;area&gt;.json</code>. The seed validates every file with zod and then the cross-file rules (unknown slugs, ladder gaps, unaffordable recipes, arity), writes nothing unless everything is valid, then writes in one transaction in one of two modes (decision 27). Rows land in the <code>content.*</code> tables drawn in the <a href="REPO-GUIDE.html#s5">repo guide</a>; JSON columns keep the shapes of spec §2.1 and are parsed with the same zod schemas when read back.</p>
         <p class="note"><span class="tag">Superseded</span>Until September 2026 problems lived in <code>backend/src/data/problems/*.json</code> (camelCase: <code>functionName</code>, <code>testCases[{input, expectedOutput, hidden}]</code>, starter code in four languages) and the compile service looked them up by id. Decisions 17 and 21 replaced that, and the files, <code>/v1/problems</code> and <code>/v1/execute</code> were deleted in September 2026 (<code>5f8c924</code>).</p>
 
         <h3>Compile service — <code>POST /v1/run</code> and <code>/v1/run/stream</code></h3>
 <pre><code>request   { language, code,
-            prelude?: string[],                     dependency sources; never Java
+            prelude?: string[],                     sources placed first; never Java; unused by the web (38)
             functionName,
             signature?,                             required for cpp, java, go
             compareMode?: "ordered" | "unordered",
@@ -1595,14 +1630,13 @@ verdict   { status, totalPassed, totalTests, runUs (Σ tests), memoryKb (max),
   : keep-alive                  every 15 s</code></pre>
         <p>Anything that is the caller's mistake is a 400 <code>{error, details}</code> before a stream opens: code over 64 KB, a prelude over 256 KB, unknown keys, values that don't match the signature (<code>int</code> is 32-bit, <code>long</code> within ±2<sup>53</sup>), a Java prelude. A disconnect aborts the run.</p>
 
-        <h3>The web run protocol — <code>POST /api/run</code> · <code>/api/submit</code> · <code>/api/build</code></h3>
+        <h3>The web run protocol — <code>POST /api/run</code> · <code>/api/submit</code></h3>
 <pre><code>POST /api/run      { questionId, language, code, customInputs?: [[...args]], attemptId? }
 POST /api/submit   { questionId, language, code, attemptId? }
-POST /api/build    { buildStepId, language, code }
 
 before the stream, plain JSON:
   401 unauthorized · 429 rate_limited (Retry-After) · 413 too large · 400 invalid_input
-  403 locked, with what's blocking each topic · 404 · 409 missing_dependencies · 503 judge down
+  403 locked, with what's blocking each topic · 404 · 503 judge down
 
 event: queued      { submissionId, totalTests }
 event: compiling   {}
@@ -1611,10 +1645,10 @@ event: test        { idx, passed, hidden, runtimeUs, memoryKb,
                      input?, expected?, actual?, error?, explainOnFail?, custom? }
 event: verdict     { status, totalPassed, totalTests, runtimeUs, memoryKb, compileMs?,
                      submissionId, percentile?, tokensAwarded?: [{topic, title, amount}],
-                     badgesAwarded?: [{slug, name, …}], componentVersionId?, error? }
+                     badgesAwarded?: [{slug, name, …}], error? }
 event: error       { message }
 : keep-alive       every 15 s</code></pre>
-        <p>Hidden tests never carry <code>input</code>, <code>expected</code> or <code>actual</code>, and their error is reduced to its class (decision 20). <code>percentile</code> comes only with an accepted submit; <code>tokensAwarded</code> only with the first accepted submit or the first passing build. The browser side is one hook, <code>useRunStream</code>, over a pure reducer in which phases only move forward.</p>
+        <p>Hidden tests never carry <code>input</code>, <code>expected</code> or <code>actual</code>, and their error is reduced to its class (decision 20). <code>percentile</code> comes only with an accepted submit; <code>tokensAwarded</code> only with the first accepted submit. The browser side is one hook, <code>useRunStream</code>, over a pure reducer in which phases only move forward.</p>
 
         <h3>Verdict semantics</h3>
         <div class="table-wrap"><table>
@@ -1833,6 +1867,7 @@ GET  /v1/queue/stats          { enabled, counts }   enabled:false without Redis<
           <li><strong>Untested</strong>: amd64 builds of the web, Directus and backup images (CI builds only the backend image), the Compose stack starting in CI, and a real Hetzner Storage Box (verified against an SFTP container).</li>
           <li><strong>LCP on a real host</strong>: with throttling applied, the catalog and the editor paint their largest element in about 1.4 s on localhost, but Lighthouse's simulation still reports about 2.6 s (<a href="#d37">decision 37</a>); the brief's 2 s bar should be confirmed against the deployed VPS.</li>
           <li><strong>Scaling out</strong>: rate limits are in-process (one web instance), the Redis queue doesn't serve <code>/v1/run</code>, and the sandbox shares the one VPS.</li>
+          <li><strong>Directus leftovers</strong> of the Queue's tables: their field and relation meta rows stay in Directus, inert; tidying them is an optional SQL step (<code>deploy/README.md</code> §7.3, <a href="#d38">decision 38</a>).</li>
           <li><strong>Books and monetization</strong> from <code>docs/authoring-v1.md</code> — not started.</li>
         </ul>
       </section>
@@ -1847,13 +1882,13 @@ GET  /v1/queue/stats          { enabled, counts }   enabled:false without Redis<
           <dt>Meta file</dt><dd>isolate's machine-readable record of time, memory and exit status.</dd>
           <dt>Function vs IDE mode</dt><dd>A function against tests (<code>/v1/run</code>) versus a whole program against stdin (<code>/v1/ide/execute</code>).</dd>
           <dt>Pure executor</dt><dd>The compile service's contract: the caller sends code and tests; the service keeps no content.</dd>
-          <dt>Prelude</dt><dd>The learner's own earlier components, placed before their code in a build.</dd>
+          <dt>Prelude</dt><dd>Sources the compile service places before the code of a run. The Queue's builds used it for the learner's earlier components; since decision 38 nothing sends one.</dd>
           <dt>Signature</dt><dd>A question's typed parameters and return type; what lets C++, Java and Go harnesses be generated.</dd>
           <dt>compareMode</dt><dd>Ordered (default) or unordered array comparison.</dd>
           <dt>Bucket</dt><dd>A user's tokens of one topic from one source difficulty; balances are sums of ledger rows.</dd>
           <dt>Recipe</dt><dd>One way to unlock a topic: items of (token topic, quantity, minimum difficulty).</dd>
           <dt>Tier, gate</dt><dd>A group of topics; the timed exam that opens it, with a pass threshold and a cooldown.</dd>
-          <dt>Component, build step</dt><dd>A reusable function learners write; a predict or build exercise that teaches it.</dd>
+          <dt>Component, build step</dt><dd>Removed with the Queue (decision 38): a reusable function learners wrote, and a predict or build exercise that taught it.</dd>
           <dt>Hint ladder</dt><dd>nudge → concept → pseudo → line → solution, each with a score or token cost.</dd>
           <dt>upsert, insert-missing</dt><dd>The seed's two modes: the files, or the database, is the source of truth.</dd>
           <dt>Internal token</dt><dd>The shared secret between <code>web/</code> and <code>backend/</code>, sent as <code>X-Codemare-Token</code>.</dd>
