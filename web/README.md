@@ -67,9 +67,9 @@ Optional settings (the public library flag, AI review, password-reset mail,
 
 ```
 app/
-  (workspace)/     every page: problems, ide, submissions, learn, map, queue,
-                   me/library, u/[handle], author, library, sign-in pages
-  api/             run · submit · build (SSE), hints, ai-review, auth
+  (workspace)/     every page: problems, ide, submissions, learn, map,
+                   u/[handle], author, library, sign-in pages
+  api/             run · submit (SSE), hints, ai-review, auth
   dev/system/      the design system in both themes (not in production)
 components/        ui/ (design system), states/ (empty, loading, error
                    pages), one folder per feature
