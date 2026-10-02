@@ -25,8 +25,7 @@ function blockerLine(b: BlockerView): string {
 
 /**
  * Why a run never started — each API error with its way out: the map for a
- * locked question, the queue for missing dependencies, sign-in for an
- * expired session, retry for the rest.
+ * locked question, sign-in for an expired session, retry for the rest.
  */
 export function RunErrorNotice({ error, onRetry }: { error: RunRequestError; onRetry?: () => void }) {
   const body = error.body ?? {};
@@ -56,16 +55,6 @@ export function RunErrorNotice({ error, onRetry }: { error: RunRequestError; onR
     action = (
       <ButtonLink href="/map" size="sm" variant="primary" icon="map">
         Open the map
-      </ButtonLink>
-    );
-  } else if (error.code === 'missing_dependencies') {
-    icon = 'puzzle';
-    title = 'Build its dependencies first';
-    message = 'This component calls your own versions of the ones below — each needs a passing build in this language.';
-    details = ((body.missing as string[] | undefined) ?? []).map((slug) => `${slug} — no passing version yet`);
-    action = (
-      <ButtonLink href="/me/library" size="sm" icon="layers">
-        My library
       </ButtonLink>
     );
   } else if (error.code === 'rate_limited') {

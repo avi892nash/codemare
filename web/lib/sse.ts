@@ -121,7 +121,7 @@ export const SSE_HEADERS: Readonly<Record<string, string>> = {
   'X-Accel-Buffering': 'no',
 };
 
-// ─── The web run protocol (POST /api/run · /api/submit · /api/build) ────
+// ─── The web run protocol (POST /api/run · /api/submit) ─────────────────
 
 /** Judge phases in the order they can happen. `compiling` only for a real compile. */
 export const RUN_PHASES = ['queued', 'compiling', 'running'] as const;
@@ -183,11 +183,9 @@ export interface VerdictEventData {
   submissionId?: string;
   /** "Beats N%" — accepted `submit` only. */
   percentile?: number | null;
-  /** First accepted submit / first passing build only. */
+  /** First accepted submit only. */
   tokensAwarded?: TokenAwardEvent[];
   badgesAwarded?: BadgeAwardEvent[];
-  /** `build` only: the component version this run recorded. */
-  componentVersionId?: string | null;
   error?: string;
 }
 

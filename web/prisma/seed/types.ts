@@ -5,7 +5,7 @@
  * cross-file checks in validate.ts) before writing anything.
  *
  * Layout:
- *   data/loop.json               LoopFile       tiers, topics, recipes, components, gates
+ *   data/loop.json               LoopFile       tiers, topics, recipes, gates
  *   data/questions/<slug>.json   QuestionFile   one question per file; file name = slug
  *   data/badges.json             BadgesFile     a top-level array of badges (optional)
  *   data/learn/<track>.json      TrackFile      one track per file; file name = track slug (optional dir)
@@ -19,20 +19,13 @@
  *   · icons must be one of CONTENT_ICON_NAMES (lib/types.ts, spec §8)
  */
 import { z } from 'zod';
-import {
-  BUILD_LANGUAGES,
-  CONTENT_ICON_NAMES,
-  DEFAULT_HINT_SCORE_COST,
-  HINT_LEVELS,
-} from '../../lib/types';
+import { CONTENT_ICON_NAMES, DEFAULT_HINT_SCORE_COST, HINT_LEVELS } from '../../lib/types';
 import {
   badgeCriteriaSchema,
-  buildPayloadSchema,
   compareModeSchema,
   difficultySchema,
   exampleSchema,
   identifierSchema,
-  predictPayloadSchema,
   signatureSchema,
   testDefSchema,
 } from '../../lib/server/schemas';
@@ -44,7 +37,7 @@ export const iconSchema = z.enum(CONTENT_ICON_NAMES);
 const text = z.string().min(1);
 const positiveInt = z.number().int().positive();
 
-// ─── Hints (questions and build steps) ───────────────────────────────────
+// ─── Hints ───────────────────────────────────────────────────────────────
 
 /**
  * One rung of a hint ladder. Levels must be unique and gapless from `nudge`
@@ -52,7 +45,7 @@ const positiveInt = z.number().int().positive();
  * `score`; a score cost defaults to the spec's per-level default
  * (nudge 0, concept 10, pseudo 25, line 40, solution 100) and is a % (0–100);
  * a token cost needs an explicit `cost_amount` (tokens of the question's
- * highest-weight topic / the component's topic).
+ * highest-weight topic).
  */
 export const hintInputSchema = z
   .object({
@@ -126,51 +119,6 @@ export const recipeInputSchema = z
   })
   .strict();
 
-/** `ord` is the step's position in `build_steps`. */
-export const buildStepInputSchema = z.discriminatedUnion('kind', [
-  z
-    .object({
-      kind: z.literal('predict'),
-      title: text,
-      prompt_md: z.string(),
-      difficulty: difficultySchema.default('Easy'),
-      payload: predictPayloadSchema,
-      hints: z.array(hintInputSchema).default([]),
-    })
-    .strict(),
-  z
-    .object({
-      kind: z.literal('build'),
-      title: text,
-      prompt_md: z.string(),
-      difficulty: difficultySchema.default('Easy'),
-      /** starter_code keys ⊆ the component's languages; test inputs match its signature. */
-      payload: buildPayloadSchema,
-      hints: z.array(hintInputSchema).default([]),
-    })
-    .strict(),
-]);
-export type BuildStepInput = z.input<typeof buildStepInputSchema>;
-
-/** A My Library component. `ord` defaults to its position in `components`. */
-export const componentInputSchema = z
-  .object({
-    slug: slugSchema,
-    /** Topic slug. */
-    topic: slugSchema,
-    title: text,
-    summary_md: z.string(),
-    function_name: identifierSchema,
-    signature: signatureSchema,
-    /** Build languages (no java in v1). */
-    languages: z.array(z.enum(BUILD_LANGUAGES)).min(1),
-    /** Component slugs this one calls; must stay acyclic. */
-    depends_on: z.array(slugSchema).default([]),
-    build_steps: z.array(buildStepInputSchema).default([]),
-    ord: z.number().int().nonnegative().optional(),
-  })
-  .strict();
-
 /** The gate that opens `tier` (tier ord > 0). */
 export const gateInputSchema = z
   .object({
@@ -192,7 +140,6 @@ export const loopFileSchema = z
     tiers: z.array(tierInputSchema).min(1),
     topics: z.array(topicInputSchema).min(1),
     recipes: z.array(recipeInputSchema).default([]),
-    components: z.array(componentInputSchema).default([]),
     gates: z.array(gateInputSchema).default([]),
   })
   .strict();

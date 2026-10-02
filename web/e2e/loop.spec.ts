@@ -3,10 +3,9 @@ import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 
 /**
- * The product's required journey — sign-up → solve → submit → unlock — plus
- * the learning loop behind it, end to end against a running app and compile
- * service (the seeded content: Foundations is free, Core Techniques opens
- * through the Foundations Gate):
+ * The product's required journey — sign-up → solve → submit → unlock — end
+ * to end against a running app and compile service (the seeded content:
+ * Foundations is free, Core Techniques opens through the Foundations Gate):
  *
  *   PLAYWRIGHT_BASE_URL=http://localhost:4205 npx playwright test e2e/loop.spec.ts
  *
@@ -18,7 +17,6 @@ import { expect, test, type Page } from '@playwright/test';
  *     → Core Techniques opens
  *  5. unlock Binary Search with the "Scan, then search" recipe → it opens
  *     (and its questions with it)
- *  6. /queue: predict a snippet, then build prefixSums → it's in /me/library
  */
 
 const DATA = join(__dirname, '..', 'prisma', 'seed');
@@ -29,12 +27,6 @@ function questionReference(slug: string): string {
     reference_solutions: { python: string };
   };
   return q.reference_solutions.python;
-}
-
-/** A seeded component's Python reference build. */
-function componentReference(slug: string): string {
-  const refs = JSON.parse(readFileSync(join(DATA, 'verify', 'component_refs.json'), 'utf8')) as Record<string, { python: string }>;
-  return refs[slug].python;
 }
 
 async function signUp(page: Page): Promise<string> {
@@ -73,7 +65,7 @@ async function solve(page: Page, path: string, code: string): Promise<void> {
   await expect(verdict(page)).toHaveText('Accepted', { timeout: 60_000 });
 }
 
-test('sign-up → solve → submit → unlock, then predict → build into My Library', async ({ page }) => {
+test('sign-up → solve → submit → unlock', async ({ page }) => {
   test.setTimeout(10 * 60_000);
 
   await test.step('sign up a fresh learner', async () => {
@@ -158,38 +150,5 @@ test('sign-up → solve → submit → unlock, then predict → build into My Li
     await page.goto('/problems/binary-search');
     await waitForEditor(page);
     await expect(page.getByTestId('locked-question')).toHaveCount(0);
-  });
-
-  await test.step('predict, then build a component — it lands in My Library', async () => {
-    await page.goto('/queue');
-    const predict = page.getByTestId('predict-step');
-    await expect(predict).toContainText('Read a prefix array');
-    const answer = predict.getByTestId('choice-0');
-    await expect(answer).toContainText('3');
-    await answer.click();
-    await predict.getByTestId('predict-submit').click();
-    await expect(page.getByTestId('predict-result')).toContainText('Correct');
-    // The list advances around the answered step, which stays on screen (and in the URL).
-    await expect(page.getByTestId('queue-steps-done')).toHaveText(/^1\s*\/\s*\d+$/);
-    await expect(page).toHaveURL(/\/queue\?step=/);
-    await expect(predict).toContainText('Read a prefix array');
-
-    await page.getByTestId('predict-continue').click();
-    await expect(page.getByTestId('queue-bar')).toContainText('Prefix Sums', { timeout: 30_000 });
-    await waitForEditor(page);
-    await setCode(page, componentReference('prefix-sums'));
-    await page.getByTestId('run-button').click();
-    await expect(verdict(page)).toHaveText('Build passed', { timeout: 60_000 });
-    await expect(page.getByTestId('build-passed')).toBeVisible();
-    // The queue advanced: Range Sum (which calls prefixSums) is next, and the build paid a token.
-    await expect(page.getByTestId('build-next')).toContainText('Spot the off-by-one', { timeout: 30_000 });
-    await expect(tokenChip(page)).toHaveText('1');
-
-    await page.goto('/me/library');
-    const card = page.getByTestId('component-prefix-sums');
-    await expect(card).toContainText('Prefix Sums');
-    await expect(card).toContainText('def prefixSums(nums):');
-    await expect(card.getByTestId('dep-graph')).toContainText('Range Sum');
-    await expect(page.getByTestId('library-built')).toHaveText(/^1\s*\/\s*\d+$/);
   });
 });

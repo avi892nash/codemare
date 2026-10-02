@@ -2,7 +2,6 @@ import 'server-only';
 import { Prisma } from '@prisma/client';
 import type { SubmissionKind, SubmissionStatus, SupportedLanguage, Verdict } from '@/lib/types';
 import { prisma, TX_OPTIONS, type Db } from './db';
-import { recordComponentVersion } from './components';
 import { InvalidInput, NotFoundError } from './errors';
 import {
   normalizeVerdict,
@@ -20,9 +19,8 @@ export type { PublicTestResult, TestOutcome };
  *   createSubmission   → status `queued`
  *   markSubmissionRunning
  *   completeSubmission → verdict + totals + test_results (hidden tests
- *                        stripped); a `build` also records its
- *                        component_versions row
- *   then, on OK: onAcceptedSubmit / onBuildPassed (awards.ts)
+ *                        stripped)
+ *   then, on OK: onAcceptedSubmit (awards.ts)
  */
 
 export interface CreateSubmissionInput {
@@ -30,10 +28,8 @@ export interface CreateSubmissionInput {
   kind: SubmissionKind;
   language: SupportedLanguage;
   code: string;
-  /** Required for run / submit / gate. */
-  questionId?: string | null;
-  /** Required for build. */
-  buildStepId?: string | null;
+  /** Every kind is a run of a question. */
+  questionId: string;
   /** Required for gate. */
   gateAttemptId?: string | null;
 }
@@ -60,17 +56,12 @@ export interface CompletedSubmission {
   compileMs: number | null;
   error: string | null;
   tests: PublicTestResult[];
-  /** Set for `build` submissions. */
-  componentVersionId: string | null;
 }
 
 /** Start a submission (status `queued`). Validates the kind ↔ reference pairing. */
 export async function createSubmission(input: CreateSubmissionInput): Promise<{ id: string; createdAt: Date }> {
   const { kind } = input;
-  if ((kind === 'run' || kind === 'submit' || kind === 'gate') && !input.questionId) {
-    throw new InvalidInput(`a ${kind} submission needs a questionId`);
-  }
-  if (kind === 'build' && !input.buildStepId) throw new InvalidInput('a build submission needs a buildStepId');
+  if (!input.questionId) throw new InvalidInput(`a ${kind} submission needs a questionId`);
   if (kind === 'gate' && !input.gateAttemptId) throw new InvalidInput('a gate submission needs a gateAttemptId');
   return prisma.submission.create({
     data: {
@@ -78,8 +69,7 @@ export async function createSubmission(input: CreateSubmissionInput): Promise<{ 
       kind,
       language: input.language,
       code: input.code,
-      questionId: input.questionId ?? null,
-      buildStepId: input.buildStepId ?? null,
+      questionId: input.questionId,
       gateAttemptId: kind === 'gate' ? input.gateAttemptId : null,
       status: 'queued',
     },
@@ -131,9 +121,8 @@ export async function saveTestResults(
 
 /**
  * Finalize a submission with the judge's result, in one transaction:
- * verdict, totals (runtime = Σ CPU µs, memory = max), test_results, and for
- * a `build` the component_versions row (passed = verdict OK). Throws
- * InvalidInput if the submission already has a verdict.
+ * verdict, totals (runtime = Σ CPU µs, memory = max) and test_results.
+ * Throws InvalidInput if the submission already has a verdict.
  */
 export async function completeSubmission(
   submissionId: string,
@@ -142,15 +131,7 @@ export async function completeSubmission(
   return prisma.$transaction(async (tx) => {
     const sub = await tx.submission.findUnique({
       where: { id: submissionId },
-      select: {
-        id: true,
-        userId: true,
-        kind: true,
-        status: true,
-        language: true,
-        code: true,
-        buildStep: { select: { componentId: true } },
-      },
+      select: { id: true, kind: true, status: true },
     });
     if (!sub) throw new NotFoundError('submission', submissionId);
     if (sub.status !== 'queued' && sub.status !== 'running') {
@@ -174,23 +155,6 @@ export async function completeSubmission(
     });
     const tests = await saveTestResults(submissionId, result.tests, tx);
 
-    let componentVersionId: string | null = null;
-    if (sub.kind === 'build' && sub.buildStep) {
-      componentVersionId = (
-        await recordComponentVersion(
-          {
-            userId: sub.userId,
-            componentId: sub.buildStep.componentId,
-            language: sub.language,
-            code: sub.code,
-            passed: status === 'OK',
-            submissionId,
-          },
-          tx
-        )
-      ).id;
-    }
-
     return {
       id: submissionId,
       kind: sub.kind,
@@ -202,7 +166,6 @@ export async function completeSubmission(
       compileMs,
       error: result.error ?? null,
       tests,
-      componentVersionId,
     };
   }, TX_OPTIONS);
 }
@@ -222,7 +185,6 @@ export interface SubmissionDetail {
   percentile: number | null;
   createdAt: Date;
   question: { id: string; slug: string; title: string; difficulty: string } | null;
-  buildStepId: string | null;
   gateAttemptId: string | null;
   tests: PublicTestResult[];
 }
@@ -252,7 +214,6 @@ export async function getSubmissionDetail(userId: string, submissionId: string):
     percentile: s.percentile,
     createdAt: s.createdAt,
     question: s.question,
-    buildStepId: s.buildStepId,
     gateAttemptId: s.gateAttemptId,
     tests: s.testResults.map((t) => {
       const out: PublicTestResult = {

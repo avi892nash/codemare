@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { completeLesson } from './learn';
 import { findProfileUser, getBadgeGalleryView, getProfile, loadBadgeStats } from './profile';
 import { prisma, setupTestDatabase } from './test/db';
-import { grant, makeBuildStep, makeComponent, makeQuestion, makeSubmission, makeTier, makeTopic, makeUser, makeWorld } from './test/factories';
+import { grant, makeQuestion, makeSubmission, makeTier, makeTopic, makeUser, makeWorld } from './test/factories';
 
 setupTestDatabase();
 
@@ -58,7 +58,7 @@ describe('getProfile', () => {
     expect(p.recent.find((r) => r.target?.kind === 'question' && r.target.slug === 'mid')).toBeTruthy();
   });
 
-  it('shows tokens, earned badges, learn progress and built components', async () => {
+  it('shows tokens, earned badges and learn progress', async () => {
     const tier = await makeTier(0);
     const topic = await makeTopic(tier.id, { slug: 'arrays' });
     const user = await makeUser({ handle: 'linus' });
@@ -67,14 +67,6 @@ describe('getProfile', () => {
       data: { slug: 'first', name: 'First', description: 'd', icon: 'check', rarity: 'common', criteria: { kind: 'first_accept' }, ord: 0 },
     });
     await prisma.badgeAward.create({ data: { userId: user.id, badgeId: badge.id } });
-    const comp = await makeComponent({ topicId: topic.id, slug: 'bsearch' });
-    const step = await makeBuildStep(comp.id);
-    for (const language of ['python', 'python', 'javascript'] as const) {
-      const sub = await makeSubmission(user.id, { kind: 'build', buildStepId: step.id, language });
-      await prisma.componentVersion.create({
-        data: { userId: user.id, componentId: comp.id, language, code: 'x', passed: true, submissionId: sub.id },
-      });
-    }
     const track = await prisma.track.create({ data: { slug: 't', title: 'T', summary: '', level: 'beginner', estHours: 1, ord: 0 } });
     const mod = await prisma.learnModule.create({ data: { trackId: track.id, slug: 'm', title: 'M', summary: '', ord: 0 } });
     const lesson = await prisma.lesson.create({ data: { moduleId: mod.id, slug: 'l', title: 'L', ord: 0, estMinutes: 3, bodyMd: 'x' } });
@@ -88,8 +80,6 @@ describe('getProfile', () => {
     expect(p.learn).toEqual([
       expect.objectContaining({ slug: 't', lessonsDone: 1, lessonsTotal: 1, complete: true, percent: 100 }),
     ]);
-    expect(p.components).toEqual([expect.objectContaining({ slug: 'bsearch', languages: ['python', 'javascript'] })]);
-    expect(p.recent[0].target).toEqual({ kind: 'build', title: 'bsearch · step' });
   });
 
   it('never exposes the email', async () => {
@@ -144,7 +134,6 @@ describe('badge gallery view', () => {
       solvesByDifficulty: { Easy: 2, Medium: 0, Hard: 0 },
       longestStreak: 2,
       noHintSolves: 2,
-      componentsBuilt: 0,
       topicsUnlocked: 0,
       openTierOrds: [0],
       gateFirstTry: false,

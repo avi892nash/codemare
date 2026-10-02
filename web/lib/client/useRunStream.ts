@@ -17,7 +17,6 @@ export type { RunKind, RunState, RunPhaseState, RunRequestError } from './runSta
 export const RUN_ENDPOINTS: Record<RunKind, string> = {
   run: '/api/run',
   submit: '/api/submit',
-  build: '/api/build',
 };
 
 export interface RunStream extends RunState {
@@ -36,7 +35,7 @@ export interface RunStream extends RunState {
 }
 
 /**
- * POST + follow a run / submit / build stream (lib/sse.ts protocol):
+ * POST + follow a run / submit stream (lib/sse.ts protocol):
  * `{phase, tests, verdict, error, start, cancel}`. Test events land in
  * `tests` (ordered by idx) as they arrive; errors before the stream opens
  * (401/403/404/409/413/429) come back in `error` with their JSON body.

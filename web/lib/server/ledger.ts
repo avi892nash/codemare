@@ -4,7 +4,7 @@ import { prisma, withUserLock, type Db, type Tx } from './db';
 import { InsufficientTokens, InvalidInput, NotFoundError } from './errors';
 import { scorePenaltyFrom, type HintTarget } from './rules/hints';
 import { balancesFromRows, planDebits, type Balances, type Debit, type Requirement } from './rules/recipes';
-import { buildAward, solveAward } from './rules/scoring';
+import { solveAward } from './rules/scoring';
 
 /**
  * The token ledger (spec §3.1–3.3). app.token_ledger is append-only: an earn
@@ -85,16 +85,12 @@ export async function getTopicBalances(userId: string, db: Db = prisma): Promise
 }
 
 /**
- * Score penalty (%) on a question's / build step's future award: the sum of
- * score-kind hint costs the user revealed on it, capped at 100.
+ * Score penalty (%) on a question's future award: the sum of score-kind hint
+ * costs the user revealed on it, capped at 100.
  */
 export async function getScorePenalty(userId: string, target: HintTarget, db: Db = prisma): Promise<number> {
   const uses = await db.hintUse.findMany({
-    where: {
-      userId,
-      costKind: 'score',
-      ...('questionId' in target ? { questionId: target.questionId } : { buildStepId: target.buildStepId }),
-    },
+    where: { userId, costKind: 'score', questionId: target.questionId },
     select: { costKind: true, costAmount: true },
   });
   return scorePenaltyFrom(uses);
@@ -148,57 +144,6 @@ export async function earnForSolve(userId: string, questionId: string, db: Db = 
     topicId: r.topicId,
     topicSlug: meta.get(r.topicId)!.slug,
     topicTitle: meta.get(r.topicId)!.title,
-    amount: r.amount,
-    sourceDifficulty: r.sourceDifficulty,
-  }));
-}
-
-/**
- * Credit a build step's tokens — call on its first passing `build`. One row
- * to the component's topic: round(BASE[step difficulty] × (1 − penalty%)).
- * Idempotent; predict steps never pay.
- */
-export async function earnForBuild(userId: string, buildStepId: string, db: Db = prisma): Promise<TokenAward[]> {
-  const step = await db.buildStep.findUnique({
-    where: { id: buildStepId },
-    select: {
-      kind: true,
-      difficulty: true,
-      component: { select: { topicId: true, topic: { select: { slug: true, title: true } } } },
-    },
-  });
-  if (!step) throw new NotFoundError('build step', buildStepId);
-  if (step.kind !== 'build') return [];
-
-  const already = await db.tokenLedger.findFirst({
-    where: { userId, reason: 'build', refType: 'build_step', refId: buildStepId, amount: { gt: 0 } },
-    select: { id: true },
-  });
-  if (already) return [];
-
-  const penalty = await getScorePenalty(userId, { buildStepId }, db);
-  const amount = buildAward(step.difficulty, penalty);
-  if (amount <= 0) return [];
-
-  const inserted = await db.tokenLedger.createManyAndReturn({
-    data: [
-      {
-        userId,
-        topicId: step.component.topicId,
-        amount,
-        sourceDifficulty: step.difficulty,
-        reason: 'build' as const,
-        refType: 'build_step' as const,
-        refId: buildStepId,
-      },
-    ],
-    skipDuplicates: true,
-    select: { amount: true, sourceDifficulty: true },
-  });
-  return inserted.map((r) => ({
-    topicId: step.component.topicId,
-    topicSlug: step.component.topic.slug,
-    topicTitle: step.component.topic.title,
     amount: r.amount,
     sourceDifficulty: r.sourceDifficulty,
   }));

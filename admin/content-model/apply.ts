@@ -3,7 +3,8 @@
  * through the REST API, META ONLY: it never sends a `schema` object, so
  * Directus never issues DDL (and the directus database role could not run
  * any on content.* anyway). Safe to run on every deploy; unchanged entries
- * are skipped, so a re-run writes nothing.
+ * are skipped, so a re-run writes nothing. The only deletes are the meta and
+ * permissions of retired collections whose tables are already gone.
  *
  *   DIRECTUS_URL                 default http://localhost:8055
  *   DIRECTUS_ADMIN_EMAIL/PASSWORD  an admin login, or
@@ -21,6 +22,7 @@ import {
   MODULE,
   PROJECT_SETTINGS,
   RELATIONS,
+  RETIRED_COLLECTIONS,
 } from './model';
 
 type Json = Record<string, unknown>;
@@ -50,6 +52,33 @@ function note(changed: boolean, what: string) {
     console.log(`  ~ ${what}`);
   } else {
     stats.unchanged++;
+  }
+}
+
+/**
+ * Collections whose tables a migration dropped (RETIRED_COLLECTIONS): delete
+ * every permission on them, then their collection meta, so they leave the
+ * data studio and the policies. Only once the table is gone — a retired
+ * collection that still has its table is reported and left alone, and
+ * deleting meta-only collections never issues DDL.
+ */
+async function applyRetired(dx: Directus) {
+  for (const collection of RETIRED_COLLECTIONS) {
+    const existing = await dx.find<{ schema: Json | null }>(`/collections/${collection}`);
+    if (existing?.schema) {
+      stats.warnings.push(`table content.${collection} still exists (migrations not applied yet?) — its Directus meta is kept`);
+      continue;
+    }
+    const filter = encodeURIComponent(JSON.stringify({ collection: { _eq: collection } }));
+    const permissions = await dx.get<{ id: number | string }[]>(`/permissions?filter=${filter}&fields=id&limit=-1`);
+    if (permissions.length > 0) {
+      await dx.delete('/permissions', permissions.map((p) => p.id));
+      note(true, `${permissions.length} permissions on retired ${collection} deleted`);
+    }
+    if (existing) {
+      await dx.delete(`/collections/${collection}`);
+      note(true, `retired collection ${collection} deleted (meta only)`);
+    } else if (permissions.length === 0) note(false, '');
   }
 }
 
@@ -205,6 +234,7 @@ async function main() {
   // schema first so this run (and the data studio) see the current tables.
   await dx.post('/utils/cache/clear?system', {});
 
+  await applyRetired(dx);
   await applyFolders(dx);
   await applyCollections(dx);
   await applyRelations(dx);

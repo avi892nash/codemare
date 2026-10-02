@@ -43,7 +43,7 @@ const LOOK: Record<Verdict, { tone: 'ok' | 'err' | 'warn' | 'info' | 'muted'; ic
 };
 
 function title(verdict: VerdictEventData, kind: RunKind): string {
-  if (verdict.status === 'OK') return kind === 'submit' ? 'Accepted' : kind === 'build' ? 'Build passed' : 'All tests passed';
+  if (verdict.status === 'OK') return kind === 'submit' ? 'Accepted' : 'All tests passed';
   return {
     WA: 'Wrong Answer',
     RE: 'Runtime Error',

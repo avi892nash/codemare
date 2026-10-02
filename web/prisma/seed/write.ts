@@ -5,11 +5,11 @@
  * upsert — the JSON files are the source of truth. Top-level entities upsert
  * by slug (ids survive re-seeds, so user progress keeps pointing at the same
  * rows); owned sets are made equal to the files — join rows (question topics,
- * component deps, gate questions) by their natural pair, so their ids survive
- * too; recipe items and checkpoint questions are replaced; ordered children
- * (recipes, build steps, modules, lessons, chapters, articles, hints) upsert
- * by their natural key and stale ones are deleted — unless users already
- * touched them, in which case they are kept and reported as warnings.
+ * gate questions) by their natural pair, so their ids survive too; recipe
+ * items and checkpoint questions are replaced; ordered children (recipes,
+ * modules, lessons, chapters, articles, hints) upsert by their natural key
+ * and stale ones are deleted — unless users already touched them, in which
+ * case they are kept and reported as warnings.
  *
  * insert-missing — the database is the source of truth (staff edit content in
  * Directus). A row is created only when its natural key does not exist yet,
@@ -20,7 +20,6 @@
  *   tier slug            —
  *   topic slug           its recipes and their items
  *   question slug        its topics + weights and its hints (tests are a column)
- *   component slug       its dependencies, its build steps and their hints
  *   gate (its tier)      its questions, in order
  *   badge slug           —
  *   track slug           its modules, lessons and checkpoint questions
@@ -80,7 +79,6 @@ export async function writeSeed(
       const { ids: topicIds, written: writtenTopics } = await writeTopics(ctx, tierIds);
       const questionIds = await writeQuestions(ctx, topicIds);
       await writeRecipes(ctx, topicIds, writtenTopics);
-      await writeComponents(ctx, topicIds);
       await writeGates(ctx, tierIds, questionIds);
       await writeBadges(ctx);
       await writeLearn(ctx, tierIds, topicIds);
@@ -210,12 +208,13 @@ async function writeRecipes({ tx, seed, mode, count }: Ctx, topicIds: Ids, writt
 }
 
 /**
- * A hint ladder. upsert: by (target, level), pruning levels the files dropped
- * unless users revealed them. insert-missing: only called for a new target.
+ * A question's hint ladder. upsert: by (question, level), pruning levels the
+ * files dropped unless users revealed them. insert-missing: only called for a
+ * new question.
  */
 async function syncHints(
   { tx, mode, warnings, count }: Ctx,
-  target: { questionId: string } | { buildStepId: string },
+  questionId: string,
   hints: readonly Hint[],
   where: string
 ): Promise<void> {
@@ -223,7 +222,7 @@ async function syncHints(
   if (mode === 'insert-missing') {
     if (hints.length) {
       await tx.hint.createMany({
-        data: hints.map((h) => ({ ...target, level: h.level, bodyMd: h.body_md, costKind: h.cost_kind, costAmount: h.cost_amount })),
+        data: hints.map((h) => ({ questionId, level: h.level, bodyMd: h.body_md, costKind: h.cost_kind, costAmount: h.cost_amount })),
       });
     }
     return;
@@ -231,92 +230,18 @@ async function syncHints(
   for (const h of hints) {
     const data = { bodyMd: h.body_md, costKind: h.cost_kind, costAmount: h.cost_amount };
     await tx.hint.upsert({
-      where:
-        'questionId' in target
-          ? { questionId_level: { questionId: target.questionId, level: h.level } }
-          : { buildStepId_level: { buildStepId: target.buildStepId, level: h.level } },
-      create: { ...target, level: h.level, ...data },
+      where: { questionId_level: { questionId, level: h.level } },
+      create: { questionId, level: h.level, ...data },
       update: data,
     });
   }
   const stale = await tx.hint.findMany({
-    where: { ...target, level: { notIn: hints.map((h) => h.level) } },
+    where: { questionId, level: { notIn: hints.map((h) => h.level) } },
     select: { id: true, level: true, _count: { select: { uses: true } } },
   });
   for (const s of stale) {
     if (s._count.uses > 0) warnings.push(`${where}: hint "${s.level}" was removed but users revealed it — kept`);
     else await tx.hint.delete({ where: { id: s.id } });
-  }
-}
-
-async function writeComponents(ctx: Ctx, topicIds: Ids): Promise<void> {
-  const { tx, seed, mode, warnings, count, keep } = ctx;
-  const components = seed.loop.data.components;
-  const existing =
-    mode === 'insert-missing'
-      ? await existingBySlug((slugs) => tx.component.findMany({ where: { slug: { in: slugs } }, select: { id: true, slug: true } }), components.map((c) => c.slug))
-      : new Map<string, string>();
-  const ids: Ids = new Map();
-  const written = new Set<string>(); // insert-missing: only the new ones
-  for (const [i, c] of components.entries()) {
-    const found = existing.get(c.slug);
-    if (found) {
-      ids.set(c.slug, found);
-      keep('components');
-      continue;
-    }
-    const data = {
-      topicId: topicIds.get(c.topic)!,
-      title: c.title,
-      summaryMd: c.summary_md,
-      functionName: c.function_name,
-      signature: json(c.signature),
-      languages: c.languages,
-      ord: c.ord ?? i,
-    };
-    const row =
-      mode === 'insert-missing'
-        ? await tx.component.create({ data: { slug: c.slug, ...data } })
-        : await tx.component.upsert({ where: { slug: c.slug }, create: { slug: c.slug, ...data }, update: data });
-    ids.set(c.slug, row.id);
-    written.add(c.slug);
-    count('components');
-  }
-
-  for (const c of components) {
-    if (!written.has(c.slug)) continue; // insert-missing: an existing component keeps its deps and steps
-    const componentId = ids.get(c.slug)!;
-    const dependsOnIds = c.depends_on.map((d) => ids.get(d)!);
-    if (mode === 'upsert') await tx.componentDep.deleteMany({ where: { componentId, dependsOnId: { notIn: dependsOnIds } } });
-    if (dependsOnIds.length) {
-      await tx.componentDep.createMany({
-        data: dependsOnIds.map((dependsOnId) => ({ componentId, dependsOnId })),
-        skipDuplicates: true, // upsert: edges that stay keep their row (and id)
-      });
-    }
-
-    const steps = mode === 'upsert' ? await tx.buildStep.findMany({ where: { componentId }, orderBy: { ord: 'asc' } }) : [];
-    for (const [ord, s] of c.build_steps.entries()) {
-      const data = { kind: s.kind, title: s.title, promptMd: s.prompt_md, difficulty: s.difficulty, payload: json(s.payload) };
-      const match = steps.find((e) => e.ord === ord);
-      const { id } = match
-        ? await tx.buildStep.update({ where: { id: match.id }, data })
-        : await tx.buildStep.create({ data: { componentId, ord, ...data } });
-      await syncHints(ctx, { buildStepId: id }, s.hints, `components "${c.slug}" build_steps[${ord}]`);
-      count('build steps');
-    }
-    if (mode === 'insert-missing') continue;
-    const stale = await tx.buildStep.findMany({
-      where: { componentId, ord: { gte: c.build_steps.length } },
-      select: { id: true, ord: true, _count: { select: { submissions: true, stepProgress: true, hintUses: true } } },
-    });
-    for (const s of stale) {
-      if (s._count.submissions + s._count.stepProgress + s._count.hintUses > 0) {
-        warnings.push(`components "${c.slug}": build step ${s.ord} was removed but has user progress — kept`);
-      } else {
-        await tx.buildStep.delete({ where: { id: s.id } });
-      }
-    }
   }
 }
 
@@ -413,7 +338,7 @@ async function writeQuestions(ctx: Ctx, topicIds: Ids): Promise<Ids> {
         });
       }
     }
-    await syncHints(ctx, { questionId: row.id }, q.hints, file);
+    await syncHints(ctx, row.id, q.hints, file);
   }
   return ids;
 }

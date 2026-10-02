@@ -7,7 +7,7 @@ import s from './Results.module.css';
 
 interface RunProgressProps {
   phase: RunPhaseState;
-  kind: 'run' | 'submit' | 'build' | null;
+  kind: 'run' | 'submit' | null;
   tests: TestEventData[];
   total: number | null;
   language?: string;
@@ -31,7 +31,7 @@ export function RunProgress({ phase, kind, tests, total, language }: RunProgress
           : 'Finishing…'
         : 'Running…'
       : PHASE_LABEL[phase] ?? 'Working…';
-  const what = kind === 'submit' ? 'Judging your submission' : kind === 'build' ? 'Building' : 'Running the samples';
+  const what = kind === 'submit' ? 'Judging your submission' : 'Running the samples';
   return (
     <div className={s.progress} data-testid="run-progress">
       <div className={s.progressHead}>

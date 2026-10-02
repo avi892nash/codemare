@@ -5,31 +5,28 @@
     python3 web/prisma/seed/verify/check_schema.py
 
 Exits non-zero on any error. Checks include: exact §6.1 field sets, all six
-starter languages (five for components), starter conventions, 8–15 tests with
->= 3 hidden and an explain_on_fail on each, tests < 150 KB, test values typed
-per the signature, five hint levels in ladder order, every referenced
-topic/question/component slug exists, acyclic component deps, gate questions
-drawn from the previous tier's topics, and icons from the spec §8 list.
+starter languages, starter conventions, 8–15 tests with >= 3 hidden and an
+explain_on_fail on each, tests < 150 KB, test values typed per the signature,
+five hint levels in ladder order, every referenced topic/question slug exists,
+gate questions drawn from the previous tier's topics, and icons from the
+spec §8 list.
 """
 import json
 import re
 import sys
 
-from common import (BASE, COMPONENT_LANGS, DEFAULT_SCORE_COSTS, DIFFICULTIES, ICONS, IDENT_RE, LANGUAGES, LEVELS,
-                    MAX_TESTS_BYTES, QUESTION_LANGS, RARITIES, SLUG_RE, Report, load_badges, load_component_refs,
-                    load_loop, load_questions, parse_type, topo_order, value_matches)
+from common import (BASE, DEFAULT_SCORE_COSTS, DIFFICULTIES, ICONS, IDENT_RE, LEVELS, MAX_TESTS_BYTES,
+                    QUESTION_LANGS, RARITIES, SLUG_RE, Report, load_badges, load_loop, load_questions, parse_type,
+                    value_matches)
 
 QUESTION_KEYS = ['slug', 'title', 'difficulty', 'statement_md', 'examples', 'constraints', 'function_name',
                  'signature', 'compare_mode', 'starter_code', 'tests', 'reference_solutions', 'topics', 'tags',
                  'companies', 'editorial_md', 'hints']
-LOOP_KEYS = ['tiers', 'topics', 'recipes', 'components', 'gates']
+LOOP_KEYS = ['tiers', 'topics', 'recipes', 'gates']
 TIER_KEYS = ['ord', 'slug', 'title', 'summary']
 TOPIC_KEYS = ['slug', 'tier', 'title', 'summary', 'icon', 'ord']
 RECIPE_KEYS = ['topic', 'title', 'items']
 ITEM_KEYS = ['topic', 'quantity', 'min_difficulty']
-COMPONENT_KEYS = ['slug', 'topic', 'title', 'summary_md', 'function_name', 'signature', 'languages', 'depends_on',
-                  'build_steps']
-STEP_KEYS = ['kind', 'title', 'prompt_md', 'difficulty', 'payload', 'hints']
 GATE_KEYS = ['tier', 'title', 'summary', 'pass_threshold', 'cooldown_hours', 'time_limit_minutes', 'questions']
 BADGE_KEYS = ['slug', 'name', 'description', 'icon', 'rarity', 'criteria', 'ord']
 HINT_KEYS = ['level', 'body_md', 'cost_kind', 'cost_amount']
@@ -41,7 +38,6 @@ CRITERIA = {  # kind -> required extra keys and their validators (spec §2.1 Cri
     'solves_difficulty': {'difficulty': 'difficulty', 'n': 'posint'},
     'streak_days': {'n': 'posint'},
     'no_hint_solves': {'n': 'posint'},
-    'components_built': {'n': 'posint'},
     'topics_unlocked': {'n': 'posint'},
     'tier_open': {'tier_ord': 'posint'},
     'gate_first_try': {},
@@ -132,7 +128,7 @@ def check_tests(r, where, tests, params, returns, min_tests=8, max_tests=15):
             r.error(tw, f'expected does not match return type {returns}')
 
 
-def check_hints(r, where, hints, allow_token=True):
+def check_hints(r, where, hints):
     if not isinstance(hints, list):
         r.error(where, 'hints must be a list')
         return 0
@@ -156,8 +152,6 @@ def check_hints(r, where, hints, allow_token=True):
                 r.error(hw, 'score cost must be a percentage 0-100')
         elif h['cost_kind'] == 'token':
             tokens += 1
-            if not allow_token:
-                r.error(hw, 'token-cost hints are not expected here')
             if amount < 1:
                 r.error(hw, 'token cost must be >= 1')
         else:
@@ -201,11 +195,6 @@ def main():
     questions = load_questions()
     loop = load_loop()
     badges = load_badges()
-    try:
-        comp_refs = load_component_refs()
-    except FileNotFoundError:
-        comp_refs = {}
-        r.error('component_refs.json', 'missing')
 
     # ------------------------------------------------------------------ loop
     check_keys(r, 'loop.json', loop, LOOP_KEYS)
@@ -286,89 +275,6 @@ def main():
     for slug, t in topic_by_slug.items():
         if t['tier'] in tier_by_slug and tier_ord(slug) > 0 and not recipes_per_topic.get(slug):
             r.error(f'topic {slug}', 'tier > 0 topic has no recipe')
-
-    components = loop.get('components', [])
-    comp_by_slug = {}
-    fn_names = {}
-    for i, c in enumerate(components):
-        w = f'loop.components[{i}]'
-        if not check_keys(r, w, c, COMPONENT_KEYS):
-            continue
-        w = f'component {c["slug"]}'
-        if not SLUG_RE.match(str(c['slug'])):
-            r.error(w, 'bad slug')
-        if c['slug'] in comp_by_slug:
-            r.error(w, 'duplicate component slug')
-        comp_by_slug[c['slug']] = c
-        if c['topic'] not in topic_by_slug:
-            r.error(w, f'unknown topic {c["topic"]!r}')
-        if not is_nonempty_str(c['title']) or not is_nonempty_str(c['summary_md']):
-            r.error(w, 'title/summary_md required')
-        if not isinstance(c['function_name'], str) or not IDENT_RE.match(c['function_name']):
-            r.error(w, 'bad function_name')
-        if c['function_name'] in fn_names:
-            r.error(w, f'function_name {c["function_name"]} collides with component {fn_names[c["function_name"]]} '
-                       '(preludes are concatenated)')
-        fn_names[c['function_name']] = c['slug']
-        params = check_signature(r, w, c['signature'])
-        if sorted(c['languages']) != sorted(COMPONENT_LANGS):
-            r.error(w, f'languages {c["languages"]} (want {COMPONENT_LANGS}; no java for components)')
-        if not isinstance(c['depends_on'], list):
-            r.error(w, 'depends_on must be a list')
-        if c['slug'] not in comp_refs:
-            r.error(w, 'no reference solutions in verify/component_refs.json')
-        elif sorted(comp_refs[c['slug']]) != ['javascript', 'python']:
-            r.error(w, 'component_refs needs python and javascript')
-        kinds = [s.get('kind') for s in c['build_steps'] if isinstance(s, dict)]
-        if kinds.count('predict') < 1 or kinds.count('build') < 1:
-            r.error(w, f'build step kinds {kinds} (want at least one predict and one build)')
-        for j, s in enumerate(c['build_steps']):
-            sw = f'{w}.build_steps[{j}]'
-            if not check_keys(r, sw, s, STEP_KEYS):
-                continue
-            if not is_nonempty_str(s['title']) or not is_nonempty_str(s['prompt_md']):
-                r.error(sw, 'title/prompt_md required')
-            if s['difficulty'] not in DIFFICULTIES:
-                r.error(sw, f'bad difficulty {s["difficulty"]!r}')
-            check_hints(r, sw, s['hints'], allow_token=False)
-            p = s['payload']
-            if s['kind'] == 'predict':
-                if not check_keys(r, sw + '.payload', p, ['language', 'code', 'question', 'answer', 'explanation_md'],
-                                  optional=['choices']):
-                    continue
-                if p['language'] not in LANGUAGES:
-                    r.error(sw, f'bad predict language {p["language"]!r}')
-                for k in ('code', 'question', 'answer', 'explanation_md'):
-                    if not is_nonempty_str(p[k]):
-                        r.error(sw, f'predict {k} must be a non-empty string')
-                if 'choices' in p:
-                    ch = p['choices']
-                    if not isinstance(ch, list) or len(ch) < 2 or not all(is_nonempty_str(x) for x in ch):
-                        r.error(sw, 'choices must be a list of >= 2 strings')
-                    elif len(set(ch)) != len(ch):
-                        r.error(sw, 'duplicate choices')
-                    elif p['answer'] not in ch:
-                        r.error(sw, 'answer is not one of the choices')
-            elif s['kind'] == 'build':
-                if not check_keys(r, sw + '.payload', p, ['starter_code', 'tests'], optional=['compare_mode']):
-                    continue
-                if p.get('compare_mode', 'ordered') not in ('ordered', 'unordered'):
-                    r.error(sw, 'bad compare_mode')
-                check_starters(r, sw, p['starter_code'], c['function_name'], c['languages'])
-                if params is not None:
-                    check_tests(r, sw, p['tests'], params, c['signature']['returns'])
-            else:
-                r.error(sw, f'bad kind {s["kind"]!r}')
-    for c in comp_by_slug.values():
-        for dep in c['depends_on']:
-            if dep not in comp_by_slug:
-                r.error(f'component {c["slug"]}', f'depends on unknown component {dep!r}')
-            elif dep == c['slug']:
-                r.error(f'component {c["slug"]}', 'depends on itself')
-    try:
-        topo_order([c for c in comp_by_slug.values() if all(d in comp_by_slug for d in c['depends_on'])])
-    except ValueError as e:
-        r.error('components', str(e))
 
     # -------------------------------------------------------------- questions
     q_by_slug = {}
@@ -538,8 +444,6 @@ def main():
             avail = sum(1 for q in q_by_slug.values() if q['difficulty'] == crit.get('difficulty'))
             if crit.get('n', 0) > avail:
                 r.error(w, f'needs {crit["n"]} {crit["difficulty"]} solves but only {avail} exist')
-        if k == 'components_built' and crit.get('n', 0) > len(comp_by_slug):
-            r.error(w, 'needs more components than exist')
         lockable = sum(1 for s in topic_by_slug if topic_by_slug[s]['tier'] in tier_by_slug and tier_ord(s) > 0)
         if k == 'topics_unlocked' and crit.get('n', 0) > lockable:
             r.error(w, f'needs {crit["n"]} unlocks but only {lockable} topics are lockable')
@@ -559,7 +463,7 @@ def main():
     print(f'questions with a token-cost hint: {token_hint_questions}')
     print(f'tiers: {len(tier_by_slug)}, topics: {len(topic_by_slug)}, recipes: {len(loop.get("recipes", []))} '
           f'({sum(1 for v in recipes_per_topic.values() if len(v) > 1)} topics with alternatives), '
-          f'components: {len(comp_by_slug)}, gates: {len(gate_tiers)}, badges: {len(badges)} '
+          f'gates: {len(gate_tiers)}, badges: {len(badges)} '
           f'covering {len(kinds)}/{len(CRITERIA)} criteria kinds')
     return 0 if r.print() else 1
 

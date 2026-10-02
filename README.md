@@ -15,16 +15,16 @@ first, with a light theme.
   hero with runtime in µs, memory, a "beats N%" percentile, and a per-test
   breakdown that explains failures. A free-form `/ide` with custom stdin.
 - **The learning loop** — `/map` shows three tiers and ten topics with token
-  balances, unlock recipes and "what's blocking you"; unlocking spends tokens
-  from an append-only ledger that can never go negative. Gate exams
-  (`/map/gates/…`) open each tier, with cooldowns. `/queue` walks predict →
-  build steps that make learners write reusable components in dependency
-  order; `/me/library` shows what they've built. A five-level hint ladder
-  (nudge → solution) shows each hint's cost before it's revealed.
+  balances, unlock recipes and "what's blocking you", with the problems that
+  pay the missing tokens; unlocking spends tokens from an append-only ledger
+  that can never go negative. Gate exams (`/map/gates/…`) open each tier,
+  with cooldowns. A five-level hint ladder (nudge → solution) shows each
+  hint's cost before it's revealed. (The Queue of predict/build steps and My
+  Library were removed on 2026-10-02 at the owner's request.)
 - **Learn** — three tracks of original lessons (`/learn`) with runnable code,
   step-through visualizations, callouts, formulas and checkpoint quizzes.
 - **Profile and badges** — `/u/[handle]` with stats, a year of activity and
-  17 badges.
+  15 badges.
 - **Authoring** — `/author` for authors and staff, with a publish checklist
   that re-runs every reference solution through the judge.
 - **Algorithms library** — `/library`, deliberately hidden (staff-only unless
@@ -39,7 +39,7 @@ first, with a light theme.
 ```
 browser ── Caddy (TLS) ──▶ web: Next.js 15 App Router ─────────────▶ Postgres 16
                             RSC pages, server actions,                ├ content.*  (problems, topics,
-                            /api/run · /api/submit · /api/build       │             recipes, lessons…)
+                            /api/run · /api/submit                    │             recipes, lessons…)
                             (SSE), Auth.js, Prisma                    └ app.*      (users, token ledger,
                                   │                                                submissions, progress…)
                                   │ X-Codemare-Token                        ▲
@@ -63,9 +63,9 @@ browser ── Caddy (TLS) ──▶ web: Next.js 15 App Router ─────�
 
 ```
 web/                Next.js app
-  app/(workspace)/  every page (problems, ide, submissions, learn, map, queue,
-                    me/library, u/[handle], author, library, sign-in pages)
-  app/api/          run · submit · build (SSE), hints, ai-review, auth
+  app/(workspace)/  every page (problems, ide, submissions, learn, map,
+                    u/[handle], author, library, sign-in pages)
+  app/api/          run · submit (SSE), hints, ai-review, auth
   components/       ui/ (design system), states/, and one folder per feature
   lib/server/       domain layer: ledger, recipes, unlocks, gates, hints,
                     badges, runner… (unit-tested)

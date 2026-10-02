@@ -7,9 +7,7 @@ their JSON key before comparing (multiset equality).
 
     python3 web/prisma/seed/verify/run_references.py [--slow-ms 1000]
 
-Covers the 30 questions, every component build step (with the transitive
-dependency references concatenated in front, like the build-step prelude), and
-every predict step (the snippet is run and its stdout must equal `answer`).
+Covers the reference solutions of all 30 questions.
 """
 import argparse
 import json
@@ -19,7 +17,7 @@ import sys
 import tempfile
 from concurrent.futures import ThreadPoolExecutor
 
-from common import Report, load_component_refs, load_loop, load_questions, transitive_deps
+from common import Report, load_questions
 
 PY_HARNESS = r'''
 import json as _cm_json
@@ -83,9 +81,9 @@ console.log(JSON.stringify(__cmOut));
 '''
 
 
-def run_suite(lang, sources, fn, mode, tests, workdir, label):
-    """Run `tests` against the concatenated `sources`. Returns (label, lang, results | error string)."""
-    body = '\n\n'.join(sources)
+def run_suite(lang, source, fn, mode, tests, workdir, label):
+    """Run `tests` against `source`. Returns (label, lang, results | error string)."""
+    body = source
     if lang == 'python':
         program = body + '\n' + PY_HARNESS.replace('__MODE__', repr(mode)).replace('__FN__', fn)
         path = os.path.join(workdir, f'{label}.py')
@@ -109,14 +107,6 @@ def run_suite(lang, sources, fn, mode, tests, workdir, label):
         return label, lang, f'unparseable output: {res.stdout[-500:]!r} {res.stderr[-500:]!r}'
 
 
-def run_snippet(language, code):
-    cmd = [sys.executable, '-c', code] if language == 'python' else ['node', '-e', code]
-    res = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
-    if res.returncode != 0:
-        return None, res.stderr.strip()
-    return res.stdout.strip(), None
-
-
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('--slow-ms', type=float, default=1000.0, help='warn when a single test takes longer than this')
@@ -124,32 +114,20 @@ def main():
 
     r = Report('references')
     questions = load_questions()
-    loop = load_loop()
-    comp_refs = load_component_refs()
-    components = loop['components']
 
-    jobs = []  # (label, lang, sources, fn, mode, tests)
+    jobs = []  # (label, lang, source, fn, mode, tests)
     for _, q in questions:
         for lang in ('python', 'javascript'):
-            jobs.append((f'q-{q["slug"]}', lang, [q['reference_solutions'][lang]], q['function_name'],
+            jobs.append((f'q-{q["slug"]}', lang, q['reference_solutions'][lang], q['function_name'],
                          q['compare_mode'], q['tests']))
-    for c in components:
-        deps = transitive_deps(c['slug'], components)
-        for step in c['build_steps']:
-            if step['kind'] != 'build':
-                continue
-            for lang in ('python', 'javascript'):
-                sources = [comp_refs[d][lang] for d in deps] + [comp_refs[c['slug']][lang]]
-                jobs.append((f'c-{c["slug"]}', lang, sources, c['function_name'],
-                             step['payload'].get('compare_mode', 'ordered'), step['payload']['tests']))
 
     totals = {'python': [0, 0], 'javascript': [0, 0]}
     with tempfile.TemporaryDirectory(prefix='seed-refs-') as workdir:
         with ThreadPoolExecutor(max_workers=os.cpu_count() or 4) as pool:
-            futures = [pool.submit(run_suite, lang, sources, fn, mode, tests, workdir, f'{label}-{lang}')
-                       for label, lang, sources, fn, mode, tests in jobs]
+            futures = [pool.submit(run_suite, lang, source, fn, mode, tests, workdir, f'{label}-{lang}')
+                       for label, lang, source, fn, mode, tests in jobs]
             results = [f.result() for f in futures]
-    for (label, lang, sources, fn, mode, tests), (_, _, out) in zip(jobs, results):
+    for (label, lang, source, fn, mode, tests), (_, _, out) in zip(jobs, results):
         where = f'{label} [{lang}]'
         if isinstance(out, str):
             r.error(where, out)
@@ -169,22 +147,8 @@ def main():
         if slowest > args.slow_ms:
             r.warn(where, f'slowest test took {slowest:.0f} ms')
 
-    predicts = 0
-    for c in components:
-        for step in c['build_steps']:
-            if step['kind'] != 'predict':
-                continue
-            p = step['payload']
-            out, err = run_snippet(p['language'], p['code'])
-            predicts += 1
-            if err is not None:
-                r.error(f'c-{c["slug"]} predict', f'snippet failed: {err}')
-            elif out != p['answer']:
-                r.error(f'c-{c["slug"]} predict', f'snippet prints {out!r} but answer is {p["answer"]!r}')
-
     for lang, (ok, total) in totals.items():
         print(f'{lang}: {ok}/{total} tests passed')
-    print(f'predict snippets checked: {predicts}')
     return 0 if r.print() else 1
 
 

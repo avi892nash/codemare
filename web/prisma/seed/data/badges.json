@@ -72,24 +72,6 @@
     "ord": 7
   },
   {
-    "slug": "first-build",
-    "name": "First Build",
-    "description": "Pass the build step of your first library component.",
-    "icon": "puzzle",
-    "rarity": "common",
-    "criteria": {"kind": "components_built", "n": 1},
-    "ord": 8
-  },
-  {
-    "slug": "toolsmith",
-    "name": "Toolsmith",
-    "description": "Build 8 components for your library.",
-    "icon": "code",
-    "rarity": "epic",
-    "criteria": {"kind": "components_built", "n": 8},
-    "ord": 9
-  },
-  {
     "slug": "cartographer",
     "name": "Cartographer",
     "description": "Unlock 7 topics with recipes.",

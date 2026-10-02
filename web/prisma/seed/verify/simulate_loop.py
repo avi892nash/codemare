@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Deadlock simulation of the learning loop, using the rules in docs/spec/architecture.md §3.
 
-    python3 web/prisma/seed/verify/simulate_loop.py [--with-builds] [--quiet]
+    python3 web/prisma/seed/verify/simulate_loop.py [--hint-heavy] [--quiet]
 
 The simulated learner:
   * solves every accessible question on the first accepted submit, with no hints
@@ -13,8 +13,6 @@ The simulated learner:
     (tier ord, topic ord), each via its cheapest *satisfiable* recipe (smallest total
     quantity, then recipe order), spending per §3.3 (qualifying buckets debited in
     ascending difficulty, items in listed order, all-or-nothing).
-  * with --with-builds, also passes every accessible component build step
-    (§3.2: BASE[step difficulty] tokens of the component's topic; dependencies first).
   * with --hint-heavy, before solving a question that has a token-cost hint it reveals
     the ladder up to that hint when it can afford it (§3.6: the token cost is spent from
     the question's highest-weight topic via §3.3, and the score costs of the lower rungs
@@ -27,7 +25,7 @@ reachable state and reports any dead end. Exit status is non-zero on a deadlock.
 import argparse
 import sys
 
-from common import BASE, DIFFICULTIES, js_round, load_loop, load_questions, topo_order
+from common import BASE, DIFFICULTIES, js_round, load_loop, load_questions
 
 
 def token_hint_plan(q):
@@ -42,7 +40,7 @@ def token_hint_plan(q):
 
 
 class Loop:
-    def __init__(self, loop, questions, with_builds, hint_heavy=False):
+    def __init__(self, loop, questions, hint_heavy=False):
         self.hint_plans = {q['slug']: token_hint_plan(q) for _, q in questions} if hint_heavy else {}
         self.tier_ord = {t['slug']: t['ord'] for t in loop['tiers']}
         self.tier_title = {t['ord']: t['title'] for t in loop['tiers']}
@@ -57,14 +55,6 @@ class Loop:
         self.questions = sorted(
             ((q['slug'], q['difficulty'], [(tp['slug'], tp['weight']) for tp in q['topics']]) for _, q in questions),
             key=lambda q: (max(self.topic_tier[t] for t, _ in q[2]), DIFFICULTIES.index(q[1]), q[0]))
-        self.builds = []
-        if with_builds:
-            comps = {c['slug']: c for c in loop['components']}
-            for slug in topo_order(loop['components']):
-                c = comps[slug]
-                for i, step in enumerate(c['build_steps']):
-                    if step['kind'] == 'build':
-                        self.builds.append((f'{slug}#{i}', slug, c['topic'], step['difficulty'], c['depends_on']))
 
     def initial(self):
         return {
@@ -72,16 +62,15 @@ class Loop:
             'unlocked': {t['slug'] for t in self.topics if self.topic_tier[t['slug']] == 0},
             'bal': {},
             'solved': set(),
-            'built': set(),
         }
 
     @staticmethod
     def copy(s):
         return {'tiers': set(s['tiers']), 'unlocked': set(s['unlocked']), 'bal': dict(s['bal']),
-                'solved': set(s['solved']), 'built': set(s['built'])}
+                'solved': set(s['solved'])}
 
     def earn(self, s):
-        """Solve every accessible question (and build step); return [(label, {topic: amount})]."""
+        """Solve every accessible question; return [(label, {topic: amount})]."""
         events = []
         for slug, diff, tps in self.questions:
             if slug in s['solved'] or not all(t in s['unlocked'] for t, _ in tps):
@@ -103,18 +92,6 @@ class Loop:
                     s['bal'][(t, diff)] = s['bal'].get((t, diff), 0) + amount
                     got[t] = got.get(t, 0) + amount
             events.append((slug, got))
-        progress = True
-        while progress:
-            progress = False
-            for key, comp, topic, diff, deps in self.builds:
-                if key in s['built'] or topic not in s['unlocked']:
-                    continue
-                if not all(any(k.startswith(d + '#') for k in s['built']) for d in deps):
-                    continue
-                s['built'].add(key)
-                s['bal'][(topic, diff)] = s['bal'].get((topic, diff), 0) + BASE[diff]
-                events.append((f'build:{comp}', {topic: BASE[diff]}))
-                progress = True
         return events
 
     def open_gates(self, s):
@@ -192,10 +169,8 @@ def greedy(sim, quiet):
                     for t, a in got.items():
                         total[t] = total.get(t, 0) + a
                 n_q = sum(1 for l, _ in payload if ':' not in l)
-                n_b = sum(1 for l, _ in payload if l.startswith('build:'))
                 n_h = sum(1 for l, _ in payload if l.startswith('hint:'))
                 steps.append(f'solve {n_q} question(s)'
-                             + (f' and {n_b} build step(s)' if n_b else '')
                              + (f', buying {n_h} token hint(s)' if n_h else '')
                              + f': {", ".join(l for l, _ in payload)} → {fmt_tokens(total)}')
             else:
@@ -265,12 +240,11 @@ def exhaustive(sim):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument('--with-builds', action='store_true', help='the learner also passes every accessible build step')
     ap.add_argument('--hint-heavy', action='store_true', help='the learner buys every affordable token-cost hint')
     ap.add_argument('--quiet', action='store_true', help='only print the summary')
     args = ap.parse_args()
 
-    sim = Loop(load_loop(), load_questions(), args.with_builds, args.hint_heavy)
+    sim = Loop(load_loop(), load_questions(), args.hint_heavy)
     ok, locked, closed, _ = greedy(sim, args.quiet)
     if ok:
         print('Greedy learner: every tier open, every topic unlocked.')

@@ -219,7 +219,14 @@ Re-verified the same way after the join tables got surrogate ids (migration
 reordered a gate's questions and added a component dependency through the API
 and the data studio, the web app's domain functions read the changes, an
 `insert-missing` seed left every content row byte-identical, and `upsert`
-reverted them.
+reverted them. Re-verified on 2026-10-02 for the Queue's removal with
+Directus 12.4.1 on a scratch database at the previous release (its content
+model applied, components and build steps in it): migration
+`20261002000000_remove_queue` ran as `codemare`, this release's
+`directus-config` deleted the three retired collections and their 12
+permissions (a second run changed nothing), and hints, questions with their
+nested hints and topics, GraphQL and the recipe-supply endpoint all answered;
+a hint without a question is refused.
 
 ### 7.2 Admin bootstrap and users
 
@@ -253,20 +260,33 @@ reverted them.
     order is `ord`); new questions go last. A gate can never be left with
     fewer questions than its pass threshold, whether by removing questions or
     by raising the threshold.
-  * *Component → Depends on*: the components whose code is prepended to its
-    builds; *Used by* lists the reverse, read-only. Self-dependencies and
-    cycles are refused with the cycle spelled out (the web app's own graph
-    rules, as the seed validator uses).
 * The extension also: gives rows created in Directus Prisma-style cuid ids
   (content ids have no database default; that includes the join rows),
-  stores Postgres arrays (tags, companies, languages, slugs lists) correctly,
-  bumps `questions.updated_at`, and re-checks the recipe, weight, dependency
-  and gate rules server-side for any client, as readable 400s (Postgres CHECK
-  violations would otherwise surface as a bare 500).
+  stores Postgres arrays (tags, companies, slug lists) correctly, bumps
+  `questions.updated_at`, and re-checks the recipe, weight and gate rules
+  server-side for any client, as readable 400s (Postgres CHECK violations
+  would otherwise surface as a bare 500).
 * `questions.author_id` points into `app.users`, which Directus cannot read, so
   it is hidden.
 * After a migration adds a content column, `directus-config` logs
   `column content.x.y is not in admin/content-model/model.ts` — add it there.
+* After a migration drops a content table, list it in `RETIRED_COLLECTIONS`
+  (`admin/content-model/model.ts`): `directus-config` then deletes its
+  collection meta (it would linger as an empty folder) and every permission
+  on it — meta only, and only once the table is gone. Directus keeps the
+  dropped table's field and relation meta rows; they are inert, and its API
+  refuses to delete them once the table is gone. Tidying them is optional,
+  as the `directus` role, e.g. for the Queue's tables (`components`,
+  `component_deps`, `build_steps`, dropped by `20261002000000_remove_queue`):
+
+  ```sql
+  DELETE FROM directus.directus_relations
+   WHERE many_collection IN ('components', 'component_deps', 'build_steps')
+      OR (many_collection = 'hints' AND many_field = 'build_step_id');
+  DELETE FROM directus.directus_fields
+   WHERE collection IN ('components', 'component_deps', 'build_steps')
+      OR (collection = 'hints' AND field = 'build_step_id');
+  ```
 * Once staff edit content in Directus, the database is the source of truth:
   seed production only in `insert-missing` mode (section 7.5).
 
@@ -287,8 +307,8 @@ two modes:
 
 | mode | what it does | where |
 |---|---|---|
-| `upsert` | the JSON files are the source of truth: every seeded row is created or **overwritten**, owned sets (a question's topics, a gate's questions, deps, recipe items, …) become exactly the files', children the files dropped are deleted unless learners touched them | `npm run seed -w web` (the CLI default) |
-| `insert-missing` | the database is the source of truth: a row is created only when its natural key is absent (tier/topic/question/component/badge/track/area slug, a gate by its tier), **with everything it owns**; an existing row is never updated or deleted, and nothing is added under it | the web image (`SEED_ON_START=true`, manual runs in the container) |
+| `upsert` | the JSON files are the source of truth: every seeded row is created or **overwritten**, owned sets (a question's topics, a gate's questions, recipe items, …) become exactly the files', children the files dropped are deleted unless learners touched them | `npm run seed -w web` (the CLI default) |
+| `insert-missing` | the database is the source of truth: a row is created only when its natural key is absent (tier/topic/question/badge/track/area slug, a gate by its tier), **with everything it owns**; an existing row is never updated or deleted, and nothing is added under it | the web image (`SEED_ON_START=true`, manual runs in the container) |
 
 Choose with `--mode upsert|insert-missing` (wins) or `SEED_MODE`. In the web
 image the entrypoint defaults `SEED_MODE` to `insert-missing`, so both paths

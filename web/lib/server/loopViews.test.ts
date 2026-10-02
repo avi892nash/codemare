@@ -1,54 +1,28 @@
 import { describe, expect, it } from 'vitest';
 import { unlockTopic } from './access';
 import { finishGate, startGate } from './gates';
-import {
-  earnOptionsFor,
-  getGateAttemptView,
-  getMapView,
-  getMyLibraryView,
-  getPredictStepView,
-  getTokenTotal,
-  signatureLine,
-} from './loopViews';
-import { AccessDenied, NotFoundError } from './errors';
-import { submitPrediction } from './steps';
+import { earnOptionsFor, getGateAttemptView, getMapView, getTokenTotal } from './loopViews';
+import { NotFoundError } from './errors';
 import { prisma, setupTestDatabase } from './test/db';
-import {
-  grant,
-  makeBuildStep,
-  makeComponent,
-  makeQuestion,
-  makeRecipe,
-  makeSubmission,
-  makeUser,
-  makeWorld,
-  openTier,
-} from './test/factories';
+import { grant, makeHints, makeQuestion, makeRecipe, makeSubmission, makeUser, makeWorld, openTier } from './test/factories';
 
 describe('earnOptionsFor (pure)', () => {
   const questions = [
-    { id: 'a', slug: 'a', title: 'A', difficulty: 'Easy' as const, tierOrd: 0, topics: [], award: [{ topicId: 't', amount: 1 }] },
-    { id: 'b', slug: 'b', title: 'B', difficulty: 'Hard' as const, tierOrd: 0, topics: [], award: [{ topicId: 't', amount: 3 }] },
-    { id: 'c', slug: 'c', title: 'C', difficulty: 'Medium' as const, tierOrd: 0, topics: [], award: [{ topicId: 'u', amount: 2 }] },
-  ];
-  const builds = [
-    { stepId: 's1', title: 'Build x', componentId: 'x', componentTitle: 'X', topicId: 't', difficulty: 'Medium' as const, amount: 2, waiting: false },
-    { stepId: 's2', title: 'Build y', componentId: 'y', componentTitle: 'Y', topicId: 't', difficulty: 'Medium' as const, amount: 2, waiting: true },
+    { id: 'a', slug: 'a', title: 'A', difficulty: 'Easy' as const, award: [{ topicId: 't', amount: 1 }] },
+    { id: 'b', slug: 'b', title: 'B', difficulty: 'Hard' as const, award: [{ topicId: 't', amount: 3 }] },
+    { id: 'c', slug: 'c', title: 'C', difficulty: 'Medium' as const, award: [{ topicId: 'u', amount: 2 }] },
+    { id: 'd', slug: 'd', title: 'D', difficulty: 'Medium' as const, award: [{ topicId: 't', amount: 2 }] },
+    { id: 'e', slug: 'e', title: 'E', difficulty: 'Easy' as const, award: [{ topicId: 't', amount: 1 }] },
   ];
 
-  it('lists questions paying the topic at or above the minimum, most tokens first, then a ready build', () => {
-    expect(earnOptionsFor({ topicId: 't', minDifficulty: 'Easy' }, { questions, builds })).toEqual([
-      { kind: 'question', slug: 'b', title: 'B', difficulty: 'Hard', amount: 3 },
-      { kind: 'question', slug: 'a', title: 'A', difficulty: 'Easy', amount: 1 },
-      { kind: 'build', stepId: 's1', title: 'Build x', componentTitle: 'X', difficulty: 'Medium', amount: 2 },
+  it('lists questions paying the topic at or above the minimum, most tokens first, at most three', () => {
+    expect(earnOptionsFor({ topicId: 't', minDifficulty: 'Easy' }, questions)).toEqual([
+      { slug: 'b', title: 'B', difficulty: 'Hard', amount: 3 },
+      { slug: 'd', title: 'D', difficulty: 'Medium', amount: 2 },
+      { slug: 'a', title: 'A', difficulty: 'Easy', amount: 1 },
     ]);
-    expect(earnOptionsFor({ topicId: 't', minDifficulty: 'Hard' }, { questions, builds }).map((o) => o.kind)).toEqual(['question']);
-  });
-});
-
-describe('signatureLine (pure)', () => {
-  it('prints a component signature on one line', () => {
-    expect(signatureLine('prefixSums', { params: [{ name: 'nums', type: 'int[]' }], returns: 'int[]' })).toBe('prefixSums(nums: int[]) → int[]');
+    expect(earnOptionsFor({ topicId: 't', minDifficulty: 'Hard' }, questions).map((o) => o.slug)).toEqual(['b']);
+    expect(earnOptionsFor({ topicId: 'none', minDifficulty: 'Easy' }, questions)).toEqual([]);
   });
 });
 
@@ -126,7 +100,32 @@ describe('loop views (DB)', () => {
       expect(dp.blocker).toMatchObject({ kind: 'recipe', recipeTitle: 'Medium arrays', missing: 2, ready: false });
       const item = dp.blocker?.kind === 'recipe' ? dp.blocker.items[0] : null;
       // q-arrays (Easy) doesn't qualify for Medium+; arrays-locked needs graphs.
-      expect(item?.earn).toEqual([{ kind: 'question', slug: 'arrays-medium', title: 'arrays-medium', difficulty: 'Medium', amount: 2 }]);
+      expect(item?.earn).toEqual([{ slug: 'arrays-medium', title: 'arrays-medium', difficulty: 'Medium', amount: 2 }]);
+    });
+
+    it('leaves out questions whose solve already paid, and applies hint penalties to the rest', async () => {
+      const w = await makeWorld();
+      const user = await makeUser();
+      await openTier(user.id, w.tier1.id);
+      await makeRecipe(w.dp.id, [{ topicId: w.arrays.id, quantity: 5 }], { title: 'Many arrays' });
+      const paid = await makeQuestion({ slug: 'arrays-paid', difficulty: 'Hard', topics: [{ topicId: w.arrays.id }] });
+      const hinted = await makeQuestion({ slug: 'arrays-hinted', difficulty: 'Hard', topics: [{ topicId: w.arrays.id }] });
+      await prisma.tokenLedger.create({
+        data: { userId: user.id, topicId: w.arrays.id, amount: 3, sourceDifficulty: 'Hard', reason: 'solve', refType: 'question', refId: paid.id },
+      });
+      const hints = await makeHints({ questionId: hinted.id }, [{ level: 'nudge', costAmount: 40 }]);
+      await prisma.hintUse.create({
+        data: { userId: user.id, hintId: hints.nudge.id, questionId: hinted.id, costKind: 'score', costAmount: 40 },
+      });
+
+      const dp = (await getMapView(user.id)).tiers[1].topics.find((t) => t.slug === 'dp')!;
+      const item = dp.blocker?.kind === 'recipe' ? dp.blocker.items[0] : null;
+      expect(item).toMatchObject({ need: 5, have: 3, missing: 2 });
+      // arrays-paid already paid out; arrays-hinted pays round(3 × 0.6) = 2.
+      expect(item?.earn).toEqual([
+        { slug: 'arrays-hinted', title: 'arrays-hinted', difficulty: 'Hard', amount: 2 },
+        { slug: 'q-arrays', title: 'q-arrays', difficulty: 'Easy', amount: 1 },
+      ]);
     });
 
     it('reports a running gate attempt with its progress', async () => {
@@ -179,83 +178,6 @@ describe('loop views (DB)', () => {
       const view = await getGateAttemptView(user.id, attempt.id);
       expect(view).toMatchObject({ running: false, passed: true, passedCount: 2, gateState: 'passed', tier: { open: true } });
       await expect(getGateAttemptView(other.id, attempt.id)).rejects.toBeInstanceOf(NotFoundError);
-    });
-  });
-
-  describe('getPredictStepView', () => {
-    it('keeps the answer on the server until the learner predicts', async () => {
-      const w = await makeWorld();
-      const user = await makeUser();
-      const c = await makeComponent({ topicId: w.arrays.id });
-      const step = await makeBuildStep(c.id, { kind: 'predict' });
-
-      const before = await getPredictStepView(user.id, step.id);
-      expect(before).toMatchObject({ code: 'print(1)', question: 'Output?', choices: ['1', '2'], result: null });
-      expect(JSON.stringify(before)).not.toContain('explanation');
-
-      await submitPrediction(user.id, step.id, '1');
-      const after = await getPredictStepView(user.id, step.id);
-      expect(after.result).toEqual({ answer: '1', correct: true, expected: '1', explanationMd: '' });
-    });
-
-    it('refuses a locked topic’s step', async () => {
-      const w = await makeWorld();
-      const user = await makeUser();
-      const c = await makeComponent({ topicId: w.graphs.id });
-      const step = await makeBuildStep(c.id, { kind: 'predict' });
-      await expect(getPredictStepView(user.id, step.id)).rejects.toBeInstanceOf(AccessDenied);
-    });
-  });
-
-  describe('getMyLibraryView', () => {
-    async function version(userId: string, componentId: string, stepId: string, language: 'python' | 'javascript', passed: boolean, at: Date) {
-      const sub = await makeSubmission(userId, { kind: 'build', buildStepId: stepId, status: passed ? 'OK' : 'WA', language, createdAt: at });
-      return prisma.componentVersion.create({
-        data: { userId, componentId, language, code: `// ${language} ${at.toISOString()}`, passed, submissionId: sub.id, createdAt: at },
-      });
-    }
-
-    it('shows latest passing code per language, numbered history, dependencies and dependents', async () => {
-      const w = await makeWorld();
-      const user = await makeUser();
-      const prefix = await makeComponent({ topicId: w.arrays.id, slug: 'prefix', ord: 0 });
-      const range = await makeComponent({ topicId: w.arrays.id, slug: 'range', ord: 1, dependsOn: [prefix.id] });
-      await makeBuildStep(prefix.id, { kind: 'predict', ord: 0 });
-      const prefixBuild = await makeBuildStep(prefix.id, { kind: 'build', ord: 1 });
-      await makeBuildStep(range.id, { kind: 'build', ord: 0 });
-
-      const day = (n: number) => new Date(Date.UTC(2026, 8, n));
-      await version(user.id, prefix.id, prefixBuild.id, 'python', false, day(1));
-      const py = await version(user.id, prefix.id, prefixBuild.id, 'python', true, day(2));
-      const js = await version(user.id, prefix.id, prefixBuild.id, 'javascript', true, day(3));
-
-      const lib = await getMyLibraryView(user.id);
-      expect(lib.totals).toEqual({ built: 1, total: 2, versions: 3, languages: ['python', 'javascript'] });
-      expect(lib.built.map((c) => c.slug)).toEqual(['prefix']);
-      expect(lib.unbuilt.map((c) => c.slug)).toEqual(['range']);
-
-      const p = lib.built[0];
-      expect(p.latest.map((v) => [v.language, v.versionId, v.number])).toEqual([
-        ['python', py.id, 2],
-        ['javascript', js.id, 1],
-      ]);
-      expect(p.history.map((h) => [h.language, h.number, h.passed])).toEqual([
-        ['javascript', 1, true],
-        ['python', 2, true],
-        ['python', 1, false],
-      ]);
-      expect(p.dependsOn).toEqual([]);
-      expect(p.usedBy).toEqual([{ slug: 'range', title: 'range', built: false }]);
-      expect(p.rebuildStepId).toBe(prefixBuild.id);
-      expect(lib.unbuilt[0].dependsOn).toEqual([{ slug: 'prefix', title: 'prefix', built: true }]);
-    });
-
-    it('is empty for a new learner', async () => {
-      await makeWorld();
-      const user = await makeUser();
-      const lib = await getMyLibraryView(user.id);
-      expect(lib.built).toEqual([]);
-      expect(lib.totals.versions).toBe(0);
     });
   });
 

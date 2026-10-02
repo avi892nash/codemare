@@ -79,7 +79,6 @@ export function SubmissionDetail({ view, now }: { view: SubmissionView; now: Dat
             </p>
             <h1 className={s.title}>
               {title}
-              {view.subject.type === 'build' && <span className={s.subtle}> · {view.subject.stepTitle}</span>}
             </h1>
             <div className={s.headMeta}>
               <SubmissionStatus status={view.status} size="md" long />

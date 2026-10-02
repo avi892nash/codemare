@@ -247,7 +247,7 @@
 					</p>
 					<p>
 						“Cheapest” marks the recipe a learner with no tokens is shown first: fewest tokens, then list order. “On offer”
-						is what all published questions and build steps pay out.
+						is what all published questions pay out.
 					</p>
 					<p>A save applies every change of the topic in one transaction.</p>
 				</div>
@@ -402,8 +402,8 @@ function describeSupply(id: string): string {
 	if (!s) return '';
 	const parts = DIFFICULTIES.map((d) => `${s.supply[id]?.[d] ?? 0} ${d}`);
 	const total = qualifyingBalance(s.supply, id, 'Easy');
-	const c = s.counts[id] ?? { questions: 0, builds: 0 };
-	return `${total} tokens (${parts.join(' / ')}) from ${c.questions} questions and ${c.builds} build steps`;
+	const c = s.counts[id] ?? { questions: 0 };
+	return `${total} tokens (${parts.join(' / ')}) from ${c.questions} question${c.questions === 1 ? '' : 's'}`;
 }
 
 function spendSentence(key: string): string {

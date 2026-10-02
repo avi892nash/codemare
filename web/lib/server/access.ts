@@ -22,7 +22,7 @@ export { isTierOpen, isTopicUnlocked, getOpenTierIds, getUnlockedTopicIds } from
 
 /**
  * Unlocks and access (spec §3.4): recipe unlocks, "what's blocking you",
- * the /map state, and the question / build-step access checks.
+ * the /map state, and the question access checks.
  */
 
 export interface TopicRef {
@@ -462,32 +462,4 @@ export async function questionAccessMap(
         : (topicsOf.get(q.id) ?? []).every((t) => unlockedTopicIds.has(t)) || inRunningGate.has(q.id),
     ])
   );
-}
-
-export type BuildStepAccess = { ok: true } | { ok: false; reason: 'topic_locked'; lockedTopics: TopicRef[] };
-
-/** Build steps are accessible iff the component's topic is unlocked. Throws NotFoundError. */
-export async function canAccessBuildStep(userId: string, buildStepId: string, db: Db = prisma): Promise<BuildStepAccess> {
-  const step = await db.buildStep.findUnique({
-    where: { id: buildStepId },
-    select: {
-      component: {
-        select: { topic: { select: { id: true, slug: true, title: true, icon: true, tier: { select: { ord: true } } } } },
-      },
-    },
-  });
-  if (!step) throw new NotFoundError('build step', buildStepId);
-  const { tier, ...topic } = step.component.topic;
-  if (tier.ord === 0) return { ok: true };
-  const row = await db.unlock.findUnique({
-    where: { userId_kind_refId: { userId, kind: 'topic', refId: topic.id } },
-    select: { id: true },
-  });
-  return row ? { ok: true } : { ok: false, reason: 'topic_locked', lockedTopics: [topic] };
-}
-
-/** canAccessBuildStep, throwing AccessDenied instead of returning `ok: false`. */
-export async function assertCanAccessBuildStep(userId: string, buildStepId: string): Promise<void> {
-  const access = await canAccessBuildStep(userId, buildStepId);
-  if (!access.ok) throw new AccessDenied('topic_locked', 'Unlock this component’s topic on the map first.');
 }

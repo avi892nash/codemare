@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-  canAccessBuildStep,
   canAccessQuestion,
   getMapState,
   isTierOpen,
@@ -14,8 +13,6 @@ import { prisma, setupTestDatabase } from './test/db';
 import {
   balanceOf,
   grant,
-  makeBuildStep,
-  makeComponent,
   makeQuestion,
   makeRecipe,
   makeUser,
@@ -283,19 +280,5 @@ describe('question access', () => {
   it('throws NotFoundError for an unknown question', async () => {
     const user = await makeUser();
     await expect(canAccessQuestion(user.id, 'nope')).rejects.toBeInstanceOf(NotFoundError);
-  });
-});
-
-describe('build step access', () => {
-  it("follows the component's topic", async () => {
-    const w = await makeWorld();
-    const user = await makeUser();
-    const free = await makeBuildStep((await makeComponent({ topicId: w.arrays.id })).id);
-    const gated = await makeBuildStep((await makeComponent({ topicId: w.graphs.id })).id);
-    expect(await canAccessBuildStep(user.id, free.id)).toEqual({ ok: true });
-    expect(await canAccessBuildStep(user.id, gated.id)).toMatchObject({ ok: false, reason: 'topic_locked' });
-    await openTier(user.id, w.tier1.id);
-    await unlockTopicRow(user.id, w.graphs.id);
-    expect(await canAccessBuildStep(user.id, gated.id)).toEqual({ ok: true });
   });
 });

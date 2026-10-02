@@ -3,29 +3,17 @@ import { describe, expect, it } from 'vitest';
 import { parsePrismaEnums } from '../content-model/prisma-enums';
 import { buildSavePayload, sameDraft, toDraft, type SavedRecipe } from '../extensions/codemare/src/recipe-editor/draft';
 import { cuid } from '../extensions/codemare/src/shared/cuid';
-import { parsePgArrayLiteral, toPgArrayLiteral } from '../extensions/codemare/src/shared/pg-array';
+import { toPgArrayLiteral } from '../extensions/codemare/src/shared/pg-array';
 
 describe('pg array literals', () => {
-  it('round-trips awkward values', () => {
+  it('quotes and escapes every element', () => {
     const values = ['plain', 'with space', 'quote"d', 'back\\slash', 'com,ma', '{brace}', ''];
-    const literal = toPgArrayLiteral(values);
-    expect(literal).toBe('{"plain","with space","quote\\"d","back\\\\slash","com,ma","{brace}",""}');
-    expect(parsePgArrayLiteral(literal)).toEqual(values);
+    expect(toPgArrayLiteral(values)).toBe('{"plain","with space","quote\\"d","back\\\\slash","com,ma","{brace}",""}');
   });
 
-  it('parses what node-postgres returns for enum arrays', () => {
-    expect(parsePgArrayLiteral('{python,javascript,typescript,cpp,go}')).toEqual([
-      'python',
-      'javascript',
-      'typescript',
-      'cpp',
-      'go',
-    ]);
-    expect(parsePgArrayLiteral('{}')).toEqual([]);
-    expect(parsePgArrayLiteral('{a,NULL}')).toEqual(['a', null]);
-    expect(parsePgArrayLiteral('not an array')).toBeNull();
-    expect(parsePgArrayLiteral('{{1,2},{3,4}}')).toBeNull();
+  it('writes NULL for missing elements and {} for an empty array', () => {
     expect(toPgArrayLiteral([null, 'x'])).toBe('{NULL,"x"}');
+    expect(toPgArrayLiteral([])).toBe('{}');
   });
 });
 

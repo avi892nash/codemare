@@ -35,7 +35,7 @@ export default async function SubmissionsPage({ searchParams }: { searchParams: 
             <Icon name="history" size={13} /> History
           </p>
           <h1 className={s.title}>Submissions</h1>
-          <p className={s.sub}>Every run, submit, build step and gate attempt, newest first.</p>
+          <p className={s.sub}>Every run, submit and gate attempt, newest first.</p>
         </header>
 
         {!data.hasAny ? (

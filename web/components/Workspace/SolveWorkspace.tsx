@@ -21,13 +21,12 @@ import { formatPercent } from '@/lib/client/format';
 import { LANGUAGE_META, languageLabel, linkErrorLines } from '@/lib/client/languages';
 import type { RunKind } from '@/lib/client/runState';
 import { useRunStream } from '@/lib/client/useRunStream';
-import type { VerdictEventData } from '@/lib/sse';
 import type { SupportedLanguage } from '@/lib/types';
 import { CasesPanel, customInputs, type CustomCase } from './CasesPanel';
 import { GateBanner } from './GateBanner';
 import { RunErrorNotice } from './RunErrorNotice';
 import { StatementPane } from './StatementPane';
-import type { BuildContext, GateContext, SubmissionSummary, WorkspaceMode, WorkspaceProblem } from './types';
+import type { GateContext, SubmissionSummary, WorkspaceMode, WorkspaceProblem } from './types';
 import { useModKey } from './useModKey';
 import { useSplit } from './useSplit';
 import s from './Workspace.module.css';
@@ -35,14 +34,14 @@ import s from './Workspace.module.css';
 const AiReview = dynamic(() => import('@/components/Results/AiReview').then((m) => m.AiReview), { ssr: false });
 
 export interface SolveWorkspaceProps {
-  /** question (catalog) · build (a component build step, /api/build) · gate (Submit counts for the attempt). */
+  /** question (catalog) · gate (Submit counts for the attempt). */
   mode: WorkspaceMode;
   problem: WorkspaceProblem;
-  /** Server-rendered statement body (or the build step's prompt). */
+  /** Server-rendered statement body. */
   statement: ReactNode;
   /** Server-rendered editorial (question mode; hidden behind a spoiler until solved). */
   editorial?: ReactNode;
-  /** Eyebrow over the title, e.g. a breadcrumb or "Build · Prefix sums". */
+  /** Eyebrow over the title, e.g. a breadcrumb. */
   eyebrow?: ReactNode;
   /** The learner's recent submissions of this question, newest first. */
   submissions?: SubmissionSummary[];
@@ -54,15 +53,11 @@ export interface SolveWorkspaceProps {
   hints?: Omit<HintLadderProps, 'solved'> | null;
   /** gate mode: the running attempt. */
   gate?: GateContext;
-  /** build mode: the component being built. */
-  build?: BuildContext;
   /** Already has an accepted submission. */
   solved?: boolean;
   bestPercentile?: number | null;
   /** FEATURE_AI_REVIEW is on (and a key is configured). */
   aiReview?: boolean;
-  /** Called with every verdict (e.g. /queue advancing after a passing build). */
-  onVerdict?: (verdict: VerdictEventData, kind: RunKind) => void;
 }
 
 type ConsoleTab = 'cases' | 'result';
@@ -77,17 +72,16 @@ function markersFrom(error: string): EditorMarker[] {
 }
 
 /**
- * The solving surface shared by /problems/[slug] (question, gate) and the
- * learning loop's build steps: statement · editor · console. Monaco loads
- * lazily; drafts persist per problem and language; ⌘/Ctrl+Enter runs and
- * ⌘/Ctrl+Shift+Enter submits. Two resizable columns from 1024 px up,
- * stacked below.
+ * The solving surface of /problems/[slug] (question and gate mode):
+ * statement · editor · console. Monaco loads lazily; drafts persist per
+ * problem and language; ⌘/Ctrl+Enter runs and ⌘/Ctrl+Shift+Enter submits.
+ * Two resizable columns from 1024 px up, stacked below.
  */
 export function SolveWorkspace(props: SolveWorkspaceProps) {
-  const { mode, problem, gate, build } = props;
+  const { mode, problem, gate } = props;
   const { toast } = useToast();
   const mod = useModKey();
-  const scope = mode === 'build' ? `b:${problem.id}` : `q:${problem.id}`;
+  const scope = `q:${problem.id}`;
   const languages = problem.languages;
   const starter = useCallback((l: SupportedLanguage) => problem.starterCode[l] ?? '', [problem.starterCode]);
   const serverCode = useCallback((l: SupportedLanguage) => props.latestCode?.[l] ?? starter(l), [props.latestCode, starter]);
@@ -158,10 +152,7 @@ export function SolveWorkspace(props: SolveWorkspaceProps) {
       }
       let kind: RunKind;
       let body: Record<string, unknown>;
-      if (mode === 'build') {
-        kind = 'build';
-        body = { buildStepId: problem.id, language, code };
-      } else if (action === 'run') {
+      if (action === 'run') {
         const custom = customInputs(problem.signature, cases, language);
         if (!custom.ok) {
           setConsoleTab('cases');
@@ -198,12 +189,6 @@ export function SolveWorkspace(props: SolveWorkspaceProps) {
         });
         if (mode === 'gate' && currentSlug) setGateSolved((prev) => new Set(prev).add(currentSlug));
       }
-      if (verdict.status === 'OK' && kind === 'build') {
-        setSolved(true);
-        if (verdict.tokensAwarded?.length) {
-          toast({ tone: 'ok', title: 'Build passed', description: verdict.tokensAwarded.map((t) => `+${t.amount} ${t.title}`).join(' · ') });
-        }
-      }
       // Layouts don't re-render on their own: refresh so the navbar's token
       // total reflects what was just awarded (editor state is client-side and
       // survives the refresh).
@@ -226,16 +211,15 @@ export function SolveWorkspace(props: SolveWorkspaceProps) {
           ...prev,
         ]);
       }
-      props.onVerdict?.(verdict, kind);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [run.busy, run.start, code, language, cases, mode, problem.id, problem.signature, gate, gateOver, currentSlug, toast, props.onVerdict, router]
+    [run.busy, run.start, code, language, cases, mode, problem.id, problem.signature, gate, gateOver, currentSlug, toast, router]
   );
 
   const executeRef = useRef(execute);
   executeRef.current = execute;
   const onRun = useCallback(() => void executeRef.current('run'), []);
-  const onSubmit = useCallback(() => void executeRef.current(mode === 'build' ? 'run' : 'submit'), [mode]);
+  const onSubmit = useCallback(() => void executeRef.current('submit'), []);
 
   // ⌘/Ctrl+Enter anywhere on the page (Monaco binds its own while focused).
   useEffect(() => {
@@ -262,33 +246,19 @@ export function SolveWorkspace(props: SolveWorkspaceProps) {
 
   const verdict = run.phase === 'done' ? run.verdict : null;
   const firstFailing = verdict ? run.tests.find((t) => !t.passed && !t.hidden)?.idx ?? null : null;
-  const runLabel = mode === 'build' ? 'Run tests' : 'Run';
-  const canSubmit = mode !== 'build';
 
-  const eyebrow =
-    props.eyebrow ??
-    (build ? (
-      <>
-        Build · <span className={s.eyebrowStrong}>{build.componentTitle}</span>
-        {build.dependencies.length > 0 && <> · uses {build.dependencies.map((d) => d.title).join(', ')}</>}
-      </>
-    ) : null);
-
-  // The page's main landmark — except in build mode, where BuildStep wraps
-  // the workspace (and its queue bar) in one.
-  const Root = mode === 'build' ? 'div' : 'main';
   return (
-    <Root className={s.root} data-mode={mode} style={layoutStyle}>
+    <main className={s.root} data-mode={mode} style={layoutStyle}>
       {gate && <GateBanner gate={gate} currentSlug={currentSlug} solved={gateSolved} onExpire={() => setGateOver(true)} />}
       <div ref={splitRef} className={s.split}>
         <section className={`${s.pane} ${s.left}`} aria-label="Problem">
           <StatementPane
             mode={mode}
             problem={problem}
-            eyebrow={eyebrow}
+            eyebrow={props.eyebrow}
             statement={props.statement}
             editorial={props.editorial}
-            submissions={mode === 'build' ? undefined : submissions}
+            submissions={submissions}
             hints={props.hints}
             solved={solved}
             bestPercentile={best}
@@ -311,7 +281,6 @@ export function SolveWorkspace(props: SolveWorkspaceProps) {
                 </Button>
               ) : null}
               <Button
-                variant={canSubmit ? 'default' : 'primary'}
                 size="sm"
                 icon="play"
                 onClick={onRun}
@@ -320,22 +289,20 @@ export function SolveWorkspace(props: SolveWorkspaceProps) {
                 kbd={`${mod}↵`}
                 data-testid="run-button"
               >
-                {runLabel}
+                Run
               </Button>
-              {canSubmit && (
-                <Button
-                  variant="primary"
-                  size="sm"
-                  icon="send"
-                  onClick={onSubmit}
-                  loading={run.busy && run.kind === 'submit'}
-                  disabled={(run.busy && run.kind !== 'submit') || (mode === 'gate' && gateOver)}
-                  kbd={`${mod}⇧↵`}
-                  data-testid="submit-button"
-                >
-                  Submit
-                </Button>
-              )}
+              <Button
+                variant="primary"
+                size="sm"
+                icon="send"
+                onClick={onSubmit}
+                loading={run.busy && run.kind === 'submit'}
+                disabled={(run.busy && run.kind !== 'submit') || (mode === 'gate' && gateOver)}
+                kbd={`${mod}⇧↵`}
+                data-testid="submit-button"
+              >
+                Submit
+              </Button>
             </div>
             <div className={s.editorArea}>
               <CodeEditor
@@ -385,8 +352,7 @@ export function SolveWorkspace(props: SolveWorkspaceProps) {
                       setCases(next);
                       setCasesError(null);
                     }}
-                    allowCustom={mode !== 'build' && !!problem.customInputs}
-                    canSubmit={canSubmit}
+                    allowCustom={!!problem.customInputs}
                     language={language}
                     selected={selectedCase}
                     onSelect={setSelectedCase}
@@ -402,7 +368,7 @@ export function SolveWorkspace(props: SolveWorkspaceProps) {
                       title="No results yet"
                       description={
                         <>
-                          <Kbd bare>{mod}↵</Kbd> runs the samples{canSubmit ? <>, <Kbd bare>{mod}⇧↵</Kbd> submits</> : null}. Runtime is CPU time in µs.
+                          <Kbd bare>{mod}↵</Kbd> runs the samples, <Kbd bare>{mod}⇧↵</Kbd> submits. Runtime is CPU time in µs.
                         </>
                       }
                     />
@@ -421,7 +387,7 @@ export function SolveWorkspace(props: SolveWorkspaceProps) {
                         language={language}
                         timeLimitMs={problem.timeLimitMs}
                         onLine={onLine}
-                        onSubmit={canSubmit && run.kind === 'run' ? onSubmit : undefined}
+                        onSubmit={run.kind === 'run' ? onSubmit : undefined}
                         onSelectTest={(idx) => document.querySelector<HTMLElement>(`[data-testid="test-row-${idx}"] button`)?.focus()}
                       />
                       {props.aiReview && verdict.status === 'OK' && run.kind === 'submit' && verdict.submissionId && (
@@ -458,6 +424,6 @@ export function SolveWorkspace(props: SolveWorkspaceProps) {
           </>
         }
       />
-    </Root>
+    </main>
   );
 }

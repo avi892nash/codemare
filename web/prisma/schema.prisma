@@ -2,7 +2,7 @@
 //
 // Two Postgres schemas:
 //   · content.* — questions, the learning loop (tiers → topics → recipes,
-//     components, gates), badges, learn tracks and the hidden library.
+//     gates), badges, learn tracks and the hidden library.
 //     Edited by staff through Directus, seeded by `npm run seed -w web`.
 //   · app.*     — everything a user writes. Only web server code touches it.
 //
@@ -13,8 +13,7 @@
 //
 // Things Prisma cannot express live in raw SQL in prisma/migrations/:
 //   · CHECK constraints (recipe quantity > 0, ledger amount <> 0, hint
-//     exactly-one-target, cooldown 12–24, handle format, no self-deps,
-//     question topic weight > 0)
+//     cost ≥ 0, cooldown 12–24, handle format, question topic weight > 0)
 //   · the append-only trigger on app.token_ledger
 //   · the partial unique index that makes ledger earns idempotent
 //
@@ -64,13 +63,6 @@ enum CompareMode {
 enum PublishStatus {
   draft
   published
-
-  @@schema("content")
-}
-
-enum BuildStepKind {
-  predict
-  build
 
   @@schema("content")
 }
@@ -145,12 +137,14 @@ enum SubmissionStatus {
 enum SubmissionKind {
   run
   submit
-  build
   gate
 
   @@schema("app")
 }
 
+/// `build` / `build_step` (LedgerRefType): earnings of the removed Queue's
+/// build steps. Nothing writes them any more, but the append-only ledger
+/// keeps those rows, so the values stay.
 enum LedgerReason {
   solve
   build
@@ -176,14 +170,6 @@ enum LedgerRefType {
 enum UnlockKind {
   topic
   tier
-
-  @@schema("app")
-}
-
-enum StepStatus {
-  seen
-  predicted
-  passed
 
   @@schema("app")
 }
@@ -226,7 +212,6 @@ model Topic {
   tier           Tier            @relation(fields: [tierId], references: [id])
   recipes        UnlockRecipe[]
   recipeItems    RecipeItem[]
-  components     Component[]
   questionTopics QuestionTopic[]
   lessons        Lesson[]
   ledger         TokenLedger[]
@@ -266,71 +251,6 @@ model RecipeItem {
 
   @@index([recipeId])
   @@map("recipe_items")
-  @@schema("content")
-}
-
-/// A reusable function the learner builds (My Library); deps are prepended
-/// as a prelude when building it.
-model Component {
-  id           String     @id @default(cuid())
-  topicId      String     @map("topic_id")
-  slug         String     @unique
-  title        String
-  summaryMd    String     @map("summary_md")
-  functionName String     @map("function_name")
-  /// Signature (lib/types.ts)
-  signature    Json
-  languages    Language[]
-  ord          Int
-
-  topic      Topic              @relation(fields: [topicId], references: [id])
-  deps       ComponentDep[]     @relation("ComponentDeps")
-  dependents ComponentDep[]     @relation("ComponentDependents")
-  buildSteps BuildStep[]
-  versions   ComponentVersion[]
-
-  @@index([topicId, ord])
-  @@map("components")
-  @@schema("content")
-}
-
-/// Edge component → depends_on. Must stay acyclic (validated in seed + app,
-/// and by the Directus content-integrity hook); no self-dependency (CHECK).
-/// `id` is a surrogate key so Directus can edit rows (it needs a single-column
-/// primary key); the edge itself is the unique pair.
-model ComponentDep {
-  id          String @id @default(cuid())
-  componentId String @map("component_id")
-  dependsOnId String @map("depends_on_id")
-
-  component Component @relation("ComponentDeps", fields: [componentId], references: [id], onDelete: Cascade)
-  dependsOn Component @relation("ComponentDependents", fields: [dependsOnId], references: [id])
-
-  @@unique([componentId, dependsOnId])
-  @@index([dependsOnId])
-  @@map("component_deps")
-  @@schema("content")
-}
-
-model BuildStep {
-  id          String        @id @default(cuid())
-  componentId String        @map("component_id")
-  ord         Int
-  kind        BuildStepKind
-  title       String
-  promptMd    String        @map("prompt_md")
-  difficulty  Difficulty    @default(Easy)
-  /// PredictPayload | BuildPayload (lib/types.ts), by `kind`.
-  payload     Json
-
-  component    Component      @relation(fields: [componentId], references: [id], onDelete: Cascade)
-  hints        Hint[]
-  submissions  Submission[]
-  stepProgress StepProgress[]
-  hintUses     HintUse[]
-
-  @@index([componentId, ord])
-  @@map("build_steps")
   @@schema("content")
 }
 
@@ -397,23 +317,20 @@ model QuestionTopic {
   @@schema("content")
 }
 
-/// Exactly one of question_id / build_step_id is set (CHECK constraint).
+/// One rung of a question's hint ladder.
 model Hint {
-  id          String       @id @default(cuid())
-  questionId  String?      @map("question_id")
-  buildStepId String?      @map("build_step_id")
-  level       HintLevel
-  bodyMd      String       @map("body_md")
-  costKind    HintCostKind @map("cost_kind")
-  /// ≥ 0. score: % penalty on the future award; token: tokens spent.
-  costAmount  Int          @map("cost_amount")
+  id         String       @id @default(cuid())
+  questionId String       @map("question_id")
+  level      HintLevel
+  bodyMd     String       @map("body_md")
+  costKind   HintCostKind @map("cost_kind")
+  /// ≥ 0 (CHECK constraint). score: % penalty on the future award; token: tokens spent.
+  costAmount Int          @map("cost_amount")
 
-  question  Question?  @relation(fields: [questionId], references: [id], onDelete: Cascade)
-  buildStep BuildStep? @relation(fields: [buildStepId], references: [id], onDelete: Cascade)
-  uses      HintUse[]
+  question Question  @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  uses     HintUse[]
 
   @@unique([questionId, level])
-  @@unique([buildStepId, level])
   @@map("hints")
   @@schema("content")
 }
@@ -628,8 +545,6 @@ model User {
   ledger             TokenLedger[]
   unlocks            Unlock[]
   submissions        Submission[]
-  componentVersions  ComponentVersion[]
-  stepProgress       StepProgress[]
   hintUses           HintUse[]
   gateAttempts       GateAttempt[]
   badgeAwards        BadgeAward[]
@@ -731,12 +646,13 @@ model Unlock {
   @@schema("app")
 }
 
+/// Every kind runs a question; `question_id` is only null once the question
+/// was deleted.
 model Submission {
   id            String           @id @default(cuid())
   userId        String           @map("user_id")
   kind          SubmissionKind
   questionId    String?          @map("question_id")
-  buildStepId   String?          @map("build_step_id")
   gateAttemptId String?          @map("gate_attempt_id")
   language      Language
   code          String
@@ -753,13 +669,11 @@ model Submission {
   percentile    Float?
   createdAt     DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
 
-  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  question         Question?         @relation(fields: [questionId], references: [id], onDelete: SetNull)
-  buildStep        BuildStep?        @relation(fields: [buildStepId], references: [id], onDelete: SetNull)
-  gateAttempt      GateAttempt?      @relation(fields: [gateAttemptId], references: [id], onDelete: SetNull)
-  testResults      TestResult[]
-  componentVersion ComponentVersion?
-  aiReviews        AiReview[]
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question    Question?    @relation(fields: [questionId], references: [id], onDelete: SetNull)
+  gateAttempt GateAttempt? @relation(fields: [gateAttemptId], references: [id], onDelete: SetNull)
+  testResults TestResult[]
+  aiReviews   AiReview[]
 
   @@index([userId, createdAt])
   @@index([questionId, language, status, runtimeUs])
@@ -792,62 +706,22 @@ model TestResult {
   @@schema("app")
 }
 
-/// One per build submission; the latest passing one per (component, language)
-/// is what dependents get as their prelude.
-model ComponentVersion {
-  id           String   @id @default(cuid())
-  userId       String   @map("user_id")
-  componentId  String   @map("component_id")
-  language     Language
-  code         String
-  passed       Boolean
-  submissionId String   @unique @map("submission_id")
-  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
-
-  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  component  Component  @relation(fields: [componentId], references: [id], onDelete: Cascade)
-  submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
-
-  @@index([userId, componentId, language, passed, createdAt(sort: Desc)])
-  @@map("component_versions")
-  @@schema("app")
-}
-
-model StepProgress {
-  userId      String     @map("user_id")
-  buildStepId String     @map("build_step_id")
-  status      StepStatus
-  answer      Json?
-  correct     Boolean?
-  updatedAt   DateTime   @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
-
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  buildStep BuildStep @relation(fields: [buildStepId], references: [id], onDelete: Cascade)
-
-  @@id([userId, buildStepId])
-  @@map("step_progress")
-  @@schema("app")
-}
-
 /// First reveal of a hint (re-viewing is free). Cost is copied at reveal time.
 model HintUse {
-  id          String       @id @default(cuid())
-  userId      String       @map("user_id")
-  hintId      String       @map("hint_id")
-  questionId  String?      @map("question_id")
-  buildStepId String?      @map("build_step_id")
-  costKind    HintCostKind @map("cost_kind")
-  costAmount  Int          @map("cost_amount")
-  createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  id         String       @id @default(cuid())
+  userId     String       @map("user_id")
+  hintId     String       @map("hint_id")
+  questionId String       @map("question_id")
+  costKind   HintCostKind @map("cost_kind")
+  costAmount Int          @map("cost_amount")
+  createdAt  DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
 
-  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  hint      Hint       @relation(fields: [hintId], references: [id], onDelete: Cascade)
-  question  Question?  @relation(fields: [questionId], references: [id], onDelete: Cascade)
-  buildStep BuildStep? @relation(fields: [buildStepId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  hint     Hint     @relation(fields: [hintId], references: [id], onDelete: Cascade)
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
 
   @@unique([userId, hintId])
   @@index([userId, questionId])
-  @@index([userId, buildStepId])
   @@map("hint_uses")
   @@schema("app")
 }

@@ -1,12 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { InsufficientTokens } from './errors';
-import { earnForBuild, earnForSolve, getBalances, getScorePenalty, getTopicBalances, grantTokens, spend } from './ledger';
+import { earnForSolve, getBalances, getScorePenalty, getTopicBalances, grantTokens, spend } from './ledger';
 import { prisma, setupTestDatabase } from './test/db';
 import {
   balanceOf,
   grant,
-  makeBuildStep,
-  makeComponent,
   makeHints,
   makeQuestion,
   makeTier,
@@ -103,30 +101,14 @@ describe('earnForSolve', () => {
   });
 });
 
-describe('earnForBuild', () => {
-  it('pays BASE[step difficulty] to the component topic, once, penalty aware', async () => {
+describe('earnings of the removed Queue', () => {
+  it('still count: build earnings stay in the append-only ledger and in balances', async () => {
     const { user, a } = await setup();
-    const component = await makeComponent({ topicId: a.id });
-    const step = await makeBuildStep(component.id, { difficulty: 'Medium' });
-    const hints = await makeHints({ buildStepId: step.id }, [{ level: 'nudge', costKind: 'score', costAmount: 25 }]);
-    await prisma.hintUse.create({
-      data: { userId: user.id, hintId: hints.nudge.id, buildStepId: step.id, costKind: 'score', costAmount: 25 },
+    await prisma.tokenLedger.create({
+      data: { userId: user.id, topicId: a.id, amount: 2, sourceDifficulty: 'Medium', reason: 'build', refType: 'build_step', refId: 'retired-step' },
     });
-
-    const awards = await earnForBuild(user.id, step.id);
-    expect(awards).toEqual([
-      { topicId: a.id, topicSlug: 'arrays', topicTitle: 'arrays', amount: 2, sourceDifficulty: 'Medium' }, // round(1.5)
-    ]);
-    expect(await earnForBuild(user.id, step.id)).toEqual([]);
-    const row = await prisma.tokenLedger.findFirstOrThrow({ where: { userId: user.id } });
-    expect(row).toMatchObject({ reason: 'build', refType: 'build_step', refId: step.id });
-  });
-
-  it('never pays for predict steps', async () => {
-    const { user, a } = await setup();
-    const component = await makeComponent({ topicId: a.id });
-    const step = await makeBuildStep(component.id, { kind: 'predict', difficulty: 'Hard' });
-    expect(await earnForBuild(user.id, step.id)).toEqual([]);
+    expect(await getBalances(user.id)).toEqual({ [a.id]: { Medium: 2 } });
+    expect(await getTopicBalances(user.id)).toEqual([expect.objectContaining({ slug: 'arrays', total: 2 })]);
   });
 });
 

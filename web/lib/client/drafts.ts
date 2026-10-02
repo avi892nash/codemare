@@ -4,7 +4,7 @@
  * be unavailable (private mode, blocked site data) and the editor must still
  * work — it just forgets.
  *
- * Scopes: `q:<questionId>`, `b:<buildStepId>`, `ide`.
+ * Scopes: `q:<questionId>`, `ide`.
  */
 import { LANGUAGES, type SupportedLanguage } from '@/lib/types';
 

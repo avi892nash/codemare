@@ -1,11 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  dependencyProblem,
-  gateQuestionCountAfter,
-  gateThresholdProblem,
-  isValidWeight,
-  type DepEdge,
-} from '../extensions/codemare/src/shared/join-checks';
+import { gateQuestionCountAfter, gateThresholdProblem, isValidWeight } from '../extensions/codemare/src/shared/join-checks';
 
 describe('isValidWeight', () => {
   it('accepts positive finite numbers, numeric strings included', () => {
@@ -16,40 +10,6 @@ describe('isValidWeight', () => {
     for (const w of [0, -1, Number.NaN, Number.POSITIVE_INFINITY, '', ' ', 'abc', null, undefined, {}, [1]]) {
       expect(isValidWeight(w), String(w)).toBe(false);
     }
-  });
-});
-
-describe('dependencyProblem', () => {
-  // merge-sort → merge-sorted, range-sum → prefix-sums (as seeded)
-  const edges: DepEdge[] = [
-    { componentId: 'merge-sort', dependsOnId: 'merge-sorted' },
-    { componentId: 'range-sum', dependsOnId: 'prefix-sums' },
-  ];
-  const name = (id: string) => id.toUpperCase();
-
-  it('accepts a new edge that keeps the graph acyclic', () => {
-    expect(dependencyProblem({ componentId: 'range-sum', dependsOnId: 'merge-sort' }, edges, name)).toBeNull();
-    expect(dependencyProblem({ componentId: 'merge-sorted', dependsOnId: 'prefix-sums' }, edges, name)).toBeNull();
-  });
-
-  it('rejects a self-dependency', () => {
-    expect(dependencyProblem({ componentId: 'gcd', dependsOnId: 'gcd' }, edges, name)).toBe('GCD cannot depend on itself');
-  });
-
-  it('rejects an edge that closes a cycle and names it with the given labels', () => {
-    const direct = dependencyProblem({ componentId: 'merge-sorted', dependsOnId: 'merge-sort' }, edges, name);
-    expect(direct).toMatch(/^This dependency would create a cycle: MERGE-SORT → MERGE-SORTED → MERGE-SORT\./);
-
-    const longer = [...edges, { componentId: 'prefix-sums', dependsOnId: 'merge-sort' }];
-    expect(dependencyProblem({ componentId: 'merge-sorted', dependsOnId: 'range-sum' }, longer, name)).toContain(
-      'MERGE-SORT → MERGE-SORTED → RANGE-SUM → PREFIX-SUMS → MERGE-SORT'
-    );
-  });
-
-  it('judges a rewritten row without its old edge (callers pass the other rows)', () => {
-    // Re-pointing merge-sort → merge-sorted at prefix-sums is fine once the old edge is gone.
-    const others = edges.filter((e) => e.componentId !== 'merge-sort');
-    expect(dependencyProblem({ componentId: 'merge-sort', dependsOnId: 'prefix-sums' }, others, name)).toBeNull();
   });
 });
 

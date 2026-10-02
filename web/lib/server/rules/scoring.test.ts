@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildAward, capPenalty, percentileOf, solveAward } from './scoring';
+import { capPenalty, percentileOf, solveAward } from './scoring';
 
 describe('solveAward', () => {
   it('pays BASE[difficulty] per topic at weight 1', () => {
@@ -43,16 +43,6 @@ describe('solveAward', () => {
     expect(solveAward('Easy', [{ topicId: 'a', weight: 1.5 }], 0)).toEqual([{ topicId: 'a', amount: 2 }]);
     // 2 × 0.25 × (1 − 0) = 0.5 → 1
     expect(solveAward('Medium', [{ topicId: 'a', weight: 0.25 }], 0)).toEqual([{ topicId: 'a', amount: 1 }]);
-  });
-});
-
-describe('buildAward', () => {
-  it('is BASE[step difficulty] minus the penalty rule', () => {
-    expect(buildAward('Easy', 0)).toBe(1);
-    expect(buildAward('Medium', 0)).toBe(2);
-    expect(buildAward('Hard', 10)).toBe(3); // 2.7
-    expect(buildAward('Hard', 50)).toBe(2); // 1.5
-    expect(buildAward('Easy', 100)).toBe(0);
   });
 });
 

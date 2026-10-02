@@ -142,8 +142,6 @@ export function badgeProgress(criteria: BadgeCriteria, stats: BadgeProgressStats
       return counted(stats.longestStreak, criteria.n, 'day in a row', 'days in a row');
     case 'no_hint_solves':
       return counted(stats.noHintSolves, criteria.n, 'hint-free solve');
-    case 'components_built':
-      return counted(stats.componentsBuilt, criteria.n, 'component built', 'components built');
     case 'topics_unlocked':
       return counted(stats.topicsUnlocked, criteria.n, 'topic unlocked', 'topics unlocked');
     case 'tier_open': {
@@ -190,8 +188,6 @@ export function describeCriteria(criteria: BadgeCriteria): string {
       return `Get an accepted submission on ${criteria.n} consecutive days (UTC).`;
     case 'no_hint_solves':
       return `Solve ${criteria.n} ${plural(criteria.n, 'problem')} without revealing a hint first.`;
-    case 'components_built':
-      return `Pass the build of ${criteria.n} library ${plural(criteria.n, 'component')}.`;
     case 'topics_unlocked':
       return `Unlock ${criteria.n} ${plural(criteria.n, 'topic')} with recipes.`;
     case 'tier_open':

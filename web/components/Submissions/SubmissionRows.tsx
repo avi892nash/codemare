@@ -9,9 +9,7 @@ import { SubmissionStatus } from './SubmissionStatus';
 import s from './Submissions.module.css';
 
 export function subjectTitle(subject: SubmissionSubject): string {
-  if (subject.type === 'question') return subject.title;
-  if (subject.type === 'build') return subject.componentTitle;
-  return 'Deleted problem';
+  return subject.type === 'question' ? subject.title : 'Deleted problem';
 }
 
 /** Visual column titles (rows carry their own screen-reader labels). */
@@ -51,7 +49,6 @@ export function SubmissionRows({ rows, now }: { rows: SubmissionListRow[]; now: 
             <span className={s.cTitle}>
               <span className={s.titleText}>
                 {subjectTitle(r.subject)}
-                {r.subject.type === 'build' && <span className={s.subtle}> · {r.subject.stepTitle}</span>}
               </span>
               {r.subject.type === 'question' && <DifficultyPill level={r.subject.difficulty} size="xs" />}
             </span>

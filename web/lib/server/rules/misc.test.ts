@@ -11,7 +11,6 @@ describe('badge criteria', () => {
     solvesByDifficulty: { Easy: 2, Medium: 1, Hard: 0 },
     longestStreak: 4,
     noHintSolves: 2,
-    componentsBuilt: 1,
     topicsUnlocked: 2,
     openTierOrds: [0, 1],
     gateFirstTry: true,
@@ -29,7 +28,6 @@ describe('badge criteria', () => {
     expect(criteriaMet({ kind: 'streak_days', n: 4 }, stats)).toBe(true);
     expect(criteriaMet({ kind: 'streak_days', n: 5 }, stats)).toBe(false);
     expect(criteriaMet({ kind: 'no_hint_solves', n: 2 }, stats)).toBe(true);
-    expect(criteriaMet({ kind: 'components_built', n: 2 }, stats)).toBe(false);
     expect(criteriaMet({ kind: 'topics_unlocked', n: 2 }, stats)).toBe(true);
     expect(criteriaMet({ kind: 'tier_open', tier_ord: 1 }, stats)).toBe(true);
     expect(criteriaMet({ kind: 'tier_open', tier_ord: 2 }, stats)).toBe(false);
@@ -43,7 +41,7 @@ describe('badge criteria', () => {
   });
 
   it('maps every kind to a stat and refuses to guess a missing one', () => {
-    expect(Object.keys(STAT_FOR_CRITERIA)).toHaveLength(12);
+    expect(Object.keys(STAT_FOR_CRITERIA)).toHaveLength(11);
     expect(() => criteriaMet({ kind: 'solves', n: 1 }, {})).toThrow(/solveCount/);
   });
 });

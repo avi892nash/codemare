@@ -12,9 +12,7 @@ import {
   LANGUAGES,
   SIGNATURE_BASE_TYPES,
   type BadgeCriteria,
-  type BuildPayload,
   type Example,
-  type PredictPayload,
   type Signature,
   type SignatureType,
   type TestDef,
@@ -70,30 +68,6 @@ export const exampleSchema = z
 /** `Partial<Record<Language, string>>` — unknown language keys are rejected. */
 export const codeByLanguageSchema = z.record(languageSchema, z.string());
 
-export const predictPayloadSchema = z
-  .object({
-    language: languageSchema,
-    code: z.string().min(1),
-    question: z.string().min(1),
-    choices: z.array(z.string().min(1)).min(2).optional(),
-    answer: z.string().min(1),
-    explanation_md: z.string(),
-  })
-  .strict()
-  .superRefine((p, ctx) => {
-    if (p.choices && !p.choices.includes(p.answer)) {
-      ctx.addIssue({ code: 'custom', message: '`answer` must be one of `choices`', path: ['answer'] });
-    }
-  });
-
-export const buildPayloadSchema = z
-  .object({
-    starter_code: codeByLanguageSchema,
-    tests: z.array(testDefSchema).min(1),
-    compare_mode: compareModeSchema.optional(),
-  })
-  .strict();
-
 const count = z.number().int().positive();
 export const badgeCriteriaSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('first_accept') }).strict(),
@@ -101,7 +75,6 @@ export const badgeCriteriaSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('solves_difficulty'), difficulty: difficultySchema, n: count }).strict(),
   z.object({ kind: z.literal('streak_days'), n: count }).strict(),
   z.object({ kind: z.literal('no_hint_solves'), n: count }).strict(),
-  z.object({ kind: z.literal('components_built'), n: count }).strict(),
   z.object({ kind: z.literal('topics_unlocked'), n: count }).strict(),
   z.object({ kind: z.literal('tier_open'), tier_ord: z.number().int().nonnegative() }).strict(),
   z.object({ kind: z.literal('gate_first_try') }).strict(),
@@ -129,7 +102,5 @@ export type __SchemaTypeChecks = [
   Assert<Satisfies<z.infer<typeof signatureSchema>, Signature>>,
   Assert<Satisfies<z.infer<typeof testDefSchema>, TestDef>>,
   Assert<Satisfies<z.infer<typeof exampleSchema>, Example>>,
-  Assert<Satisfies<z.infer<typeof predictPayloadSchema>, PredictPayload>>,
-  Assert<Satisfies<z.infer<typeof buildPayloadSchema>, BuildPayload>>,
   Assert<Satisfies<z.infer<typeof badgeCriteriaSchema>, BadgeCriteria>>,
 ];

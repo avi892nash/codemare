@@ -3,13 +3,12 @@
  * only the stats the still-unearned badges need, then asks `criteriaMet`.
  *
  * Criteria semantics ("solve" = an accepted `submit` or `gate` submission of
- * a question; runs and builds never count):
+ * a question; runs never count):
  *   first_accept          ≥ 1 solve
  *   solves n              ≥ n distinct questions solved
  *   solves_difficulty     ≥ n distinct questions of that difficulty solved
  *   streak_days n         longest run of consecutive UTC days with a solve ≥ n
  *   no_hint_solves n      ≥ n questions solved with no hint revealed before the first solve
- *   components_built n    ≥ n distinct components with a passing version
  *   topics_unlocked n     ≥ n topics unlocked by recipe (free tier-0 topics don't count)
  *   tier_open tier_ord    the tier with that ord is open
  *   gate_first_try        some gate passed on the user's first attempt at it
@@ -25,7 +24,6 @@ export interface BadgeStats {
   solvesByDifficulty: Record<Difficulty, number>;
   longestStreak: number;
   noHintSolves: number;
-  componentsBuilt: number;
   topicsUnlocked: number;
   openTierOrds: number[];
   gateFirstTry: boolean;
@@ -44,7 +42,6 @@ export const STAT_FOR_CRITERIA: Record<BadgeCriteriaKind, BadgeStatKey> = {
   solves_difficulty: 'solvesByDifficulty',
   streak_days: 'longestStreak',
   no_hint_solves: 'noHintSolves',
-  components_built: 'componentsBuilt',
   topics_unlocked: 'topicsUnlocked',
   tier_open: 'openTierOrds',
   gate_first_try: 'gateFirstTry',
@@ -72,8 +69,6 @@ export function criteriaMet(criteria: BadgeCriteria, stats: Partial<BadgeStats>)
       return need(stats, 'longestStreak') >= criteria.n;
     case 'no_hint_solves':
       return need(stats, 'noHintSolves') >= criteria.n;
-    case 'components_built':
-      return need(stats, 'componentsBuilt') >= criteria.n;
     case 'topics_unlocked':
       return need(stats, 'topicsUnlocked') >= criteria.n;
     case 'tier_open':

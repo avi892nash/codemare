@@ -11,7 +11,7 @@ import type { HintLadder as HintLadderData, HintRung, RevealResult } from '@/lib
 import type { HintLevel } from '@/lib/types';
 import s from './HintLadder.module.css';
 
-export type HintTargetProp = { questionId: string } | { buildStepId: string };
+export type HintTargetProp = { questionId: string };
 
 export interface HintLadderProps {
   target: HintTargetProp;
@@ -99,7 +99,7 @@ export function HintLadder({ target, initial, solved = false, onReveal }: HintLa
   const [announce, setAnnounce] = useState('');
   const bodyRefs = useRef(new Map<string, HTMLDivElement | null>());
   const headingId = useId();
-  const key = 'questionId' in target ? `questionId=${encodeURIComponent(target.questionId)}` : `buildStepId=${encodeURIComponent(target.buildStepId)}`;
+  const key = `questionId=${encodeURIComponent(target.questionId)}`;
 
   const load = useCallback(async () => {
     setLoadError(null);

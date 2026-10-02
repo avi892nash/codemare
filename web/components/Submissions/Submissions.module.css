@@ -137,10 +137,6 @@
   white-space: nowrap;
   font-weight: 500;
 }
-.subtle {
-  color: var(--fg-2);
-  font-weight: 400;
-}
 .cLang {
   display: inline-flex;
   align-items: center;

@@ -4,9 +4,9 @@
     python3 web/prisma/seed/verify/verify_all.py [--skip-compile]
 
 1. check_schema.py      — §2.1/§6.1 shapes, references between files, icons, hint ladders
-2. run_references.py    — python + javascript references vs every test; predict snippets
+2. run_references.py    — python + javascript references vs every test
 3. compile_starters.py  — C++/Java/Go/TypeScript stubs compile verbatim (needs the toolchains)
-4. simulate_loop.py     — deadlock simulation (plus --with-builds and --hint-heavy variants)
+4. simulate_loop.py     — deadlock simulation, questions only (plus a --hint-heavy variant)
 
 Exits non-zero if any step fails.
 """
@@ -21,9 +21,7 @@ STEPS = [
     ('references', ['run_references.py']),
     ('starters', ['compile_starters.py']),
     ('simulation', ['simulate_loop.py']),
-    ('simulation + builds', ['simulate_loop.py', '--quiet', '--with-builds']),
     ('simulation + token hints', ['simulate_loop.py', '--quiet', '--hint-heavy']),
-    ('simulation + builds + token hints', ['simulate_loop.py', '--quiet', '--with-builds', '--hint-heavy']),
 ]
 
 

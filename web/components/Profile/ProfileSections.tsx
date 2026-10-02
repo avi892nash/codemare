@@ -160,14 +160,13 @@ export function RecentSubmissions({ view, now }: { view: ProfileView; now: Date 
   return (
     <ul className={s.subs}>
       {view.recent.map((r) => {
-        const title =
-          r.target?.kind === 'question' ? (
-            <Link href={`/problems/${r.target.slug}`} className="focus-ring">
-              {r.target.title}
-            </Link>
-          ) : (
-            <span className={s.subName}>{r.target?.title ?? 'A draft question'}</span>
-          );
+        const title = r.target ? (
+          <Link href={`/problems/${r.target.slug}`} className="focus-ring">
+            {r.target.title}
+          </Link>
+        ) : (
+          <span className={s.subName}>A draft question</span>
+        );
         const status = isStatusCode(r.status) ? r.status : 'PND';
         const t = r.runtimeUs === null ? null : formatMicros(r.runtimeUs);
         return (
@@ -178,7 +177,7 @@ export function RecentSubmissions({ view, now }: { view: ProfileView; now: Date 
               <span className={s.subMeta}>
                 <LangMark lang={r.language} size={11} />
                 {LANG_LABEL[r.language] ?? r.language} · {r.kind}
-                {r.target?.kind === 'question' && <DifficultyPill level={r.target.difficulty} size="xs" />}
+                {r.target && <DifficultyPill level={r.target.difficulty} size="xs" />}
               </span>
             </span>
             <span className={s.subSide}>
@@ -299,41 +298,6 @@ export function LearnPanel({ view }: { view: ProfileView }) {
                   {t.lessonsDone}/{t.lessonsTotal} lessons · {t.checkpointsPassed}/{t.checkpointsTotal} checkpoints
                 </span>
                 <ProgressBar value={t.percent} tone={t.complete ? 'ok' : 'accent'} aria-label={`${t.title}: ${t.percent}% complete`} valueText={`${t.percent}%`} />
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-    </Panel>
-  );
-}
-
-export function ComponentsPanel({ view }: { view: ProfileView }) {
-  return (
-    <Panel
-      title="Components built"
-      id="components-title"
-      action={
-        view.isOwner ? (
-          <Link href="/me/library" className={`${s.panelLink} focus-ring`}>
-            My Library <Icon name="arrow-right" size={12} />
-          </Link>
-        ) : undefined
-      }
-    >
-      {view.components.length === 0 ? (
-        <p className={s.empty}>No components built yet.</p>
-      ) : (
-        <div className={s.panelBody}>
-          <ul className={s.chips}>
-            {view.components.map((c) => (
-              <li key={c.slug} className={s.chip}>
-                <Icon name="puzzle" size={13} style={{ color: 'var(--accent-hi)' }} />
-                {c.title}
-                {c.languages.map((l) => (
-                  <LangMark key={l} lang={l} size={12} />
-                ))}
-                <span className="sr-only">in {c.languages.map((l) => LANG_LABEL[l] ?? l).join(', ')}</span>
               </li>
             ))}
           </ul>

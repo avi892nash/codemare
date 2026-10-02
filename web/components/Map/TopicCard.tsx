@@ -38,24 +38,14 @@ function EarnLinks({ options }: { options: EarnOption[] }) {
       <li className={s.earnLabel} aria-hidden="true">
         Earn it:
       </li>
-      {options.map((o) =>
-        o.kind === 'question' ? (
-          <li key={`q-${o.slug}`}>
-            <Link href={`/problems/${o.slug}`} className={`${s.earnLink} focus-ring`}>
-              <span>{o.title}</span>
-              <span className={s.earnAmount}>+{o.amount}</span>
-            </Link>
-          </li>
-        ) : (
-          <li key={`b-${o.stepId}`}>
-            <Link href={`/queue?step=${encodeURIComponent(o.stepId)}`} className={`${s.earnLink} focus-ring`} title={`Build step of ${o.componentTitle}`}>
-              <Icon name="puzzle" size={11} />
-              <span>{o.componentTitle}</span>
-              <span className={s.earnAmount}>+{o.amount}</span>
-            </Link>
-          </li>
-        )
-      )}
+      {options.map((o) => (
+        <li key={o.slug}>
+          <Link href={`/problems/${o.slug}`} className={`${s.earnLink} focus-ring`}>
+            <span>{o.title}</span>
+            <span className={s.earnAmount}>+{o.amount}</span>
+          </Link>
+        </li>
+      ))}
     </ul>
   );
 }

@@ -4,13 +4,10 @@ import { unlockTopic } from './access';
 import { evaluateBadges, getBadgeGallery } from './badges';
 import { finishGate, startGate } from './gates';
 import { completeLesson, submitCheckpoint } from './learn';
-import { markStepSeen, submitPrediction } from './steps';
 import { EmailTaken, HandleTaken, createUserWithHandle, generateHandle } from './users';
 import { prisma, setupTestDatabase } from './test/db';
 import {
   grant,
-  makeBuildStep,
-  makeComponent,
   makeHints,
   makeQuestion,
   makeRecipe,
@@ -70,13 +67,12 @@ describe('evaluateBadges', () => {
     expect(slugs(await evaluateBadges(user.id))).toEqual(['streak-3']);
   });
 
-  it('awards unlock, gate and build badges through their hooks', async () => {
+  it('awards unlock and gate badges through their hooks', async () => {
     const w = await makeWorld();
     const user = await makeUser();
     await badge('tier-1', { kind: 'tier_open', tier_ord: 1 });
     await badge('first-try', { kind: 'gate_first_try' });
     await badge('unlocker', { kind: 'topics_unlocked', n: 1 });
-    await badge('builder', { kind: 'components_built', n: 1 });
 
     const attempt = await startGate(user.id, w.gate.id);
     await makeSubmission(user.id, { kind: 'gate', questionId: w.q1.id, gateAttemptId: attempt.id });
@@ -88,13 +84,6 @@ describe('evaluateBadges', () => {
     await makeRecipe(w.graphs.id, [{ topicId: w.arrays.id, quantity: 1 }]);
     await grant(user.id, w.arrays.id, 'Easy', 1);
     expect(slugs((await unlockTopic(user.id, w.graphs.id)).badgesAwarded)).toEqual(['unlocker']);
-
-    const component = await makeComponent({ topicId: w.arrays.id });
-    const sub = await makeSubmission(user.id, { kind: 'build' });
-    await prisma.componentVersion.create({
-      data: { userId: user.id, componentId: component.id, language: 'python', code: '', passed: true, submissionId: sub.id },
-    });
-    expect(slugs(await evaluateBadges(user.id))).toEqual(['builder']);
   });
 
   it('does not award gate_first_try after a failed first attempt', async () => {
@@ -186,21 +175,6 @@ describe('evaluateBadges', () => {
     ]);
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('ignoring badge "broken"'));
     warn.mockRestore();
-  });
-});
-
-describe('predict steps', () => {
-  it('records seen, then the prediction and whether it was right', async () => {
-    const w = await makeWorld();
-    const user = await makeUser();
-    const component = await makeComponent({ topicId: w.arrays.id });
-    const step = await makeBuildStep(component.id, { kind: 'predict' });
-    await markStepSeen(user.id, step.id);
-    expect(await submitPrediction(user.id, step.id, '2')).toEqual({ correct: false, expected: '1', explanationMd: '' });
-    expect(await submitPrediction(user.id, step.id, '1')).toMatchObject({ correct: true });
-    await markStepSeen(user.id, step.id); // never downgrades
-    const p = await prisma.stepProgress.findUniqueOrThrow({ where: { userId_buildStepId: { userId: user.id, buildStepId: step.id } } });
-    expect(p).toMatchObject({ status: 'predicted', answer: '1', correct: true });
   });
 });
 

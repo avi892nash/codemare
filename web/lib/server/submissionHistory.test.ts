@@ -3,7 +3,7 @@ import { EMPTY_SUBMISSION_QUERY, type SubmissionQuery } from '@/components/Submi
 import { getSubmissionView, listUserSubmissions } from './submissionHistory';
 import { completeSubmission, createSubmission } from './submissions';
 import { prisma, setupTestDatabase } from './test/db';
-import { makeBuildStep, makeComponent, makeSubmission, makeUser, makeWorld } from './test/factories';
+import { makeQuestion, makeSubmission, makeUser, makeWorld } from './test/factories';
 
 setupTestDatabase();
 
@@ -14,23 +14,21 @@ async function history() {
   const w = await makeWorld();
   const user = await makeUser();
   const other = await makeUser();
-  const component = await makeComponent({ topicId: w.arrays.id, slug: 'lower-bound' });
-  const step = await makeBuildStep(component.id);
   const ok = await makeSubmission(user.id, { questionId: w.q1.id, status: 'OK', language: 'python', createdAt: minutesAgo(40) });
   const wa = await makeSubmission(user.id, { questionId: w.q2.id, kind: 'run', status: 'WA', language: 'javascript', createdAt: minutesAgo(30) });
   const queued = await makeSubmission(user.id, { questionId: w.q1.id, status: 'queued', language: 'go', createdAt: minutesAgo(20) });
-  const build = await makeSubmission(user.id, { buildStepId: step.id, kind: 'build', status: 'OK', language: 'typescript', createdAt: minutesAgo(10) });
+  const gate = await makeSubmission(user.id, { questionId: w.q2.id, kind: 'gate', status: 'OK', language: 'typescript', createdAt: minutesAgo(10) });
   const theirs = await makeSubmission(other.id, { questionId: w.q1.id, status: 'OK' });
-  return { w, user, other, component, step, ok, wa, queued, build, theirs };
+  return { w, user, other, ok, wa, queued, gate, theirs };
 }
 
 describe('listUserSubmissions', () => {
   it("lists only the user's submissions, newest first, with what each was for", async () => {
     const h = await history();
     const r = await listUserSubmissions(h.user.id, Q());
-    expect(r.rows.map((x) => x.id)).toEqual([h.build.id, h.queued.id, h.wa.id, h.ok.id]);
+    expect(r.rows.map((x) => x.id)).toEqual([h.gate.id, h.queued.id, h.wa.id, h.ok.id]);
     expect(r).toMatchObject({ total: 4, page: 1, pageCount: 1, hasAny: true });
-    expect(r.rows[0].subject).toEqual({ type: 'build', componentSlug: 'lower-bound', componentTitle: 'lower-bound', stepTitle: 'step' });
+    expect(r.rows[0].subject).toEqual({ type: 'question', slug: 'q-strings', title: 'q-strings', difficulty: 'Easy' });
     expect(r.rows[3].subject).toEqual({ type: 'question', slug: 'q-arrays', title: 'q-arrays', difficulty: 'Easy' });
     expect(r.rows[3]).toMatchObject({ kind: 'submit', status: 'OK', language: 'python', runtimeUs: 1000 });
   });
@@ -38,10 +36,10 @@ describe('listUserSubmissions', () => {
   it('filters by verdict, pending, language and kind', async () => {
     const h = await history();
     const ids = async (q: Partial<SubmissionQuery>) => (await listUserSubmissions(h.user.id, Q(q))).rows.map((x) => x.id);
-    expect(await ids({ status: 'OK' })).toEqual([h.build.id, h.ok.id]);
+    expect(await ids({ status: 'OK' })).toEqual([h.gate.id, h.ok.id]);
     expect(await ids({ status: 'pending' })).toEqual([h.queued.id]);
     expect(await ids({ language: 'javascript' })).toEqual([h.wa.id]);
-    expect(await ids({ kind: 'build' })).toEqual([h.build.id]);
+    expect(await ids({ kind: 'gate' })).toEqual([h.gate.id]);
     expect(await ids({ status: 'OK', kind: 'submit' })).toEqual([h.ok.id]);
     const none = await listUserSubmissions(h.user.id, Q({ status: 'TLE' }));
     expect(none).toMatchObject({ rows: [], total: 0, hasAny: true });
@@ -123,16 +121,15 @@ describe('getSubmissionView', () => {
     expect(await getSubmissionView(user.id, 'x'.repeat(500))).toBeNull();
   });
 
-  it('describes build submissions by component and step', async () => {
-    const w = await makeWorld();
+  it('still shows a submission whose question was deleted', async () => {
     const user = await makeUser();
-    const component = await makeComponent({ topicId: w.arrays.id, slug: 'prefix-sums' });
-    const step = await makeBuildStep(component.id);
-    const s = await makeSubmission(user.id, { buildStepId: step.id, kind: 'build', status: 'OK', language: 'python' });
-    await prisma.testResult.create({ data: { submissionId: s.id, idx: 0, passed: true, hidden: false, input: [], expected: 0, actual: 0 } });
+    const q = await makeQuestion();
+    const s = await makeSubmission(user.id, { questionId: q.id, status: 'OK', language: 'python' });
+    await prisma.testResult.create({ data: { submissionId: s.id, idx: 0, passed: true, hidden: false, input: [1], expected: 1, actual: 1 } });
+    await prisma.question.delete({ where: { id: q.id } });
     const v = await getSubmissionView(user.id, s.id);
-    expect(v?.subject).toEqual({ type: 'build', componentSlug: 'prefix-sums', componentTitle: 'prefix-sums', stepTitle: 'step' });
-    // The component signature has no params: an empty argument list.
-    expect(v?.tests[0].args).toEqual([]);
+    expect(v?.subject).toEqual({ type: 'none' });
+    // No signature left to name the arguments.
+    expect(v?.tests[0].args).toEqual([{ name: null, value: 1 }]);
   });
 });

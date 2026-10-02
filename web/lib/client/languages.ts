@@ -32,7 +32,7 @@ const PY_REF = /File "solution\.py", line (\d+)/g;
 
 /**
  * Split judge output into segments, marking every reference to a line of
- * the learner's file (never the harness or a dependency's prelude file).
+ * the learner's file (never the harness or a prelude file).
  */
 export function linkErrorLines(output: string): OutputSegment[] {
   const refs: { start: number; end: number; line: number; column?: number }[] = [];

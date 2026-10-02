@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { auth } from '@/auth';
-import { canAccessBuildStep, canAccessQuestion } from '@/lib/server/access';
+import { canAccessQuestion } from '@/lib/server/access';
 import { prisma } from '@/lib/server/db';
 import { AccessDenied, isDomainError } from '@/lib/server/errors';
 import { getHintLadder, revealHint, type HintTarget } from '@/lib/server/hints';
@@ -8,7 +8,7 @@ import { getHintLadder, revealHint, type HintTarget } from '@/lib/server/hints';
 /**
  * The hint ladder (spec §3.6).
  *
- *   GET  /api/hints?questionId=… | ?buildStepId=…  → HintLadder
+ *   GET  /api/hints?questionId=…  → HintLadder
  *   POST /api/hints {hintId}  → {reveal: RevealResult, ladder: HintLadder}
  *
  * The client shows each rung's cost before this is called and asks for
@@ -28,7 +28,7 @@ function fail(e: unknown): Response {
 }
 
 async function assertAccess(userId: string, target: HintTarget): Promise<void> {
-  const access = 'questionId' in target ? await canAccessQuestion(userId, target.questionId) : await canAccessBuildStep(userId, target.buildStepId);
+  const access = await canAccessQuestion(userId, target.questionId);
   if (!access.ok) throw new AccessDenied(access.reason, 'Unlock this first to see its hints.');
 }
 
@@ -38,11 +38,10 @@ export async function GET(request: Request) {
   if (!userId) return Response.json({ error: 'unauthorized', message: 'Sign in to see hints.' }, { status: 401 });
   const params = new URL(request.url).searchParams;
   const questionId = idSchema.safeParse(params.get('questionId'));
-  const buildStepId = idSchema.safeParse(params.get('buildStepId'));
-  if (questionId.success === buildStepId.success) {
-    return Response.json({ error: 'invalid_input', message: 'Pass exactly one of questionId or buildStepId.' }, { status: 400 });
+  if (!questionId.success) {
+    return Response.json({ error: 'invalid_input', message: 'Pass a questionId.' }, { status: 400 });
   }
-  const target: HintTarget = questionId.success ? { questionId: questionId.data } : { buildStepId: buildStepId.data! };
+  const target: HintTarget = { questionId: questionId.data };
   try {
     await assertAccess(userId, target);
     return Response.json(await getHintLadder(userId, target), { headers: { 'Cache-Control': 'no-store' } });
@@ -64,9 +63,9 @@ export async function POST(request: Request) {
     const reveal = await revealHint(userId, body.data.hintId);
     const hint = await prisma.hint.findUniqueOrThrow({
       where: { id: body.data.hintId },
-      select: { questionId: true, buildStepId: true },
+      select: { questionId: true },
     });
-    const target: HintTarget = hint.questionId ? { questionId: hint.questionId } : { buildStepId: hint.buildStepId! };
+    const target: HintTarget = { questionId: hint.questionId };
     return Response.json({ reveal, ladder: await getHintLadder(userId, target) });
   } catch (e) {
     return fail(e);

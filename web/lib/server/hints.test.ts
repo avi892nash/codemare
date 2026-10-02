@@ -1,13 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { AccessDenied, HintLocked, InsufficientTokens } from './errors';
 import { getHintLadder, revealHint } from './hints';
-import { earnForBuild, earnForSolve } from './ledger';
+import { earnForSolve } from './ledger';
 import { prisma, setupTestDatabase } from './test/db';
 import {
   balanceOf,
   grant,
-  makeBuildStep,
-  makeComponent,
   makeHints,
   makeQuestion,
   makeUser,
@@ -138,27 +136,5 @@ describe('hint ladder', () => {
     const q = await makeQuestion({ topics: [{ topicId: w.graphs.id }] });
     const hints = await makeHints({ questionId: q.id }, [{ level: 'nudge' }]);
     await expect(revealHint(user.id, hints.nudge.id)).rejects.toBeInstanceOf(AccessDenied);
-  });
-});
-
-describe('build step hints', () => {
-  it("charge the component's topic and penalize the build award", async () => {
-    const w = await makeWorld();
-    const user = await makeUser();
-    const component = await makeComponent({ topicId: w.strings.id });
-    const step = await makeBuildStep(component.id, { difficulty: 'Hard' });
-    const hints = await makeHints({ buildStepId: step.id }, [
-      { level: 'nudge', costKind: 'token', costAmount: 1 },
-      { level: 'concept', costKind: 'score', costAmount: 40 },
-    ]);
-    await grant(user.id, w.strings.id, 'Medium', 1);
-
-    await revealHint(user.id, hints.nudge.id);
-    expect(await balanceOf(user.id, w.strings.id)).toBe(0);
-    const concept = await revealHint(user.id, hints.concept.id);
-    expect(concept.penalty).toBe(40);
-
-    const [award] = await earnForBuild(user.id, step.id);
-    expect(award.amount).toBe(2); // round(3 × 0.6) = round(1.8)
   });
 });

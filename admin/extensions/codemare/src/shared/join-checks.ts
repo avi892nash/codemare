@@ -1,19 +1,15 @@
 /**
- * Checks for the join tables staff edit in Directus — question topics,
- * component dependencies and gate questions. Pure; the content-integrity
- * hook feeds them rows and turns problems into readable 400s. Unit-tested in
- * admin/test/join-checks.test.ts. Messages carry no final period: Directus
- * renders them as "Invalid payload. <message>.".
+ * Checks for the join tables staff edit in Directus — question topics and
+ * gate questions. Pure; the content-integrity hook feeds them rows and turns
+ * problems into readable 400s. Unit-tested in admin/test/join-checks.test.ts.
+ * Messages carry no final period: Directus renders them as
+ * "Invalid payload. <message>.".
  *
  * They mirror the seed validator (web/prisma/seed/validate.ts), so Directus
  * cannot store what the seed would refuse:
  *   · a question topic's weight is a number > 0 (also a CHECK constraint)
- *   · a component never depends on itself (also a CHECK constraint) and the
- *     dependency graph stays acyclic — checked with the web app's own graph
- *     rules, the ones that assemble build preludes
  *   · a gate keeps at least `pass_threshold` questions
  */
-import { findCycle, graphFromEdges } from './rules';
 
 export const WEIGHT_MESSAGE =
   'Weight must be a number greater than 0: the share of the solve award this topic gets (1 = the full award)';
@@ -22,33 +18,6 @@ export const WEIGHT_MESSAGE =
 export function isValidWeight(value: unknown): boolean {
   const n = typeof value === 'string' && value.trim() !== '' ? Number(value) : value;
   return typeof n === 'number' && Number.isFinite(n) && n > 0;
-}
-
-export interface DepEdge {
-  componentId: string;
-  dependsOnId: string;
-}
-
-/**
- * Why adding `edge` to the graph of `others` (the other edges, not the row
- * being written) is invalid, or null. `name` renders a component id.
- */
-export function dependencyProblem(
-  edge: DepEdge,
-  others: readonly DepEdge[],
-  name: (id: string) => string
-): string | null {
-  if (edge.componentId === edge.dependsOnId) {
-    return `${name(edge.componentId)} cannot depend on itself`;
-  }
-  const cycle = findCycle(
-    graphFromEdges([...others, edge].map((e) => ({ from: e.componentId, dependsOn: e.dependsOnId })))
-  );
-  if (!cycle) return null;
-  return (
-    `This dependency would create a cycle: ${cycle.map(name).join(' → ')}. ` +
-    'Dependencies are built first and prepended to the build, so a component cannot (indirectly) depend on itself'
-  );
 }
 
 /**

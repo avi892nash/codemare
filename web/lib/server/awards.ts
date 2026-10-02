@@ -2,7 +2,7 @@ import 'server-only';
 import { prisma, type Db } from './db';
 import { evaluateBadges, type AwardedBadge } from './badges';
 import { InvalidInput, NotFoundError } from './errors';
-import { earnForBuild, earnForSolve, type TokenAward } from './ledger';
+import { earnForSolve, type TokenAward } from './ledger';
 import { percentileOf } from './rules/scoring';
 
 /**
@@ -23,11 +23,6 @@ export interface AcceptedSubmitAwards {
   tokensAwarded: TokenAwardView[];
   /** "Beats N%" (submit only; null for gate submissions). */
   percentile: number | null;
-  badgesAwarded: AwardedBadge[];
-}
-
-export interface BuildPassedAwards {
-  tokensAwarded: TokenAwardView[];
   badgesAwarded: AwardedBadge[];
 }
 
@@ -89,28 +84,4 @@ export async function onAcceptedSubmit(userId: string, submissionId: string): Pr
   }
   const badgesAwarded = await evaluateBadges(userId);
   return { tokensAwarded, percentile, badgesAwarded };
-}
-
-/**
- * After a passing `build` submission: first-pass tokens for the step
- * (idempotent), step_progress → passed, then badges.
- */
-export async function onBuildPassed(userId: string, submissionId: string): Promise<BuildPassedAwards> {
-  const s = await prisma.submission.findUnique({
-    where: { id: submissionId },
-    select: { userId: true, kind: true, status: true, buildStepId: true },
-  });
-  if (!s || s.userId !== userId) throw new NotFoundError('submission', submissionId);
-  if (s.kind !== 'build' || s.status !== 'OK' || !s.buildStepId) {
-    throw new InvalidInput('onBuildPassed needs a passing build submission');
-  }
-
-  const tokensAwarded = view(await earnForBuild(userId, s.buildStepId));
-  await prisma.stepProgress.upsert({
-    where: { userId_buildStepId: { userId, buildStepId: s.buildStepId } },
-    create: { userId, buildStepId: s.buildStepId, status: 'passed' },
-    update: { status: 'passed' },
-  });
-  const badgesAwarded = await evaluateBadges(userId);
-  return { tokensAwarded, badgesAwarded };
 }

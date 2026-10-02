@@ -52,6 +52,9 @@ export class Directus {
   patch<T>(path: string, body: unknown): Promise<T> {
     return this.request<T>('PATCH', path, body);
   }
+  delete(path: string, body?: unknown): Promise<void> {
+    return this.request<void>('DELETE', path, body);
+  }
 
   /** GET that resolves to null on 403/404 (Directus answers 403 for unknown collections). */
   async find<T>(path: string): Promise<T | null> {
