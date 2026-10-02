@@ -5,7 +5,6 @@ import {
   catalogSearchString,
   countFacetFilters,
   hasActiveFilters,
-  pageWindow,
   parseCatalogQuery,
   searchWords,
 } from '@/components/Catalog/query';
@@ -84,15 +83,5 @@ describe('catalog URLs', () => {
   it('splits search words', () => {
     expect(searchWords('  Hash   Table ')).toEqual(['hash', 'table']);
     expect(searchWords('')).toEqual([]);
-  });
-});
-
-describe('pageWindow', () => {
-  it('shows first, last and the neighbours of the current page', () => {
-    expect(pageWindow(1, 1)).toEqual([1]);
-    expect(pageWindow(1, 3)).toEqual([1, 2, 3]);
-    expect(pageWindow(5, 10)).toEqual([1, null, 4, 5, 6, null, 10]);
-    expect(pageWindow(1, 10)).toEqual([1, 2, null, 10]);
-    expect(pageWindow(10, 10)).toEqual([1, null, 9, 10]);
   });
 });

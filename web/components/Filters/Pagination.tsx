@@ -1,6 +1,6 @@
 import { Button, ButtonLink } from '@/components/ui/Button';
-import { pageWindow } from './query';
-import s from './Catalog.module.css';
+import { pageWindow } from './pageWindow';
+import s from './Pagination.module.css';
 
 export interface PaginationProps {
   page: number;

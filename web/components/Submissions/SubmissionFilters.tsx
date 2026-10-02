@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
 import { Spinner } from '@/components/ui/Spinner';
 import { LANGUAGE_LABEL } from '@/components/ui/highlight';
-import { useFilterNav, useSettledState } from '@/components/Catalog/FilterNav';
+import { useFilterNav, useSettledState } from '@/components/Filters/FilterNav';
 import { LANGUAGES, VERDICTS, VERDICT_LABEL, type SubmissionKind, type SupportedLanguage } from '@/lib/types';
 import {
   EMPTY_SUBMISSION_QUERY,

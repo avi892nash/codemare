@@ -19,7 +19,7 @@ import {
   type CatalogQuery,
   type CatalogStatus,
 } from './query';
-import { useFilterNav, useSettledState } from './FilterNav';
+import { useFilterNav, useSettledState } from '@/components/Filters/FilterNav';
 import s from './Catalog.module.css';
 
 const SEARCH_DEBOUNCE_MS = 300;

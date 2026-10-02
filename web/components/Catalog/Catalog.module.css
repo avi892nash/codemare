@@ -275,49 +275,6 @@ button.toggle {
   background: var(--bg-1);
 }
 
-/* ── Pagination ─────────────────────────────────────────── */
-.pager {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-top: 16px;
-}
-.pagerInfo {
-  margin: 0;
-  font-size: 12.5px;
-  color: var(--fg-2);
-}
-.pagerInfo span {
-  font-family: var(--font-mono);
-  color: var(--fg-1);
-}
-.pagerLinks {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.pages {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.gap {
-  padding: 0 6px;
-  color: var(--fg-2);
-  font-family: var(--font-mono);
-  font-size: 12px;
-}
-.pageOf {
-  display: none;
-  font-size: 12.5px;
-  color: var(--fg-2);
-}
-
 /* ── Responsive ─────────────────────────────────────────── */
 @media (max-width: 720px) {
   .title {
@@ -405,19 +362,5 @@ button.toggle {
     width: auto;
     height: auto;
     clip: auto;
-  }
-
-  .pages {
-    display: none;
-  }
-  .pageOf {
-    display: inline;
-  }
-  .pager {
-    justify-content: center;
-  }
-  .pagerInfo {
-    width: 100%;
-    text-align: center;
   }
 }
