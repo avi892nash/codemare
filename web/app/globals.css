@@ -292,15 +292,17 @@ body {
 
 .hm-cell { width: 11px; height: 11px; border-radius: 2px; }
 
-/* Auth screen layout — two columns on wide, single (form only) on narrow */
+/* Auth screen layout — form and hero reel side by side on wide; on narrow a
+ * single column where the reel is a short banner above the form (DOM order
+ * stays form → reel; `order` lifts the banner, which is non-essential). */
 .auth-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   min-height: 100%;
 }
 @media (max-width: 900px) {
-  .auth-grid { grid-template-columns: 1fr; }
-  .auth-panel { display: none !important; }
+  .auth-grid { grid-template-columns: minmax(0, 1fr); }
+  .auth-panel { order: -1; }
 }
 
 /* ─── Motion ─────────────────────────────────────────────────────── */

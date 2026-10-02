@@ -5,9 +5,9 @@ import { AuthValuePanel } from './AuthValuePanel';
 import s from './Auth.module.css';
 
 /**
- * The split auth screen: form column on the left, value panel on the right
- * (hidden below 900 px, leaving a centered form). Server component; the form
- * inside is the only client part.
+ * The split auth screen: form column on the left, value panel (the topic hero
+ * reel) on the right; below 900 px the panel becomes a short banner above the
+ * form. Server component; the form and the reel are the only client parts.
  */
 export function AuthShell({ children }: { children: ReactNode }) {
   return (
