@@ -220,7 +220,7 @@
     <h1>Codemare Decisions</h1>
     <p class="dek">Why Codemare is shaped the way it is: every decision with the alternatives it beat, the path a submission takes, the contracts between the parts, and the bugs that set the rules.</p>
     <div class="meta">
-      <span>211 commits · Nov 2025 → Oct 2026</span>
+      <span>219 commits · Nov 2025 → Oct 2026</span>
       <span>grounded in <code>git log</code> and the merge messages</span>
       <span>companion to README.md and docs/spec/architecture.md</span>
     </div>
@@ -287,7 +287,7 @@
           <li><strong>The design files never arrived.</strong> The brief builds from <code>/design/tokens.css</code>, <code>MVP Architecture.html</code> and the screen artboards; none were in the repository. Rather than stall, the build ran against a reconstructed spec, <code>docs/spec/architecture.md</code>, with the already-ported design system as canonical, and wrote down every place it departs from the brief (<a href="#d15">decision 15</a>).</li>
           <li><strong>It was built by agents working in parallel</strong>: five phases, each a set of agents in their own git worktrees with strict file ownership, an integrator verifying and merging every branch, and CI as the final word (<a href="#d36">decision 36</a>). From the spec commit (<code>4ce8b73</code>, 14:58) to the last merge (<code>5f8c924</code>, 03:55 the next night): 128 commits, 16 merges, about thirteen hours.</li>
         </ul>
-        <p>Then the owner used it. On 2 October 2026 they tested the running site and judged one piece of the brief — the Queue, where learners predicted and built reusable components into My Library — not a usable feature, so it was taken out again, tables and all (<a href="#d38">decision 38</a>).</p>
+        <p>Then the owner used it. On 2 October 2026 they tested the running site and judged one piece of the brief — the Queue, where learners predicted and built reusable components into My Library — not a usable feature, so it was taken out again, tables and all (<a href="#d38">decision 38</a>). The same day the problem list went too: the tier map, which already showed every topic, became the home page and the place where each topic's problems are listed (<a href="#d39">decision 39</a>).</p>
       </section>
 
       <!-- ============================================================ 2 -->
@@ -539,7 +539,7 @@
             <tr><td>12</td><td><a href="#d12">Verdicts are derived, never echoed</a></td><td><span class="st">current</span></td></tr>
             <tr><td>13</td><td><a href="#d13">Order-insensitive judging via <code>compareMode</code></a></td><td><span class="st">current</span></td></tr>
             <tr><td>14</td><td><a href="#d14">Process: dev → QA → manager agents</a></td><td><span class="st superseded">superseded by 35, 36</span></td></tr>
-            <tr><td>15</td><td><a href="#d15">Build against a reconstructed spec</a></td><td><span class="st amended">amended by 38</span></td></tr>
+            <tr><td>15</td><td><a href="#d15">Build against a reconstructed spec</a></td><td><span class="st amended">amended by 38, 39</span></td></tr>
             <tr><td>16</td><td><a href="#d16">Keep our compile service instead of Judge0</a></td><td><span class="st amended">amended by 38</span></td></tr>
             <tr><td>17</td><td><a href="#d17">The compile service becomes a pure executor, over SSE</a></td><td><span class="st amended">amended by 38</span></td></tr>
             <tr><td>18</td><td><a href="#d18">One marked line per test, judged against the caller's answers</a></td><td><span class="st new">new · Sep 2026</span></td></tr>
@@ -547,22 +547,23 @@
             <tr><td>20</td><td><a href="#d20">Hidden tests never leave the server</a></td><td><span class="st new">new · Sep 2026</span></td></tr>
             <tr><td>21</td><td><a href="#d21">Two Postgres schemas, real migrations, guards in SQL</a></td><td><span class="st amended">amended by 38</span></td></tr>
             <tr><td>22</td><td><a href="#d22">An append-only token ledger, bucketed by difficulty</a></td><td><span class="st amended">amended by 38</span></td></tr>
-            <tr><td>23</td><td><a href="#d23">Unlock recipes, tiers and gates</a></td><td><span class="st amended">amended by 38</span></td></tr>
+            <tr><td>23</td><td><a href="#d23">Unlock recipes, tiers and gates</a></td><td><span class="st amended">amended by 38, 39</span></td></tr>
             <tr><td>24</td><td><a href="#d24">The hint ladder: score costs and token costs</a></td><td><span class="st amended">amended by 38</span></td></tr>
             <tr><td>25</td><td><a href="#d25">Component builds prepend their dependencies</a></td><td><span class="st amended">amended by 38</span></td></tr>
             <tr><td>26</td><td><a href="#d26">Directus edits rows; Postgres roles enforce it</a></td><td><span class="st amended">amended by 38</span></td></tr>
             <tr><td>27</td><td><a href="#d27">Two seed modes</a></td><td><span class="st amended">amended by 38</span></td></tr>
             <tr><td>28</td><td><a href="#d28">One VPS: Docker Compose, Caddy, restic backups</a></td><td><span class="st new">new · Sep 2026</span></td></tr>
             <tr><td>29</td><td><a href="#d29">Sandbox hardening: what every box gets</a></td><td><span class="st new">new · Sep 2026</span></td></tr>
-            <tr><td>30</td><td><a href="#d30">No route-level <code>loading.tsx</code> on query-navigated routes</a></td><td><span class="st amended">amended by 37, 38</span></td></tr>
+            <tr><td>30</td><td><a href="#d30">No route-level <code>loading.tsx</code> on query-navigated routes</a></td><td><span class="st amended">amended by 37, 38, 39</span></td></tr>
             <tr><td>31</td><td><a href="#d31">An Edge-safe Auth.js config for the middleware</a></td><td><span class="st new">new · Sep 2026</span></td></tr>
             <tr><td>32</td><td><a href="#d32">Throttle where identity exists</a></td><td><span class="st amended">amended by 38</span></td></tr>
             <tr><td>33</td><td><a href="#d33">AI review after the verdict, never instead of it</a></td><td><span class="st new">new · Sep 2026</span></td></tr>
             <tr><td>34</td><td><a href="#d34">The hidden Library: a 404 like any other</a></td><td><span class="st new">new · Sep 2026</span></td></tr>
             <tr><td>35</td><td><a href="#d35">Six CI jobs; a production build is the final word</a></td><td><span class="st new">new · Sep 2026</span></td></tr>
             <tr><td>36</td><td><a href="#d36">How it was built: phased agents, an integrator, CI</a></td><td><span class="st new">new · Sep 2026</span></td></tr>
-            <tr><td>37</td><td><a href="#d37">Accessibility and first paint, measured and gated</a></td><td><span class="st amended">amended by 38</span></td></tr>
+            <tr><td>37</td><td><a href="#d37">Accessibility and first paint, measured and gated</a></td><td><span class="st amended">amended by 38, 39</span></td></tr>
             <tr><td>38</td><td><a href="#d38">Remove the Queue and My Library</a></td><td><span class="st new">new · Oct 2026</span></td></tr>
+            <tr><td>39</td><td><a href="#d39">Remove the problem list; the map is home</a></td><td><span class="st new">new · Oct 2026</span></td></tr>
           </tbody>
         </table></div>
 
@@ -939,8 +940,9 @@
         <!-- ==================================== new records, Sep 2026 -->
 
         <article class="dr" id="d15">
-          <div class="eyebrow">Decision 15 · <span class="st amended">amended by 38</span></div>
+          <div class="eyebrow">Decision 15 · <span class="st amended">amended by 38, 39</span></div>
           <h3>Build against a reconstructed spec; the design files never arrived</h3>
+          <p class="note amended"><span class="tag">Amended</span>The brief's screen 01, the problem catalog with its empty state 08b, has no screen any more: the list was removed on 2 October 2026 and the tier map lists the problems (<a href="#d39">decision 39</a>). When the design files arrive, 01 and 08b have nothing to be compared with.</p>
           <p class="note amended"><span class="tag">Amended</span>One deviation is moot: “no Java in component builds” went with the component builds themselves on 2 October 2026 (<a href="#d38">decision 38</a>); spec deviation 0.4 now reads that questions support all six languages. The spec marks what was removed and when.</p>
           <dl class="drg">
             <dt>Context</dt><dd><p>The brief (<code>docs/spec/implementation-prompt.md</code>, verbatim from the design project) says to build from <code>/design</code>: <code>tokens.css</code> for every color, <code>MVP Architecture.html</code> for the data model, ledger rules, gates and infrastructure ("follow it exactly"), and the screen artboards. None of them were in the repository.</p></dd>
@@ -1109,8 +1111,9 @@
         </article>
 
         <article class="dr" id="d23">
-          <div class="eyebrow">Decision 23 · <span class="st amended">amended by 38</span></div>
+          <div class="eyebrow">Decision 23 · <span class="st amended">amended by 38, 39</span></div>
           <h3>Unlock recipes, tiers and gates</h3>
+          <p class="note amended"><span class="tag">Amended</span>Locked questions no longer list in a catalog with a lock (<a href="#d39">decision 39</a>): the map lists every published question under each of its topics. An unlocked topic links its questions to the editor, a composite that a still-locked topic keeps closed names that topic instead, and a locked topic shows how many questions it holds.</p>
           <p class="note amended"><span class="tag">Amended</span>With the Queue gone (<a href="#d38">decision 38</a>) the map shows only the questions that would pay what is missing, and the economy was re-simulated with questions as the only source of tokens: every tier opens and every topic unlocks, with no dead end in 876 reachable states (504 when every affordable token-cost hint is bought). No recipe had to change.</p>
           <dl class="drg">
             <dt>Context</dt><dd><p>Progression should resist grinding one easy topic, never dead-end, and always tell the learner exactly what to do next.</p></dd>
@@ -1387,8 +1390,9 @@
         </article>
 
         <article class="dr" id="d30">
-          <div class="eyebrow">Decision 30 · <span class="st amended">amended by 37, 38</span></div>
+          <div class="eyebrow">Decision 30 · <span class="st amended">amended by 37, 38, 39</span></div>
           <h3>No route-level <code>loading.tsx</code> on routes that navigate by query string</h3>
+          <p class="note amended"><span class="tag">Amended</span>The rule stands, with one route left to apply to: <code>/problems</code> only redirects to the map since the problem list was removed (<a href="#d39">decision 39</a>), so <code>/submissions</code> is the route that navigates by query string. <code>/map</code> lost its <code>loading.tsx</code> when it became the home page; no route has one now.</p>
           <p class="note amended"><span class="tag">Amended</span>The rule stands. The editor, <code>/problems/[slug]</code>, has since lost its <code>loading.tsx</code> as well, for a different reason: its skeleton delayed the first real paint by at least 300 ms (<a href="#d37">decision 37</a>). Only <code>/map</code> and <code>/me/library</code> keep one.</p>
           <p class="note amended"><span class="tag">Amended</span><code>/queue</code> and <code>/me/library</code> were removed on 2 October 2026 (<a href="#d38">decision 38</a>); <code>/map</code> is the only route with a <code>loading.tsx</code> now.</p>
           <dl class="drg">
@@ -1548,8 +1552,9 @@
         </article>
 
         <article class="dr" id="d37">
-          <div class="eyebrow">Decision 37 · <span class="st amended">amended by 38</span></div>
+          <div class="eyebrow">Decision 37 · <span class="st amended">amended by 38, 39</span></div>
           <h3>Accessibility and first paint, measured and gated</h3>
+          <p class="note amended"><span class="tag">Amended</span><code>/problems</code> is gone (<a href="#d39">decision 39</a>). The map is the home page, and with the editor the LCP target, so it lost its skeleton as the editor did: under the same throttling settings a return visit paints the map's content in 0.64 s instead of 0.98 s, and a first visit in 1.40 s either way (the editor: 1.42 s). The clicked problem on the map now shows the spinner, and the accessibility gate checks <code>/map</code> at 375 px in both themes.</p>
           <p class="note amended"><span class="tag">Amended</span><code>/me/library</code> was removed with the Queue (<a href="#d38">decision 38</a>): only <code>/map</code> keeps a skeleton, and the accessibility gate no longer visits <code>/queue</code> or <code>/me/library</code>.</p>
           <dl class="drg">
             <dt>Context</dt><dd><p>Every feature had tests; nobody had yet looked at the product whole. The first audit found 92 axe violations (4 critical, 28 serious) on 17 of 46 route states, five page containers of different widths, the same runtime printed two different ways, and an editor whose problem statement — its largest paint — appeared 3.3 s into a simulated mobile load.</p></dd>
@@ -1578,7 +1583,31 @@
               <li><strong>Admin</strong>: <code>directus-config</code> deletes the dropped collections' meta and permissions once their tables are gone; Directus keeps their field and relation rows, inert, which <code>deploy/README.md</code> shows how to tidy.</li>
               <li><strong>Tests</strong>: web 522 → 468 tests (41 → 38 files), admin 29 → 25, Playwright 43 → 43 — the journey now ends at the unlock, and the accessibility gate no longer visits the two routes, which answer 404.</li>
             </ul></dd>
-            <dt>Evidence</dt><dd><p><code>ae40442</code> (content), <code>61c5b45</code> (Directus), <code>7d3b04b</code> (web app), <code>1ed8efc</code> (migration), <code>a49c21e</code> (spec and READMEs), then this record; the migration was applied to an empty database (no drift from the schema) and to the copy above, and checked against Directus 12.4.1 before and after.</p></dd>
+            <dt>Evidence</dt><dd><p><code>ae40442</code> (content), <code>61c5b45</code> (Directus), <code>7d3b04b</code> (web app), <code>1ed8efc</code> (migration), <code>a49c21e</code> (spec and READMEs), then this record; the migration was applied to an empty database (no drift from the schema) and to the copy above, and checked against Directus 12.4.1 before and after. Two lines of copy that still said builds earn tokens — the map's subtitle and the profile's empty token panel — were fixed later (<code>831e73f</code>).</p></dd>
+          </dl>
+        </article>
+
+        <article class="dr" id="d39">
+          <div class="eyebrow">Decision 39 · <span class="st new">new</span></div>
+          <h3>Remove the problem list; the map is home</h3>
+          <dl class="drg">
+            <dt>Context</dt><dd><p>The brief's first screen (01, with the empty state 08b) was a problem catalog at <code>/problems</code>: search over titles and tags, difficulty chips, status, topic, tag and company filters, curriculum order, 20 per page, and locked questions listed with a padlock linking to the map. It was the home page — <code>/</code>, the logo and the default after sign-in led there — and a ⌘/Ctrl+K “Jump to problem” box in the top bar searched it. The tier map already showed every topic with its balance, recipes and what was blocking it, and sent each unlocked topic's learners to <code>/problems?topic=&lt;slug&gt;</code>. On 2 October 2026, after the Queue went (<a href="#d38">decision 38</a>), the owner asked for the problem list to be removed too, and for the map to become home — which means the map has to let a learner reach every problem they can open.</p></dd>
+            <dt>Options</dt><dd><ul><li>Keep the list and only move the home page to the map.</li><li>Hide the list: keep the route, drop the links.</li><li>Remove it, and let the map list each topic's problems.</li></ul></dd>
+            <dt>Decision</dt><dd><p>Remove it; the map lists the problems.</p>
+              <ul>
+                <li><strong>Routes</strong>: <code>/problems</code> redirects to <code>/map</code> whatever its query string — old links and bookmarks such as <code>/problems?q=graph</code> — and <code>?topic=&lt;slug&gt;</code>, the map's own old link, lands on that topic's card (<code>#topic-&lt;slug&gt;</code>). <code>/</code>, the default after sign-in and after a password reset, and the logo all lead to <code>/map</code>, where the Map tab is current. <code>/problems/[slug]</code> and the <code>/p/[id]</code> redirect are unchanged.</li>
+                <li><strong>The map's lists</strong>: every published question appears under each of its topics, a composite under all of them, in the catalog's curriculum order, with the learner's progress (the catalog's <code>userQuestionProgress</code>, moved to <code>lib/server/topicProblems.ts</code>) and “n/m solved”. An unlocked topic links each title to the editor — the whole row is the target, and it shows decision 37's spinner while the editor loads. A composite that a still-locked topic keeps closed names that topic, linking to its card, instead of linking to a locked page. A locked or unlockable topic only says how many problems it holds: they can't be opened yet, and the card already says what is blocking. Whether a question opens comes from <code>questionAccessMap</code>, so a question of a running gate attempt counts as open (the running-attempt banner links the attempt). Published questions with no topic, which no card would list, get an “Other problems” section of their own.</li>
+                <li><strong>Gone</strong>: the jump box, the catalog's components and URL contract, <code>lib/server/catalog.ts</code> (listing, facet counts, search, acceptance rates — nothing else used them) and their tests. <strong>Kept</strong>, moved to <code>components/Filters</code>: the filter navigation and the pager, which <code>/submissions</code> uses.</li>
+                <li><strong>No skeleton on the map</strong>: as an LCP target it lost its <code>loading.tsx</code>, for the editor's reason in decision 37.</li>
+              </ul></dd>
+            <dt>Consequences</dt><dd><ul>
+              <li><strong>Finding problems</strong>: by topic, in the order the curriculum opens them, with progress at a glance. There is no search, no difficulty, tag or company filter and no list across topics any more, and a question's acceptance rate across all learners is no longer shown anywhere. Tags and companies still show on the problem page; Directus' notes for them say so now.</li>
+              <li><strong>Links</strong>: everything that led to the list leads to the map — the 404 pages, the editor's and the submissions' error pages, the submissions empty state, the gate result and the badge gallery's call to action (“Find a problem on the map”); the locked-question page keeps only “Open the map”. Authoring revalidates <code>/map</code>, which shows a question as soon as it is published.</li>
+              <li><strong>First paint</strong>, on a production build under Lighthouse's mobile applied-throttling settings (4× CPU, 562.5 ms RTT, 1.47 Mbps), reproduced through Chromium's DevTools protocol, median of 7 hard loads for a fresh learner: <code>/map</code> paints its largest element in 1.40 s on a first visit with or without the skeleton — the CSS decides — and in 0.64 s instead of 0.98 s on a return visit; the editor in 1.42 s, against decision 37's 1.43 s in Lighthouse itself. The map renders in about 60 ms on the server. Without the boundary, an unknown gate attempt answers a real 404 instead of a 200 (<a href="#l-200">section 6</a>).</li>
+              <li><strong>Data</strong>: nothing — no table, column or content changed, and nothing to migrate.</li>
+              <li><strong>Tests</strong>: web 468 → 459 (38 → 37 files) — the catalog's 19 unit tests go (the pager's one moves next to the submissions tests), and 9 new ones cover the topic lists and the map's view data; Playwright 43 → 43 — the catalog spec's 6 tests are replaced by a map spec's 6 (home and the redirects, an unlocked topic's list, a locked composite, a locked topic's count, a gate attempt's real 404, 375 px), the journey starts on the map and opens problems from it, and the accessibility gate now checks every phone-width route in both themes.</li>
+            </ul></dd>
+            <dt>Evidence</dt><dd><p><code>0665a73</code> (the filter components move out), <code>07b73b6</code> (the map lists problems), <code>5d6bfaa</code> (the list and the jump box go), <code>eff5790</code> (the map's skeleton, with the measurements above), <code>bd1a3bf</code> (spec and READMEs), then this record; checked with typecheck and lint clean, web vitest 459/459, admin 25/25, and Playwright 43/43 against a production build.</p></dd>
           </dl>
         </article>
       </section>
@@ -1865,7 +1894,7 @@ GET  /v1/queue/stats          { enabled, counts }   enabled:false without Redis<
           <li><strong>Directus's license</strong>: on first admin login Directus 12 asks a project owner to accept its MSCL-1.0-GPL license and data processing agreement. That is the deployment owner's call; “Skip” defers it without accepting anything.</li>
           <li><strong>Java timing</strong> counts only the calling thread: work handed to other threads is missing from <code>runUs</code>, pinned or not.</li>
           <li><strong>Untested</strong>: amd64 builds of the web, Directus and backup images (CI builds only the backend image), the Compose stack starting in CI, and a real Hetzner Storage Box (verified against an SFTP container).</li>
-          <li><strong>LCP on a real host</strong>: with throttling applied, the catalog and the editor paint their largest element in about 1.4 s on localhost, but Lighthouse's simulation still reports about 2.6 s (<a href="#d37">decision 37</a>); the brief's 2 s bar should be confirmed against the deployed VPS.</li>
+          <li><strong>LCP on a real host</strong>: with throttling applied, the map (the home page) and the editor paint their largest element in about 1.4 s on a first visit on localhost, the map in 0.64 s on a return visit (<a href="#d39">decision 39</a>), but Lighthouse's simulation reported about 2.6 s for the editor (<a href="#d37">decision 37</a>); the brief's 2 s bar should be confirmed against the deployed VPS.</li>
           <li><strong>Scaling out</strong>: rate limits are in-process (one web instance), the Redis queue doesn't serve <code>/v1/run</code>, and the sandbox shares the one VPS.</li>
           <li><strong>Directus leftovers</strong> of the Queue's tables: their field and relation meta rows stay in Directus, inert; tidying them is an optional SQL step (<code>deploy/README.md</code> §7.3, <a href="#d38">decision 38</a>).</li>
           <li><strong>Books and monetization</strong> from <code>docs/authoring-v1.md</code> — not started.</li>

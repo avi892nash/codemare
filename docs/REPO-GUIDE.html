@@ -178,10 +178,10 @@
       <div class="fact"><b>6</b><span>languages judged</span></div>
       <div class="fact"><b>30</b><span>problems · 3 tiers · 10 topics</span></div>
       <div class="fact"><b>32</b><span>tables in 2 schemas</span></div>
-      <div class="fact"><b>656</b><span>unit tests (web · backend · admin)</span></div>
+      <div class="fact"><b>647</b><span>unit tests (web · backend · admin)</span></div>
       <div class="fact"><b>43</b><span>Playwright tests</span></div>
       <div class="fact"><b>6</b><span>CI jobs per push</span></div>
-      <div class="fact"><b>211</b><span>commits, Nov 2025 →</span></div>
+      <div class="fact"><b>219</b><span>commits, Nov 2025 →</span></div>
     </div>
   </header>
 
@@ -205,7 +205,7 @@
     <main>
       <section id="s1">
         <h2><span class="n">1</span>Orientation</h2>
-        <p class="lede">Codemare is a DSA practice and learning platform. Learners solve problems in an in-browser editor in Python, JavaScript, TypeScript, C++, Java or Go; a sandboxed judge times their function on the CPU clock to the microsecond; and a tiered learning loop turns solves into topic tokens that unlock new topics through recipes, with timed gate exams opening each tier. Around that sit three Learn tracks, profiles and badges, question authoring, a hidden algorithms library and a Directus admin.</p>
+        <p class="lede">Codemare is a DSA practice and learning platform. Learners solve problems in an in-browser editor in Python, JavaScript, TypeScript, C++, Java or Go; a sandboxed judge times their function on the CPU clock to the microsecond; and a tiered learning loop turns solves into topic tokens that unlock new topics through recipes, with timed gate exams opening each tier. The tier map is the home page and lists every topic's problems. Around that sit three Learn tracks, profiles and badges, question authoring, a hidden algorithms library and a Directus admin.</p>
         <p>The repository is an <strong>npm workspaces monorepo</strong> with one root lockfile. Two workspaces deploy; the rest supports them:</p>
         <ul>
           <li><code>web/</code> — the Next.js 15 app the browser talks to: every page, the <code>/api/run|submit</code> streams, server actions, Auth.js, and the domain layer (<code>web/lib/server</code>) over Prisma and two Postgres schemas. It is the only writer of <code>app.*</code>.</li>
@@ -219,7 +219,7 @@
 
       <section id="s2">
         <h2><span class="n">2</span>Repo map</h2>
-        <p>Every tracked file (588) and directory (132) as <code>git ls-files</code> lists them at <code>a49c21e</code>. Click a folder to open it and a file to read what it does, or filter by path or description. The 30 question files share one entry; <code>node_modules</code>, <code>.next</code> and <code>dist</code> are not tracked, so they are not here. <em>Legacy</em> marks files that still exist but nothing current depends on.</p>
+        <p>Every tracked file (583) and directory (132) as <code>git ls-files</code> lists them at <code>bd1a3bf</code>. Click a folder to open it and a file to read what it does, or filter by path or description. The 30 question files share one entry; <code>node_modules</code>, <code>.next</code> and <code>dist</code> are not tracked, so they are not here. <em>Legacy</em> marks files that still exist but nothing current depends on.</p>
         <div class="map">
           <div class="map-left">
             <div class="tree-tools">
@@ -457,11 +457,11 @@ npm run dev            # compile service :4000 + web :4001</code></pre>
         <div class="table-wrap"><table>
           <thead><tr><th>Route</th><th>What it is</th><th>Guard</th></tr></thead>
           <tbody>
-            <tr><td><code>/</code></td><td>Redirect: <code>/problems</code> when signed in, else <code>/signin</code>.</td><td>—</td></tr>
-            <tr><td><code>/signin</code>, <code>/signup</code></td><td>Email and password; OAuth buttons only for configured providers.</td><td>public; signed-in visitors go on to <code>next</code> or <code>/problems</code></td></tr>
+            <tr><td><code>/</code></td><td>Redirect: <code>/map</code> (home) when signed in, else <code>/signin</code>.</td><td>—</td></tr>
+            <tr><td><code>/signin</code>, <code>/signup</code></td><td>Email and password; OAuth buttons only for configured providers.</td><td>public; signed-in visitors go on to <code>next</code> or <code>/map</code></td></tr>
             <tr><td><code>/forgot</code>, <code>/reset?token=</code></td><td>Password reset (Resend, or the server log without it).</td><td>public; rate-limited</td></tr>
             <tr><td><code>/auth</code>, <code>/p/[id]</code>, <code>/profile</code></td><td>Old routes: redirect to <code>/signin</code>, <code>/problems/[slug]</code>, <code>/u/&lt;handle&gt;</code>.</td><td>—</td></tr>
-            <tr><td><code>/problems</code></td><td>Catalog: URL filters, curriculum order, locks linking to <code>/map</code>, pagination.</td><td>login</td></tr>
+            <tr><td><code>/problems</code></td><td>The removed problem list (<a href="DECISIONS.html#d39">decision 39</a>): redirects to <code>/map</code>, whatever the query string; <code>?topic=&lt;slug&gt;</code> lands on that topic's card.</td><td>login</td></tr>
             <tr><td><code>/problems/[slug]</code></td><td>Statement, editor, results, hints, related lessons; <code>?attempt=</code> is gate mode. A locked question renders what's blocking it.</td><td>login; drafts 404 unless yours</td></tr>
             <tr><td><code>/ide</code></td><td>Playground with stdin cases, six languages.</td><td>login</td></tr>
             <tr><td><code>/submissions</code></td><td>Your history, filtered in the URL.</td><td>login (own only)</td></tr>
@@ -471,7 +471,7 @@ npm run dev            # compile service :4000 + web :4001</code></pre>
             <tr><td><code>/learn/[track]/[lesson]</code></td><td>A lesson; a module slug here redirects to the track page.</td><td>login</td></tr>
             <tr><td><code>/learn/[track]/[module]/checkpoint</code></td><td>The module quiz; <code>?attempt=</code> shows a graded review.</td><td>login</td></tr>
             <tr><td><code>/learn/[track]/complete</code></td><td>Track completion.</td><td>login</td></tr>
-            <tr><td><code>/map</code></td><td>Tiers, gates, topics, balances, recipes, what's blocking you; unlock and start-gate flows.</td><td>login</td></tr>
+            <tr><td><code>/map</code></td><td>Home: tiers, gates, topics, balances, recipes, what's blocking you, and each topic's problems (listed once it is unlocked, counted before); unlock and start-gate flows.</td><td>login</td></tr>
             <tr><td><code>/map/gates/[attemptId]</code></td><td>A gate attempt: countdown, progress, problems, Finish.</td><td>login; your own attempt, else 404</td></tr>
             <tr><td><code>/author</code>, <code>/author/new</code>, <code>/author/[id]/edit</code></td><td>Write, verify and publish questions.</td><td>role ≥ author (DB), own questions unless staff; else 404; noindex</td></tr>
             <tr><td><code>/library</code>, <code>/library/[area]</code>, <code>/library/[area]/[article]</code></td><td>The hidden algorithms library.</td><td>staff+ (DB) unless <code>FEATURE_LIBRARY_PUBLIC</code>; else 404; noindex; robots Disallow</td></tr>
@@ -542,14 +542,14 @@ npm run dev            # compile service :4000 + web :4001</code></pre>
 
       <section id="s8">
         <h2><span class="n">8</span>Tests and CI</h2>
-        <p>Counts are from running each suite at <code>a49c21e</code> on 2 Oct 2026 (Playwright against a production build).</p>
+        <p>Counts are from running each suite at <code>bd1a3bf</code> on 2 Oct 2026 (Playwright against a production build).</p>
         <div class="table-wrap"><table>
           <thead><tr><th>Layer</th><th>Size</th><th>What it covers</th><th>Run</th></tr></thead>
           <tbody>
-            <tr><td>Web unit + DB (vitest)</td><td>38 files · 468 tests</td><td>The pure rules (the debit planner is cross-checked against a brute-force allocator); every domain service against a migrated Postgres test database, trigger and partial indexes included (20 parallel spends never overdraw); the seed's validation, modes and idempotency; the real content played end to end as a fresh learner; lesson markdown against hostile input; SSE framing; the runner with a fake compile client.</td><td><code>npm test -w web</code></td></tr>
+            <tr><td>Web unit + DB (vitest)</td><td>37 files · 459 tests</td><td>The pure rules (the debit planner is cross-checked against a brute-force allocator); every domain service against a migrated Postgres test database, trigger and partial indexes included (20 parallel spends never overdraw); the seed's validation, modes and idempotency; the real content played end to end as a fresh learner; lesson markdown against hostile input; SSE framing; the runner with a fake compile client.</td><td><code>npm test -w web</code></td></tr>
             <tr><td>Backend (<code>node:test</code>)</td><td>17 files · 163 tests</td><td>The exact isolate command line per language and phase, the CPU plan, bounded box output, the harness protocol, generators compiled and run for real (<code>javac</code>, <code>go build</code>), and <code>/v1/run</code> plus <code>/v1/run/stream</code> end to end through the local adapter in all six languages. One test (the cpuset CLI) runs on Linux only.</td><td><code>npm test -w backend</code></td></tr>
             <tr><td>Admin (vitest)</td><td>3 files · 25 tests</td><td>Recipe and join-row checks, Postgres array literals, cuids, the enum parser, the recipe save payload.</td><td><code>npm --prefix admin test</code></td></tr>
-            <tr><td>Playwright</td><td>11 specs · 43 tests</td><td>Every feature through the UI against a running app and compile service: auth, catalog, editor, IDE, submissions, learn, profile, authoring, the hidden library, the sign-up → solve → submit → gate → unlock journey, and an accessibility gate (axe, one <code>h1</code>, no sideways scroll) on a route per section in both themes.</td><td><code>cd web &amp;&amp; PLAYWRIGHT_BASE_URL=… npx playwright test</code></td></tr>
+            <tr><td>Playwright</td><td>11 specs · 43 tests</td><td>Every feature through the UI against a running app and compile service: auth, the map as home with its problem lists, editor, IDE, submissions, learn, profile, authoring, the hidden library, the sign-up → solve → submit → gate → unlock journey, and an accessibility gate (axe, one <code>h1</code>, no sideways scroll) on a route per section in both themes.</td><td><code>cd web &amp;&amp; PLAYWRIGHT_BASE_URL=… npx playwright test</code></td></tr>
             <tr><td>Isolate smoke</td><td>26 checks</td><td>The production image, privileged: six languages, verdicts, the compile cache, fork/memory/output bombs, no network, no host files, one CPU per box, the syscall filter.</td><td><code>node backend/tests/isolate/smoke.mjs</code></td></tr>
             <tr><td>Content verification</td><td>4 Python scripts</td><td>Shapes and references, every reference solution against every test, starters compiling verbatim, and the token economy simulated over every unlock order.</td><td><code>python3 web/prisma/seed/verify/verify_all.py</code></td></tr>
           </tbody>
@@ -575,7 +575,7 @@ npm run dev            # compile service :4000 + web :4001</code></pre>
             <rect class="box" x="200" y="124" width="640" height="34" rx="3"/>
             <text x="214" y="146"><tspan class="b">infra</tspan> — compose config against .env.example · admin tests and typecheck</text>
             <rect class="box" x="200" y="162" width="640" height="34" rx="3"/>
-            <text x="214" y="184"><tspan class="b">web</tspan> — migrate · seed twice · 468 vitest tests · typecheck · lint · build</text>
+            <text x="214" y="184"><tspan class="b">web</tspan> — migrate · seed twice · 459 vitest tests · typecheck · lint · build</text>
             <rect class="box hi" x="200" y="200" width="640" height="34" rx="3"/>
             <text x="214" y="222"><tspan class="b">e2e</tspan> — next start + compile service + seeded Postgres → 43 Playwright tests</text>
           </svg>
@@ -593,13 +593,14 @@ npm run dev            # compile service :4000 + web :4001</code></pre>
               <li>Judging in six languages through <code>/v1/run</code> and SSE, with µs CPU timing and per-test results</li>
               <li>The learning loop: ledger, recipes, unlocks, gates with cooldowns, the hint ladder</li>
               <li>The Queue and My Library removed at the owner's request (decision 38): migration, Directus clean-up, and the economy re-simulated with questions as the only earn — no dead ends</li>
+              <li>The problem list removed at the owner's request (decision 39): the map is home and lists every topic's problems with your progress; <code>/problems</code> redirects there</li>
               <li>Learn (3 tracks, 23 lessons), profiles, 15 badges, authoring with a re-verified publish, the hidden library</li>
               <li>Directus confined by Postgres roles, with editable join tables and the two seed modes</li>
               <li>Sandbox hardening proven in the production image (the 26-check smoke runs in CI); the compile cache bounded by bytes as well as entries</li>
               <li>The legacy compile-service surface removed: the web app and the compile service speak only <code>/v1/run</code>, <code>/v1/run/stream</code> and IDE mode</li>
               <li>The Compose stack, backups and a restore drill, verified locally end to end</li>
               <li>CI: six jobs, including Playwright against a production build</li>
-              <li>Accessibility and first paint: no axe violations on any audited view in either theme, gated by a Playwright spec; LCP about 1.4 s on the catalog and the editor with throttling applied</li>
+              <li>Accessibility and first paint: no axe violations on any audited view in either theme, gated by a Playwright spec; with throttling applied, LCP about 1.4 s on a first visit to the map or the editor, 0.64 s on a return to the map</li>
             </ul>
           </div>
           <div class="col mid">
@@ -674,7 +675,7 @@ docker compose --env-file deploy/.env -f docker-compose.prod.yml exec backup cod
 <script>
 (function () {
   // ---- repo map ---------------------------------------------------------
-  // [name, role, description, children?] — generated from `git ls-files` at a49c21e;
+  // [name, role, description, children?] — generated from `git ls-files` at bd1a3bf;
   // a fourth element marks a directory.
   var TREE = [[".github","CI","GitHub configuration: the CI workflow.",[["workflows","CI","Workflows (one: ci.yml).",[["ci.yml","CI","Six jobs on every push to master and every PR: backend lint/build/unit tests; a six-language /v1/run smoke; the isolate smoke in the production image; compose and Directus admin checks; web migrations, seed, vitest, typecheck, lint, build; Playwright against a production build."]]]]],
 ["admin","Admin","Directus over content.*: the content model as code and one extension bundle (recipe editor, content-integrity hook, supply endpoint). A standalone npm package, deliberately not a workspace.",[["content-model","Admin","The Directus content model as data, applied through the REST API: meta only, never DDL.",[["apply.ts","Admin","Applies model.ts to a running Directus idempotently (unchanged entries are skipped); the directus-config one-shot runs it on every deploy, warns about content columns missing from the model, and deletes the meta and permissions of retired collections whose tables are gone."],
@@ -823,16 +824,14 @@ docker compose --env-file deploy/.env -f docker-compose.prod.yml exec backup cod
 ["layout.tsx","Layout","noindex/nofollow for every library page."],
 ["page.tsx","Page","/library: the index with reading progress."],
 ["viewer.ts","Security","The viewer if the library is open to them (staff+, or anyone with the flag); otherwise the same 404 as an unknown URL."]]],
-["map","Page","The tier map (T1) and gate attempts.",[["gates","Page","Gate attempts.",[["[attemptId]","Page","One running or finished attempt.",[["page.tsx","Page","/map/gates/[attemptId]: countdown, progress against the threshold, the gate’s problems, Finish; settles lazily after the deadline."]]]]],
+["map","Page","The tier map (T1) — the home page, listing every topic's problems — and gate attempts.",[["gates","Page","Gate attempts.",[["[attemptId]","Page","One running or finished attempt.",[["page.tsx","Page","/map/gates/[attemptId]: countdown, progress against the threshold, the gate’s problems, Finish; settles lazily after the deadline."]]]]],
 ["actions.ts","Server action","unlockTopicAction, startGateAction, finishGateAction; expected failures come back as the DomainError’s JSON (e.g. the shortfall per token topic)."],
-["loading.tsx","Boundary","Skeleton for /map (safe: it never navigates by query string)."],
-["page.tsx","Page","/map: every tier with its gate, every topic with balances, recipes and what’s blocking it."]]],
+["page.tsx","Page","/map, the home page: every tier with its gate, every topic with balances, recipes, what’s blocking it and its problems (listed once unlocked); questions with no topic on their own. No route-level loading.tsx: its skeleton held the first real paint back (decision 39)."]]],
 ["p","Legacy","The old editor route.",[["[id]","Legacy","Redirects to /problems/[slug].",[["page.tsx","Legacy","/p/<slug> → /problems/<slug>, query string kept."]]]]],
-["problems","Page","Catalog (01) and editor (02/03).",[["[slug]","Page","One question: statement, editor, results.",[["error.tsx","Boundary","The editor’s error boundary: a retry of just this segment; users only see the digest."],
+["problems","Page","The editor (02/03); /problems itself only redirects to the map.",[["[slug]","Page","One question: statement, editor, results.",[["error.tsx","Boundary","The editor’s error boundary: a retry of just this segment; users only see the digest."],
 ["not-found.tsx","Boundary","Unknown slug, or someone else’s draft."],
 ["page.tsx","Page","/problems/[slug]: statement and SolveWorkspace, hint ladder, related lessons; the locked page when a topic is locked; ?attempt= switches to gate mode. No route-level loading.tsx: a skeleton delayed the first real paint (decision 37)."]]],
-["error.tsx","Boundary","Error boundary for the catalog."],
-["page.tsx","Page","/problems: URL-driven filters, curriculum order, locks, acceptance rates, pagination. No route-level loading.tsx (decision 30)."]]],
+["page.tsx","Legacy","/problems → /map, whatever the query string; ?topic=<slug> → /map#topic-<slug>. The problem list that lived here was removed (decision 39)."]]],
 ["profile","Legacy","The old /profile route.",[["page.tsx","Legacy","/profile → /u/<handle>."]]],
 ["reset","Page","Choose a new password.",[["page.tsx","Page","/reset?token=: choose a new password (single-use, 30-minute link)."]]],
 ["signin","Page","Sign in (07a).",[["page.tsx","Page","/signin: email and password plus whichever OAuth providers are configured; ?error= messages."]]],
@@ -845,7 +844,7 @@ docker compose --env-file deploy/.env -f docker-compose.prod.yml exec backup cod
 ["not-found.tsx","Boundary","Unknown handle."],
 ["page.tsx","Page","/u/[handle]: stats, a 365-day heatmap, badges, recent submissions, tokens by topic. No email, no code."]]]]],
 ["layout.tsx","Layout","Navbar over the page. Reads the session on the server (no avatar flicker) and the learner’s token total for the chip."],
-["page.tsx","Page","/ → /problems when signed in, else /signin."]]],
+["page.tsx","Page","/ → /map (home) when signed in, else /signin."]]],
 ["api","Route handler","JSON and SSE endpoints. All but /api/auth sit behind the middleware (401 JSON when signed out), and each re-reads the session.",[["ai-review","Route handler","Optional AI review.",[["route.ts","Route handler","GET/POST /api/ai-review: the stored or a new AI review of your own accepted submission; 404 unless FEATURE_AI_REVIEW and a key are set; 12 per hour."]]],
 ["auth","Auth","Auth.js.",[["[...nextauth]","Auth","Auth.js’s catch-all route.",[["route.ts","Auth","Auth.js handlers: sign-in, callback, session, csrf, signout."]]]]],
 ["hints","Route handler","The hint ladder.",[["route.ts","Route handler","GET the ladder for a question; POST reveals a hint (order enforced, tokens spent atomically)."]]],
@@ -872,7 +871,7 @@ docker compose --env-file deploy/.env -f docker-compose.prod.yml exec backup cod
 ["OAuthButtons.tsx","UI","“Continue with …” buttons, only for providers configured on the server."],
 ["PasswordInput.tsx","UI","The kit’s Input with a pressed-state show/hide toggle."],
 ["ResetForm.tsx","UI","The /reset form, with the invalid, used or expired link state."],
-["routes.ts","Security","Pure routing rules shared by the middleware, the pages and the forms: decideRoute, safeNextPath (same-origin paths only), signInHref."],
+["routes.ts","Security","Pure routing rules shared by the middleware, the pages and the forms: decideRoute, safeNextPath (same-origin paths only), signInHref, and where a signed-in visitor lands (/map)."],
 ["SessionProvider.tsx","UI","Client wrapper for Auth.js’s SessionProvider."],
 ["SignInForm.tsx","UI","Email/password sign-in; submit stays disabled until the form has hydrated."],
 ["SignUpForm.tsx","UI","Sign-up with field-level errors; submit disabled until hydrated."]]],
@@ -895,27 +894,23 @@ docker compose --env-file deploy/.env -f docker-compose.prod.yml exec backup cod
 ["BadgeMedallion.tsx","UI","A badge’s emblem in its rarity tone; locked ones dashed, with a padlock."],
 ["badges.module.css","Style","Gallery, medallions and the focus view."],
 ["BadgeStrip.tsx","UI","The profile’s strip of badges."]]],
-["Catalog","UI","The /problems catalog (01, 08b).",[["Catalog.module.css","Style","Catalog toolbar, rows and facets."],
-["CatalogFilters.tsx","UI","Search, difficulty chips and status/topic/tag/company selects; every change is a URL change, made in a transition."],
-["CatalogRows.tsx","UI","One link per question; locked ones keep a lock and open /map. Server component."],
-["FilterNav.tsx","UI","Filter navigation shared by a page’s controls and results: transitions, a dimmed pending region, optimistic state so quick changes compose."],
-["LinkPending.tsx","UI","Inside a catalog row’s link: swaps the status dot for a spinner while that navigation is in flight (useLinkStatus) — the editor has no loading.tsx to show the wait."],
-["Pagination.tsx","UI","“Showing 21–40 of 132” with real links; compact on phones. Server component."],
-["query.ts","Rule","The /problems URL contract, parsed by the page and built by the filters, so both always agree."]]],
 ["Editor","UI","Monaco, themed from the tokens.",[["CodeEditor.module.css","Style","Editor frame, placeholder and focus ring."],
 ["CodeEditor.tsx","UI","Monaco, loaded on the client after the page is interactive, behind a code-shaped placeholder; TS/JS semantic diagnostics off (the judge only transpiles)."],
 ["LanguageSelector.tsx","UI","The language picker (a native select)."],
 ["monacoTheme.ts","UI","Monaco themes built from the design tokens, resolved by the browser and read back through a canvas (Monaco takes only hex)."]]],
+["Filters","UI","Filtered lists (/submissions): filter navigation and the pager.",[["FilterNav.tsx","UI","Filter navigation shared by a page’s controls and results: transitions, a dimmed pending region, optimistic state so quick changes compose."],
+["pageWindow.ts","Rule","The pager’s page numbers: first, last, the current page ± 1, gaps marked."],
+["Pagination.module.css","Style","The pager; Previous · “Page 2 of 7” · Next on phones."],
+["Pagination.tsx","UI","“Showing 21–40 of 132” with real links; compact on phones. Server component."]]],
 ["Hints","UI","The hint ladder.",[["HintLadder.module.css","Style","Ladder rungs and the reveal dialog."],
 ["HintLadder.tsx","UI","nudge → concept → pseudo → line → solution: each rung’s cost shown up front, revealed only through a confirmation."]]],
 ["IDE","UI","The /ide playground (04).",[["IDE.module.css","Style","Playground layout."],
 ["IdeOutputDisplay.tsx","UI","Per case: status, CPU time, memory, stdout, and a line diff against the expected output."],
 ["IdeView.tsx","UI","The playground: editor, language, cases, ⌘/Ctrl+Enter to run, drafts per language."],
 ["TestCaseManager.tsx","UI","Up to ten stdin cases in an accordion (the row header is role=button, so its remove button is valid HTML)."]]],
-["Layout","UI","The app shell (L8).",[["JumpInput.tsx","UI","“Jump to problem”: ⌘/Ctrl+K focuses it, Enter opens /problems?q=."],
-["nav-model.ts","UI","Pure nav data shared by the server layout and the client navbar; the catalog has no tab (the logo and ⌘K open it)."],
+["Layout","UI","The app shell (L8).",[["nav-model.ts","UI","Pure nav data shared by the server layout and the client navbar; the map is home (the logo opens it) and lists the problems, so no tab or search box opens a list."],
 ["Navbar.module.css","Style","Navbar and its responsive collapse."],
-["Navbar.tsx","UI","Section tabs (Learn, Map, IDE, Submissions; a menu below 768 px), the logo that opens the catalog, the jump box, the token chip, theme toggle and profile menu."],
+["Navbar.tsx","UI","Section tabs (Learn, Map, IDE, Submissions; a menu below 768 px), the logo that opens the map (home), the token chip, theme toggle and profile menu."],
 ["ProfileMenu.tsx","UI","The avatar menu: profile, badges, Author (≥ author), Library (only when visible), sign out."]]],
 ["Learn","UI","Learn pages (L1–L8).",[["CheckpointQuiz.tsx","UI","The quiz: answers stay on the client until submit; grading and answers live on the server."],
 ["CheckpointReview.tsx","UI","Score, pass/fail and per-question explanations, rendered from the stored attempt."],
@@ -954,11 +949,13 @@ docker compose --env-file deploy/.env -f docker-compose.prod.yml exec backup cod
 ["TokenBuckets.tsx","UI","A topic balance split into its Easy · Medium · Hard buckets."]]],
 ["Map","UI","The tier map (T1) and gate attempts.",[["GateAttempt.tsx","UI","Gate-attempt pieces: live re-render while it runs, the countdown, the cooldown clock, Finish (asks first when below the threshold)."],
 ["GateCard.tsx","UI","A tier’s gate and its state for you: start (confirmed), continue, cooldown countdown, or passed."],
-["map.module.css","Style","Map layout (topic cards keep their own height; items wrap on phones)."],
+["LinkPending.tsx","UI","Inside a problem’s link on the map: swaps the status dot for a spinner while that navigation is in flight (useLinkStatus) — the editor has no loading.tsx to show the wait."],
+["map.module.css","Style","Map layout (topic cards keep their own height; items wrap on phones) and the problem lists."],
 ["RunningAttemptBanner.tsx","UI","A running gate attempt, pinned to the top of the map."],
 ["TierSection.tsx","UI","One tier: header, the gate that opens it, its topics."],
 ["TopicActions.tsx","UI","The unlock flow: pick a recipe, see the exact debits, confirm; a shortfall comes back itemized."],
-["TopicCard.tsx","UI","One topic: state, balance by bucket, what’s blocking it, recipes with have/need per item."]]],
+["TopicCard.tsx","UI","One topic: state, balance by bucket, what’s blocking it, recipes with have/need per item, its problems."],
+["TopicProblems.tsx","UI","A topic’s problems at the foot of its card. Unlocked: every one with your progress and difficulty, the title linking to the editor (the whole row is the target), a locked composite naming the topic it needs, “n/m solved”. Locked: how many it holds. Server component."]]],
 ["Problem","UI","Problem statement pieces.",[["LockedQuestion.tsx","UI","What a locked question renders instead of the editor: what blocks each topic, and the way to the map."],
 ["Markdown.module.css","Style","Statement prose."],
 ["Markdown.tsx","UI","Sanitized GFM with fenced code through the kit’s CodeBlock; server-rendered for statements, lazy in the browser for hints."],
@@ -976,8 +973,8 @@ docker compose --env-file deploy/.env -f docker-compose.prod.yml exec backup cod
 ["TestBreakdown.tsx","UI","Per-test results: visible tests open to input/expected/output/error; hidden ones show pass or fail only."],
 ["TestStrip.tsx","UI","One tick per test, filling in as test events arrive."]]],
 ["states","UI","Shared screen states (08): empty, loading, 404, 500.",[["EmptyState.tsx","UI","“Nothing here yet”: icon, title, one line of help, optional action."],
-["LoadingState.tsx","UI","Skeletons shaped like the coming screen (list or editor), role=status; used by loading.tsx files."],
-["NotFound.tsx","UI","The 404, inline or full page."],
+["LoadingState.tsx","UI","Skeletons shaped like the coming screen (list or editor), role=status, for loading.tsx files — no route has one now (decisions 37 and 39); /dev/system shows them."],
+["NotFound.tsx","UI","The 404, inline or full page; its way out is the map unless the page names a closer one."],
 ["ServerError.tsx","UI","The 500, showing only the digest, never the raw message."],
 ["StatePage.tsx","UI","Frame for full-page states outside the workspace layout."],
 ["states.module.css","Style","State layouts."]]],
@@ -1027,7 +1024,7 @@ docker compose --env-file deploy/.env -f docker-compose.prod.yml exec backup cod
 ["Select.tsx","UI kit","Styled native select."],
 ["Skeleton.tsx","UI kit","Placeholder blocks with the design’s slow pulse (static under reduced motion)."],
 ["Spinner.tsx","UI kit","Indeterminate activity indicator."],
-["StatusDot.tsx","UI kit","Round solved/attempted indicator in catalog rows."],
+["StatusDot.tsx","UI kit","Round solved/attempted indicator in the map’s problem lists."],
 ["StatusPill.tsx","UI kit","Verdict pill in its spec tone (OK ok, WA/RE err, TLE/MLE warn, CE info, XX neutral); screen readers hear the long name."],
 ["Switch.tsx","UI kit","On/off control (role=switch); Toggle is the same component."],
 ["Tabs.module.css","Style","Tabs."],
@@ -1065,15 +1062,15 @@ docker compose --env-file deploy/.env -f docker-compose.prod.yml exec backup cod
 ["useModKey.ts","UI","Prints ⌘ or Ctrl for shortcut hints, corrected after mount."],
 ["useSplit.ts","UI","A resizable split remembered per browser, as a WAI-ARIA window splitter."],
 ["Workspace.module.css","Style","Workspace layout (panes are positioned so hidden text cannot stretch the page)."]]]]],
-["e2e","Test","Playwright: 43 tests in 11 specs, run against an already-running app (PLAYWRIGHT_BASE_URL); each spec creates its own users (those that earned tokens stay: the ledger is append-only).",[["a11y.spec.ts","Test","The accessibility and layout gate: no serious or critical axe violation and exactly one h1 on a route per section in both themes, no sideways scroll at 375 px (3 tests; axe-core loaded from cdnjs)."],
+["e2e","Test","Playwright: 43 tests in 11 specs, run against an already-running app (PLAYWRIGHT_BASE_URL); each spec creates its own users (those that earned tokens stay: the ledger is append-only).",[["a11y.spec.ts","Test","The accessibility and layout gate: no serious or critical axe violation and exactly one h1 on a route per section in both themes, no sideways scroll at 375 px in both themes (3 tests; axe-core loaded from cdnjs)."],
 ["auth.spec.ts","Test","The login wall, sign-up, sign-in, forgot and reset (6 tests)."],
 ["author.spec.ts","Test","Role gate, write → verify on the judge → publish, ownership (3 tests)."],
-["catalog.spec.ts","Test","Pagination, per-user status, locks, URL filters, the jump box, the empty state, 375 px (6 tests)."],
 ["editor.spec.ts","Test","Run, submit (Accepted, beats N%, +1 token), a wrong answer, Go and C++, a compile error linked to its line, a locked question (4 tests)."],
 ["ide.spec.ts","Test","stdin cases, per-case runtime, the diff, Go (1 test)."],
 ["learn.spec.ts","Test","Home, a lesson with a snippet and a visualization, a checkpoint with review, track completion and its badges (5 tests)."],
 ["library.spec.ts","Test","The plain 404 below staff, noindex, robots.txt, a staff reader through index → area → article (4 tests)."],
-["loop.spec.ts","Test","The required journey: sign up → solve → submit → pass the gate → unlock (1 test)."],
+["loop.spec.ts","Test","The required journey: sign up (landing on the map) → solve, the first problem opened from the map’s list → submit → pass the gate → unlock, then open the unlocked topic’s problem from its card (1 test)."],
+["map.spec.ts","Test","The map as home: /, the logo and the /problems redirects; an unlocked topic’s list (progress, links, the editor opening); a locked composite; a locked topic’s count; a gate attempt’s real 404; 375 px (6 tests)."],
 ["profile.spec.ts","Test","The /profile redirect, stats, the keyboard heatmap, someone else’s profile, the badge modal (5 tests)."],
 ["submissions.spec.ts","Test","History filters and pagination, the detail page, who may see a submission, the empty state, 375 px (5 tests)."]]],
 ["lib","Library","Shared code: the compile-service client, SSE, rate limits, mail, lesson markdown, client helpers and the domain layer.",[["client","Client","Browser-side helpers for the editor and IDE. Pure where possible.",[["client.test.ts","Test","The run-state reducer, drafts, metric formatting, judge-output line links, signature helpers (15 tests)."],
@@ -1112,7 +1109,7 @@ docker compose --env-file deploy/.env -f docker-compose.prod.yml exec backup cod
 ["global-setup.ts","Test","Creates the test database if needed and runs prisma migrate deploy, so the trigger and partial indexes are under test."],
 ["server-only.ts","Test","Stand-in for the server-only package outside an RSC build."]]],
 ["access.test.ts","Test","Recipe unlocks, the cheapest recipe, tier-closed blockers, map state, question access (17 tests)."],
-["access.ts","Domain","Unlocks and access (§3.4): unlockTopic, whatsBlocking, getMapState, canAccessQuestion (incl. the running-gate exception and drafts)."],
+["access.ts","Domain","Unlocks and access (§3.4): unlockTopic, whatsBlocking, getMapState, canAccessQuestion and the batched questionAccessMap (incl. the running-gate exception and drafts)."],
 ["aiReview.test.ts","Test","Prompt order and cache_control, model choice, the flag-off path, the stored flow with a fake client (7 tests)."],
 ["aiReview.ts","Domain","Optional AI review of an accepted submission: stable instructions first and cached, Haiku by default, a deeper review on request; stored with token usage."],
 ["author.model.test.ts","Test","The pure authoring rules, incl. stubs reproducing all 30 seeded starters byte for byte (20 tests)."],
@@ -1121,8 +1118,6 @@ docker compose --env-file deploy/.env -f docker-compose.prod.yml exec backup cod
 ["awards.ts","Domain","What an accepted verdict earns: tokens, badges and the percentile, for the SSE verdict event."],
 ["badges.test.ts","Test","Every criteria kind through its hook; idempotent awards (9 tests)."],
 ["badges.ts","Domain","evaluateBadges after solves, unlocks, gates, lessons and checkpoints; idempotent, never revoked."],
-["catalog.test.ts","Test","Filters, facet counts, curriculum order, locks (10 tests)."],
-["catalog.ts","Domain","The /problems read model: published questions, filters with honest facet counts, curriculum order, per-user status and locks, acceptance."],
 ["db.ts","Domain","Db/Tx types and withUserLock: pg_advisory_xact_lock(hashtextextended(user_id, 0)) around balance-changing work."],
 ["errors.ts","Domain","Typed DomainErrors (code + HTTP status), e.g. InsufficientTokens with per-topic shortfalls."],
 ["gates.test.ts","Test","Thresholds, cooldowns, lazy deadline finishes, gate submissions (11 tests)."],
@@ -1137,8 +1132,8 @@ docker compose --env-file deploy/.env -f docker-compose.prod.yml exec backup cod
 ["ledger.ts","Domain","The token ledger (§3.1–3.3): bucket balances, idempotent earnForSolve, and spend under the advisory lock."],
 ["library.test.ts","Test","Access, drafts, progress and the snippet runner (14 tests)."],
 ["library.ts","Domain","The hidden Library: access (staff+ or the flag, read fresh from the database), index, areas, articles, progress, runnable C++."],
-["loopViews.test.ts","Test","Map, gate and navbar view models, incl. the map’s earn options (9 tests)."],
-["loopViews.ts","Domain","View models for /map (with the questions that pay what a recipe misses), the gate attempt page and the navbar token total."],
+["loopViews.test.ts","Test","Map, gate and navbar view models, incl. the map’s earn options and each topic’s problems (11 tests)."],
+["loopViews.ts","Domain","View models for /map (with the questions that pay what a recipe misses, and each topic’s problems), the gate attempt page and the navbar token total."],
 ["passwordReset.test.ts","Test","Hashed single-use tokens, throttles, identical answers for unknown emails (13 tests)."],
 ["passwordReset.ts","Domain","Password reset: SHA-256 of a random token in verification_tokens (reset:<email>), 30 minutes, single use, consumed in a transaction."],
 ["profile.test.ts","Test","Public profile and badge gallery (7 tests)."],
@@ -1152,10 +1147,11 @@ docker compose --env-file deploy/.env -f docker-compose.prod.yml exec backup cod
 ["submissionHistory.ts","Domain","The /submissions list and detail (owner or staff+; hidden tests reduced to pass/fail on the server)."],
 ["submissions.test.ts","Test","Submission lifecycle and percentile (7 tests)."],
 ["submissions.ts","Domain","Submission lifecycle: createSubmission (queued) → markSubmissionRunning → completeSubmission (verdict, totals, test results)."],
+["topicProblems.test.ts","Test","Grouping under every topic, curriculum order, what opens (every topic, or a running gate), progress, topic-less questions, the comparator (7 tests)."],
+["topicProblems.ts","Domain","The map’s problem lists: every published question under each of its topics in curriculum order, with the learner’s progress (userQuestionProgress) and whether it opens (questionAccessMap)."],
 ["unlocks.ts","Domain","Unlock state: tier 0 always open, tier N open with a tier unlock row, topics unlocked by a recipe spend."],
 ["users.ts","Domain","User creation with a guaranteed unique handle."]]],
 ["authRoutes.test.ts","Test","decideRoute and safeNextPath, open-redirect tricks included (21 tests)."],
-["catalogQuery.test.ts","Test","The /problems URL contract (9 tests)."],
 ["compile.test.ts","Test","The SSE client against canned streams, and executeIde’s inline and 202 + poll replies (6 tests)."],
 ["compile.ts","Service link","The server-only compile-service client: run, runStream, executeIde, with X-Codemare-Token; refuses a placeholder token in production."],
 ["mailer.test.ts","Test","Resend requests and the console fallback (6 tests)."],
@@ -1165,7 +1161,7 @@ docker compose --env-file deploy/.env -f docker-compose.prod.yml exec backup cod
 ["rateLimit.ts","Security","In-memory sliding-window limiter: login, sign-up, and the per-user judge budget (30 a minute) shared by run, submit, IDE, snippets and reference runs."],
 ["sse.test.ts","Test","SSE framing edge cases: CRLF, lone CR, split chunks, comments (10 tests)."],
 ["sse.ts","Service link","SSE framing in both directions and the web run protocol’s event types; isomorphic, shared by route handlers, the compile client and the browser hook."],
-["submissionsFormat.test.ts","Test","Submission formatting and URL contract (7 tests)."],
+["submissionsFormat.test.ts","Test","Submission formatting, the URL contract and the pager’s page window (8 tests)."],
 ["theme.ts","UI","The cm-theme cookie contract, shared by server and client."],
 ["types.ts","Types","The shared vocabulary (difficulties, six languages, roles, verdicts, JSON shapes) plus the compile service’s IDE-mode shapes."]]],
 ["prisma","Data","Schema, migrations and the content seed.",[["migrations","Data","Real migrations, applied with prisma migrate deploy on every start. Never db push: it would drop the SQL-only guards.",[["20260928094803_init","Data","The baseline.",[["migration.sql","Data","The baseline: both schemas, 37 tables, enums, indexes and foreign keys."]]],
@@ -1369,7 +1365,8 @@ docker compose --env-file deploy/.env -f docker-compose.prod.yml exec backup cod
       ['web/components/Workspace/SolveWorkspace.tsx', 'One solving surface for questions and gate attempts.'],
       ['web/middleware.ts', 'The login wall, and why it fails closed.'],
       ['web/auth.config.ts', 'The Edge-safe half of Auth.js.'],
-      ['web/app/(workspace)/map/page.tsx', 'A server-rendered page over the domain layer: the tier map.']
+      ['web/app/(workspace)/map/page.tsx', 'A server-rendered page over the domain layer: the tier map, which is also home.'],
+      ['web/lib/server/topicProblems.ts', 'What the map’s topic cards list: every question under each of its topics, in curriculum order, with your progress and whether it opens.']
     ],
     ops: [
       ['README.md', 'The product and the quick start.'],
