@@ -47,11 +47,13 @@ const markup = new Map<string, string>();
 
 /** A scene's SVG content as markup, built once: the scenes are static, so every use of a slug shares one string. */
 function sceneMarkup(slug: string): string {
-  let m = markup.get(slug);
+  // Unknown slugs all draw the fallback, so they share one entry instead of one each.
+  const key = isTopicSlug(slug) ? slug : '';
+  let m = markup.get(key);
   if (m === undefined) {
     const Scene = isTopicSlug(slug) ? SCENES[slug] : FallbackScene;
     m = toMarkup(Scene());
-    markup.set(slug, m);
+    markup.set(key, m);
   }
   return m;
 }
