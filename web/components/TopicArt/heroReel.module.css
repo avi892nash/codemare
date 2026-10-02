@@ -1,0 +1,243 @@
+/* The sign-in hero reel (HeroReel.tsx): the stage (chrome shared with TopicArt
+ * in topicArt.module.css), the topic switcher along its top edge, and the
+ * topic's name and caption under it. Colors are existing tokens plus the
+ * topic's own hue (--a, an --art-* token). Phones use the same markup: the
+ * stage just gets shorter (see the media query). */
+
+.reel {
+  --dwell: 7s;
+  width: 100%;
+  max-width: 600px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.stage {
+  box-shadow:
+    0 34px 80px -40px color-mix(in oklab, var(--a) 65%, transparent),
+    0 0 0 1px color-mix(in oklab, var(--a) 12%, transparent);
+}
+
+/* the art fills the stage; the switcher's strip floats over its top 22 units (scenes keep that margin free) */
+.layers {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+}
+.layer {
+  position: absolute;
+  inset: 0;
+}
+.layer[data-state='in'] {
+  animation: kLayerIn 0.5s cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+.layer[data-state='out'] {
+  animation: kLayerOut 0.38s ease-in both;
+  pointer-events: none;
+}
+/* the scene that is leaving freezes while it fades */
+.layer[data-state='out'] * {
+  animation-play-state: paused !important;
+}
+@keyframes kLayerIn {
+  from { opacity: 0; transform: translateX(calc(var(--dir, 1) * 28px)) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes kLayerOut {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translateX(calc(var(--dir, 1) * -28px)) scale(0.98); }
+}
+
+/* ── Topic switcher: one segment per topic along the top edge ─────────── */
+.segs {
+  position: absolute;
+  z-index: 5;
+  top: 4px; /* leaves room for the focus ring inside the stage's clipped edge */
+  left: 0;
+  right: 0;
+  display: flex;
+  gap: 4px;
+  padding: 0 12px;
+}
+.seg {
+  --seg: var(--accent);
+  flex: 1 1 0;
+  min-width: 0;
+  /* a button centers its content vertically: pin the bar to the top, where the scenes leave room for it */
+  display: flex;
+  align-items: flex-start;
+  height: 26px;
+  margin: 0;
+  padding: 14px 0 0;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.segBar {
+  display: block;
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  overflow: hidden;
+  background: color-mix(in oklab, var(--seg) 36%, transparent);
+  transition: background 0.15s, transform 0.15s;
+}
+.seg:hover .segBar {
+  background: color-mix(in oklab, var(--seg) 62%, transparent);
+}
+.seg[aria-current] .segBar {
+  background: color-mix(in oklab, var(--seg) 30%, transparent);
+  transform: scaleY(1.35);
+}
+/* the active segment fills over one loop; its end moves the reel on */
+.fill {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--seg);
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+}
+.reel[data-live] .fill {
+  animation: kDwell var(--dwell) linear forwards;
+}
+.reel[data-hold] .fill {
+  animation-play-state: paused;
+}
+@keyframes kDwell {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+/* ── Name, caption, pause ─────────────────────────────────────────────── */
+.meta {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 52px;
+}
+.text {
+  min-width: 0;
+  display: grid;
+}
+/* all topics' texts share one grid cell (see HeroReel.tsx); only the current one is visible */
+.slot {
+  grid-area: 1 / 1;
+  min-width: 0;
+  visibility: hidden;
+}
+.slot[data-on] {
+  visibility: visible;
+  animation: kTextIn 0.45s cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+@keyframes kTextIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+.name {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 22px;
+  font-weight: 650;
+  letter-spacing: -0.4px;
+  line-height: 1.2;
+  color: var(--fg-0);
+}
+.name::before {
+  content: '';
+  flex: none;
+  width: 11px;
+  height: 11px;
+  border-radius: 3.5px;
+  background: var(--a);
+  box-shadow: 0 0 14px color-mix(in oklab, var(--a) 70%, transparent);
+}
+.caption {
+  margin: 5px 0 0;
+  font-size: 15px;
+  line-height: 1.4;
+  color: var(--fg-1);
+}
+.pause {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  margin: 0;
+  padding: 0;
+  color: var(--fg-1);
+  background: var(--bg-2);
+  border: 1px solid var(--line-3);
+  border-radius: 12px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+.pause:hover {
+  color: var(--fg-0);
+  background: var(--bg-3);
+}
+
+/* ── Phones: the same reel as a short banner above the form ───────────── */
+@media (max-width: 900px) {
+  .reel {
+    gap: 10px;
+  }
+  .stage {
+    aspect-ratio: auto;
+    height: clamp(128px, 30vw, 180px);
+    border-radius: 16px;
+    /* a short glow: the banner clips whatever reaches past its bottom edge, which would show as a hard line */
+    box-shadow:
+      0 8px 22px -14px color-mix(in oklab, var(--a) 60%, transparent),
+      0 0 0 1px color-mix(in oklab, var(--a) 12%, transparent);
+  }
+  .segs {
+    gap: 3px;
+    padding: 0 9px;
+  }
+  /* a thumb-sized target: the bar stays 4 px, the button is taller than the stage's top margin */
+  .seg {
+    height: 40px;
+    padding-top: 7px;
+  }
+  .meta {
+    min-height: 0;
+    gap: 10px;
+    align-items: center;
+  }
+  .name {
+    font-size: 16px;
+  }
+  .caption {
+    margin-top: 2px;
+    font-size: 13.5px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .layer[data-state='in'],
+  .slot,
+  .fill {
+    animation: none !important;
+  }
+  .layer[data-state='out'] {
+    display: none;
+  }
+  /* no timer: just show which topic is current */
+  .seg[aria-current] .fill {
+    transform: scaleX(1);
+  }
+  .segBar {
+    transition: none;
+  }
+}
