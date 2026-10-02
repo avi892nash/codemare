@@ -1,0 +1,86 @@
+/* The stage a topic scene plays on, shared by <TopicArt> and the sign-in
+ * reel: a framed 16:9 screen with a drifting dot grid, a vignette and a glow
+ * in the topic's hue, plus the pause / still-poster switches. Kept apart from
+ * the scenes' own CSS (topicArt.module.css) so the client reel can import the
+ * few class names it needs without dragging the scenes' class map along.
+ * Colors come only from the --art-* tokens (globals.css). */
+
+/* ── Hue: a scene's main color and the shades derived from it ─────────── */
+.hue {
+  --a-hi: color-mix(in oklab, var(--a) 58%, var(--art-white));
+  --a-lo: color-mix(in oklab, var(--a) 58%, var(--art-black));
+  --a-glow: color-mix(in oklab, var(--a) var(--art-glow-mix), transparent);
+  --gold-hi: color-mix(in oklab, var(--art-gold) 55%, var(--art-white));
+  --gold-lo: color-mix(in oklab, var(--art-gold) 58%, var(--art-black));
+  --hot-lo: color-mix(in oklab, var(--art-hot) 58%, var(--art-black));
+  --cool-lo: color-mix(in oklab, var(--art-cool) 58%, var(--art-black));
+  --surf-lo: color-mix(in oklab, var(--art-surface) 62%, var(--art-black));
+}
+
+/* ── Stage ────────────────────────────────────────────────────────────── */
+.stage {
+  --L: 7s;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 18px;
+  border: 1px solid var(--art-line);
+  background: var(--art-bg);
+  contain: paint;
+  container-type: inline-size;
+}
+/* A dot grid that drifts one cell per cycle (seamless), faded toward the edges by ::after.
+ * Its cell scales with the stage (cqw), so a 120 px thumbnail is a small stage, not a cropped big one. */
+.stage::before {
+  --grid: clamp(8px, 4.2cqw, 24px);
+  content: '';
+  position: absolute;
+  inset: calc(var(--grid) * -1);
+  z-index: 0;
+  background-image: radial-gradient(circle, color-mix(in oklab, var(--art-line) 85%, transparent) 0.055em, transparent 0.085em);
+  font-size: var(--grid);
+  background-size: var(--grid) var(--grid);
+  animation: kDrift 12s linear infinite;
+}
+.stage::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: radial-gradient(ellipse 85% 80% at 50% 48%, transparent 38%, color-mix(in oklab, var(--art-bg) 92%, transparent) 100%);
+}
+.layer {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+}
+.glow {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(48% 62% at 50% 52%, var(--a-glow), transparent 72%),
+    radial-gradient(30% 40% at 82% 14%, color-mix(in oklab, var(--a) 22%, transparent), transparent 70%);
+  opacity: 0.5;
+  animation: kBreathe var(--L) ease-in-out infinite;
+}
+@keyframes kDrift { to { transform: translate(var(--grid), var(--grid)); } }
+@keyframes kBreathe { 0%, 100% { opacity: 0.38; } 50% { opacity: 0.62; } }
+
+/* ── Motion off: pause, no-motion and reduced motion ──────────────────── */
+.stage[data-paused] *,
+.stage[data-paused]::before {
+  animation-play-state: paused !important;
+}
+.stage[data-motion='off'] *,
+.stage[data-motion='off']::before {
+  animation: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .stage *,
+  .stage::before {
+    animation: none !important;
+  }
+}
