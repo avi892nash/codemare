@@ -5,10 +5,10 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 import loop from '@/prisma/seed/data/loop.json';
-import { HERO_ORDER, TOPIC_ART, TOPIC_SLUGS, isTopicSlug, topicMeta } from '@/components/TopicArt/art';
+import { HERO_ORDER, SCENE_ROUTE, TOPIC_ART, TOPIC_SLUGS, isTopicSlug, sceneKey, topicMeta } from '@/components/TopicArt/art';
 import { expandKeyframes, loopSeconds } from '@/components/TopicArt/kfx';
 import { toMarkup } from '@/components/TopicArt/markup';
-import { SCENES, TopicArt, TopicScene } from '@/components/TopicArt/TopicArt';
+import { SCENES, TopicArt, TopicScene, sceneMarkup, sceneSrc, sceneSvg } from '@/components/TopicArt/TopicArt';
 import { FallbackScene } from '@/components/TopicArt/scenes/fallback';
 import { LOOP_MS } from '@/lib/client/heroReel';
 
@@ -154,6 +154,38 @@ describe('the stylesheet', () => {
     expect([...used].filter((name) => !defined.has(name))).toEqual([]);
     // The numbered keyframes a scene picks at run time (s[`kStk${k}`]): rendering every scene above touched them all.
     expect([...sheet.missing]).toEqual([]);
+  });
+});
+
+describe('lazy art', () => {
+  it('serves each scene as one whole <svg> that is what <TopicScene> renders inline', () => {
+    const attrs = (html: string) => [...html.match(/<svg[^>]*>/)![0].matchAll(/([\w-]+)=["']([^"']*)["']/g)].map((m) => `${m[1]}=${m[2]}`).sort();
+    for (const slug of [...TOPIC_SLUGS, 'not-a-topic']) {
+      const inline = renderToStaticMarkup(createElement(TopicScene, { slug }));
+      const lazy = sceneSvg(slug);
+      expect(attrs(lazy), slug).toEqual(attrs(inline));
+      expect(lazy.endsWith(`${sceneMarkup(slug)}</svg>`)).toBe(true);
+      expect(inline.endsWith(`${sceneMarkup(slug)}</svg>`)).toBe(true);
+    }
+  });
+
+  it('keys unknown slugs to the fallback scene, and fingerprints the url by content', () => {
+    expect(sceneKey('graphs')).toBe('graphs');
+    expect(sceneKey('not-a-topic')).toBe('fallback');
+    expect(sceneKey('other-unknown')).toBe('fallback');
+    const urls = TOPIC_SLUGS.map(sceneSrc);
+    for (const [i, slug] of TOPIC_SLUGS.entries()) expect(urls[i]).toMatch(new RegExp(`^${SCENE_ROUTE}/${slug}\\?v=[0-9a-f]{8}$`));
+    expect(new Set(urls).size).toBe(TOPIC_SLUGS.length);
+    expect(sceneSrc('not-a-topic')).toBe(sceneSrc('other-unknown'));
+    expect(sceneSrc('graphs')).toBe(sceneSrc('graphs'));
+  });
+
+  it('renders the stage without the scene when lazy: an empty slot to fill', () => {
+    const html = renderToStaticMarkup(createElement(TopicArt, { slug: 'stack', lazy: true }));
+    expect(html).toContain('data-lazy=""');
+    expect(html).not.toContain('<svg');
+    expect(html.length).toBeLessThan(900);
+    expect(renderToStaticMarkup(createElement(TopicArt, { slug: 'stack' }))).not.toContain('data-lazy');
   });
 });
 

@@ -122,3 +122,11 @@ export function topicMeta(slug: string): TopicArtMeta {
   if (isTopicSlug(slug)) return TOPIC_ART[slug];
   return { slug, title: slug, caption: '', hue: 'var(--art-fallback)' };
 }
+
+/** Where the scenes' svgs are served for lazy art (app/api/topic-art/[slug]/route.ts). */
+export const SCENE_ROUTE = '/api/topic-art';
+
+/** The route's name for a slug's scene: the slug itself, or `fallback` for any slug without a scene of its own. */
+export function sceneKey(slug: string): string {
+  return isTopicSlug(slug) ? slug : 'fallback';
+}
