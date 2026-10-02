@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { EMPTY_CATALOG_QUERY, type CatalogQuery } from '@/components/Catalog/query';
 import type { Difficulty } from '@/lib/types';
-import { acceptanceRates, listCatalog, matchesSearch, userQuestionProgress } from './catalog';
+import { acceptanceRates, listCatalog, matchesSearch } from './catalog';
+import { userQuestionProgress } from './topicProblems';
 import { prisma, setupTestDatabase } from './test/db';
 import {
   makeGate,

@@ -9,6 +9,7 @@ import {
 } from '@/components/Catalog/query';
 import { questionAccessMap } from './access';
 import { prisma } from './db';
+import { userQuestionProgress } from './topicProblems';
 
 /**
  * The problem catalog (/problems): published questions filtered by the URL
@@ -119,26 +120,6 @@ function compareCurriculum(a: Item, b: Item): number {
     a.title.localeCompare(b.title, 'en') ||
     a.slug.localeCompare(b.slug, 'en')
   );
-}
-
-/**
- * This user's progress per question: `solved` once any submit or gate
- * submission is accepted; `attempted` after any run / submit / gate without
- * that. Everything else is `todo`.
- */
-export async function userQuestionProgress(userId: string): Promise<Map<string, Exclude<CatalogStatus, 'todo'>>> {
-  const groups = await prisma.submission.groupBy({
-    by: ['questionId', 'kind', 'status'],
-    where: { userId, questionId: { not: null } },
-    _count: { _all: true },
-  });
-  const progress = new Map<string, Exclude<CatalogStatus, 'todo'>>();
-  for (const g of groups) {
-    if (!g.questionId) continue;
-    if (g.status === 'OK' && (g.kind === 'submit' || g.kind === 'gate')) progress.set(g.questionId, 'solved');
-    else if (!progress.has(g.questionId)) progress.set(g.questionId, 'attempted');
-  }
-  return progress;
 }
 
 /** Acceptance per question (percent, one decimal) over judged submit + gate submissions. */

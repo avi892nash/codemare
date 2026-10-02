@@ -4,7 +4,7 @@ import { Icon } from '@/components/ui/Icon';
 import { Pill } from '@/components/ui/Pill';
 import { StatusDot } from '@/components/ui/StatusDot';
 import type { CatalogRow } from '@/lib/server/catalog';
-import { LinkPending } from './LinkPending';
+import { LinkPending } from '@/components/Map/LinkPending';
 import s from './Catalog.module.css';
 
 const STATUS_TEXT = { solved: 'Solved', attempted: 'Attempted', todo: 'Not started' } as const;
