@@ -1,0 +1,5 @@
+{
+  "private": true,
+  "description": "Marks the topic art side-effect free (CSS excepted) so webpack drops it from the client bundles of components that merely sit next to it: the auth forms import AuthShell, which renders the hero, and the scenes' top-level self-checks would otherwise be kept and shipped.",
+  "sideEffects": ["*.css"]
+}
