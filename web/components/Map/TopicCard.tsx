@@ -9,6 +9,7 @@ import { Progress } from '@/components/ui/Progress';
 import type { EarnOption, RecipeCard, TopicBlockerView, TopicCardState, TopicCardView } from '@/lib/server/loopViews';
 import { TopicActions, type BalanceIndex } from './TopicActions';
 import { TopicProblems } from './TopicProblems';
+import { TopicThumb } from './TopicThumb';
 import s from './map.module.css';
 
 const STATE: Record<TopicCardState, { label: string; tone: PillTone; icon: IconName }> = {
@@ -216,9 +217,7 @@ export function TopicCard({ topic, free, balances }: { topic: TopicCardView; fre
   return (
     <article className={s.topic} data-state={topic.state} id={`topic-${topic.slug}`} aria-labelledby={titleId} data-testid={`topic-${topic.slug}`}>
       <header className={s.topicHead}>
-        <span className={s.topicIcon} aria-hidden="true">
-          <Icon name={topic.icon} size={17} />
-        </span>
+        <TopicThumb slug={topic.slug} state={topic.state} />
         <div className={s.topicHeadText}>
           <h3 className={s.topicTitle} id={titleId} tabIndex={-1}>
             {topic.title}

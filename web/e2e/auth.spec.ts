@@ -95,7 +95,7 @@ test('sign up with a username, land on the map, then get bounced off the auth pa
   await page.getByRole('button', { name: 'Create account' }).click();
 
   await page.waitForURL('**/map');
-  await expect(page.getByRole('heading', { name: 'Earn tokens, unlock topics, open tiers', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Tier map', level: 1 })).toBeVisible();
   const user = await prisma.user.findUniqueOrThrow({ where: { email } });
   userIds.push(user.id);
   expect(user.handle).toBe(handle);

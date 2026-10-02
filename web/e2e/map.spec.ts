@@ -80,7 +80,7 @@ test.afterAll(async () => {
 test('the map is home: `/`, the logo and the old problem list all lead to it', async ({ page }) => {
   await page.goto('/');
   await expect(page).toHaveURL(/\/map$/);
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Earn tokens, unlock topics, open tiers');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Tier map');
   const nav = page.getByRole('navigation', { name: 'Primary' });
   await expect(nav.getByRole('link', { name: 'Map' })).toHaveAttribute('aria-current', 'page');
   await expect(page.getByRole('link', { name: 'Codemare home' })).toHaveAttribute('href', '/map');

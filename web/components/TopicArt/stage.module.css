@@ -25,7 +25,7 @@
   overflow: hidden;
   width: 100%;
   aspect-ratio: 16 / 9;
-  border-radius: 18px;
+  border-radius: var(--stage-r, 18px);
   border: 1px solid var(--art-line);
   background: var(--art-bg);
   contain: paint;
@@ -66,12 +66,25 @@
   opacity: 0.5;
   animation: kBreathe var(--L) ease-in-out infinite;
 }
+/* The slot a lazily loaded scene is put into (<ArtInView src>): it fades in once it holds the svg. */
+.lazy {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.lazy[data-ready] {
+  opacity: 1;
+}
 @keyframes kDrift { to { transform: translate(var(--grid), var(--grid)); } }
 @keyframes kBreathe { 0%, 100% { opacity: 0.38; } 50% { opacity: 0.62; } }
 
 /* ── Motion off: pause, no-motion and reduced motion ──────────────────── */
 .stage[data-paused] *,
-.stage[data-paused]::before {
+.stage[data-paused]::before,
+/* the same pause, switched by an ancestor: <ArtInView> holds art that scrolled out of sight */
+[data-art-hold] .stage *,
+[data-art-hold] .stage::before {
   animation-play-state: paused !important;
 }
 .stage[data-motion='off'] *,
@@ -82,5 +95,8 @@
   .stage *,
   .stage::before {
     animation: none !important;
+  }
+  .lazy {
+    transition: none;
   }
 }
