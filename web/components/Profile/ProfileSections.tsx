@@ -240,7 +240,7 @@ export function TokensPanel({ view }: { view: ProfileView }) {
       }
     >
       {view.tokens.topics.length === 0 ? (
-        <p className={s.empty}>No tokens yet — accepted solves and builds earn them.</p>
+        <p className={s.empty}>No tokens yet — accepted solves earn them.</p>
       ) : (
         <div className={s.panelBody}>
           <ul className={s.bars}>

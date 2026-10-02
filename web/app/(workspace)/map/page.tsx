@@ -30,7 +30,7 @@ export default async function MapPage() {
         icon="map"
         eyebrow="Tier map"
         title="Earn tokens, unlock topics, open tiers"
-        subtitle="Accepted solves and passing builds pay tokens in their topics. Spend any one recipe to unlock a topic, and pass a tier’s gate to open it."
+        subtitle="Accepted solves pay tokens in their topics. Spend any one recipe to unlock a topic, and pass a tier’s gate to open it."
         stats={[
           { label: 'Tokens', value: totals.tokens, testId: 'map-tokens' },
           { label: 'Topics unlocked', value: totals.topicsUnlocked, unit: `/ ${totals.topicsTotal}` },
