@@ -8,19 +8,23 @@ first, with a light theme.
 
 ## What's in it
 
-- **Practice** — a catalog of 30 problems (`/problems`) with URL-driven
-  filters, and an editor workspace (`/problems/[slug]`) in **Python,
-  JavaScript, TypeScript, C++, Java and Go**. Runs and submissions stream live
-  over SSE (queued → compiling → running → each test → verdict) into a results
-  hero with runtime in µs, memory, a "beats N%" percentile, and a per-test
+- **Practice** — 30 problems, listed by topic on the tier map (below), and
+  an editor workspace (`/problems/[slug]`) in **Python, JavaScript,
+  TypeScript, C++, Java and Go**. Runs and submissions stream live over SSE
+  (queued → compiling → running → each test → verdict) into a results hero
+  with runtime in µs, memory, a "beats N%" percentile, and a per-test
   breakdown that explains failures. A free-form `/ide` with custom stdin.
-- **The learning loop** — `/map` shows three tiers and ten topics with token
-  balances, unlock recipes and "what's blocking you", with the problems that
-  pay the missing tokens; unlocking spends tokens from an append-only ledger
-  that can never go negative. Gate exams (`/map/gates/…`) open each tier,
-  with cooldowns. A five-level hint ladder (nudge → solution) shows each
-  hint's cost before it's revealed. (The Queue of predict/build steps and My
-  Library were removed on 2026-10-02 at the owner's request.)
+- **The learning loop** — `/map`, the home page, shows three tiers and ten
+  topics with token balances, unlock recipes and "what's blocking you", with
+  the problems that pay the missing tokens; every unlocked topic lists its
+  problems with your progress, and a locked one says how many it holds.
+  Unlocking spends tokens from an append-only ledger that can never go
+  negative. Gate exams (`/map/gates/…`) open each tier, with cooldowns. A
+  five-level hint ladder (nudge → solution) shows each hint's cost before
+  it's revealed. (The Queue of predict/build steps and My Library were
+  removed on 2026-10-02 at the owner's request, and so was the problem
+  catalog at `/problems`, with its search and filters: that URL now opens
+  the map.)
 - **Learn** — three tracks of original lessons (`/learn`) with runnable code,
   step-through visualizations, callouts, formulas and checkpoint quizzes.
 - **Profile and badges** — `/u/[handle]` with stats, a year of activity and
@@ -63,8 +67,9 @@ browser ── Caddy (TLS) ──▶ web: Next.js 15 App Router ─────�
 
 ```
 web/                Next.js app
-  app/(workspace)/  every page (problems, ide, submissions, learn, map,
-                    u/[handle], author, library, sign-in pages)
+  app/(workspace)/  every page (map — the home page —, the problem editor,
+                    ide, submissions, learn, u/[handle], author, library,
+                    sign-in pages)
   app/api/          run · submit (SSE), hints, ai-review, auth
   components/       ui/ (design system), states/, and one folder per feature
   lib/server/       domain layer: ledger, recipes, unlocks, gates, hints,
