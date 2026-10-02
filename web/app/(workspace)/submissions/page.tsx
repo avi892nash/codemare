@@ -45,8 +45,8 @@ export default async function SubmissionsPage({ searchParams }: { searchParams: 
               title="No submissions yet"
               description="Run or submit a solution and it lands here with its runtime, memory and per-test results."
               action={
-                <ButtonLink href="/problems" variant="primary" iconRight="arrow-right">
-                  Browse problems
+                <ButtonLink href="/map" variant="primary" iconRight="arrow-right">
+                  Find a problem on the map
                 </ButtonLink>
               }
             />

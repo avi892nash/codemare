@@ -11,7 +11,7 @@ import { decideRoute } from '@/components/Auth/routes';
  *   · signed out, page     → /signin?next=<path+query>  (`/` → plain /signin)
  *   · signed out, /api/*   → 401 JSON (a fetch or EventSource should not be
  *                            redirected to an HTML page)
- *   · signed in, auth page → the safe `next`, else /problems
+ *   · signed in, auth page → the safe `next`, else /map (home)
  *
  * In production /dev/* stays behind the wall AND 404s (app/dev/layout.tsx).
  * Auth.js's own /api/auth/* routes and static assets skip the middleware

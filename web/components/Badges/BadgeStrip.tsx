@@ -15,7 +15,7 @@ export function badgeCta(criteria: BadgeCriteria | null): { href: string; label:
     case 'track_completed':
       return { href: '/learn', label: 'Go to Learn' };
     default:
-      return { href: '/problems', label: 'Browse problems' };
+      return { href: '/map', label: 'Find a problem on the map' };
   }
 }
 

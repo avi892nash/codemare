@@ -66,8 +66,6 @@
 .sectionMenu { display: none; }
 .spacer { flex: 1; min-width: 0; }
 .right { display: flex; align-items: center; gap: 10px; flex: none; }
-.jump { display: block; }
-.jumpKbd { display: inline-flex; }
 
 .tokens {
   display: inline-flex;
@@ -116,10 +114,8 @@
   .bar { gap: 14px; }
   .tab svg { display: none; }
   .tab { padding: 6px 9px; }
-  .jumpKbd { display: none; }
 }
 @media (max-width: 899px) {
-  .jump { display: none; }
   .tabs { margin-left: 0; }
 }
 @media (max-width: 767px) {

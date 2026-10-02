@@ -260,7 +260,7 @@ function Buttons() {
       </div>
       <Sub>Link variant (next/link) and full width</Sub>
       <div className={s.row}>
-        <ButtonLink href="/problems" variant="primary" icon="list">Problems</ButtonLink>
+        <ButtonLink href="/map" variant="primary" icon="map">Tier map</ButtonLink>
         <ButtonLink href="/learn" variant="ghost" iconRight="external">Learn</ButtonLink>
       </div>
       <Button full variant="outline" icon="github">Continue with GitHub</Button>
@@ -435,7 +435,7 @@ function Overlays() {
         open={open}
         onClose={() => setOpen(false)}
         title="Rename draft"
-        description="Titles show in the catalog and on your profile."
+        description="Titles show on the map and on your profile."
         footer={
           <>
             <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
@@ -519,10 +519,10 @@ function KbdAndBreadcrumb({ theme }: { theme: Theme }) {
   return (
     <div className={s.stack}>
       <div className={s.row} style={{ fontSize: 13, color: 'var(--fg-1)' }}>
-        <Kbd bare>⌘K</Kbd> jump · <Kbd bare>⌘↵</Kbd> run · <Kbd bare>Esc</Kbd> close · <Kbd bare>Shift</Kbd>+<Kbd bare>Tab</Kbd> back
+        <Kbd bare>⌘↵</Kbd> run · <Kbd bare>⌘⇧↵</Kbd> submit · <Kbd bare>Esc</Kbd> close · <Kbd bare>Shift</Kbd>+<Kbd bare>Tab</Kbd> back
       </div>
       <Breadcrumb label={`Breadcrumb example 1 (${theme})`} items={[{ label: 'Learn', href: '/learn', icon: 'graduation' }, { label: 'Arrays & Hashing', href: '/learn/arrays' }, { label: 'Two pointers on sorted input' }]} />
-      <Breadcrumb label={`Breadcrumb example 2 (${theme})`} items={[{ label: 'Problems', href: '/problems' }, { label: 'Longest Substring Without Repeating Characters, a much longer title' }]} />
+      <Breadcrumb label={`Breadcrumb example 2 (${theme})`} items={[{ label: 'Tier map', href: '/map', icon: 'map' }, { label: 'Longest Substring Without Repeating Characters, a much longer title' }]} />
     </div>
   );
 }

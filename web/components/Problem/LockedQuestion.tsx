@@ -96,9 +96,6 @@ export function LockedQuestion({ title, difficulty, blockers }: { title: string;
           <ButtonLink href="/map" variant="primary" icon="map">
             Open the map
           </ButtonLink>
-          <ButtonLink href="/problems" variant="ghost" icon="list">
-            Back to problems
-          </ButtonLink>
         </div>
       </section>
     </main>

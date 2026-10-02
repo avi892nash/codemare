@@ -77,7 +77,7 @@ const DIFF_TONE = { Easy: 'ok', Medium: 'warn', Hard: 'err' } as const;
 
 export function StatTiles({ view }: { view: ProfileView }) {
   const { solved, acceptance, fastest, streak } = view;
-  const catalogTotal = solved.catalog.Easy + solved.catalog.Medium + solved.catalog.Hard;
+  const publishedTotal = solved.published.Easy + solved.published.Medium + solved.published.Hard;
   // Same runtime formatting as the editor and the submissions list.
   const fast = fastest ? formatMicros(fastest.runtimeUs) : null;
   return (
@@ -85,15 +85,15 @@ export function StatTiles({ view }: { view: ProfileView }) {
       <Tile icon="check-circle" label="Solved">
         <dd className={s.tileValue} style={{ margin: 0 }}>
           <span className={`${s.big} mono`}>{solved.total}</span>
-          <span className={`${s.unit} mono`}>/ {catalogTotal}</span>
+          <span className={`${s.unit} mono`}>/ {publishedTotal}</span>
         </dd>
         <dd className={s.diffRows} style={{ margin: 0 }}>
           {DIFFS.map((d) => (
             <span key={d} className={s.diffRow}>
               <DifficultyPill level={d} size="xs" />
-              <Progress value={solved.byDifficulty[d]} max={Math.max(1, solved.catalog[d])} tone={DIFF_TONE[d]} />
+              <Progress value={solved.byDifficulty[d]} max={Math.max(1, solved.published[d])} tone={DIFF_TONE[d]} />
               <span className="mono">
-                {solved.byDifficulty[d]}/{solved.catalog[d]}
+                {solved.byDifficulty[d]}/{solved.published[d]}
               </span>
             </span>
           ))}

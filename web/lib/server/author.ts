@@ -60,7 +60,7 @@ import { exampleSchema, signatureSchema, signatureTypeSchema, testDefSchema } fr
  *
  * Authored questions start as drafts owned by their author. Drafts are only
  * reachable by the author and staff (canAccessQuestion in access.ts);
- * published ones go through the normal catalog access rules.
+ * published ones go through the normal access rules.
  */
 
 // ─── Viewer & permissions ────────────────────────────────────────────────
@@ -574,7 +574,7 @@ export async function publishQuestion(viewer: AuthorViewer, raw: unknown): Promi
   }
 }
 
-/** Take a published question back to draft (hidden from the catalog again). */
+/** Take a published question back to draft (hidden from learners again). */
 export async function unpublishQuestion(viewer: AuthorViewer, id: string): Promise<SaveResult> {
   const existing = await loadExisting(viewer, id);
   if (!existing || existing === 'forbidden') return fail('not_found', 'That question does not exist or is not yours to edit');

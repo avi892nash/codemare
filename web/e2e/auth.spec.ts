@@ -58,8 +58,8 @@ test.afterAll(async () => {
 });
 
 test('the wall sends signed-out visitors to /signin and keeps where they were going', async ({ page }) => {
-  await page.goto('/problems?q=graph');
-  await expect(page).toHaveURL(/\/signin\?next=%2Fproblems%3Fq%3Dgraph$/);
+  await page.goto('/submissions?status=WA');
+  await expect(page).toHaveURL(/\/signin\?next=%2Fsubmissions%3Fstatus%3DWA$/);
   await expect(page.getByRole('heading', { name: 'Welcome back.' })).toBeVisible();
 
   await page.goto('/');
@@ -77,7 +77,7 @@ test('the wall sends signed-out visitors to /signin and keeps where they were go
   else await expect(github).toHaveCount(0);
 });
 
-test('sign up with a username, land on the catalog, then get bounced off the auth pages', async ({ page }) => {
+test('sign up with a username, land on the map, then get bounced off the auth pages', async ({ page }) => {
   const id = uid();
   const email = `e2e-signup-${id}@test.dev`;
   emails.push(email);
@@ -94,19 +94,19 @@ test('sign up with a username, land on the catalog, then get bounced off the aut
   await page.getByLabel('Password', { exact: true }).fill('correct horse battery');
   await page.getByRole('button', { name: 'Create account' }).click();
 
-  await page.waitForURL('**/problems');
-  await expect(page.getByRole('heading', { name: 'Problems', level: 1 })).toBeVisible();
+  await page.waitForURL('**/map');
+  await expect(page.getByRole('heading', { name: 'Earn tokens, unlock topics, open tiers', level: 1 })).toBeVisible();
   const user = await prisma.user.findUniqueOrThrow({ where: { email } });
   userIds.push(user.id);
   expect(user.handle).toBe(handle);
 
-  // Signed in: the auth pages send you on (to a safe `next`, else the catalog).
+  // Signed in: the auth pages send you on (to a safe `next`, else home — the map).
   await page.goto('/signin?next=%2Fsubmissions');
   await expect(page).toHaveURL(/\/submissions$/);
   await page.goto('/signup');
-  await expect(page).toHaveURL(/\/problems$/);
+  await expect(page).toHaveURL(/\/map$/);
   await page.goto('/signin?next=%2F%2Fevil.example');
-  await expect(page).toHaveURL(/\/problems$/);
+  await expect(page).toHaveURL(/\/map$/);
 });
 
 test('sign-up reports a taken email and a taken username on their fields', async ({ page }) => {
@@ -190,7 +190,7 @@ test('a reset link sets a new password, signs you in, and works only once', asyn
 
   await page.getByLabel('Confirm new password', { exact: true }).fill('a much better password');
   await save.click();
-  await page.waitForURL('**/problems');
+  await page.waitForURL('**/map');
 
   const fresh = await prisma.user.findUniqueOrThrow({ where: { id: u.id } });
   expect(await bcrypt.compare('a much better password', fresh.passwordHash!)).toBe(true);

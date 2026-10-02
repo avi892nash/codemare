@@ -19,10 +19,11 @@ const nextConfig = {
   experimental: {
     // Server actions are GA in Next 15 — keep the block for forward-compat.
     // Next's default CSS chunking merges CSS modules from unrelated routes
-    // into ~100 KB files, so /problems downloaded (render-blocking) the
-    // author, learn, queue and editor styles too: 5 files, 25 KB gzipped.
-    // Unmerged, a page gets only what its layouts and page import
-    // (/problems: 3 files, 11 KB). Rendering is pixel-identical on every route.
+    // into ~100 KB files, so the problem list (/problems, since removed)
+    // downloaded (render-blocking) the author, learn, queue and editor
+    // styles too: 5 files, 25 KB gzipped. Unmerged, a page gets only what
+    // its layouts and page import (that list: 3 files, 11 KB). Rendering is
+    // pixel-identical on every route.
     cssChunking: false,
   },
 };

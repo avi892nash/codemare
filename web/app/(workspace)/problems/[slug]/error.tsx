@@ -18,7 +18,7 @@ export default function ProblemError({ error, reset }: { error: Error & { digest
       description="Something went wrong while loading the problem. Your drafts are saved in this browser — try again."
       digest={error.digest}
       onRetry={reset}
-      homeHref="/problems"
+      homeHref="/map"
     />
   );
 }

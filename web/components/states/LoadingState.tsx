@@ -6,7 +6,7 @@ import s from './states.module.css';
 export type LoadingVariant = 'list' | 'editor' | 'inline';
 
 interface LoadingStateProps {
-  /** list: catalog-style page · editor: statement + code + results · inline: spinner + label. */
+  /** list: list-shaped page · editor: statement + code + results · inline: spinner + label. */
   variant?: LoadingVariant;
   /** Announced to screen readers (and shown for `inline`). */
   label?: string;
@@ -39,7 +39,7 @@ export function LoadingState({ variant = 'list', label = 'Loading…', rows = 8,
   );
 }
 
-/** Catalog / submissions shaped page: heading, filter chips, table rows. */
+/** List-shaped page (the submissions frame; the map's loading state): heading, filter chips, rows. */
 export function ListPageSkeleton({ rows = 8 }: { rows?: number }) {
   return (
     <div className={s.listPage} aria-hidden="true">

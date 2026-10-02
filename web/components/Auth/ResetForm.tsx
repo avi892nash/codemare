@@ -8,6 +8,7 @@ import { resetPassword } from '@/app/auth/actions';
 import { Button, ButtonLink } from '@/components/ui/Button';
 import { AuthHeading, FormAlert } from './AuthShell';
 import { PasswordInput } from './PasswordInput';
+import { DEFAULT_AFTER_SIGN_IN } from './routes';
 import s from './Auth.module.css';
 
 /** The link is unusable: invalid, already used, or past its 30 minutes. */
@@ -73,7 +74,7 @@ export function ResetForm({ token, email, ttlMinutes }: { token: string; email: 
         return;
       }
       const signedIn = await signIn('credentials', { email: res.email ?? email, password, redirect: false });
-      window.location.assign(signedIn && !signedIn.error ? '/problems' : '/signin?reset=1');
+      window.location.assign(signedIn && !signedIn.error ? DEFAULT_AFTER_SIGN_IN : '/signin?reset=1');
     } catch {
       setError('Could not reach the server. Check your connection and try again.');
       setBusy(false);

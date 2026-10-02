@@ -7,7 +7,7 @@ export interface PaginationProps {
   pageCount: number;
   pageSize: number;
   total: number;
-  /** Plural noun for the summary line ("problems", "submissions"). */
+  /** Plural noun for the summary line ("submissions"). */
   noun: string;
   /** URL of a given page (keeps the current filters). */
   hrefFor: (page: number) => string;

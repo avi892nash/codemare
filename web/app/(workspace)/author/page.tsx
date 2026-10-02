@@ -34,7 +34,7 @@ export default async function AuthorHome({ searchParams }: { searchParams: Promi
             <h1 className={s.title}>{scope === 'all' ? 'All questions' : 'My questions'}</h1>
             <p className={s.sub}>
               {rows.length === 0
-                ? 'Write a problem, prove it with a reference solution, publish it to the catalog.'
+                ? 'Write a problem, prove it with a reference solution, publish it to the map.'
                 : `${rows.length} question${rows.length === 1 ? '' : 's'} · ${drafts} draft${drafts === 1 ? '' : 's'}`}
             </p>
           </div>

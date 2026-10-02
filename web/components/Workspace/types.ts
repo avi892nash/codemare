@@ -6,7 +6,7 @@ import type { Difficulty, Signature, SubmissionKind, SubmissionStatus, Supported
 import type { HintLadder } from '@/lib/server/hints';
 
 /**
- * question — a catalog question: Run (samples + custom inputs) and Submit.
+ * question — a published question: Run (samples + custom inputs) and Submit.
  * gate     — a question inside a running gate attempt: Submit counts for the gate.
  */
 export type WorkspaceMode = 'question' | 'gate';

@@ -10,8 +10,8 @@ import { authErrorMessage, credentialsErrorMessage } from '@/components/Auth/mes
 
 describe('safeNextPath', () => {
   it('keeps plain same-origin paths with their query and hash', () => {
-    expect(safeNextPath('/problems')).toBe('/problems');
-    expect(safeNextPath('/problems?q=graph&tag=bfs')).toBe('/problems?q=graph&tag=bfs');
+    expect(safeNextPath('/map')).toBe('/map');
+    expect(safeNextPath('/submissions?status=WA&language=go')).toBe('/submissions?status=WA&language=go');
     expect(safeNextPath('/submissions/abc#tests')).toBe('/submissions/abc#tests');
     expect(safeNextPath('/')).toBe('/');
   });
@@ -45,12 +45,12 @@ describe('safeNextPath', () => {
 describe('isAuthPage / signInHref', () => {
   it('knows the public auth pages and the legacy alias', () => {
     for (const p of ['/signin', '/signup', '/forgot', '/reset', '/auth']) expect(isAuthPage(p)).toBe(true);
-    expect(isAuthPage('/problems')).toBe(false);
+    expect(isAuthPage('/map')).toBe(false);
     expect(isAuthPage('/resetting')).toBe(false);
   });
 
   it('carries a safe next and drops the rest', () => {
-    expect(signInHref('/problems?q=dp')).toBe('/signin?next=%2Fproblems%3Fq%3Ddp');
+    expect(signInHref('/submissions?status=WA')).toBe('/signin?next=%2Fsubmissions%3Fstatus%3DWA');
     expect(signInHref('/')).toBe('/signin');
     expect(signInHref('//evil.com')).toBe('/signin');
     expect(signInHref(null)).toBe('/signin');
@@ -63,7 +63,7 @@ describe('decideRoute (middleware)', () => {
     decideRoute({ path, search, signedIn, production });
 
   it('walls every page for signed-out visitors, remembering where they were going', () => {
-    expect(route('/problems', false, '?q=graph')).toEqual({ type: 'redirect', to: '/signin?next=%2Fproblems%3Fq%3Dgraph' });
+    expect(route('/submissions', false, '?status=WA')).toEqual({ type: 'redirect', to: '/signin?next=%2Fsubmissions%3Fstatus%3DWA' });
     expect(route('/submissions/abc', false)).toEqual({ type: 'redirect', to: '/signin?next=%2Fsubmissions%2Fabc' });
     expect(route('/', false)).toEqual({ type: 'redirect', to: '/signin' });
   });
@@ -73,7 +73,8 @@ describe('decideRoute (middleware)', () => {
     expect(route('/api/run', true)).toEqual({ type: 'next' });
   });
 
-  it('keeps the auth pages public and sends signed-in visitors on', () => {
+  it('keeps the auth pages public and sends signed-in visitors on — home is the tier map', () => {
+    expect(DEFAULT_AFTER_SIGN_IN).toBe('/map');
     for (const p of ['/signin', '/signup', '/forgot', '/reset', '/auth']) {
       expect(route(p, false)).toEqual({ type: 'next' });
       expect(route(p, true)).toEqual({ type: 'redirect', to: DEFAULT_AFTER_SIGN_IN });
@@ -90,7 +91,7 @@ describe('decideRoute (middleware)', () => {
   });
 
   it('lets signed-in users through everywhere else', () => {
-    expect(route('/problems', true)).toEqual({ type: 'next' });
+    expect(route('/map', true)).toEqual({ type: 'next' });
     expect(route('/', true)).toEqual({ type: 'next' });
   });
 });

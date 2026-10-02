@@ -1,14 +1,16 @@
 import type { ReactNode } from 'react';
 import { ButtonLink } from '@/components/ui/Button';
+import type { IconName } from '@/components/ui/Icon';
 import { StatePage } from './StatePage';
 import s from './states.module.css';
 
 interface NotFoundProps {
   title?: string;
   description?: ReactNode;
-  /** Primary way out. */
+  /** Primary way out: the map (home) unless a page has a closer one. */
   homeHref?: string;
   homeLabel?: string;
+  homeIcon?: IconName;
   /** Adds the logo bar and fills the viewport (root not-found). */
   fullPage?: boolean;
   /** Inside a page that already has a <main> (see StatePage). */
@@ -22,8 +24,9 @@ interface NotFoundProps {
 export function NotFound({
   title = 'Page not found',
   description = 'The page you asked for doesn’t exist, moved, or isn’t available to your account.',
-  homeHref = '/problems',
-  homeLabel = 'Go to problems',
+  homeHref = '/map',
+  homeLabel = 'Open the map',
+  homeIcon = 'map',
   fullPage = false,
   embedded = false,
 }: NotFoundProps) {
@@ -38,7 +41,7 @@ export function NotFound({
         <Heading className={s.title}>{title}</Heading>
         <p className={s.desc}>{description}</p>
         <div className={s.actions}>
-          <ButtonLink href={homeHref} variant="primary" icon="list">
+          <ButtonLink href={homeHref} variant="primary" icon={homeIcon}>
             {homeLabel}
           </ButtonLink>
           <ButtonLink href="/learn" variant="default" icon="graduation">

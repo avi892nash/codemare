@@ -195,7 +195,7 @@ export interface EarnedBadge {
 export interface ProfileView {
   user: ProfileUser;
   isOwner: boolean;
-  solved: { total: number; byDifficulty: Record<Difficulty, number>; catalog: Record<Difficulty, number> };
+  solved: { total: number; byDifficulty: Record<Difficulty, number>; published: Record<Difficulty, number> };
   acceptance: { accepted: number; judged: number; rate: number | null };
   fastest: { runtimeUs: number; language: SupportedLanguage; question: { slug: string; title: string } } | null;
   streak: { current: number; longest: number };
@@ -215,7 +215,7 @@ export async function getProfile(handle: string, viewerId: string | null, now = 
   const today = utcDay(now);
   const from = new Date(Date.parse(`${today}T00:00:00Z`) - 364 * DAY_MS);
 
-  const [solves, catalog, verdicts, fastest, days, activity, tokens, gallery, recent, learn] = await Promise.all([
+  const [solves, published, verdicts, fastest, days, activity, tokens, gallery, recent, learn] = await Promise.all([
     loadSolves(userId),
     prisma.question.groupBy({ by: ['difficulty'], where: { status: 'published' }, _count: { _all: true } }),
     prisma.submission.groupBy({
@@ -251,8 +251,8 @@ export async function getProfile(handle: string, viewerId: string | null, now = 
 
   const byDifficulty: Record<Difficulty, number> = { Easy: 0, Medium: 0, Hard: 0 };
   for (const s of solves) byDifficulty[s.difficulty]++;
-  const catalogCounts: Record<Difficulty, number> = { Easy: 0, Medium: 0, Hard: 0 };
-  for (const c of catalog) catalogCounts[c.difficulty] = c._count._all;
+  const publishedCounts: Record<Difficulty, number> = { Easy: 0, Medium: 0, Hard: 0 };
+  for (const c of published) publishedCounts[c.difficulty] = c._count._all;
   const judged = verdicts.reduce((n, v) => n + v._count._all, 0);
   const accepted = verdicts.find((v) => v.status === 'OK')?._count._all ?? 0;
 
@@ -264,7 +264,7 @@ export async function getProfile(handle: string, viewerId: string | null, now = 
   return {
     user,
     isOwner: viewerId === userId,
-    solved: { total: solves.length, byDifficulty, catalog: catalogCounts },
+    solved: { total: solves.length, byDifficulty, published: publishedCounts },
     acceptance: { accepted, judged, rate: acceptanceRate(accepted, judged) },
     fastest:
       fastest && fastest.question && fastest.runtimeUs !== null

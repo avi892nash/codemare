@@ -8,6 +8,7 @@ export default function SubmissionNotFound() {
       description="It doesn’t exist, or it belongs to another account."
       homeHref="/submissions"
       homeLabel="Your submissions"
+      homeIcon="list"
     />
   );
 }
