@@ -220,7 +220,7 @@
     <h1>Codemare Decisions</h1>
     <p class="dek">Why Codemare is shaped the way it is: every decision with the alternatives it beat, the path a submission takes, the contracts between the parts, and the bugs that set the rules.</p>
     <div class="meta">
-      <span>219 commits · Nov 2025 → Oct 2026</span>
+      <span>236 commits · Nov 2025 → Oct 2026</span>
       <span>grounded in <code>git log</code> and the merge messages</span>
       <span>companion to README.md and docs/spec/architecture.md</span>
     </div>
@@ -288,6 +288,7 @@
           <li><strong>It was built by agents working in parallel</strong>: five phases, each a set of agents in their own git worktrees with strict file ownership, an integrator verifying and merging every branch, and CI as the final word (<a href="#d36">decision 36</a>). From the spec commit (<code>4ce8b73</code>, 14:58) to the last merge (<code>5f8c924</code>, 03:55 the next night): 128 commits, 16 merges, about thirteen hours.</li>
         </ul>
         <p>Then the owner used it. On 2 October 2026 they tested the running site and judged one piece of the brief — the Queue, where learners predicted and built reusable components into My Library — not a usable feature, so it was taken out again, tables and all (<a href="#d38">decision 38</a>). The same day the problem list went too: the tier map, which already showed every topic, became the home page and the place where each topic's problems are listed (<a href="#d39">decision 39</a>).</p>
+        <p>Then the owner asked for the product to look like it was made for teenagers: images — animated SVG of the topics — instead of big text. The sign-in screens now open on a reel of ten animated scenes, one per topic, and the map on an animated hero of the topic to work on next, with a thumbnail of every topic on its card (<a href="#d40">decision 40</a>, <a href="#d41">decision 41</a>).</p>
       </section>
 
       <!-- ============================================================ 2 -->
@@ -563,7 +564,9 @@
             <tr><td>36</td><td><a href="#d36">How it was built: phased agents, an integrator, CI</a></td><td><span class="st new">new · Sep 2026</span></td></tr>
             <tr><td>37</td><td><a href="#d37">Accessibility and first paint, measured and gated</a></td><td><span class="st amended">amended by 38, 39</span></td></tr>
             <tr><td>38</td><td><a href="#d38">Remove the Queue and My Library</a></td><td><span class="st new">new · Oct 2026</span></td></tr>
-            <tr><td>39</td><td><a href="#d39">Remove the problem list; the map is home</a></td><td><span class="st new">new · Oct 2026</span></td></tr>
+            <tr><td>39</td><td><a href="#d39">Remove the problem list; the map is home</a></td><td><span class="st amended">amended by 41</span></td></tr>
+            <tr><td>40</td><td><a href="#d40">The hero is animated topic art, not text</a></td><td><span class="st new">new · Oct 2026</span></td></tr>
+            <tr><td>41</td><td><a href="#d41">The map opens on the learner's next topic</a></td><td><span class="st new">new · Oct 2026</span></td></tr>
           </tbody>
         </table></div>
 
@@ -1476,16 +1479,16 @@
               <rect class="box" x="200" y="124" width="640" height="34" rx="3"/>
               <text x="214" y="146"><tspan class="b">infra</tspan> — compose config against .env.example · admin tests and typecheck</text>
               <rect class="box" x="200" y="162" width="640" height="34" rx="3"/>
-              <text x="214" y="184"><tspan class="b">web</tspan> — migrate · seed twice · 522 vitest tests · typecheck · lint · build</text>
+              <text x="214" y="184"><tspan class="b">web</tspan> — migrate · seed twice · 572 vitest tests · typecheck · lint · build</text>
               <rect class="box hi" x="200" y="200" width="640" height="34" rx="3"/>
-              <text x="214" y="222"><tspan class="b">e2e</tspan> — next start + compile service + seeded Postgres → 43 Playwright tests</text>
+              <text x="214" y="222"><tspan class="b">e2e</tspan> — next start + compile service + seeded Postgres → 73 Playwright tests</text>
             </svg>
             </div>
             <figcaption>The teal jobs exercise production as it really runs: the sandbox inside the real image, and the browser against <code>next start</code> rather than the dev server. Seeding twice proves the seed idempotent.</figcaption>
           </figure>
           <dl class="drg">
             <dt>Consequences</dt><dd><p>Every production-only bug found during the build is now covered in the mode it happened in. Not covered: amd64 builds of the web, Directus and backup images (CI builds only the backend image), the compose stack actually starting, and a real Storage Box.</p></dd>
-            <dt>Evidence</dt><dd><p><code>059d122</code>, <code>2e6f235</code>, <code>02598fd</code>, <code>f8a5144</code>; test counts measured at <code>79c7592</code>.</p></dd>
+            <dt>Evidence</dt><dd><p><code>059d122</code>, <code>2e6f235</code>, <code>02598fd</code>, <code>f8a5144</code>; test counts measured at <code>b762b72</code>.</p></dd>
           </dl>
         </article>
 
@@ -1546,7 +1549,7 @@
             <figcaption>Each filled dot is a branch merged into master; hollow dots are the integrator's own integration commits. Agents in a phase worked at the same time in separate worktrees — the dot is when their branch was verified and merged, not when the work started.</figcaption>
           </figure>
           <dl class="drg">
-            <dt>Consequences</dt><dd><p>About thirteen hours from the spec to the last merge: 128 commits, 16 merges. The price is integration work and the discipline of writing the contract first; the benefit is that every merge carries its own verification record — the evidence cited throughout this page. What the process can't replace is a human look at the product against its design, which is still owed (15). This page and the repo guide were themselves written by one agent while a QA agent worked on the UI in parallel; a fifth phase merged them, the QA pass (<a href="#d37">decision 37</a>) and the removal of the legacy compile-service surface.</p></dd>
+            <dt>Consequences</dt><dd><p>About thirteen hours from the spec to the last merge: 128 commits, 16 merges. The price is integration work and the discipline of writing the contract first; the benefit is that every merge carries its own verification record — the evidence cited throughout this page. What the process can't replace is a human look at the product against its design, which is still owed (15). This page and the repo guide were themselves written by one agent while a QA agent worked on the UI in parallel; a fifth phase merged them, the QA pass (<a href="#d37">decision 37</a>) and the removal of the legacy compile-service surface. A sixth round followed on 2 October, after the owner tested the running site: the removal of the Queue, the removal of the problem list and the animated topic art with its map follow-up (decisions 38–41) — each a single agent in its own worktree, merged by the same checks, and the same agent wrote the art and then extended it to the map.</p></dd>
             <dt>Evidence</dt><dd><p>The merge commits <code>a2c9e1f</code> … <code>5f8c924</code> (<code>git log --merges</code>).</p></dd>
           </dl>
         </article>
@@ -1588,8 +1591,9 @@
         </article>
 
         <article class="dr" id="d39">
-          <div class="eyebrow">Decision 39 · <span class="st new">new</span></div>
+          <div class="eyebrow">Decision 39 · <span class="st amended">amended by 41</span></div>
           <h3>Remove the problem list; the map is home</h3>
+          <p class="note amended"><span class="tag">Amended</span>The map's header — a headline, a paragraph and three big totals — became a hero of animated topic art with one button, and its totals small chips (<a href="#d41">decision 41</a>); its topic cards gained art thumbnails (<a href="#d40">decision 40</a>).</p>
           <dl class="drg">
             <dt>Context</dt><dd><p>The brief's first screen (01, with the empty state 08b) was a problem catalog at <code>/problems</code>: search over titles and tags, difficulty chips, status, topic, tag and company filters, curriculum order, 20 per page, and locked questions listed with a padlock linking to the map. It was the home page — <code>/</code>, the logo and the default after sign-in led there — and a ⌘/Ctrl+K “Jump to problem” box in the top bar searched it. The tier map already showed every topic with its balance, recipes and what was blocking it, and sent each unlocked topic's learners to <code>/problems?topic=&lt;slug&gt;</code>. On 2 October 2026, after the Queue went (<a href="#d38">decision 38</a>), the owner asked for the problem list to be removed too, and for the map to become home — which means the map has to let a learner reach every problem they can open.</p></dd>
             <dt>Options</dt><dd><ul><li>Keep the list and only move the home page to the map.</li><li>Hide the list: keep the route, drop the links.</li><li>Remove it, and let the map list each topic's problems.</li></ul></dd>
@@ -1608,6 +1612,57 @@
               <li><strong>Tests</strong>: web 468 → 459 (38 → 37 files) — the catalog's 19 unit tests go (the pager's one moves next to the submissions tests), and 9 new ones cover the topic lists and the map's view data; Playwright 43 → 43 — the catalog spec's 6 tests are replaced by a map spec's 6 (home and the redirects, an unlocked topic's list, a locked composite, a locked topic's count, a gate attempt's real 404, 375 px), the journey starts on the map and opens problems from it, and the accessibility gate now checks every phone-width route in both themes.</li>
             </ul></dd>
             <dt>Evidence</dt><dd><p><code>0665a73</code> (the filter components move out), <code>07b73b6</code> (the map lists problems), <code>5d6bfaa</code> (the list and the jump box go), <code>eff5790</code> (the map's skeleton, with the measurements above), <code>bd1a3bf</code> (spec and READMEs), then this record; checked with typecheck and lint clean, web vitest 459/459, admin 25/25, and Playwright 43/43 against a production build.</p></dd>
+          </dl>
+        </article>
+
+        <article class="dr" id="d40">
+          <div class="eyebrow">Decision 40 · <span class="st new">new</span></div>
+          <h3>The hero is animated topic art, not text</h3>
+          <dl class="drg">
+            <dt>Context</dt><dd><p>The sign-in screens led with a 30 px headline, a paragraph and three feature rows, and hid all of it below 900 px — so on a phone, where many teenagers arrive, they were only a form. The map's header was a 28 px headline and a paragraph. On 2 October 2026, after the removals (<a href="#d38">38</a>, <a href="#d39">39</a>), the owner asked for images — animated SVG of the topics — instead of big text, to be “more attractive to a normal teenager”.</p></dd>
+            <dt>Options</dt><dd><ul><li>Photographs or stock illustrations.</li><li>A video loop, or an animation library such as Lottie.</li><li>Hand-drawn inline SVG animated with CSS keyframes.</li></ul></dd>
+            <dt>Decision</dt><dd><p>The third: a reusable <code>TopicArt</code>, keyed by topic slug (<code>components/TopicArt</code>), with no libraries, image files or JavaScript animation loops.</p>
+              <ul>
+                <li><strong>Ten scenes and a fallback</strong>, each on a 320×180 canvas and a 7 s loop that ends in a payoff (a burst of confetti and a +1 coin, which ties to the tokens). Each runs the real algorithm: binary search halving a sorted row onto its target; a hash machine dropping keys into buckets; a stack matching brackets; a breadth-first wave labelled with distances and the shortest path lit; two pointers closing in on a pair; a 4×5 grid-paths table filled in dependency order up to 35; a 3-wide window sliding to its best sum, 17; the <code>fib(4)</code> call tree built and unwound to 3; insertion sort; a max-heap sifting 95 up to the root. A bit hopping up a staircase to a coin is the fallback for a topic without art, so a new topic never breaks a page.</li>
+                <li><strong>Look</strong>: an arcade palette — chunky rounded blocks, a hue per topic and a soft glow — as <code>--art-*</code> tokens in both themes; no text inside the SVG, and the artwork is decoration: hidden from assistive technology, with the topic's name and caption beside it as text.</li>
+                <li><strong>Reduced motion</strong>: a scene's base, unanimated markup is its <em>poster</em>, the frame at its payoff; the keyframes only override it. So under <code>prefers-reduced-motion</code> (and for a locked topic's card) the art is a still picture, and nothing rotates.</li>
+                <li><strong>How it is made</strong>: the keyframes are generated from specs written in seconds (<code>kfx.ts</code>; a test fails when the stylesheet is stale), and the loop length is one constant that a test ties to the stylesheet. The scenes are small server components, turned into SVG strings by a serializer whose output a test compares with React's own renderer, so a scene is sent once and nothing hydrates; the folder is marked side-effect free so the scenes stay out of client bundles.</li>
+                <li><strong>The sign-in reel</strong>: one scene on a stage at a time, cycling every 7 s through the ten topics with the topic's name and a one-line caption (“Guess smarter: halve the pile”) and three small chips; the first topic is fixed so the server and the first client render agree. A toolbar of ten segments is one tab stop with arrow keys; a pause button stops the rotation and the animations (WCAG 2.2.2). The rotation also holds for a mouse over it, keyboard focus inside it, a hidden tab, a reel scrolled out of view and reduced motion. On phones the panel is no longer hidden: it is a banner of about 178 px above the form (the DOM order stays form, then reel), and the form stays inside the first screen at 375×812.</li>
+                <li><strong>On the map</strong>: the hero (<a href="#d41">decision 41</a>) and a 104×58 thumbnail in each topic card's header. An unlocked topic's thumbnail animates only while it is on screen; every other state is a dimmed poster with a lock or an open lock. The thumbnails' scenes are not in the page: they load on demand from <code>GET /api/topic-art/[slug]?v=&lt;fingerprint&gt;</code>, immutable-cached for a year and behind the login wall like every <code>/api</code> route — and compressed by the handler itself, because Next does not compress a route handler's response (<a href="#l-gzip">section 6</a>).</li>
+                <li><strong>Gallery</strong>: <code>/dev/topic-art</code> shows every scene in both themes at hero, card and thumbnail size (development only).</li>
+              </ul></dd>
+            <dt>Consequences</dt><dd><ul>
+              <li><strong>Weight on the sign-in pages</strong>: about 25 KB gzipped more (HTML +10.7, CSS +10.4, JavaScript +4.3 KB), First Load JS 119 → 123 kB. The ten scenes are about 78 KB raw, twice the 40 KB the brief aimed for: the extra detail was judged worth it, and a test holds the line at 80 KB.</li>
+              <li><strong>Weight on the map</strong>, measured as in decision 39 (production build, Lighthouse's mobile applied-throttling settings through Chromium's DevTools protocol, median of 7 hard loads, a fresh learner): with every thumbnail inline the page grew by 42.7 KB gzipped and paid 0.12 s of first-visit LCP, because each scene travels in the HTML and again in the RSC payload. With the thumbnails loaded on demand: +15.2 KB on the wire, first-visit LCP 1.46 → 1.48 s, return visit 0.64–0.69 → 0.72 s, CLS unchanged at 0.00006. The hero's scene stays inline; the first three cards' scenes are preloaded at low priority.</li>
+              <li><strong>Motion budget</strong>: at most four stages animate at once on a desktop (the hero and three in-view cards) and two or three on a phone; a learner scrolled past tier 0 sees none moving.</li>
+              <li><strong>Adding a topic</strong>: a scene file, its entries in the registries, an <code>--art-&lt;slug&gt;</code> token in both themes and its keyframe specs — <code>lib/topicArt.test.ts</code> fails until all of it is in place and, with <code>loop.json</code>, until every topic has a scene.</li>
+              <li><strong>Browsers</strong>: only Chromium was exercised. <code>color-mix()</code>, <code>oklch()</code>, container units, <code>transform-box: fill-box</code> and the in-view pause are untested in Safari and Firefox (section 7).</li>
+              <li><strong>Tests</strong>: web 459 → 572 (37 → 41 files) — 16 for the reel's rules, 82 for the art (catalog coverage against <code>loop.json</code>, markup against React's renderer, no literal colors, the poster rules, the stylesheet in sync, the lazy slot, the scene route) and 15 for the map's rule; Playwright 43 → 73 — 14 for the sign-in reel (it renders, switching changes the caption, pause works, reduced motion is a poster, the banner at 375 px, no layout shift while rotating through all ten topics) and 16 for the map's hero and thumbnails. The accessibility gate still passes on every route in both themes.</li>
+            </ul></dd>
+            <dt>Evidence</dt><dd><p>The reel: <code>16a11be</code>, <code>22d46d4</code>, <code>c7e727c</code>, <code>dfd541b</code>, <code>803c91c</code>, <code>93019b7</code> (merged in <code>725df24</code>, with <code>39482e3</code>); the map's thumbnails and the lazy route: <code>46bcc38</code>, <code>8105ffe</code> (merged in <code>b762b72</code>); frames of every scene were reviewed in both themes, at hero and card size and as posters, before merging.</p></dd>
+          </dl>
+        </article>
+
+        <article class="dr" id="d41">
+          <div class="eyebrow">Decision 41 · <span class="st new">new</span></div>
+          <h3>The map opens on the learner's next topic</h3>
+          <dl class="drg">
+            <dt>Context</dt><dd><p>With the problem list gone (<a href="#d39">decision 39</a>) the home page had no primary action — a learner landed on a page of cards — and its header was the headline and paragraph the owner wanted replaced by art.</p></dd>
+            <dt>Options</dt><dd><ul><li>Keep the headline and add a “continue” link.</li><li>A reel through all ten topics, like the sign-in.</li><li>Feature one topic, with one button.</li></ul></dd>
+            <dt>Decision</dt><dd><p>The third. The header is a small <code>h1</code> (“Tier map”) with the three totals as chips. Below it the hero shows the featured topic's animated art, an “up next” label, the topic's name (<code>h2</code>), its caption, “n/m solved” with a thin bar and one button; on phones the art stacks above the text and the button is full width. The topic is chosen by a pure function (<code>lib/server/featuredTopic.ts</code>) over the view the map already builds, in curriculum order:</p>
+              <ol>
+                <li>the first <em>unlocked</em> topic with an unsolved problem that opens for the learner (a composite that a locked topic still keeps closed does not count; one in a running gate attempt does) — “Continue: …” for an attempted problem, else “Start: …”, linking to the editor;</li>
+                <li>else the first topic ready to <em>unlock</em> — “Unlock …”, to its card;</li>
+                <li>else the topic <em>closest to unlocking</em> — the fewest tokens missing from its cheapest recipe, an open tier before a closed one — “See what's missing”, to its card;</li>
+                <li>else every topic is open and solved — “Every topic cleared”, with a link to the submissions.</li>
+              </ol></dd>
+            <dt>Consequences</dt><dd><ul>
+              <li>The rule keeps the earlier topic until it is finished — it does not jump to a newly unlocked later one — and never features a gate, even one that is open; both are product decisions left for the owner (section 7).</li>
+              <li>The hero's scene is inline, as the page's largest picture; cost and timings are in decision 40.</li>
+              <li>The page keeps exactly one <code>h1</code> and stays axe-clean in both themes at 375 px.</li>
+              <li><strong>Tests</strong>: 15 unit tests for the rule (start, attempted before untouched, curriculum order across tiers, closed and gate-opened composites, unlock before missing and its tie-breaks, a topic without a recipe, done, empty) and the map-hero e2e spec: the hero for a fresh learner and its button's target, the other states, posters on locked cards, thumbnails pausing off screen, stacking at 375 px.</li>
+            </ul></dd>
+            <dt>Evidence</dt><dd><p><code>d0e9938</code> (the rule), <code>d08fe7d</code> (the hero), <code>1d68af5</code> (the end-to-end tests), merged in <code>b762b72</code>.</p></dd>
           </dl>
         </article>
       </section>
@@ -1884,6 +1939,18 @@ GET  /v1/queue/stats          { enabled, counts }   enabled:false without Redis<
           <p>The editor's <code>loading.tsx</code> streamed a skeleton first and the page after it. React deliberately holds a Suspense reveal until at least 300 ms after the fallback painted, so on a hard load the problem statement — the page's largest paint — never appeared sooner than 300 ms after a placeholder nobody needed.</p>
           <p class="rule"><span class="tag">Rule</span>Measure first paint with and without a loading boundary. Keep one only where navigation is slow enough to need feedback, and give fast routes their feedback where the click happened (<code>41ab193</code>).</p>
         </div>
+
+        <div class="lesson" id="l-testdb">
+          <h3>A test run pointed at the wrong database</h3>
+          <p>The browser specs build their own Prisma client from the <em>Playwright</em> process's <code>DATABASE_URL</code>, falling back to <code>web/.env.local</code> — the owner's dev database. An agent pointed only the Next server at a scratch database, so the specs' users and rows went to the dev one, and the run was stopped partway through. The specs delete their own rows by id, and an audit afterwards found nothing left, but it was luck that this cost nothing.</p>
+          <p class="rule"><span class="tag">Rule</span>Set <code>DATABASE_URL</code> for the server <em>and</em> for Playwright, and print the database's name before a run. Each spec still carries its own copy of the lookup; one shared guard would remove the trap.</p>
+        </div>
+
+        <div class="lesson" id="l-gzip">
+          <h3>Route handlers are not compressed</h3>
+          <p>Next compresses pages but not a route handler's response. The ten art scenes would have gone out as about 80 KB where brotli makes about 9 KB — about 1.2 KB a scene — and the build's size table, which does not see route handlers, showed nothing.</p>
+          <p class="rule"><span class="tag">Rule</span>Compress in the handler (once per asset, with <code>Vary: Accept-Encoding</code>), and judge a payload by the bytes on the wire, not by the build output (<code>46bcc38</code>).</p>
+        </div>
       </section>
 
       <!-- ============================================================ 7 -->
@@ -1897,6 +1964,8 @@ GET  /v1/queue/stats          { enabled, counts }   enabled:false without Redis<
           <li><strong>LCP on a real host</strong>: with throttling applied, the map (the home page) and the editor paint their largest element in about 1.4 s on a first visit on localhost, the map in 0.64 s on a return visit (<a href="#d39">decision 39</a>), but Lighthouse's simulation reported about 2.6 s for the editor (<a href="#d37">decision 37</a>); the brief's 2 s bar should be confirmed against the deployed VPS.</li>
           <li><strong>Scaling out</strong>: rate limits are in-process (one web instance), the Redis queue doesn't serve <code>/v1/run</code>, and the sandbox shares the one VPS.</li>
           <li><strong>Directus leftovers</strong> of the Queue's tables: their field and relation meta rows stay in Directus, inert; tidying them is an optional SQL step (<code>deploy/README.md</code> §7.3, <a href="#d38">decision 38</a>).</li>
+          <li><strong>The topic art outside Chromium</strong>: only Chromium was exercised for the art (<code>color-mix()</code>, <code>oklch()</code>, container units, <code>transform-box: fill-box</code>) and for the map's lazy loader and in-view pause (<a href="#d40">decision 40</a>). A Safari and Firefox pass is owed.</li>
+          <li><strong>The next-topic rule</strong> keeps the earlier topic until it is finished and never features a gate, even an open one — whether it should is a product decision (<a href="#d41">decision 41</a>). The Learn track cards have no art yet; they are the natural next place for it.</li>
           <li><strong>Books and monetization</strong> from <code>docs/authoring-v1.md</code> — not started.</li>
         </ul>
       </section>
@@ -1921,6 +1990,7 @@ GET  /v1/queue/stats          { enabled, counts }   enabled:false without Redis<
           <dt>Hint ladder</dt><dd>nudge → concept → pseudo → line → solution, each with a score or token cost.</dd>
           <dt>upsert, insert-missing</dt><dd>The seed's two modes: the files, or the database, is the source of truth.</dd>
           <dt>Internal token</dt><dd>The shared secret between <code>web/</code> and <code>backend/</code>, sent as <code>X-Codemare-Token</code>.</dd>
+          <dt>Topic art, poster, reel</dt><dd>The animated SVG scene of a topic (decision 40); a scene's still base frame at its payoff — what reduced motion and locked topics show; the sign-in hero that cycles through the scenes.</dd>
           <dt>Integrator</dt><dd>The agent that verified and merged each parallel branch (decision 36).</dd>
         </dl>
       </section>

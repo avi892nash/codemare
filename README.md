@@ -25,6 +25,12 @@ first, with a light theme.
   removed on 2026-10-02 at the owner's request, and so was the problem
   catalog at `/problems`, with its search and filters: that URL now opens
   the map.)
+- **Visual, not text-heavy** — the sign-in screens open
+  on a reel of animated SVG scenes, one per topic (binary search halving a
+  pile, a hash machine, BFS spreading like a rumor…), and the map on a hero
+  of your next topic with one button, plus an art thumbnail on every topic
+  card. Pure inline SVG and CSS, a pause button, still posters under
+  reduced motion; `/dev/topic-art` shows them all.
 - **Learn** — three tracks of original lessons (`/learn`) with runnable code,
   step-through visualizations, callouts, formulas and checkpoint quizzes.
 - **Profile and badges** — `/u/[handle]` with stats, a year of activity and
