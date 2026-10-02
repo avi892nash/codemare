@@ -8,6 +8,7 @@ import { Pill, type PillTone } from '@/components/ui/Pill';
 import { Progress } from '@/components/ui/Progress';
 import type { EarnOption, RecipeCard, TopicBlockerView, TopicCardState, TopicCardView } from '@/lib/server/loopViews';
 import { TopicActions, type BalanceIndex } from './TopicActions';
+import { TopicProblems } from './TopicProblems';
 import s from './map.module.css';
 
 const STATE: Record<TopicCardState, { label: string; tone: PillTone; icon: IconName }> = {
@@ -205,8 +206,9 @@ function RecipeList({ recipes }: { recipes: RecipeCard[] }) {
 /**
  * One topic on the map: its state, token balance by difficulty bucket,
  * what's blocking it (the gate, or the cheapest recipe's missing tokens
- * with ways to earn them), its recipes with have/need per item, and the
- * unlock action.
+ * with ways to earn them), its recipes with have/need per item, its
+ * problems (listed once it is unlocked, counted before), and the unlock
+ * action.
  */
 export function TopicCard({ topic, free, balances }: { topic: TopicCardView; free: boolean; balances: BalanceIndex }) {
   const titleId = `topic-${topic.slug}-title`;
@@ -241,8 +243,9 @@ export function TopicCard({ topic, free, balances }: { topic: TopicCardView; fre
           <RecipeList recipes={topic.recipes} />
         </details>
       )}
+      <TopicProblems topic={{ title: topic.title, unlocked: topic.state === 'unlocked', problems: topic.problems }} />
       <TopicActions
-        topic={{ id: topic.id, slug: topic.slug, title: topic.title, state: topic.state }}
+        topic={{ id: topic.id, title: topic.title, state: topic.state }}
         recipes={topic.recipes}
         balances={balances}
         titleId={titleId}

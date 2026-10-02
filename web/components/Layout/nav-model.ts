@@ -34,8 +34,8 @@ export interface NavSection {
   exact?: string[];
 }
 
-// The problem catalog has no tab: the logo opens it (`/` → /problems when
-// signed in), and so does the jump box (⌘K).
+// The tier map is home: the logo opens it (`/` → /map when signed in), and
+// it lists every topic's problems — there is no separate problem list.
 export const NAV_SECTIONS: NavSection[] = [
   { key: 'learn', label: 'Learn', href: '/learn', icon: 'graduation' },
   { key: 'map', label: 'Map', href: '/map', icon: 'map' },

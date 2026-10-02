@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { pageWindow } from '@/components/Filters/pageWindow';
 import { fmtAbsolute, fmtMicros, fmtRelative, fmtValue } from '@/components/Submissions/format';
 import {
   EMPTY_SUBMISSION_QUERY,
@@ -31,6 +32,16 @@ describe('submissions URL contract', () => {
     expect(submissionsHref(EMPTY_SUBMISSION_QUERY)).toBe('/submissions');
     expect(hasSubmissionFilters(q)).toBe(true);
     expect(hasSubmissionFilters({ ...EMPTY_SUBMISSION_QUERY, page: 5 })).toBe(false);
+  });
+});
+
+describe('pageWindow (the pager under the list)', () => {
+  it('shows first, last and the neighbours of the current page', () => {
+    expect(pageWindow(1, 1)).toEqual([1]);
+    expect(pageWindow(1, 3)).toEqual([1, 2, 3]);
+    expect(pageWindow(5, 10)).toEqual([1, null, 4, 5, 6, null, 10]);
+    expect(pageWindow(1, 10)).toEqual([1, 2, null, 10]);
+    expect(pageWindow(10, 10)).toEqual([1, null, 9, 10]);
   });
 });
 

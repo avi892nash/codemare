@@ -35,7 +35,7 @@ const notFound = { ok: false as const, code: 'not_found' as const, error: 'Not f
 function revalidate(id: string, slug: string) {
   revalidatePath('/author');
   revalidatePath(`/author/${id}/edit`);
-  revalidatePath('/problems');
+  revalidatePath('/map'); // lists every published problem under its topics
   revalidatePath(`/problems/${slug}`);
 }
 

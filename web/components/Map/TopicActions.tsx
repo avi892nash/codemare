@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { unlockTopicAction, type ActionError } from '@/app/(workspace)/map/actions';
 import { plural, toastBadges } from '@/components/Loop/awards';
-import { Button, ButtonLink } from '@/components/ui/Button';
+import { Button } from '@/components/ui/Button';
 import { DifficultyPill } from '@/components/ui/DifficultyPill';
 import { Icon } from '@/components/ui/Icon';
 import { Modal } from '@/components/ui/Modal';
@@ -18,7 +18,7 @@ import s from './map.module.css';
 export type BalanceIndex = Record<string, { title: string; total: number }>;
 
 interface TopicActionsProps {
-  topic: { id: string; slug: string; title: string; state: TopicCardState };
+  topic: { id: string; title: string; state: TopicCardState };
   /** The topic's recipes (only needed while it is unlockable). */
   recipes: RecipeCard[];
   balances: BalanceIndex;
@@ -49,9 +49,9 @@ function errorContent(error: ActionError, balances: BalanceIndex): ReactNode {
 }
 
 /**
- * The action row under a topic card: Unlock (with the recipe-choosing
- * confirmation) while unlockable, a link to its problems once unlocked.
- * After an unlock, focus moves to the card's heading.
+ * The action row under a topic card: Unlock, with the recipe-choosing
+ * confirmation, while the topic is unlockable. After an unlock, focus
+ * moves to the card's heading (the card now lists its problems).
  */
 export function TopicActions({ topic, recipes, balances, titleId }: TopicActionsProps) {
   const [open, setOpen] = useState(false);
@@ -66,13 +66,6 @@ export function TopicActions({ topic, recipes, balances, titleId }: TopicActions
 
   return (
     <>
-      {topic.state === 'unlocked' && (
-        <div className={s.topicFoot}>
-          <ButtonLink href={`/problems?topic=${encodeURIComponent(topic.slug)}`} size="sm" variant="ghost" icon="list">
-            Problems
-          </ButtonLink>
-        </div>
-      )}
       {topic.state === 'unlockable' && (
         <div className={s.topicFoot}>
           <Button variant="primary" size="sm" icon="lock-open" onClick={() => setOpen(true)} data-testid="unlock-button">

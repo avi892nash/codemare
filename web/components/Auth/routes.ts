@@ -11,8 +11,8 @@
 
 export const AUTH_PAGES = ['/signin', '/signup', '/forgot', '/reset'] as const;
 export const LEGACY_AUTH_PAGE = '/auth';
-/** Where a signed-in visitor lands when there is no usable `next`. */
-export const DEFAULT_AFTER_SIGN_IN = '/problems';
+/** Where a signed-in visitor lands when there is no usable `next`: the tier map, which is home. */
+export const DEFAULT_AFTER_SIGN_IN = '/map';
 
 const under = (path: string, prefix: string) => path === prefix || path.startsWith(`${prefix}/`);
 

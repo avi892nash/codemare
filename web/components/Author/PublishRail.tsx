@@ -74,7 +74,7 @@ export function PublishRail({
         </div>
         <p className={s.help}>
           {published
-            ? 'Live in the catalog. Changes go live when you publish them.'
+            ? 'Live on the map. Changes go live when you publish them.'
             : 'Only you and staff can see drafts.'}
         </p>
       </div>
@@ -155,7 +155,7 @@ export function PublishRail({
           <div className={s.railLinks}>
             {published ? (
               <ButtonLink href={`/problems/${slug}`} variant="ghost" size="xs" icon="external" target="_blank" rel="noopener">
-                View in catalog
+                View as a learner
               </ButtonLink>
             ) : (
               <span />

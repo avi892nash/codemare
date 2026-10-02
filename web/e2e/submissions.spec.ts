@@ -227,8 +227,8 @@ test("someone else's submission is a 404, but staff can open it", async ({ page,
 test('a user with no submissions gets the empty state', async ({ page }) => {
   await signIn(page, empty, '/submissions');
   await expect(page.getByRole('heading', { name: 'No submissions yet' })).toBeVisible();
-  await page.getByRole('link', { name: 'Browse problems' }).click();
-  await expect(page).toHaveURL(/\/problems$/);
+  await page.getByRole('link', { name: 'Find a problem on the map' }).click();
+  await expect(page).toHaveURL(/\/map$/);
 });
 
 test('at 375 px the list and the detail fit without sideways scrolling', async ({ page }) => {

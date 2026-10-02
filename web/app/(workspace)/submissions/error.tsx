@@ -14,7 +14,7 @@ export default function SubmissionsError({ error, reset }: { error: Error & { di
       description="Something went wrong on our side. Trying again usually works; if it keeps happening, share the error ID below."
       digest={error.digest}
       onRetry={reset}
-      homeHref="/problems"
+      homeHref="/map"
     />
   );
 }

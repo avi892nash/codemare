@@ -128,6 +128,62 @@ describe('loop views (DB)', () => {
       ]);
     });
 
+    it('lists an unlocked topic’s problems with this learner’s progress, and counts a locked topic’s', async () => {
+      const w = await makeWorld();
+      const user = await makeUser();
+      // q-arrays (from the world) is solved; arrays-medium was attempted; the composite also needs graphs.
+      await makeQuestion({ slug: 'arrays-medium', difficulty: 'Medium', topics: [{ topicId: w.arrays.id }] });
+      await makeQuestion({ slug: 'arrays-graphs', difficulty: 'Hard', topics: [{ topicId: w.arrays.id }, { topicId: w.graphs.id, weight: 0.5 }] });
+      await makeQuestion({ slug: 'graphs-only', difficulty: 'Medium', topics: [{ topicId: w.graphs.id }] });
+      await makeQuestion({ slug: 'arrays-draft', status: 'draft', topics: [{ topicId: w.arrays.id }] });
+      await makeSubmission(user.id, { questionId: w.q1.id, kind: 'submit', status: 'OK' });
+      const medium = await prisma.question.findUniqueOrThrow({ where: { slug: 'arrays-medium' } });
+      await makeSubmission(user.id, { questionId: medium.id, kind: 'run', status: 'WA' });
+
+      const map = await getMapView(user.id);
+      const arrays = map.tiers[0].topics.find((t) => t.slug === 'arrays')!;
+      expect(arrays.problems).toEqual({
+        total: 3,
+        solved: 1,
+        list: [
+          { slug: 'q-arrays', title: 'q-arrays', difficulty: 'Easy', progress: 'solved', needs: [] },
+          { slug: 'arrays-medium', title: 'arrays-medium', difficulty: 'Medium', progress: 'attempted', needs: [] },
+          // Open only once graphs is unlocked too: the card says so instead of linking it.
+          {
+            slug: 'arrays-graphs',
+            title: 'arrays-graphs',
+            difficulty: 'Hard',
+            progress: 'todo',
+            needs: [{ id: w.graphs.id, slug: 'graphs', title: 'graphs', icon: 'grid' }],
+          },
+        ],
+      });
+      // A locked topic shows how many problems it holds, composites included — no list.
+      const graphs = map.tiers[1].topics.find((t) => t.slug === 'graphs')!;
+      expect(graphs.state).toBe('tier_closed');
+      expect(graphs.problems).toEqual({ total: 2, solved: 0, list: [] });
+      expect(map.tiers[1].topics.find((t) => t.slug === 'dp')!.problems).toEqual({ total: 0, solved: 0, list: [] });
+      expect(map.unfiled).toEqual([]);
+
+      // Unlocking graphs opens the composite (and lists graphs’ own problems).
+      await openTier(user.id, w.tier1.id);
+      await prisma.unlock.create({ data: { userId: user.id, kind: 'topic', refId: w.graphs.id } });
+      const after = await getMapView(user.id);
+      expect(after.tiers[0].topics.find((t) => t.slug === 'arrays')!.problems.list[2]).toMatchObject({ slug: 'arrays-graphs', needs: [] });
+      expect(after.tiers[1].topics.find((t) => t.slug === 'graphs')!.problems.list.map((p) => p.slug)).toEqual([
+        'arrays-graphs',
+        'graphs-only',
+      ]);
+    });
+
+    it('lists published questions without a topic on their own', async () => {
+      await makeWorld();
+      const user = await makeUser();
+      await makeQuestion({ slug: 'no-topic', difficulty: 'Medium' });
+      const map = await getMapView(user.id);
+      expect(map.unfiled).toEqual([{ slug: 'no-topic', title: 'no-topic', difficulty: 'Medium', progress: 'todo', needs: [] }]);
+    });
+
     it('reports a running gate attempt with its progress', async () => {
       const w = await makeWorld();
       const user = await makeUser();

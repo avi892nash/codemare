@@ -223,7 +223,7 @@ export function QuestionEditor({ initial, meta: initialMeta, topics, suggestions
       const res = await unpublishAction(draft.id);
       if (res.ok) {
         setMeta((m) => ({ ...m, status: res.status, updatedAt: res.updatedAt }));
-        toast({ title: 'Unpublished', description: 'Back to draft: hidden from the catalog.', tone: 'ok' });
+        toast({ title: 'Unpublished', description: 'Back to draft: hidden from learners.', tone: 'ok' });
       } else failWith(res.error, res);
     } finally {
       setBusy(null);
@@ -395,7 +395,7 @@ export function QuestionEditor({ initial, meta: initialMeta, topics, suggestions
         description={
           confirm === 'delete'
             ? 'The question, its tests, hints and reference solutions are deleted for good.'
-            : 'It leaves the catalog right away. Learners’ past submissions are kept; you can publish it again later.'
+            : 'Learners lose it right away. Their past submissions are kept; you can publish it again later.'
         }
         footer={
           <>

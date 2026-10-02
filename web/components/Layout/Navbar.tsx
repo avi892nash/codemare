@@ -7,7 +7,6 @@ import { Icon } from '@/components/ui/Icon';
 import { Logomark } from '@/components/ui/Logomark';
 import { DropdownMenu } from '@/components/ui/Menu';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
-import { JumpInput } from './JumpInput';
 import { ProfileMenu } from './ProfileMenu';
 import { NAV_SECTIONS, activeSection, formatTokens, isSectionActive, parseRole, type NavUser } from './nav-model';
 import s from './Navbar.module.css';
@@ -34,9 +33,10 @@ function normalize(u: NavbarUser): NavUser {
 
 /**
  * App shell top bar (L8). Section tabs are links with aria-current, active
- * by path prefix; the logo leads to the problem catalog. Below 768 px the
- * tabs collapse into a section menu. Right side: jump-to-problem (⌘K),
- * token balance, theme toggle, profile menu. Signed out: logo, theme, Sign in.
+ * by path prefix; the logo leads home — the tier map, which lists every
+ * topic's problems (so the Map tab is current there too). Below 768 px the
+ * tabs collapse into a section menu. Right side: token balance, theme
+ * toggle, profile menu. Signed out: logo (to sign-in), theme, Sign in.
  */
 export function Navbar({ user, tokenTotal, libraryVisible = false }: NavbarProps) {
   const pathname = usePathname() ?? '/';
@@ -48,7 +48,7 @@ export function Navbar({ user, tokenTotal, libraryVisible = false }: NavbarProps
     <header className={s.bar}>
       <a href="#main" className={s.skip}>Skip to content</a>
 
-      <Link href="/" className={`${s.brand} focus-ring`} aria-label="Codemare home">
+      <Link href={viewer ? '/map' : '/'} className={`${s.brand} focus-ring`} aria-label="Codemare home">
         <Logomark />
         <span className={s.wordmark} aria-hidden="true">codemare</span>
       </Link>
@@ -108,7 +108,6 @@ export function Navbar({ user, tokenTotal, libraryVisible = false }: NavbarProps
       <div className={s.right}>
         {viewer ? (
           <>
-            <JumpInput />
             {tokenTotal != null && (
               <Link
                 href="/map"

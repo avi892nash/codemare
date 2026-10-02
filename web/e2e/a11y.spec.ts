@@ -1,10 +1,11 @@
 /**
  * Accessibility + layout regression net across the product: for a
  * representative route per section, in both themes, no serious or critical
- * axe-core violations and exactly one <h1>; on phones (375 px) no
- * horizontal page scroll on the pages that must work there (catalog, learn,
- * profile, map, library). The editor-like pages (problem, IDE)
- * are checked at desktop width, where they are supported.
+ * axe-core violations and exactly one <h1>; on phones (375 px), in both
+ * themes, no horizontal page scroll on the pages that must work there (the
+ * map — home, with every topic's problems — learn, profile, library,
+ * submissions). The editor-like pages (problem, IDE) are checked at desktop
+ * width, where they are supported.
  *
  * axe-core is injected from cdnjs per page (not a dependency). A staff user
  * is created straight in the database (so /author and the hidden /library
@@ -117,7 +118,7 @@ test('signed-in sections at desktop width: no serious axe violations and one h1,
   await page.setViewportSize({ width: 1440, height: 900 });
   await signIn(page, user!.email);
   const routes = [
-    '/problems',
+    '/map',
     '/problems/two-sum',
     '/ide',
     '/submissions',
@@ -126,7 +127,6 @@ test('signed-in sections at desktop width: no serious axe violations and one h1,
     '/learn/foundations/hash-maps',
     `/u/${user!.handle}`,
     `/u/${user!.handle}/badges`,
-    '/map',
     '/author',
     '/library',
     '/this-page-does-not-exist',
@@ -141,14 +141,16 @@ test('signed-in sections at desktop width: no serious axe violations and one h1,
   }
 });
 
-test('phone width (375 px): no horizontal page scroll where phones are supported', async ({ page }) => {
-  test.setTimeout(90_000);
+test('phone width (375 px): no horizontal page scroll where phones are supported, in both themes', async ({ page }) => {
+  test.setTimeout(150_000);
   await page.setViewportSize({ width: 375, height: 812 });
   await signIn(page, user!.email);
-  await setTheme(page, 'dark');
-  for (const path of ['/problems', '/learn', '/learn/foundations', `/u/${user!.handle}`, '/map', '/library', '/submissions']) {
-    await open(page, path);
-    expect(await horizontalOverflow(page), `${path} overflow at 375 px`).toBe(0);
-    expect(await axeViolations(page), `${path} at 375 px`).toEqual([]);
+  for (const theme of ['dark', 'light'] as const) {
+    await setTheme(page, theme);
+    for (const path of ['/map', '/learn', '/learn/foundations', `/u/${user!.handle}`, '/library', '/submissions']) {
+      await open(page, path);
+      expect(await horizontalOverflow(page), `${path} overflow at 375 px (${theme})`).toBe(0);
+      expect(await axeViolations(page), `${path} at 375 px (${theme})`).toEqual([]);
+    }
   }
 });

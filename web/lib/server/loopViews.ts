@@ -8,10 +8,12 @@ import { getTopicBalances } from './ledger';
 import { scorePenaltyFrom } from './rules/hints';
 import { difficultyRank, meetsMinDifficulty, planDebits, type Balances } from './rules/recipes';
 import { solveAward } from './rules/scoring';
+import { listTopicProblems, type ProblemProgress, type TopicProblem } from './topicProblems';
 
 /**
- * View models for the learning-loop pages — /map (T1) and the gate attempt
- * page — plus the navbar token total. Every rule comes from the domain layer
+ * View models for the learning-loop pages — /map (T1, which is also how
+ * learners find problems) and the gate attempt page — plus the navbar
+ * token total. Every rule comes from the domain layer
  * (getMapState, planDebits, getGateAttempt, solveAward, …); this module only
  * joins and shapes, and returns JSON-safe data (dates as ISO strings) so
  * pages can hand it straight to client components.
@@ -118,6 +120,26 @@ export type TopicBlockerView =
     }
   | { kind: 'no_recipe' };
 
+/** A problem on the map: a link to the editor, unless a locked topic still keeps it closed. */
+export interface TopicProblemView {
+  slug: string;
+  title: string;
+  difficulty: Difficulty;
+  progress: ProblemProgress;
+  /** The locked topics keeping it closed (a composite question's other topics); empty when it opens. */
+  needs: TopicLite[];
+}
+
+/** The problems a topic holds. */
+export interface TopicProblemsView {
+  /** Published questions in the topic, composites included. */
+  total: number;
+  /** …of which this learner has solved. */
+  solved: number;
+  /** The questions, in curriculum order — only once the topic is unlocked (locked topics show the count). */
+  list: TopicProblemView[];
+}
+
 export interface TopicCardView extends TopicLite {
   summary: string;
   state: TopicCardState;
@@ -128,6 +150,7 @@ export interface TopicCardView extends TopicLite {
   /** Cheapest first; empty for free topics. */
   recipes: RecipeCard[];
   blocker: TopicBlockerView | null;
+  problems: TopicProblemsView;
 }
 
 export interface TierView {
@@ -143,6 +166,8 @@ export interface TierView {
 
 export interface MapView {
   tiers: TierView[];
+  /** Published questions without a topic, which no topic card lists (a content gap; normally empty). */
+  unfiled: TopicProblemView[];
   totals: { tokens: number; topicsUnlocked: number; topicsTotal: number; tiersOpen: number; tiersTotal: number };
   /** The learner's running gate attempt, if any. */
   running: {
@@ -287,8 +312,9 @@ function cardState(t: MapTopic): TopicCardState {
 /**
  * Everything /map renders: tiers (open state, gate card), topics (state,
  * balances per difficulty bucket, recipes with have/need and — when ready —
- * the exact debits), "what's blocking you" with ways to earn the missing
- * tokens, and the running gate attempt. Lazily finishes expired attempts.
+ * the exact debits, the problems they hold), "what's blocking you" with
+ * ways to earn the missing tokens, and the running gate attempt. Lazily
+ * finishes expired attempts.
  */
 export async function getMapView(userId: string, now: Date = new Date()): Promise<MapView> {
   const map = await getMapState(userId, now);
@@ -298,7 +324,7 @@ export async function getMapView(userId: string, now: Date = new Date()): Promis
   const balances: Balances = Object.fromEntries(map.tiers.flatMap((t) => t.topics.map((topic) => [topic.id, topic.balance.byDifficulty])));
   const unlocked = new Set(map.tiers.flatMap((t) => t.topics.filter((topic) => topic.status === 'unlocked').map((topic) => topic.id)));
 
-  const [earnable, gates, recipeTitles] = await Promise.all([
+  const [earnable, gates, recipeTitles, problems] = await Promise.all([
     loadEarnableQuestions(userId, unlocked),
     prisma.gate.findMany({
       select: {
@@ -310,9 +336,17 @@ export async function getMapView(userId: string, now: Date = new Date()): Promis
       where: { id: { in: map.tiers.flatMap((t) => t.topics.map((topic) => topic.unlock?.viaRecipeId).filter((id): id is string => !!id)) } },
       select: { id: true, title: true },
     }),
+    listTopicProblems(userId, now),
   ]);
   const gateQuestions = new Map(gates.map((g) => [g.id, g.questions.map((q) => q.question)]));
   const recipeTitle = new Map(recipeTitles.map((r) => [r.id, r.title]));
+  const problemView = (p: TopicProblem): TopicProblemView => ({
+    slug: p.slug,
+    title: p.title,
+    difficulty: p.difficulty,
+    progress: p.progress,
+    needs: p.open ? [] : p.topicIds.filter((id) => !unlocked.has(id)).flatMap((id) => topics.get(id) ?? []),
+  });
 
   const tiers: TierView[] = map.tiers.map((tier, i) => {
     const previous = i > 0 ? map.tiers[i - 1] : null;
@@ -356,6 +390,7 @@ export async function getMapView(userId: string, now: Date = new Date()): Promis
         } else if (t.blocker?.kind === 'no_recipe') {
           blocker = { kind: 'no_recipe' };
         }
+        const held = problems.byTopic.get(t.id) ?? [];
         return {
           id: t.id,
           slug: t.slug,
@@ -368,6 +403,11 @@ export async function getMapView(userId: string, now: Date = new Date()): Promis
           balance: t.balance,
           recipes,
           blocker,
+          problems: {
+            total: held.length,
+            solved: held.filter((p) => p.progress === 'solved').length,
+            list: t.status === 'unlocked' ? held.map(problemView) : [],
+          },
         };
       }),
     };
@@ -393,6 +433,7 @@ export async function getMapView(userId: string, now: Date = new Date()): Promis
   const allTopics = tiers.flatMap((t) => t.topics);
   return {
     tiers,
+    unfiled: problems.unfiled.map(problemView),
     totals: {
       tokens: allTopics.reduce((s, t) => s + t.balance.total, 0),
       topicsUnlocked: allTopics.filter((t) => t.state === 'unlocked').length,

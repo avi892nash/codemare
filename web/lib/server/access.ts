@@ -432,7 +432,7 @@ export async function assertCanAccessQuestion(userId: string, questionId: string
 }
 
 /**
- * Accessibility of many questions at once — for the catalog's lock icons.
+ * Accessibility of many questions at once — for the map's problem lists.
  * Same rules as canAccessQuestion except drafts count as accessible only to
  * their author. Unknown ids are omitted.
  */

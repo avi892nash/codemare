@@ -1,13 +1,13 @@
 import { Button, ButtonLink } from '@/components/ui/Button';
-import { pageWindow } from './query';
-import s from './Catalog.module.css';
+import { pageWindow } from './pageWindow';
+import s from './Pagination.module.css';
 
 export interface PaginationProps {
   page: number;
   pageCount: number;
   pageSize: number;
   total: number;
-  /** Plural noun for the summary line ("problems", "submissions"). */
+  /** Plural noun for the summary line ("submissions"). */
   noun: string;
   /** URL of a given page (keeps the current filters). */
   hrefFor: (page: number) => string;

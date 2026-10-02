@@ -6,8 +6,7 @@ export default function ProblemNotFound() {
     <NotFound
       title="Problem not found"
       description="There’s no problem at this address — it may have been renamed, or it isn’t published yet."
-      homeHref="/problems"
-      homeLabel="Browse problems"
+      homeLabel="Find a problem on the map"
     />
   );
 }

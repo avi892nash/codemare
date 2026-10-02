@@ -1,5 +1,6 @@
-/* Submissions (artboard 05): history list + detail. Same list-page frame as
- * the catalog (max 1100 px, 28 px / 24 px padding). */
+/* Submissions (artboard 05): history list + detail. The shared list-page
+ * frame (max 1100 px, 28 px / 24 px padding; states/LoadingState's list
+ * skeleton matches it). */
 
 .main {
   position: relative;

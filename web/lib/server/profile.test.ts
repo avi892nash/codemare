@@ -45,7 +45,7 @@ describe('getProfile', () => {
     expect(p.isOwner).toBe(false);
     expect(p.solved.total).toBe(4); // q1, mid, q2, drafty (a solve is a solve)
     expect(p.solved.byDifficulty).toEqual({ Easy: 3, Medium: 1, Hard: 0 });
-    expect(p.solved.catalog).toEqual({ Easy: 2, Medium: 1, Hard: 0 }); // published only
+    expect(p.solved.published).toEqual({ Easy: 2, Medium: 1, Hard: 0 }); // published only
     // judged submit/gate: 6 OK + 1 WA (the run is excluded)
     expect(p.acceptance).toEqual({ accepted: 6, judged: 7, rate: 86 });
     expect(p.fastest).toEqual({ runtimeUs: 400, language: 'python', question: { slug: 'q-arrays', title: 'q-arrays' } });

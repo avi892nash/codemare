@@ -269,7 +269,7 @@ describe('question access', () => {
     expect(await canAccessQuestion(staff.id, draft.id)).toEqual({ ok: true, via: 'author' });
   });
 
-  it('batches access for the catalog', async () => {
+  it('batches access for the map’s problem lists', async () => {
     const w = await makeWorld();
     const user = await makeUser();
     const locked = await makeQuestion({ topics: [{ topicId: w.dp.id }] });

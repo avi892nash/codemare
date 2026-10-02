@@ -9,14 +9,15 @@ import { expect, test, type Page } from '@playwright/test';
  *
  *   PLAYWRIGHT_BASE_URL=http://localhost:4205 npx playwright test e2e/loop.spec.ts
  *
- *  1. sign up a fresh learner through /signup
- *  2. solve three tier-0 questions in the editor, watching the navbar's
- *     token total rise with each accepted submit
+ *  1. sign up a fresh learner through /signup — they land on the map
+ *  2. solve three tier-0 questions in the editor (the first opened from
+ *     the map's list), watching the navbar's token total rise with each
+ *     accepted submit, and the map's list mark them solved
  *  3. /map: Binary Search (tier 1) is blocked by the Foundations Gate
  *  4. start the gate, solve three of its four problems in gate mode, finish
  *     → Core Techniques opens
- *  5. unlock Binary Search with the "Scan, then search" recipe → it opens
- *     (and its questions with it)
+ *  5. unlock Binary Search with the "Scan, then search" recipe → it opens,
+ *     and its card lists its questions, which open in the editor
  */
 
 const DATA = join(__dirname, '..', 'prisma', 'seed');
@@ -68,9 +69,9 @@ async function solve(page: Page, path: string, code: string): Promise<void> {
 test('sign-up → solve → submit → unlock', async ({ page }) => {
   test.setTimeout(10 * 60_000);
 
-  await test.step('sign up a fresh learner', async () => {
+  await test.step('sign up a fresh learner, who lands on the map', async () => {
     await signUp(page);
-    await page.goto('/problems');
+    await expect(page).toHaveURL(/\/map$/);
     await expect(tokenChip(page)).toHaveText('0');
   });
 
@@ -80,6 +81,9 @@ test('sign-up → solve → submit → unlock', async ({ page }) => {
       { slug: 'valid-anagram', reward: '+1 Arrays & Hashing' },
       { slug: 'reverse-string', reward: '+1 Two Pointers' },
     ];
+    // The first one opened the way a learner finds it: from its topic's list on the map.
+    await page.getByRole('list', { name: 'Arrays & Hashing problems' }).getByRole('link', { name: 'Two Sum', exact: true }).click();
+    await expect(page).toHaveURL(/\/problems\/two-sum$/);
     for (const [i, s] of solves.entries()) {
       await solve(page, `/problems/${s.slug}`, questionReference(s.slug));
       await expect(page.getByTestId('rewards')).toContainText(s.reward);
@@ -93,6 +97,10 @@ test('sign-up → solve → submit → unlock', async ({ page }) => {
     await tokenChip(page).click();
     await expect(page).toHaveURL(/\/map$/);
     await expect(page.getByTestId('map-tokens')).toHaveText('3');
+    const arrays = page.getByRole('list', { name: 'Arrays & Hashing problems' });
+    for (const title of ['Two Sum', 'Valid Anagram']) {
+      await expect(arrays.getByRole('listitem').filter({ has: page.getByRole('link', { name: title, exact: true }) })).toContainText('Solved');
+    }
     const topic = page.getByTestId('topic-binary-search');
     await expect(topic.getByTestId('topic-state')).toHaveText('Tier closed');
     await expect(topic.getByTestId('blocker')).toContainText('Core Techniques is closed');
@@ -146,8 +154,9 @@ test('sign-up → solve → submit → unlock', async ({ page }) => {
     await expect(topic).toContainText('Unlocked with “Scan, then search”');
     await expect(tokenChip(page)).toHaveText('0');
 
-    // Its questions open with it.
-    await page.goto('/problems/binary-search');
+    // Its questions open with it: the card lists them now, and they open in the editor.
+    await topic.getByRole('list', { name: 'Binary Search problems' }).getByRole('link', { name: 'Binary Search', exact: true }).click();
+    await expect(page).toHaveURL(/\/problems\/binary-search$/);
     await waitForEditor(page);
     await expect(page.getByTestId('locked-question')).toHaveCount(0);
   });

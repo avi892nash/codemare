@@ -141,7 +141,7 @@ export default async function LibraryArticlePage({ params }: { params: Params })
             </Block>
 
             {a.practice.length > 0 && (
-              <Block id="practice" title="Practice" icon="list" note="Problems in the catalog where this technique does the heavy lifting.">
+              <Block id="practice" title="Practice" icon="list" note="Problems where this technique does the heavy lifting.">
                 <ul className={s.practiceList}>
                   {a.practice.map((q) => (
                     <li key={q.slug}>

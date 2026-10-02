@@ -168,8 +168,8 @@ function Result({ view }: { view: GateAttemptPageView }) {
               Back to the map
             </ButtonLink>
           )}
-          <ButtonLink href="/problems" variant="ghost" icon="list">
-            Browse problems
+          <ButtonLink href="/map" variant="ghost" icon="list">
+            Find a problem on the map
           </ButtonLink>
         </div>
       </div>

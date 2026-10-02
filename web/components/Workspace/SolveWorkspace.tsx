@@ -34,7 +34,7 @@ import s from './Workspace.module.css';
 const AiReview = dynamic(() => import('@/components/Results/AiReview').then((m) => m.AiReview), { ssr: false });
 
 export interface SolveWorkspaceProps {
-  /** question (catalog) · gate (Submit counts for the attempt). */
+  /** question (a published question) · gate (Submit counts for the attempt). */
   mode: WorkspaceMode;
   problem: WorkspaceProblem;
   /** Server-rendered statement body. */

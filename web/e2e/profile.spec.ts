@@ -191,7 +191,7 @@ test('the badge gallery opens a focus view that deep-links, closes on Esc and re
   await expect(warm.getByText('How to earn it')).toBeVisible();
   await expect(warm.getByText('Solve 10 different problems.')).toBeVisible();
   await expect(warm.getByRole('progressbar', { name: 'Your progress' })).toHaveAttribute('aria-valuetext', '3 / 10 problems solved');
-  await expect(warm.getByRole('link', { name: 'Browse problems' })).toHaveAttribute('href', '/problems');
+  await expect(warm.getByRole('link', { name: 'Find a problem on the map' })).toHaveAttribute('href', '/map');
   await page.keyboard.press('Escape');
   await expect(warm).toBeHidden();
   await expect(page.getByRole('button', { name: /^Getting Warm/ })).toBeFocused();
@@ -207,5 +207,5 @@ test('someone else’s gallery shows their progress, without calls to action', a
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(`${other.name}’s badges`);
   const dialog = page.getByRole('dialog', { name: 'Getting Warm' });
   await expect(dialog.getByRole('progressbar', { name: `${other.name}’s progress` })).toHaveAttribute('aria-valuetext', '0 / 10 problems solved');
-  await expect(dialog.getByRole('link', { name: 'Browse problems' })).toHaveCount(0);
+  await expect(dialog.getByRole('link', { name: 'Find a problem on the map' })).toHaveCount(0);
 });

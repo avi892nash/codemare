@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { signInHref } from '@/components/Auth/routes';
-import { FilterNavProvider, PendingRegion } from '@/components/Catalog/FilterNav';
-import { Pagination } from '@/components/Catalog/Pagination';
+import { FilterNavProvider, PendingRegion } from '@/components/Filters/FilterNav';
+import { Pagination } from '@/components/Filters/Pagination';
 import { EmptyState } from '@/components/states/EmptyState';
 import { SubmissionFilters } from '@/components/Submissions/SubmissionFilters';
 import { SubmissionColumnHead, SubmissionRows } from '@/components/Submissions/SubmissionRows';
@@ -45,8 +45,8 @@ export default async function SubmissionsPage({ searchParams }: { searchParams: 
               title="No submissions yet"
               description="Run or submit a solution and it lands here with its runtime, memory and per-test results."
               action={
-                <ButtonLink href="/problems" variant="primary" iconRight="arrow-right">
-                  Browse problems
+                <ButtonLink href="/map" variant="primary" iconRight="arrow-right">
+                  Find a problem on the map
                 </ButtonLink>
               }
             />

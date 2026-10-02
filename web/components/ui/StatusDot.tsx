@@ -1,6 +1,6 @@
 import { Icon } from './Icon';
 
-/* Round indicator used in the catalog row. */
+/* Round progress indicator for a problem (the map's problem lists). */
 export type ProblemStatus = 'solved' | 'attempted' | 'unsolved';
 
 export function StatusDot({ status }: { status: ProblemStatus }) {

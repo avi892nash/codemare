@@ -197,8 +197,21 @@ Used by recipe unlocks (reason `unlock`, ref `recipe`) and token-cost hints
   `{topic, have, need, min_difficulty}`.
 - A question is accessible iff **every** one of its topics is unlocked — or it
   belongs to a gate the user has a running attempt for (gate questions are
-  always reachable during their attempt). Locked questions still list in the
-  catalog, with a lock and a link to `/map`.
+  always reachable during their attempt).
+- The map is where learners find questions: every published question is
+  listed under each of its topics (a composite under all of them), in
+  curriculum order — the primary (heaviest-weight) topic's tier, then that
+  topic's place in its tier, then difficulty, then title — with the
+  learner's progress (`solved` once a submit or gate submission is
+  accepted, `attempted` after any run, submit or gate without that). An
+  unlocked topic lists its questions, each linking to the editor, under
+  "n/m solved"; a question that a still-locked topic keeps closed (a
+  composite's other topic) names that topic instead of linking. A locked
+  or unlockable topic shows only how many questions it holds. Published
+  questions without a topic, a content gap, are listed on their own.
+  *(Until 2026-10-02 a problem catalog at `/problems` listed them with
+  search and filters, and locked ones with a lock linking to `/map`; it was
+  removed at the owner's request — see §7.)*
 
 ### 3.5 Gates
 - Eligible for tier N's gate: tier N−1 open, no running attempt, and
@@ -363,26 +376,32 @@ plus these blocks:
 
 | route | notes |
 |---|---|
-| `/` | redirect → `/problems` (signed in) or `/signin` |
-| `/signin`, `/signup`, `/forgot` (+ `/reset?token=`) | public; signed-in visitors redirect away |
-| `/problems`, `/problems/[slug]` | catalog; editor + results |
+| `/` | redirect → `/map` (signed in) or `/signin` |
+| `/signin`, `/signup`, `/forgot` (+ `/reset?token=`) | public; signed-in visitors redirect away (to a safe `next`, else `/map`) |
+| `/problems/[slug]` | editor + results |
 | `/ide` | playground, custom stdin/stdout |
 | `/submissions`, `/submissions/[id]` | history, detail |
 | `/u/[handle]`, `/u/[handle]/badges` | profile, badges gallery + modal |
 | `/learn`, `/learn/[track]`, `/learn/[track]/[lesson]`, `/learn/[track]/[module]/checkpoint`, `/learn/[track]/complete` | learn |
-| `/map`, `/map/gates/[attemptId]` | learning loop: the tier map, a gate attempt |
+| `/map`, `/map/gates/[attemptId]` | home and the learning loop: the tier map with every topic's problems (§3.4), a gate attempt |
 | `/author/new`, `/author/[id]/edit` | ≥ author |
 | `/library`, `/library/[area]`, `/library/[area]/[article]` | hidden; ≥ staff unless flag; noindex |
 | `/dev/system` | non-production only |
 
-Old routes `/p/[id]`, `/auth`, `/profile` redirect to their new homes.
+Old routes `/p/[id]`, `/auth`, `/profile` redirect to their new homes, and
+`/problems` — with whatever query string an old link carries — redirects to
+`/map` (`?topic=<slug>` to that topic's card, `/map#topic-<slug>`).
 
-Top bar: Learn, Map, IDE, Submissions. The catalog has no tab: the logo
-opens it (`/` redirects signed-in visitors to `/problems`) and the jump box
-(⌘/Ctrl+K) searches it. The profile menu holds Profile, Badges, Author
-(≥ author), Library (when visible) and Sign out. *`/queue` and
+Top bar: Learn, Map, IDE, Submissions. The map is home: the logo opens it
+(`/` redirects signed-in visitors to `/map`, the Map tab then current) and
+it lists every topic's problems. The profile menu holds Profile, Badges,
+Author (≥ author), Library (when visible) and Sign out. *`/queue` and
 `/me/library` — and the Problems and Queue tabs and the My Library menu
-link — were removed on 2026-10-02 at the owner's request.*
+link — were removed on 2026-10-02 at the owner's request. So was the
+problem catalog the same day: `/problems` with search, difficulty, status,
+topic, tag and company filters, curriculum order and pagination (the
+brief's screen 01, with its empty state 08b), and the ⌘/Ctrl+K "Jump to
+problem" box that searched it (decision 39 in `docs/DECISIONS.html`).*
 
 ---
 
@@ -414,20 +433,24 @@ link — were removed on 2026-10-02 at the owner's request.*
   themes, honor `prefers-reduced-motion` (transitions off, not shortened).
   `web/e2e/a11y.spec.ts` gates it: no serious or critical axe violation and
   exactly one `h1` per page in both themes, no sideways scroll at 375 px.
-- **Responsive**: editor ≥ 1024 px; catalog, learn, library, profile ≥ 375 px.
+- **Responsive**: editor ≥ 1024 px; map, learn, library, profile and
+  submissions ≥ 375 px.
 - **Perf**: RSC by default; client components only for editor, visualizations,
   filters, interactive widgets. Monaco and visualizations are dynamically
-  imported. LCP < 2 s on `/problems` and `/problems/[slug]`.
+  imported. LCP < 2 s on `/map` (home) and `/problems/[slug]`.
 - **No route-level `loading.tsx` on routes that navigate by query string**
-  (`/problems`, `/submissions`, …). In production builds Next 15.5's router
-  never commits a same-path, query-only navigation under a route-level loading
-  boundary — filters and pagination silently do nothing (dev mode doesn't
-  prefetch, so it only shows up in `next start`). Use in-page `<Suspense>`
-  for skeletons instead. `/problems/[slug]` has none either, for a different
-  reason: React holds a Suspense reveal until ≥ 300 ms after its fallback
-  painted, so a skeleton there delays the statement (the LCP element); the
-  clicked catalog row shows a pending spinner instead. Only `/map` keeps a
-  `loading.tsx`.
+  (`/submissions`). In production builds Next 15.5's router never commits a
+  same-path, query-only navigation under a route-level loading boundary —
+  filters and pagination silently do nothing (dev mode doesn't prefetch, so
+  it only shows up in `next start`). Use in-page `<Suspense>` for skeletons
+  instead. `/problems/[slug]` has none either, for a different reason:
+  React holds a Suspense reveal until ≥ 300 ms after its fallback painted,
+  so a skeleton there delays the statement (the LCP element); the clicked
+  problem on the map shows a pending spinner instead. `/map` lost its own
+  skeleton on 2026-10-02 for the same reason once it became the home page
+  (on a return visit it held the LCP back by ~0.34 s, and above a gate
+  attempt it turned `notFound()` into a 200): no route has a `loading.tsx`
+  now.
 
 ---
 
