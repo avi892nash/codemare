@@ -142,6 +142,12 @@ test('a locked topic counts its problems without linking them', async ({ page })
   await expect(card.locator('a[href^="/problems/"]')).toHaveCount(0);
 });
 
+test('an unknown gate attempt is a real 404 (no loading boundary above it)', async ({ page }) => {
+  const res = await page.goto('/map/gates/no-such-attempt');
+  expect(res?.status()).toBe(404);
+  await expect(page.getByRole('heading', { name: 'Page not found', level: 1 })).toBeVisible();
+});
+
 test('at 375 px the problem lists fit without sideways scrolling', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto('/map');
