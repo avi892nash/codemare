@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { PrismaClient } from '@prisma/client';
+import { capsules } from './capsules';
 import bcrypt from 'bcryptjs';
 
 /**
@@ -449,6 +450,17 @@ test.describe('the milestone line', () => {
     await openMap(page, 'running');
     await expect(page.getByTestId('running-attempt')).toBeVisible();
     await expect(milestone(page)).toHaveCount(0);
+  });
+
+  test('while a gate attempt runs its banner holds the page’s one primary action, and the hero’s button is a quiet one', async ({ page }) => {
+    await openMap(page, 'running');
+    const banner = page.getByTestId('running-attempt');
+    await expect(banner.getByRole('link', { name: 'Continue' })).toHaveAttribute('data-variant', 'primary');
+    await expect(page.getByTestId('map-hero-cta')).toHaveAttribute('data-variant', 'default');
+    await expect(page.locator('main [data-variant="primary"]:visible'), 'one primary button on screen').toHaveCount(1);
+
+    await openMap(page, 'midway'); // no attempt: the hero's button is the one
+    await expect(page.getByTestId('map-hero-cta')).toHaveAttribute('data-variant', 'primary');
   });
 
   test('when the hero already offers the gate, the line under it does not say it again', async ({ page }) => {
@@ -919,6 +931,7 @@ test.describe('the type scale', () => {
         expect(sizes.length, `${kind} at ${width}: ${JSON.stringify(sizes)}`).toBeLessThanOrEqual(8);
         const upper = await page.getByRole('main').evaluate((main) => [...main.querySelectorAll('*')].filter((e) => getComputedStyle(e).textTransform === 'uppercase').length);
         expect(upper, `${kind} at ${width}: text in capitals`).toBe(0);
+        expect(await capsules(page), `${kind} at ${width}: tags (a filled or outlined pill) — a recipe's state is a word`).toEqual([]);
       }
     });
   }

@@ -26,7 +26,7 @@ export function RunningAttemptBanner({ running }: { running: NonNullable<MapView
         <Countdown to={running.deadlineAt} onExpire={() => router.refresh()} expiredText="Time’s up" />
         <span className="sr-only"> left</span>
       </span>
-      <ButtonLink href={`/map/gates/${encodeURIComponent(running.attemptId)}`} variant="primary" size="sm" iconRight="arrow-right">
+      <ButtonLink href={`/map/gates/${encodeURIComponent(running.attemptId)}`} variant="primary" size="sm" tap iconRight="arrow-right">
         Continue
       </ButtonLink>
     </div>

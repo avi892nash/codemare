@@ -2,7 +2,6 @@
 
 import { useEffect, useId, useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
-import { Pill } from '@/components/ui/Pill';
 import { formatKb, formatMicros, text } from '@/lib/client/format';
 import { formatValue, namedArgs } from '@/lib/client/signature';
 import type { TestEventData } from '@/lib/sse';
@@ -10,20 +9,19 @@ import type { Signature } from '@/lib/types';
 import { JudgeOutput } from './JudgeOutput';
 import s from './Results.module.css';
 
-/** Pills are 12 px here, like the rest of the result (the shared Pill sizes run smaller). */
-const PILL_TEXT = { fontSize: 'var(--fs-xs)' } as const;
-
 /** "Sample" · "Custom" · "Hidden" — what kind of test this is. */
 export function testKind(t: Pick<TestEventData, 'hidden' | 'custom'>): 'Sample' | 'Custom' | 'Hidden' {
   return t.hidden ? 'Hidden' : t.custom ? 'Custom' : 'Sample';
 }
 
-/** The kind of a test as a small label. */
-export function TestKindPill({ test }: { test: Pick<TestEventData, 'hidden' | 'custom'> }) {
+/** The kind of a test as a small quiet label (a lock before "Hidden"), not a tag. */
+export function TestKindLabel({ test }: { test: Pick<TestEventData, 'hidden' | 'custom'> }) {
+  const kind = testKind(test);
   return (
-    <Pill size="xs" tone={test.hidden ? 'muted' : test.custom ? 'info' : 'default'} icon={test.hidden ? 'lock' : undefined} style={PILL_TEXT}>
-      {testKind(test)}
-    </Pill>
+    <span className={s.testKind} data-kind={kind.toLowerCase()}>
+      {test.hidden && <Icon name="lock" size={12} />}
+      {kind}
+    </span>
   );
 }
 
@@ -130,7 +128,7 @@ export function TestBreakdown({ tests, signature, openIdx = null, onLine, headin
                 style={{ color: t.passed ? 'var(--ok-fg)' : 'var(--err-fg)' }}
               />
               <span className={s.testName}>Test {t.idx + 1}</span>
-              <TestKindPill test={t} />
+              <TestKindLabel test={t} />
               {!t.passed && t.error && <span className={s.testErr}>{t.error.split('\n')[0]}</span>}
               <span className={s.testSpacer} />
               {!t.hidden && (

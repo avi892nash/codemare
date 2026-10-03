@@ -119,6 +119,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
         onClick?.(e);
       }}
       className={classFor(variant, size, full, iconOnly, tap, className)}
+      data-variant={variant}
       {...rest}
     >
       <Content size={size} icon={icon} iconRight={iconRight} kbd={kbd} loading={loading}>
@@ -150,6 +151,7 @@ export const ButtonLink = forwardRef<HTMLAnchorElement, ButtonLinkProps>(functio
       scroll={scroll}
       aria-busy={loading || undefined}
       className={classFor(variant, size, full, iconOnly, tap, className)}
+      data-variant={variant}
       {...rest}
     >
       <Content size={size} icon={icon} iconRight={iconRight} kbd={kbd} loading={loading}>

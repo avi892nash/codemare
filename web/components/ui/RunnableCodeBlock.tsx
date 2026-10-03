@@ -7,7 +7,8 @@ import { CopyButton } from './CopyButton';
 import { Icon } from './Icon';
 import { LangMark } from './LangMark';
 import { Spinner } from './Spinner';
-import { StatusPill, STATUS_META, type StatusCode } from './StatusPill';
+import { VerdictText } from '@/components/Results/VerdictText';
+import { STATUS_META, type StatusCode } from './StatusPill';
 import { useModKey, useTouchOnly } from '@/components/Workspace/useModKey';
 import { fmtTime } from './formatters';
 import { highlight, LANGUAGE_LABEL, normalizeLanguage } from './highlight';
@@ -168,7 +169,7 @@ export function RunnableCodeBlock({
                 <Spinner size={12} /> Running…
               </span>
             ) : (
-              status && <StatusPill code={status} showLong withIcon size="xs" />
+              status && <VerdictText status={status} kind="run" label={status === 'OK' ? 'Ran' : undefined} />
             )}
             {result && (
               <span className={`${s.metrics} mono`}>

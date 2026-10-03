@@ -278,13 +278,17 @@ button.testHead:hover { background: var(--bg-2); }
   line-height: 1.5;
   color: var(--fg-1);
 }
-.heroTags {
+/* the language and the judge's short code: quiet labels at the card's edge, not tags */
+.heroMeta {
   display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--fg-2);
+  white-space: nowrap;
 }
+.heroCode { font-size: var(--fs-xs); color: var(--fg-2); }
 
 /* What to try: one short paragraph. */
 .advice {
@@ -436,5 +440,16 @@ button.testHead:hover { background: var(--bg-2); }
 @media (max-width: 480px) {
   .actions .actionBtn { flex: 1 1 auto; justify-content: center; }
   .heroTop { flex-wrap: wrap; }
-  .heroTags { flex: 1 1 100%; justify-content: flex-start; padding-left: 48px; }
+  .heroMeta { flex: 1 1 100%; padding-left: 48px; }
 }
+
+/* a test's kind (Sample · Custom · Hidden): quiet text beside its title, not a tag */
+.testKind {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  color: var(--fg-2);
+}
+.testKind[data-kind='custom'] { color: var(--info-fg); }

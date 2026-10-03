@@ -68,7 +68,7 @@ export default async function MapPage() {
       <HowItWorks initialOpen={firstRun}>
         <div className={s.mapHead}>
           <MapHeader totals={totals} />
-          <MapHero featured={featured} milestone={milestone} />
+          <MapHero featured={featured} milestone={milestone} gateRunning={!!view.running} />
         </div>
         {view.running && <RunningAttemptBanner running={view.running} />}
         <HowItWorksCard />

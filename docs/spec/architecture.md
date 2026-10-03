@@ -434,7 +434,8 @@ is takeable — its tier closed, the tier before it open, no attempt running,
 no cooldown — ("Take the Foundations Gate", to `#gate-<id>`, kicker "Ready
 for the gate", art of the first topic that tier opens), else the topic
 closest to unlocking ("See what's missing"), else "Every topic cleared"
-(decision 43).
+(decision 43). While a gate attempt is running its banner holds the page's one
+primary action and the hero's button is the quiet variant (decision 44).
 
 **The map is calm** (decision 42). Under the hero at most one more line may
 appear (`lib/server/mapMilestone.ts`; it adds no restriction): a topic that is
@@ -505,7 +506,7 @@ rarity as a word, the date or progress), the focus view in a dialog.
 
 ## 8. Design language
 
-- **Tokens** only (`--bg-0..4`, `--line-1..3`, `--fg-0..4`, `--accent*`,
+- **Tokens** only (`--bg-0..4`, `--line-1..3`, `--fg-0..4`, `--fg-ph` (placeholders, at least 4.5 : 1), `--accent*`,
   `--ok/warn/err/info` + `-bg`, `--r-sm..xl`, `--shadow*`). Dark `.cm` is the
   default; `.cm-light` swaps the palette. Theme persists in a `cm-theme`
   cookie so SSR renders the right class (no flash).
@@ -517,18 +518,25 @@ rarity as a word, the date or progress), the focus view in a dialog.
 - **One height ladder** (decision 43): controls are `--ctl-xs/sm/md/lg` =
   22/28/32/38 px and `--tap` = 44 px; on phones and coarse pointers
   (`max-width: 720px` or `pointer: coarse`) fields are 16 px and 44 px tall
-  and large buttons, tabs, menu rows, breadcrumbs and dialog buttons are 44 px
+  and medium and large buttons (a long label wraps instead of widening the
+  page), tabs, menu rows, breadcrumbs and dialog buttons are 44 px; a small
+  button that is a page's action passes `tap`
   (a page's own size wins: the kit's touch rules carry no more specificity
   than its base rules, except field text, which is enforced at 16 px). `Pill`
   heights are fixed (22/24/28). The language mark is a 12 px tag and avatar
   initials are at least 12 px. The shell is `100dvh` (`.app-shell`) and the
   viewport's `interactive-widget=resizes-content` lets the soft keyboard
   shrink it.
-- **One page header, one dialect** (decision 43): `PageHeader` (26 px title,
-  one line, actions at the right, no eyebrow), `DifficultyText` for
-  difficulty in lists, `StatusDot` and `VerdictText` / `SubmissionStatus` for
-  status; a filled difficulty pill only where a tag is the point (the
-  editor's title row, a locked question). `/dev/system` shows them.
+- **One page header, one dialect** (decisions 43 and 44): `PageHeader` (26 px
+  title, one line, actions at the right, no eyebrow), `DifficultyText` for
+  difficulty everywhere (the problem header and the locked page too),
+  `StatusDot` for progress and `VerdictText` for verdicts — the glyph and
+  name in the verdict's tone, sentence case, the short code small;
+  `VERDICT_LOOK` in `lib/client/resultCopy.ts` is the one table of tones and
+  glyphs. No learner-facing screen has a filled or outlined capsule: a cost, a
+  role, a test's kind, a recipe's state is a word (`e2e/capsules.ts` fails a
+  page that has one; the authoring pages and the sign-in screens' feature
+  chips are the exceptions). `/dev/system` shows them.
 - **Calm pages** (decision 42): say each thing once; collapse what the
   learner cannot use yet; one primary action per screen (the hero's button,
   the result's "Next problem"); the same words, and no constraint added to
@@ -575,7 +583,8 @@ rarity as a word, the date or progress), the focus view in a dialog.
   route table `FLOOR_ROUTES` (18 routes, an owner each — add a route there)
   also asserts, per route, no visible text under 12 px (both themes at 1440,
   dark at 375; SVG text and screen-reader-only text are ignored), 16 px form
-  fields at 375 px and a phone gate, and the top bar's 44 px targets.
+  fields at 375 px and a phone gate, and the top bar's 44 px targets;
+  `auth.spec.ts` holds placeholder text at 4.5 : 1 in both themes.
 - **Responsive**: the problem page is three panes from 1024 px, two on a
   tablet upright (768–1023 px wide, at least 600 px tall) and one pane at a
   time below that (Problem · Code · Result, a 44 px action bar); the IDE

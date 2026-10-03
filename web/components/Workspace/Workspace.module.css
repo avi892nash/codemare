@@ -88,13 +88,23 @@
   letter-spacing: -0.3px;
   color: var(--fg-0);
 }
+/* difficulty, solved and best are quiet words, like everywhere else (no filled tags) */
 .titleMeta {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
-  margin-top: 8px;
+  gap: 4px 16px;
+  margin-top: 6px;
 }
+.solvedMark {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  color: var(--ok-fg);
+}
+.bestMark { font-size: var(--fs-sm); color: var(--fg-2); }
 .paneTabs {
   flex: none;
   padding: 0 12px;

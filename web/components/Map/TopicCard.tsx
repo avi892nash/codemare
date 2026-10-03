@@ -2,7 +2,6 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { plural } from '@/components/Loop/awards';
 import { Icon } from '@/components/ui/Icon';
-import { Pill } from '@/components/ui/Pill';
 import { Progress } from '@/components/ui/Progress';
 import { DIFFICULTIES } from '@/lib/types';
 import type { EarnOption, RecipeCard, TopicBlockerView, TopicCardView } from '@/lib/server/loopViews';
@@ -78,15 +77,10 @@ function RecipeList({ recipes }: { recipes: RecipeCard[] }) {
         <li key={r.id} className={s.recipe} data-ready={r.ready} data-testid="recipe">
           <div className={s.recipeHead}>
             <span className={s.recipeTitle}>{r.title}</span>
-            {r.ready ? (
-              <Pill tone="ok" size="xs" icon="check">
-                Ready
-              </Pill>
-            ) : (
-              <Pill tone="muted" size="xs">
-                {r.missing} missing
-              </Pill>
-            )}
+            <span className={s.recipeState} data-ready={r.ready}>
+              {r.ready && <Icon name="check" size={12} />}
+              {r.ready ? 'Ready' : `${r.missing} missing`}
+            </span>
           </div>
           <ul className={s.items}>
             {r.items.map((it) => {

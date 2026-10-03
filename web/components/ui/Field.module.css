@@ -65,7 +65,7 @@
 .full .input { width: 100%; }
 .lg .input { font-size: var(--fs-md); }
 .input::placeholder,
-.textarea::placeholder { color: var(--fg-3); opacity: 1; }
+.textarea::placeholder { color: var(--fg-ph); opacity: 1; }
 .input:disabled { cursor: not-allowed; }
 
 /* Textarea: the control grows with the element instead of a fixed height. */

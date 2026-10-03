@@ -4,11 +4,17 @@
   gap: 16px;
 }
 
-.chips {
+/* the topic and the tags: one quiet line of words, like "Asked at …" under it — no filled chips */
+.tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
+  margin: 0;
+  font-size: var(--fs-sm);
+  line-height: 1.7;
+  color: var(--fg-2);
 }
+.tags > span + span::before { content: '·'; margin: 0 8px; color: var(--fg-3); }
+.tags > .topicTag { color: var(--fg-1); font-weight: 500; }
 
 /* "More": the second half of a statement. On a phone it is closed behind one
  * 44 px toggle; from 768 px (on a tablet upright) the toggle is gone and the content is just there. */
@@ -188,11 +194,20 @@
   line-height: 1.5;
   color: var(--fg-1);
 }
+/* what a recipe asks for, as quiet lines: a glyph in the state's tone, the topic and have/need */
 .items {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 4px 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--fs-sm);
+  color: var(--fg-1);
 }
+.items li { display: inline-flex; align-items: center; gap: 6px; }
+.items li svg { flex: none; color: var(--warn-fg); }
+.items li[data-ready='true'] svg { color: var(--ok-fg); }
 .actions {
   display: flex;
   flex-wrap: wrap;

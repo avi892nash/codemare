@@ -23,6 +23,12 @@
 .howLink:hover { color: var(--fg-0); }
 /* a line of progress that has to wrap does so between its parts, not inside one */
 .nowrap { white-space: nowrap; }
+/* ... and on a phone with spacing, not dots: a dot would dangle at a line's end (the plain spaces between the parts stay
+ * where a line may break) */
+@media (max-width: 720px) {
+  .progressLine .dot { display: none; }
+  .progressLine > .nowrap { margin-right: 10px; }
+}
 
 /* The featured topic: its art, its name, how far you are, and the one button. --a is the topic's hue. */
 .feature {
@@ -155,7 +161,7 @@
 .tierSummary:hover { background: var(--bg-2); }
 .tierSummary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .tierSummary .tierBar { padding-bottom: 4px; }
-.tierReason { margin: 0; padding: 0 18px 10px; font-size: var(--fs-body); color: var(--fg-2); }
+.tierReason { margin: 0; padding: 0 18px 10px; font-size: var(--fs-md); color: var(--fg-2); }
 .tierPreview { display: flex; flex-wrap: wrap; gap: 8px 22px; padding: 2px 18px 16px; }
 .previewItem { display: inline-flex; align-items: center; gap: 8px; min-width: 0; font-size: var(--fs-sm); color: var(--fg-2); }
 .tier[open] > .tierSummary { border-bottom: 1px solid var(--line-1); }
@@ -192,13 +198,7 @@
 }
 .state[data-kind='open'] { color: var(--ok-fg); }
 .state[data-kind='locked'] { color: var(--fg-2); }
-.state[data-kind='ready'] {
-  padding: 1px 8px;
-  color: var(--accent-hi);
-  background: var(--accent-bg);
-  border: 1px solid var(--accent-line);
-  border-radius: 999px;
-}
+.state[data-kind='ready'] { color: var(--accent-hi); }
 
 /* ── topic rows ─────────────────────────────────────────────── */
 .topics { list-style: none; margin: 0; padding: 0; }
@@ -359,6 +359,9 @@
 .recipe[data-ready='true'] { border-color: color-mix(in oklab, var(--ok) 35%, var(--line-2)); }
 .recipeHead { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .recipeTitle { flex: 1; min-width: 0; font-size: var(--fs-sm); font-weight: 600; color: var(--fg-0); }
+/* a recipe's state: a quiet word at the end of its line (Ready, or how many tokens it is short), not a tag */
+.recipeState { flex: none; display: inline-flex; align-items: center; gap: 4px; font-size: var(--fs-xs); color: var(--fg-2); white-space: nowrap; }
+.recipeState[data-ready='true'] { color: var(--ok-fg); }
 .items { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .item {
   display: grid;
@@ -371,13 +374,11 @@
 .itemName { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
 .itemName > svg { flex: none; color: var(--fg-2); }
 .itemTitle { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* a recipe item's difficulty floor ("Medium+"): a quiet word after its name, not a tag */
 .minTag {
   flex: none;
-  padding: 0 6px;
   font-size: var(--fs-xs);
   color: var(--fg-2);
-  border: 1px solid var(--line-2);
-  border-radius: 999px;
   white-space: nowrap;
 }
 .itemCount { min-width: 34px; text-align: right; font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--warn-fg); white-space: nowrap; }

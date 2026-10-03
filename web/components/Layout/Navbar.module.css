@@ -141,6 +141,13 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* the role (Learner, Author, Staff): a quiet word at the card's edge, not a tag */
+.cardRole {
+  flex: none;
+  font-size: var(--fs-xs);
+  color: var(--fg-2);
+  text-transform: capitalize;
+}
 
 /* ── Responsive ─────────────────────────────────────────────── */
 @media (max-width: 1179px) {

@@ -9,6 +9,7 @@ import { Callout } from '@/components/ui/Callout';
 import { Chip } from '@/components/ui/Chip';
 import { CodeBlock } from '@/components/ui/CodeBlock';
 import { DifficultyPill } from '@/components/ui/DifficultyPill';
+import { VerdictText } from '@/components/Results/VerdictText';
 import { DifficultyText } from '@/components/ui/DifficultyText';
 import { Formula } from '@/components/ui/Formula';
 import { Icon, ICON_NAMES } from '@/components/ui/Icon';
@@ -402,7 +403,17 @@ function Pills() {
         <Pill tone="warn" icon="clock">Cooldown 12h</Pill>
         <Pill tone="info" icon="coin" size="md">3 Recursion tokens</Pill>
       </div>
-      <Sub>StatusPill · every verdict (code, long, icon)</Sub>
+      <Sub>VerdictText · the quiet verdict (lists, the playground, snippets) — the words learners see; a state before a verdict spins</Sub>
+      <div className={s.row}>{VERDICTS.map((v) => <VerdictText key={v} status={v} />)}</div>
+      <div className={s.row}>
+        <VerdictText status="OK" kind="run" />
+        <VerdictText status="OK" label="All matched" size="md" />
+        <VerdictText status="WA" label="Mismatch" size="md" />
+        {VERDICTS.map((v) => <VerdictText key={v} status={v} variant="code" />)}
+        <VerdictText status="queued" />
+        <VerdictText status="running" />
+      </div>
+      <Sub>StatusPill · the capsule form — authoring tools only; learners see VerdictText</Sub>
       <div className={s.row}>{VERDICTS.map((v) => <StatusPill key={v} code={v} />)}</div>
       <div className={s.row}>{VERDICTS.map((v) => <StatusPill key={v} code={v} showLong withIcon />)}</div>
       <div className={s.row}>

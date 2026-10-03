@@ -22,6 +22,19 @@
   font-size: var(--fs-xs);
   color: var(--fg-2);
 }
+/* the ladder's state (solved, or the penalty so far): a quiet word at the header's edge, not a tag */
+.note {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  color: var(--fg-2);
+  white-space: nowrap;
+}
+.note[data-tone='ok'] { color: var(--ok-fg); }
+.note[data-tone='warn'] { color: var(--warn-fg); }
 
 .rungs {
   list-style: none;
@@ -95,6 +108,7 @@
 }
 .rung[data-state='locked'] .level { color: var(--fg-2); }
 
+/* what a hint costs: quiet mono text beside its name, in the cost's tone — not a tag */
 .cost {
   display: inline-flex;
   align-items: center;
@@ -102,13 +116,10 @@
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
   color: var(--fg-2);
-  padding: 1px 6px;
-  border: 1px solid var(--line-2);
-  border-radius: 999px;
 }
-.cost[data-kind='free'] { color: var(--ok-fg); border-color: color-mix(in oklab, var(--ok) 30%, transparent); }
-.cost[data-kind='score'] { color: var(--warn-fg); border-color: color-mix(in oklab, var(--warn) 30%, transparent); }
-.cost[data-kind='token'] { color: var(--warn-fg); border-color: color-mix(in oklab, var(--warn) 30%, transparent); }
+.cost[data-kind='free'] { color: var(--ok-fg); }
+.cost[data-kind='score'] { color: var(--warn-fg); }
+.cost[data-kind='token'] { color: var(--warn-fg); }
 
 .spacer { flex: 1; }
 

@@ -3,7 +3,8 @@
 import { EmptyState } from '@/components/states/EmptyState';
 import { Icon } from '@/components/ui/Icon';
 import { Spinner } from '@/components/ui/Spinner';
-import { StatusPill, isStatusCode, type StatusCode } from '@/components/ui/StatusPill';
+import { VerdictText } from '@/components/Results/VerdictText';
+import { isStatusCode, type StatusCode } from '@/components/ui/StatusPill';
 import { formatKb, formatMillis, text } from '@/lib/client/format';
 import { languageLabel } from '@/lib/client/languages';
 import type { IdeExecutionResponse, IdeTestResult, SupportedLanguage } from '@/lib/types';
@@ -95,7 +96,7 @@ export function IdeOutputDisplay({ results, pending = false, language }: IdeOutp
   }
   if (results.testResults.length === 0) {
     return (
-      <div className={s.outputBody}>
+      <div className={s.outputBody} tabIndex={0}>
         <div className={s.summary} data-tone="err">
           <Icon name="alert-circle" size={16} />
           <span>{results.error ?? 'Nothing ran.'}</span>
@@ -112,13 +113,12 @@ export function IdeOutputDisplay({ results, pending = false, language }: IdeOutp
   const worst: StatusCode = ce ? 'CE' : statuses.find((c) => c !== 'OK') ?? 'OK';
 
   return (
-    <div className={`${s.outputBody} scroll`}>
+    <div className={`${s.outputBody} scroll`} tabIndex={0}>
       <div className={s.summary} data-tone={worst === 'OK' ? 'ok' : worst === 'CE' ? 'info' : worst === 'TLE' || worst === 'MLE' ? 'warn' : 'err'}>
-        <StatusPill
-          code={worst}
+        <VerdictText
+          status={worst}
+          kind="run"
           size="md"
-          withIcon
-          showLong
           label={worst === 'OK' ? (comparedCount > 0 ? 'All matched' : 'Ran') : worst === 'WA' ? 'Mismatch' : undefined}
         />
         <span className={s.summaryText}>
@@ -148,7 +148,7 @@ export function IdeOutputDisplay({ results, pending = false, language }: IdeOutp
               <li key={i} className={s.result} data-status={code} data-testid={`ide-case-${i}`}>
                 <div className={s.resultHead}>
                   <span className={s.resultName}>Case {i + 1}</span>
-                  <StatusPill code={code} size="xs" withIcon />
+                  <VerdictText status={code} variant="code" />
                   {!compared[i] && <span className={s.resultNote}>no expected output</span>}
                   <span className={s.spacer} />
                   <span className={`${s.resultMetric} mono`} title="CPU time · peak memory">

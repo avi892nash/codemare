@@ -245,3 +245,32 @@ test('on a phone the auth forms are thumb-sized: 44 px fields and links, 16 px t
   const desktopForgot = await page.getByRole('link', { name: 'Forgot password?' }).boundingBox();
   expect(desktopForgot!.y + desktopForgot!.height).toBeLessThanOrEqual(desktopPassword!.y);
 });
+
+test('placeholder text is readable — 4.5 : 1 against its field, in both themes', async ({ page }) => {
+  const base = test.info().project.use.baseURL ?? 'http://localhost:4001';
+  for (const theme of ['dark', 'light'] as const) {
+    await page.context().addCookies([{ name: 'cm-theme', value: theme, url: base }]);
+    for (const path of ['/signin', '/signup']) {
+      await page.goto(path, { waitUntil: 'networkidle' });
+      const ratios = await page.evaluate(() => {
+        const rgb = (c: string) => c.match(/[\d.]+/g)?.slice(0, 3).map(Number) ?? null;
+        const lin = (v: number) => ((v /= 255) <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
+        const lum = (c: number[]) => 0.2126 * lin(c[0]) + 0.7152 * lin(c[1]) + 0.0722 * lin(c[2]);
+        return [...document.querySelectorAll<HTMLInputElement>('input[placeholder]')].flatMap((input) => {
+          const fg = rgb(getComputedStyle(input, '::placeholder').color);
+          // the field's own surface: the first ancestor that paints a background
+          let bg: number[] | null = null;
+          for (let n: HTMLElement | null = input; n && !bg; n = n.parentElement) {
+            const c = getComputedStyle(n).backgroundColor;
+            if (!/rgba\(0, 0, 0, 0\)|transparent/.test(c)) bg = rgb(c);
+          }
+          if (!fg || !bg) return [];
+          const [hi, lo] = [lum(fg), lum(bg)].sort((a, b) => b - a);
+          return [{ placeholder: input.placeholder, ratio: Math.round(((hi + 0.05) / (lo + 0.05)) * 100) / 100 }];
+        });
+      });
+      expect(ratios.length, `${path} (${theme}): placeholders measured`).toBeGreaterThan(0);
+      for (const r of ratios) expect(r.ratio, `${path} (${theme}): "${r.placeholder}"`).toBeGreaterThanOrEqual(4.5);
+    }
+  }
+});
