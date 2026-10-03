@@ -647,6 +647,8 @@
     visibility: hidden;
     pointer-events: none;
   }
+  /* The server cannot know it is a tablet: it sends the phone's three segments and the page drops the third once it knows. Not shown meanwhile. */
+  div.viewSwitch [role='tab']:nth-child(3) { display: none; }
   .root[data-view='code'] .console,
   .root[data-view='result'] .editorPane {
     visibility: visible;
