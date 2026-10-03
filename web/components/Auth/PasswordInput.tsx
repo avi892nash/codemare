@@ -22,7 +22,8 @@ export const PasswordInput = forwardRef<HTMLInputElement, Omit<InputProps, 'type
         trailing={
           <Button
             variant="ghost"
-            size="xs"
+            size="sm"
+            tap
             icon={shown ? 'eye-off' : 'eye'}
             aria-label="Show password"
             aria-pressed={shown}
