@@ -6,6 +6,7 @@ import { ButtonLink } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
 import { Progress } from '@/components/ui/Progress';
 import type { Featured, FeaturedReason } from '@/lib/server/featuredTopic';
+import type { Milestone } from '@/lib/server/mapMilestone';
 import type { MapView } from '@/lib/server/loopViews';
 import s from './map.module.css';
 
@@ -20,43 +21,27 @@ const KICKER: Record<FeaturedReason, string> = {
 
 /**
  * The tier map's header and hero — what the learner does now. One small h1
- * ("Tier map") with the three totals as chips beside it, then a banner that
- * features ONE topic as animated art (the learner's next up, chosen by
- * pickFeaturedTopic) with its name, caption, "n/m solved" and the page's one
- * primary action. The art is decoration: the title, caption and button carry
- * the meaning. On phones the art stacks above the text.
+ * ("Tier map") with one quiet line of progress beside it (the token total is
+ * in the top bar, once), then a banner that features ONE topic as animated art
+ * (the learner's next up, chosen by pickFeaturedTopic) with its name, caption,
+ * "n/m solved" and the page's one primary action, then — only when there is
+ * one — a single milestone line (pickMilestone). The art is decoration: the
+ * title, caption and button carry the meaning. On phones the art stacks above
+ * the text.
  */
-export function MapHero({ featured, totals }: { featured: Featured | null; totals: MapView['totals'] }) {
+export function MapHero({ featured, milestone, totals }: { featured: Featured | null; milestone: Milestone | null; totals: MapView['totals'] }) {
   return (
     <header className={s.mapHead}>
       <div className={s.mapTop}>
-        <h1 className={s.mapEyebrow}>
+        <h1 className={s.mapTitle}>
           <Icon name="map" size={13} /> Tier map
         </h1>
-        <ul className={s.chips} aria-label="Your progress">
-          <li className={s.chip}>
-            <Icon name="coin" size={13} />
-            <strong data-testid="map-tokens">{totals.tokens}</strong> <span>tokens</span>
-          </li>
-          <li className={s.chip}>
-            <strong>
-              {totals.topicsUnlocked}/{totals.topicsTotal}
-            </strong>{' '}
-            <span>
-              topics<span className={s.chipMore}> unlocked</span>
-            </span>
-          </li>
-          <li className={s.chip}>
-            <strong>
-              {totals.tiersOpen}/{totals.tiersTotal}
-            </strong>{' '}
-            <span>
-              tiers<span className={s.chipMore}> open</span>
-            </span>
-          </li>
-        </ul>
+        <p className={s.mapMeta} data-testid="map-progress">
+          {totals.topicsUnlocked}/{totals.topicsTotal} topics unlocked · {totals.tiersOpen}/{totals.tiersTotal} tiers open
+        </p>
       </div>
       {featured && <FeaturedBanner featured={featured} />}
+      {milestone && <MilestoneLine milestone={milestone} />}
     </header>
   );
 }
@@ -89,10 +74,26 @@ function FeaturedBanner({ featured }: { featured: Featured }) {
             <Progress value={topic.solved} max={topic.total} tone="ok" height={4} />
           </div>
         )}
-        <ButtonLink href={featured.cta.href} variant="primary" size="lg" iconRight="arrow-right" className={s.featureCta} data-testid="map-hero-cta">
+        <ButtonLink href={featured.cta.href} id="map-hero-cta" variant="primary" size="lg" iconRight="arrow-right" className={s.featureCta} data-testid="map-hero-cta">
           {featured.cta.label}
         </ButtonLink>
       </div>
     </section>
+  );
+}
+
+/** One line under the hero, for the moment worth a nudge — never a second hero, and it asks nothing of the learner. */
+function MilestoneLine({ milestone }: { milestone: Milestone }) {
+  return (
+    <p className={s.milestone} data-testid="map-milestone" data-kind={milestone.kind}>
+      <Icon name={milestone.kind === 'unlock' ? 'sparkle' : 'shield'} size={16} />
+      <span className={s.milestoneText}>
+        <strong>{milestone.subject}</strong> {milestone.text}
+      </span>
+      <ButtonLink href={milestone.cta.href} size="sm" variant="default" data-testid="map-milestone-cta">
+        {milestone.cta.label}
+        <span className="sr-only"> {milestone.subject}</span>
+      </ButtonLink>
+    </p>
   );
 }

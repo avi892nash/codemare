@@ -27,11 +27,19 @@ interface PillProps extends Omit<HTMLAttributes<HTMLSpanElement>, 'className' | 
   style?: CSSProperties;
 }
 
+/* Sizes sit on the app's type scale (globals.css --fs-*): nothing is set in
+ * text smaller than --fs-xs (12 px). `icon` is the glyph size in px, which an
+ * <svg> cannot take from a custom property — keep it equal to the font size. */
+const SIZES: Record<PillSize, { font: string; icon: number; py: number; px: number }> = {
+  xs: { font: 'var(--fs-xs)', icon: 12, py: 1, px: 8 },
+  sm: { font: 'var(--fs-sm)', icon: 13, py: 2, px: 9 },
+  md: { font: 'var(--fs-md)', icon: 14, py: 3, px: 10 },
+};
+
 /** Status / metadata capsule. Tones: default · accent · ok · warn · err · info · muted. */
 export function Pill({ children, tone = 'default', icon, dot, size = 'sm', className = '', style, ...rest }: PillProps) {
   const t = PILL_TONES[tone];
-  const fz = size === 'xs' ? 10.5 : size === 'md' ? 12.5 : 11.5;
-  const py = size === 'xs' ? 1 : size === 'md' ? 3 : 2;
+  const { font, icon: iconSize, py, px } = SIZES[size];
   return (
     <span
       {...rest}
@@ -40,8 +48,8 @@ export function Pill({ children, tone = 'default', icon, dot, size = 'sm', class
         display: 'inline-flex',
         alignItems: 'center',
         gap: 4,
-        padding: `${py}px 7px`,
-        fontSize: fz,
+        padding: `${py}px ${px}px`,
+        fontSize: font,
         fontWeight: 500,
         lineHeight: 1.4,
         color: t.fg,
@@ -58,7 +66,7 @@ export function Pill({ children, tone = 'default', icon, dot, size = 'sm', class
           style={{ width: 6, height: 6, borderRadius: 999, background: 'currentColor', flex: 'none' }}
         />
       )}
-      {icon && <Icon name={icon} size={fz} />}
+      {icon && <Icon name={icon} size={iconSize} />}
       {children}
     </span>
   );

@@ -49,9 +49,11 @@ function errorContent(error: ActionError, balances: BalanceIndex): ReactNode {
 }
 
 /**
- * The action row under a topic card: Unlock, with the recipe-choosing
- * confirmation, while the topic is unlockable. After an unlock, focus
- * moves to the card's heading (the card now lists its problems).
+ * The action at the end of a topic's row: Unlock, with the recipe-choosing
+ * confirmation, while the topic is unlockable. After an unlock the row opens
+ * to its problems and focus moves to its heading. This stays mounted in the
+ * row through the unlock — it is the last child of the card in every state —
+ * so it sees the state change.
  */
 export function TopicActions({ topic, recipes, balances, titleId }: TopicActionsProps) {
   const [open, setOpen] = useState(false);
@@ -60,14 +62,16 @@ export function TopicActions({ topic, recipes, balances, titleId }: TopicActions
   useEffect(() => {
     if (topic.state === 'unlocked' && justUnlocked.current) {
       justUnlocked.current = false;
-      document.getElementById(titleId)?.focus();
+      const title = document.getElementById(titleId);
+      title?.closest('article')?.querySelector('details')?.setAttribute('open', '');
+      title?.focus();
     }
   }, [topic.state, titleId]);
 
   return (
     <>
       {topic.state === 'unlockable' && (
-        <div className={s.topicFoot}>
+        <div className={s.rowAction}>
           <Button variant="primary" size="sm" icon="lock-open" onClick={() => setOpen(true)} data-testid="unlock-button">
             Unlock {topic.title}
           </Button>
@@ -157,7 +161,7 @@ function UnlockDialog({
         description:
           res.status === 'already_unlocked'
             ? 'It was already open — nothing was spent.'
-            : `Spent ${[...spent].map(([id, n]) => `${n} ${balances[id]?.title ?? 'tokens'}`).join(' · ')}. Its problems and components are open.`,
+            : `Spent ${[...spent].map(([id, n]) => `${n} ${balances[id]?.title ?? 'tokens'}`).join(' · ')}. Its problems are now open.`,
       });
       toastBadges(toast, res.badges);
       router.refresh();

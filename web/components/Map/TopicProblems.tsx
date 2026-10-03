@@ -1,14 +1,22 @@
 import Link from 'next/link';
 import { Fragment } from 'react';
-import { plural } from '@/components/Loop/awards';
-import { DifficultyPill } from '@/components/ui/DifficultyPill';
 import { Icon } from '@/components/ui/Icon';
 import { StatusDot } from '@/components/ui/StatusDot';
-import type { TopicProblemView, TopicProblemsView } from '@/lib/server/loopViews';
+import type { TopicProblemView } from '@/lib/server/loopViews';
+import type { Difficulty } from '@/lib/types';
 import { LinkPending } from './LinkPending';
 import s from './map.module.css';
 
 const PROGRESS_TEXT = { solved: 'Solved', attempted: 'Attempted', todo: 'Not started' } as const;
+
+/** Easy · Medium · Hard as quiet text with a small dot — information a learner preparing wants, not a traffic light. */
+export function DifficultyText({ level }: { level: Difficulty }) {
+  return (
+    <span className={s.diff} data-level={level}>
+      {level}
+    </span>
+  );
+}
 
 /**
  * One problem. The title links to the editor (the whole row is the target)
@@ -28,7 +36,7 @@ function ProblemRow({ problem: p }: { problem: TopicProblemView }) {
           <span className="sr-only">Locked: </span>
           <span className={s.problemTitle}>{p.title}</span>
         </span>
-        <DifficultyPill level={p.difficulty} size="xs" />
+        <DifficultyText level={p.difficulty} />
         <span className={s.problemNeeds}>
           Also needs{' '}
           {p.needs.map((t, i) => (
@@ -54,7 +62,7 @@ function ProblemRow({ problem: p }: { problem: TopicProblemView }) {
         </span>
         <span className={s.problemTitle}>{p.title}</span>
       </Link>
-      <DifficultyPill level={p.difficulty} size="xs" />
+      <DifficultyText level={p.difficulty} />
     </li>
   );
 }
@@ -67,39 +75,5 @@ export function ProblemList({ problems, label }: { problems: TopicProblemView[];
         <ProblemRow key={p.slug} problem={p} />
       ))}
     </ol>
-  );
-}
-
-/**
- * The problems a topic holds, at the foot of its card. Unlocked: every
- * one, in curriculum order, with this learner's progress and "n / m
- * solved". Locked or not yet unlocked: how many there are — they can't be
- * opened yet, and the card above says what's blocking.
- */
-export function TopicProblems({ topic }: { topic: { title: string; unlocked: boolean; problems: TopicProblemsView } }) {
-  const { total, solved, list } = topic.problems;
-  if (!topic.unlocked || total === 0) {
-    return (
-      <p className={s.problemsLocked} data-testid="topic-problems">
-        <Icon name={total === 0 ? 'list' : 'lock'} size={12} />
-        {total === 0 ? 'No problems yet.' : `${plural(total, 'problem')} — unlock the topic to open them.`}
-      </p>
-    );
-  }
-  return (
-    <div className={s.problemsBlock} data-testid="topic-problems">
-      <div className={s.problemsHead}>
-        <p className={s.label}>
-          <Icon name="list" size={12} /> Problems
-        </p>
-        <span className={s.problemsCount}>
-          <span className={`${s.problemsNum} mono`}>
-            {solved}/{total}
-          </span>{' '}
-          solved
-        </span>
-      </div>
-      <ProblemList problems={list} label={`${topic.title} problems`} />
-    </div>
   );
 }

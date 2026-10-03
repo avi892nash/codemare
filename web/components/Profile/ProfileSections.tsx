@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { BadgeStrip } from '@/components/Badges/BadgeStrip';
 import { LevelPill } from '@/components/Learn/parts';
+import { plural } from '@/components/Loop/awards';
 import { Avatar } from '@/components/ui/Avatar';
 import { DifficultyPill } from '@/components/ui/DifficultyPill';
 import { Icon, type IconName } from '@/components/ui/Icon';
@@ -248,10 +249,9 @@ export function TokensPanel({ view }: { view: ProfileView }) {
               <li key={t.slug} className={s.barRow}>
                 <span>{t.title}</span>
                 <span className={`${s.barValue} mono`} title={`Easy ${t.byDifficulty.Easy} · Medium ${t.byDifficulty.Medium} · Hard ${t.byDifficulty.Hard}`}>
-                  {t.total}
+                  <span aria-hidden="true">{t.total}</span>
                   <span className="sr-only">
-                    {' '}
-                    tokens: {t.byDifficulty.Easy} Easy, {t.byDifficulty.Medium} Medium, {t.byDifficulty.Hard} Hard
+                    {plural(t.total, 'token')}: {t.byDifficulty.Easy} Easy, {t.byDifficulty.Medium} Medium, {t.byDifficulty.Hard} Hard
                   </span>
                 </span>
                 <Progress value={t.total} max={max} tone="accent" />

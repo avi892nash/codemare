@@ -9,7 +9,8 @@ import { Button } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
 import { Modal } from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
-import s from './map.module.css';
+import s from './attempt.module.css';
+import m from './map.module.css';
 
 const LIVE_MS = 10_000;
 /** Server renders this browser has already shown (see AttemptLive). */
@@ -170,7 +171,7 @@ export function FinishGateButton({ attemptId, solved, passThreshold, cooldownHou
         }
       >
         {error && (
-          <div className={s.formError} role="alert">
+          <div className={m.formError} role="alert">
             <Icon name="alert-circle" size={14} />
             <div>{error}</div>
           </div>

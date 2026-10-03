@@ -1,7 +1,10 @@
 import type { Metadata } from 'next';
+import { cookies } from 'next/headers';
 import { HashScroll } from '@/components/Loop/HashScroll';
 import { LoopPage } from '@/components/Loop/LoopPage';
 import { requireViewer } from '@/components/Learn/viewer';
+import { FirstRun } from '@/components/Map/FirstRun';
+import { FIRST_RUN_COOKIE } from '@/components/Map/firstRunCookie';
 import { MapHero } from '@/components/Map/MapHero';
 import { RunningAttemptBanner } from '@/components/Map/RunningAttemptBanner';
 import { TierSection } from '@/components/Map/TierSection';
@@ -11,52 +14,66 @@ import s from '@/components/Map/map.module.css';
 import { sceneSrc } from '@/components/TopicArt/TopicArt';
 import { pickFeaturedTopic } from '@/lib/server/featuredTopic';
 import { getMapView } from '@/lib/server/loopViews';
+import { pickMilestone } from '@/lib/server/mapMilestone';
 
 export const metadata: Metadata = { title: 'Tier map · Codemare' };
 export const dynamic = 'force-dynamic';
 
 /**
- * T1 — the tier map, and the home page: a hero featuring the topic to work
- * on next (animated art, its progress and one button), then every tier (open
- * or behind its gate), every topic with its picture, balance, recipes and
- * "what's blocking you", its problems (listed once it is unlocked), the
- * unlock flow and the gates. Reading it lazily finishes an expired gate attempt.
+ * T1 — the tier map, and the home page: a small header with one line of
+ * progress, a hero featuring the topic to work on next (animated art, its
+ * progress and one button) and, only when there is one, a single milestone
+ * line under it; a first-run card while nothing is solved; then every tier —
+ * the open ones in full, each closed one as a compact panel with the gate that
+ * opens it — and every topic as a row that opens to its problems (listed once
+ * it is unlocked), or to what is blocking it. Reading it lazily finishes an
+ * expired gate attempt.
  */
 export default async function MapPage() {
   const viewer = await requireViewer('/map');
-  const view = await getMapView(viewer.id);
+  const [view, jar] = await Promise.all([getMapView(viewer.id), cookies()]);
   const balances: BalanceIndex = Object.fromEntries(
     view.tiers.flatMap((t) => t.topics.map((topic) => [topic.id, { title: topic.title, total: topic.balance.total }]))
   );
   const { totals } = view;
-  // The first cards are the ones in view when the page opens — one on a phone, a row of two or three wider up: ask for
-  // their scenes now, at low priority, so they are in hand by the time the page hydrates and <ArtInView> wants them
-  // (the rest load as their cards come near). The media queries keep a phone from fetching what it will not show.
+  const featured = pickFeaturedTopic(view.tiers);
+  const milestone = pickMilestone(view.tiers, featured);
+  const firstRun = totals.solved === 0 && jar.get(FIRST_RUN_COOKIE)?.value !== 'hide';
+  // Past the first problem, the topic the hero is about has its problems open; everything else is one row.
+  const openTopic = featured && (featured.reason === 'start' || featured.reason === 'continue') && totals.solved > 0 ? featured.topic.slug : null;
+  // The first rows are the ones in view when the page opens — one on a phone (the hero and the steps come first), three
+  // wider up: ask for their scenes now, at low priority, so they are in hand by the time the page hydrates and <ArtInView>
+  // wants them (the rest load as their rows come near). The media queries keep a phone from fetching what it will not show.
   const firstScenes = view.tiers
     .flatMap((tier) => tier.topics)
     .slice(0, 3)
-    .map((t, i) => ({ href: sceneSrc(t.slug), media: [undefined, '(min-width: 720px)', '(min-width: 1100px)'][i] }));
+    .map((t, i) => ({ href: sceneSrc(t.slug), media: i === 0 ? undefined : '(min-width: 720px)' }));
 
   return (
     <LoopPage label="Tier map">
       {firstScenes.map(({ href, media }) => (
         <link key={href} rel="preload" as="fetch" href={href} media={media} crossOrigin="anonymous" fetchPriority="low" />
       ))}
-      <MapHero featured={pickFeaturedTopic(view.tiers)} totals={totals} />
+      <MapHero featured={featured} milestone={milestone} totals={totals} />
       {view.running && <RunningAttemptBanner running={view.running} />}
+      {firstRun && <FirstRun />}
       <div className={s.tiers}>
         {view.tiers.map((tier) => (
-          <TierSection key={tier.id} tier={tier} balances={balances} />
+          <TierSection key={tier.id} tier={tier} balances={balances} openTopic={openTopic} />
         ))}
         {view.unfiled.length > 0 && (
           <section className={s.tier} aria-labelledby="unfiled-title" data-testid="unfiled-problems">
-            <header className={s.unfiledHead}>
-              <h2 className={s.tierTitle} id="unfiled-title">
-                Other problems
-              </h2>
-              <p className={s.tierSummary}>Problems that aren’t filed under a topic yet. They open for everyone and pay no tokens.</p>
+            <header className={s.tierBar}>
+              <div className={s.tierHeading}>
+                <h2 className={s.tierTitle} id="unfiled-title">
+                  Other problems
+                </h2>
+              </div>
             </header>
-            <ProblemList problems={view.unfiled} label="Other problems" />
+            <p className={s.unfiledNote}>Problems that aren’t filed under a topic yet. They open for everyone and pay no tokens.</p>
+            <div className={s.unfiledList}>
+              <ProblemList problems={view.unfiled} label="Other problems" />
+            </div>
           </section>
         )}
       </div>

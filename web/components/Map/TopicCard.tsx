@@ -1,33 +1,16 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import { Countdown } from '@/components/Loop/Countdown';
-import { TokenBuckets } from '@/components/Loop/TokenBuckets';
 import { plural } from '@/components/Loop/awards';
-import { Icon, type IconName } from '@/components/ui/Icon';
-import { Pill, type PillTone } from '@/components/ui/Pill';
+import { Icon } from '@/components/ui/Icon';
+import { Pill } from '@/components/ui/Pill';
 import { Progress } from '@/components/ui/Progress';
-import type { EarnOption, RecipeCard, TopicBlockerView, TopicCardState, TopicCardView } from '@/lib/server/loopViews';
+import { DIFFICULTIES } from '@/lib/types';
+import type { EarnOption, RecipeCard, TopicBlockerView, TopicCardView } from '@/lib/server/loopViews';
+import { StateLabel } from './StateLabel';
 import { TopicActions, type BalanceIndex } from './TopicActions';
-import { TopicProblems } from './TopicProblems';
+import { ProblemList } from './TopicProblems';
 import { TopicThumb } from './TopicThumb';
 import s from './map.module.css';
-
-const STATE: Record<TopicCardState, { label: string; tone: PillTone; icon: IconName }> = {
-  unlocked: { label: 'Unlocked', tone: 'ok', icon: 'lock-open' },
-  unlockable: { label: 'Ready to unlock', tone: 'accent', icon: 'sparkle' },
-  needs_tokens: { label: 'Needs tokens', tone: 'warn', icon: 'coin' },
-  tier_closed: { label: 'Tier closed', tone: 'muted', icon: 'lock' },
-  no_recipe: { label: 'Locked', tone: 'muted', icon: 'lock' },
-};
-
-export function TopicStatePill({ state, free }: { state: TopicCardState; free?: boolean }) {
-  const m = STATE[state];
-  return (
-    <Pill tone={m.tone} size="xs" icon={free ? 'check' : m.icon} data-testid="topic-state">
-      {free ? 'Free' : m.label}
-    </Pill>
-  );
-}
 
 const minText = (d: string) => (d === 'Easy' ? '' : ` (${d}+)`);
 
@@ -52,92 +35,21 @@ function EarnLinks({ options }: { options: EarnOption[] }) {
   );
 }
 
+/**
+ * What stands between this topic and an unlock, for a topic in an open tier
+ * that is short of tokens: the cheapest recipe, what it still lacks and the
+ * problems that pay it. (A closed tier says why once, at the tier — not on
+ * every topic — and a topic that is ready has its button.)
+ */
 function Blocker({ blocker, topicTitle }: { blocker: TopicBlockerView; topicTitle: string }) {
   if (blocker.kind === 'no_recipe') {
-    return (
-      <div className={s.blocker} data-kind="gate">
-        <p className={s.label}>
-          <Icon name="lock" size={12} /> What’s blocking you
-        </p>
-        <p className={s.blockerText}>{topicTitle} has no unlock recipe yet.</p>
-      </div>
-    );
+    return <p className={s.blockerText}>{topicTitle} has no unlock recipe yet.</p>;
   }
-
-  if (blocker.kind === 'gate') {
-    const g = blocker.gate;
-    let detail: ReactNode;
-    if (!g) detail = <>It has no gate yet.</>;
-    else if (g.state === 'eligible')
-      detail = (
-        <>
-          Pass the{' '}
-          <a href={`#gate-${g.id}`} className={`${s.inlineLink} focus-ring`}>
-            {g.title}
-          </a>{' '}
-          to open it — you can take it now.
-        </>
-      );
-    else if (g.state === 'running')
-      detail = (
-        <>
-          Your {g.title} attempt is running —{' '}
-          <Link href={`/map/gates/${g.attemptId}`} className={`${s.inlineLink} focus-ring`}>
-            continue it
-          </Link>
-          .
-        </>
-      );
-    else if (g.state === 'cooldown' && g.nextEligibleAt)
-      detail = (
-        <>
-          The {g.title} is cooling down — retry in <Countdown to={g.nextEligibleAt} expiredText="a moment" />.
-        </>
-      );
-    else if (g.state === 'previous_tier_closed')
-      detail = blocker.previousTier ? (
-        <>
-          Open{' '}
-          <a href={`#tier-${blocker.previousTier.slug}`} className={`${s.inlineLink} focus-ring`}>
-            {blocker.previousTier.title}
-          </a>{' '}
-          first, then pass the {g.title}.
-        </>
-      ) : (
-        <>Open the tier before it first, then pass the {g.title}.</>
-      );
-    else detail = <>Pass the {g.title} to open it.</>;
-    return (
-      <div className={s.blocker} data-kind="gate" data-testid="blocker">
-        <p className={s.label}>
-          <Icon name="shield" size={12} /> What’s blocking you
-        </p>
-        <p className={s.blockerText}>
-          <strong>{blocker.tier.title}</strong> is closed. {detail}
-        </p>
-      </div>
-    );
-  }
-
-  if (blocker.ready) {
-    return (
-      <div className={s.blocker} data-kind="ready" data-testid="blocker">
-        <p className={s.label}>
-          <Icon name="sparkle" size={12} /> Ready
-        </p>
-        <p className={s.blockerText}>
-          You hold enough for <strong>{blocker.recipeTitle}</strong> — spend it to open {topicTitle}.
-        </p>
-      </div>
-    );
-  }
-
+  if (blocker.kind !== 'recipe') return null;
   const missing = blocker.items.filter((i) => i.missing > 0);
   return (
-    <div className={s.blocker} data-kind="recipe" data-testid="blocker">
-      <p className={s.label}>
-        <Icon name="coin" size={12} /> What’s blocking you
-      </p>
+    <div className={s.blocker} data-testid="blocker">
+      <p className={s.label}>What’s blocking you</p>
       <p className={s.blockerText}>
         Cheapest recipe, <strong>{blocker.recipeTitle}</strong>: {plural(blocker.missing, 'more token')}.
       </p>
@@ -205,46 +117,142 @@ function RecipeList({ recipes }: { recipes: RecipeCard[] }) {
 }
 
 /**
- * One topic on the map: its state, token balance by difficulty bucket,
- * what's blocking it (the gate, or the cheapest recipe's missing tokens
- * with ways to earn them), its recipes with have/need per item, its
- * problems (listed once it is unlocked, counted before), and the unlock
- * action.
+ * "Tokens: 2 Easy · 1 Medium" — the split of a balance, only where it tells
+ * something the total in the row does not: the buckets that hold anything,
+ * and only when there is more than one (recipes ask for a minimum difficulty).
  */
-export function TopicCard({ topic, free, balances }: { topic: TopicCardView; free: boolean; balances: BalanceIndex }) {
+function tokenSplit(balance: TopicCardView['balance']): string | null {
+  const held = DIFFICULTIES.filter((d) => (balance.byDifficulty[d] ?? 0) > 0);
+  if (held.length < 2) return null;
+  return `Tokens: ${held.map((d) => `${balance.byDifficulty[d]} ${d}`).join(' · ')}`;
+}
+
+/** The quiet line at the top of an open topic: how it was unlocked, what its tokens are made of. */
+function Facts({ topic }: { topic: TopicCardView }) {
+  const facts = [topic.viaRecipe ? `Unlocked with “${topic.viaRecipe}”` : null, tokenSplit(topic.balance)].filter(Boolean);
+  if (facts.length === 0) return null;
+  return <p className={s.facts}>{facts.join(' · ')}</p>;
+}
+
+/**
+ * One topic of a tier: a row with its poster, its name and the one thing a
+ * learner wants to know about it. What that is follows its state —
+ *
+ *  - unlocked: how many problems are solved (and the tokens it holds, once
+ *    it holds any); the row opens to its problems;
+ *  - ready to unlock: the label and the Unlock button;
+ *  - short of tokens (tier open): how many more it needs; the row opens to
+ *    what is blocking it and its recipes;
+ *  - in a closed tier: its summary and how many problems it holds — the tier
+ *    says why it is closed, once;
+ *  - without a recipe: a note.
+ *
+ * Only an unlocked or short-of-tokens topic opens: a disclosure (<details>,
+ * keyboard-operable, no script) whose summary is the whole row. `defaultOpen`
+ * opens the problems of the topic the hero is about.
+ */
+export function TopicCard({
+  topic,
+  balances,
+  defaultOpen = false,
+  inClosedTier = false,
+}: {
+  topic: TopicCardView;
+  balances: BalanceIndex;
+  defaultOpen?: boolean;
+  inClosedTier?: boolean;
+}) {
   const titleId = `topic-${topic.slug}-title`;
-  const showRecipes = topic.state !== 'unlocked' && topic.recipes.length > 0;
-  return (
-    <article className={s.topic} data-state={topic.state} id={`topic-${topic.slug}`} aria-labelledby={titleId} data-testid={`topic-${topic.slug}`}>
-      <header className={s.topicHead}>
-        <TopicThumb slug={topic.slug} state={topic.state} />
-        <div className={s.topicHeadText}>
+  const { state } = topic;
+  const { total, solved } = topic.problems;
+
+  let marker: ReactNode = null;
+  let meta: ReactNode = null;
+  let body: ReactNode = null;
+  if (state === 'unlocked') {
+    meta =
+      total === 0 ? (
+        <>No problems yet</>
+      ) : (
+        <>
+          <span className="mono">
+            {solved}/{total}
+          </span>{' '}
+          solved
+          {topic.balance.total > 0 && <> · {plural(topic.balance.total, 'token')}</>}
+        </>
+      );
+    if (total > 0) {
+      body = (
+        <>
+          <p className={s.summary}>{topic.summary}</p>
+          <Facts topic={topic} />
+          <ProblemList problems={topic.problems.list} label={`${topic.title} problems`} />
+        </>
+      );
+    }
+  } else if (state === 'unlockable') {
+    marker = <StateLabel kind="ready" data-testid="topic-state" />;
+    meta = <>{plural(total, 'problem')}</>;
+  } else if (state === 'needs_tokens') {
+    marker = <StateLabel kind="locked" data-testid="topic-state" />;
+    const need = topic.blocker?.kind === 'recipe' ? topic.blocker.missing : null;
+    meta = need != null ? <>Needs {plural(need, 'more token')}</> : <>{plural(total, 'problem')}</>;
+    body = (
+      <>
+        <p className={s.summary}>{topic.summary}</p>
+        {topic.blocker && <Blocker blocker={topic.blocker} topicTitle={topic.title} />}
+        {topic.recipes.length > 0 && (
+          <div className={s.recipesBlock}>
+            <p className={s.label}>{topic.recipes.length === 1 ? 'Recipe' : `Recipes (${topic.recipes.length})`} — spend any one</p>
+            <RecipeList recipes={topic.recipes} />
+          </div>
+        )}
+      </>
+    );
+  } else if (state === 'no_recipe') {
+    marker = <StateLabel kind="locked" data-testid="topic-state" />;
+    meta = <>No unlock recipe yet</>;
+  } else {
+    // tier_closed: the tier says it once
+    meta = <>{total === 0 ? 'No problems yet' : plural(total, 'problem')}</>;
+  }
+
+  const head = (
+    <div className={s.rowHead}>
+      <TopicThumb slug={topic.slug} state={state} />
+      <div className={s.rowText}>
+        <div className={s.rowTitleLine}>
           <h3 className={s.topicTitle} id={titleId} tabIndex={-1}>
             {topic.title}
           </h3>
-          <TopicStatePill state={topic.state} free={free} />
+          {marker}
         </div>
-      </header>
-      <p className={s.topicSummary}>{topic.summary}</p>
-      <TokenBuckets balance={topic.balance} label={`${topic.title} tokens`} />
-      {topic.state === 'unlocked' && topic.viaRecipe && (
-        <p className={s.topicNote}>
-          <Icon name="check-circle" size={12} /> Unlocked with “{topic.viaRecipe}”
-        </p>
+        {inClosedTier && <p className={s.rowSummary}>{topic.summary}</p>}
+      </div>
+      <div className={s.rowMeta} data-testid="topic-problems">
+        {meta}
+      </div>
+      {body && (
+        <span className={s.chev} aria-hidden="true">
+          <Icon name="chev-down" size={16} />
+        </span>
       )}
-      {topic.blocker && <Blocker blocker={topic.blocker} topicTitle={topic.title} />}
-      {showRecipes && (
-        <details className={s.recipesToggle} open={topic.state !== 'tier_closed'}>
-          <summary className="focus-ring">
-            <Icon name="chev-right" size={12} />
-            {topic.recipes.length === 1 ? 'Recipe' : `Recipes (${topic.recipes.length})`} — spend any one
-          </summary>
-          <RecipeList recipes={topic.recipes} />
+    </div>
+  );
+
+  return (
+    <article className={s.topic} data-state={state} data-card="" id={`topic-${topic.slug}`} aria-labelledby={titleId} data-testid={`topic-${topic.slug}`}>
+      {body ? (
+        <details className={s.rowDetails} open={defaultOpen || undefined}>
+          <summary className={s.rowSummaryBar}>{head}</summary>
+          <div className={s.rowBody}>{body}</div>
         </details>
+      ) : (
+        <div className={s.rowStatic}>{head}</div>
       )}
-      <TopicProblems topic={{ title: topic.title, unlocked: topic.state === 'unlocked', problems: topic.problems }} />
       <TopicActions
-        topic={{ id: topic.id, title: topic.title, state: topic.state }}
+        topic={{ id: topic.id, title: topic.title, state }}
         recipes={topic.recipes}
         balances={balances}
         titleId={titleId}

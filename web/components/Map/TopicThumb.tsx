@@ -1,32 +1,24 @@
 import { ArtInView } from '@/components/TopicArt/ArtInView';
 import { TopicArt, sceneSrc } from '@/components/TopicArt/TopicArt';
-import { Icon } from '@/components/ui/Icon';
 import type { TopicCardState } from '@/lib/server/loopViews';
 import s from './map.module.css';
 
 /**
- * A topic card's picture: the topic's art at thumbnail size. An unlocked
- * topic's plays — only while the card is on screen, and as a still under
- * reduced motion — and every other state shows the still poster, dimmed, with
- * a small glyph so the state still reads: an open lock for a topic that is
- * ready to unlock, a lock for the rest. The scene is not in the page: the
- * card holds an empty stage and <ArtInView> fetches the scene when the card is
- * near the screen (ten scenes in the HTML and again in the RSC payload were
- * ~30 KB gzipped on the home page). Decorative: the title and the status
- * pill next to it are the accessible name.
+ * A topic's picture at row size: the topic's art as a still poster (the
+ * scene at its payoff), never animated — the page's one moving picture is
+ * the hero's. A topic that is not open yet is dimmed, which is all its state
+ * adds to the picture: the label next to it carries the words. The scene is
+ * not in the page: the row holds an empty stage and <ArtInView> fetches the
+ * scene when the row is near the screen (ten scenes in the HTML and again in
+ * the RSC payload were ~30 KB gzipped on the home page). Decorative: the
+ * title beside it is the accessible name.
  */
-export function TopicThumb({ slug, state }: { slug: string; state: TopicCardState }) {
-  const playing = state === 'unlocked';
+export function TopicThumb({ slug, state, size = 'md' }: { slug: string; state: TopicCardState; size?: 'md' | 'sm' }) {
   return (
-    <div className={s.thumb} data-state={state} aria-hidden="true">
+    <div className={s.thumb} data-state={state} data-size={size} aria-hidden="true">
       <ArtInView src={sceneSrc(slug)}>
-        <TopicArt slug={slug} animated={playing} lazy className={s.thumbStage} />
+        <TopicArt slug={slug} animated={false} lazy className={s.thumbStage} />
       </ArtInView>
-      {!playing && (
-        <span className={s.thumbGlyph}>
-          <Icon name={state === 'unlockable' ? 'lock-open' : 'lock'} size={11} />
-        </span>
-      )}
     </div>
   );
 }
