@@ -121,7 +121,8 @@
 .subTitle a:focus-visible::after { box-shadow: inset 0 0 0 2px var(--accent); }
 .subMeta { grid-area: meta; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 14px; font-size: var(--fs-sm); line-height: 1.5; color: var(--fg-2); }
 .subMeta > span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
-.verdict[data-tone='ok'] { color: var(--ok-fg); }
+/* Accepted is the usual case and stays quiet (its glyph is the green one); a verdict that needs a look is coloured. */
+.verdict[data-tone='ok'] { color: var(--fg-1); }
 .verdict[data-tone='err'] { color: var(--err-fg); }
 .verdict[data-tone='warn'] { color: var(--warn-fg); }
 .verdict[data-tone='info'] { color: var(--info-fg); }
