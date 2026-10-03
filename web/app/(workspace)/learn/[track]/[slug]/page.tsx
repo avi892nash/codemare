@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import { Breadcrumb } from '@/components/ui/Breadcrumb';
 import { Icon } from '@/components/ui/Icon';
-import { Pill } from '@/components/ui/Pill';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { LessonComplete } from '@/components/Learn/LessonComplete';
 import { LessonMarkdown } from '@/components/Learn/LessonMarkdown';
 import { LessonOutline, Pager } from '@/components/Learn/LessonOutline';
@@ -52,30 +52,24 @@ export default async function LessonPage({ params }: { params: Promise<Params> }
       />
       <div className={s.lessonLayout}>
         <article className={s.article} aria-labelledby="lesson-title">
-          <header className={s.header}>
-            <span className={s.eyebrow}>
-              Module {moduleIndex + 1} · {mod.title}
-            </span>
-            <h1 className={s.title} id="lesson-title">
-              {lesson.title}
-            </h1>
-            <div className={s.meta}>
-              <span className={s.metaItem}>
-                <Icon name="clock" size={13} />
-                {minutes(lesson.estMinutes)}
-              </span>
-              {lesson.topic && (
-                <Pill tone="default" size="xs" icon={lesson.topic.icon}>
-                  {lesson.topic.title}
-                </Pill>
-              )}
-              {lesson.state === 'completed' && (
-                <Pill tone="ok" size="xs" icon="check">
-                  Completed
-                </Pill>
-              )}
-            </div>
-          </header>
+          <PageHeader
+            title={lesson.title}
+            titleId="lesson-title"
+            subtitle={
+              <>
+                Module {moduleIndex + 1} · {mod.title} · {minutes(lesson.estMinutes)}
+                {lesson.state === 'completed' && (
+                  <>
+                    {' · '}
+                    <span className={s.status} data-tone="ok">
+                      <Icon name="check" size={12} />
+                      Completed
+                    </span>
+                  </>
+                )}
+              </>
+            }
+          />
 
           <LessonMarkdown blocks={view.blocks} questions={view.questions} runSnippet={runSnippet} />
 
@@ -93,11 +87,13 @@ export default async function LessonPage({ params }: { params: Promise<Params> }
           {related.length > 0 && (
             <section aria-labelledby="practice-title">
               <SectionHead title="Practice what you learned" id="practice-title" />
-              <div className={s.qgrid}>
+              <ul className={s.linkGrid}>
                 {related.map((q) => (
-                  <QuestionCard key={q} slug={q} question={view.questions.get(q)} kicker="Problem" />
+                  <li key={q}>
+                    <QuestionCard slug={q} question={view.questions.get(q)} kicker={null} />
+                  </li>
                 ))}
-              </div>
+              </ul>
             </section>
           )}
         </article>

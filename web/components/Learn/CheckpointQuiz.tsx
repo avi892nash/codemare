@@ -125,7 +125,8 @@ export function CheckpointQuiz({ trackSlug, moduleSlug, questions, passPercent, 
                 maxLength={200}
                 value={typeof answers[q.id] === 'string' ? (answers[q.id] as string) : ''}
                 onChange={(e) => setAnswers((a) => ({ ...a, [q.id]: e.target.value }))}
-                style={{ maxWidth: 420 }}
+                className={s.shortAnswer}
+                inputStyle={{ fontSize: 'var(--fs-body)' }}
               />
             )}
           </fieldset>
@@ -133,10 +134,10 @@ export function CheckpointQuiz({ trackSlug, moduleSlug, questions, passPercent, 
       })}
 
       <div className={s.quizBar}>
-        <span style={{ fontSize: 12.5, color: 'var(--fg-2)' }} className="mono">
+        <span className={`${s.quizCount} mono`}>
           {answered}/{questions.length} answered
         </span>
-        <span role="alert" style={{ fontSize: 12.5, color: 'var(--err-fg)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+        <span role="alert" className={s.quizError}>
           {error && (
             <>
               <Icon name="alert-circle" size={14} />
@@ -145,7 +146,7 @@ export function CheckpointQuiz({ trackSlug, moduleSlug, questions, passPercent, 
           )}
         </span>
         <span className={s.spacer} />
-        <Button type="submit" variant="primary" icon="send" loading={pending}>
+        <Button type="submit" variant="primary" icon="send" loading={pending} className={s.quizSubmit}>
           Submit answers
         </Button>
       </div>

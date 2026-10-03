@@ -1,7 +1,7 @@
 import Link from 'next/link';
-import { DifficultyPill } from '@/components/ui/DifficultyPill';
+import { DifficultyText } from '@/components/ui/DifficultyText';
 import { Icon } from '@/components/ui/Icon';
-import { Pill } from '@/components/ui/Pill';
+import { StatusDot } from '@/components/ui/StatusDot';
 import type { QuestionRef } from '@/lib/server/learnViews';
 import s from './learn.module.css';
 
@@ -9,45 +9,38 @@ import s from './learn.module.css';
 export const questionHref = (slug: string) => `/problems/${slug}`;
 
 /**
- * Link card to a practice question (`:::question{slug=…}` and the related
- * questions strip). A slug that is missing or unpublished renders a muted,
- * non-link card rather than a dead link. Server-safe.
+ * A practice problem as one row (`:::question{slug=…}` and the lists of related problems): the map's glyph (solved or
+ * not), the title and one quiet line, Easy · Medium · Hard as quiet text, and a chevron. A slug that is missing or
+ * unpublished renders a muted, non-link row rather than a dead link. Pass `kicker={null}` where a heading already
+ * says what the row is. Server-safe.
  */
-export function QuestionCard({ slug, question, kicker = 'Practice' }: { slug: string; question?: QuestionRef; kicker?: string }) {
+export function QuestionCard({ slug, question, kicker = 'Practice' }: { slug: string; question?: QuestionRef; kicker?: string | null }) {
   if (!question) {
     return (
-      <div className={s.qcard} aria-disabled="true">
-        <span className={s.qicon} aria-hidden="true">
-          <Icon name="lock" size={15} />
+      <div className={s.linkRow} aria-disabled="true">
+        <Icon name="lock" size={16} style={{ color: 'var(--fg-2)' }} />
+        <span className={s.linkBody}>
+          <span className={`${s.linkTitle} mono`}>{slug}</span>
+          {kicker && <span className={s.linkMeta}>{kicker}</span>}
         </span>
-        <span className={s.qbody}>
-          <span className={s.qkicker}>{kicker}</span>
-          <span className={`${s.qtitle} mono`}>{slug}</span>
-        </span>
-        <span className={s.qside}>Not available yet</span>
+        <span className={s.linkSide}>Not available yet</span>
       </div>
     );
   }
+  const meta = [kicker, question.topic].filter(Boolean).join(' · ');
   return (
-    <Link href={questionHref(question.slug)} className={`${s.qcard} focus-ring`}>
-      <span className={s.qicon} aria-hidden="true">
-        <Icon name="code" size={15} />
+    <Link href={questionHref(question.slug)} className={`${s.linkRow} focus-ring`}>
+      <span className={s.stateIcon}>
+        <StatusDot status={question.solved ? 'solved' : 'unsolved'} />
+        <span className="sr-only">{question.solved ? 'Solved. ' : 'Not solved. '}</span>
       </span>
-      <span className={s.qbody}>
-        <span className={s.qkicker}>
-          {kicker}
-          {question.topic ? ` · ${question.topic}` : ''}
-        </span>
-        <span className={s.qtitle}>{question.title}</span>
+      <span className={s.linkBody}>
+        <span className={s.linkTitle}>{question.title}</span>
+        {meta && <span className={s.linkMeta}>{meta}</span>}
       </span>
-      <span className={s.qside}>
-        {question.solved && (
-          <Pill tone="ok" size="xs" icon="check">
-            Solved
-          </Pill>
-        )}
-        <DifficultyPill level={question.difficulty} size="xs" />
-        <Icon name="arrow-right" size={14} />
+      <span className={s.linkSide}>
+        <DifficultyText level={question.difficulty} />
+        <Icon name="chev-right" size={16} />
       </span>
     </Link>
   );

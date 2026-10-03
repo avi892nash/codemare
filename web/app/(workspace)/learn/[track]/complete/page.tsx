@@ -6,12 +6,13 @@ import bs from '@/components/Badges/badges.module.css';
 import { Breadcrumb } from '@/components/ui/Breadcrumb';
 import { ButtonLink } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { Pill } from '@/components/ui/Pill';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { CheckpointStatus } from '@/components/Learn/ModuleCard';
 import { minutes, PageShell, SectionHead, StateIcon } from '@/components/Learn/parts';
 import { QuestionCard } from '@/components/Learn/QuestionCard';
-import { TrackCard } from '@/components/Learn/TrackCard';
+import { TrackList } from '@/components/Learn/TrackCard';
 import s from '@/components/Learn/learn.module.css';
 import { requireViewer } from '@/components/Learn/viewer';
 import { getLearnTitles, getTrackCompletion } from '@/lib/server/learnViews';
@@ -28,7 +29,10 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
 const fmtDate = (d: Date) => d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
 const fmtShort = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
 
-/** L7 — track completion: summary, checkpoint scores, badges earned, what next. */
+/**
+ * L7 — track completion: the shared page header, one line of what you did (not four tiles), checkpoint scores,
+ * badges earned, problems to practise and what comes next. Before the track is done it is the list of what is left.
+ */
 export default async function TrackCompletePage({ params }: { params: Promise<Params> }) {
   const { track: trackSlug } = await params;
   const viewer = await requireViewer(`/learn/${trackSlug}/complete`);
@@ -55,39 +59,47 @@ export default async function TrackCompletePage({ params }: { params: Promise<Pa
     return (
       <PageShell narrow>
         {crumbs}
-        <header className={s.header}>
-          <span className={s.eyebrow}>
-            <Icon name="trophy" size={13} /> Track completion
-          </span>
-          <h1 className={s.title}>Almost there: {track.title}</h1>
-          <p className={s.subtitle}>
-            Finish every lesson and pass every module checkpoint to complete the track. {remaining.length} step
-            {remaining.length === 1 ? '' : 's'} to go.
-          </p>
-        </header>
-        <div className={`${s.card} ${s.progressCard}`}>
-          <ProgressBar label="Track progress" value={p.percent} showValue valueText={`${p.percent}%`} height={6} />
-          {step && (
-            <div>
-              <ButtonLink href={stepHref(track.slug, step)} variant="primary" iconRight="arrow-right">
-                {step.kind === 'lesson' ? `Continue: ${step.title}` : `Take the ${step.moduleTitle} checkpoint`}
-              </ButtonLink>
-            </div>
-          )}
+        <div className={s.trackHead}>
+          <PageHeader
+            title={`Almost there: ${track.title}`}
+            subtitle={`Finish every lesson and pass every module checkpoint to complete the track. ${remaining.length} step${remaining.length === 1 ? '' : 's'} to go.`}
+            actions={
+              step && (
+                <ButtonLink
+                  href={stepHref(track.slug, step)}
+                  variant="primary"
+                  size="lg"
+                  iconRight="arrow-right"
+                  className={s.headCta}
+                  data-testid="learn-primary-action"
+                >
+                  {step.kind === 'lesson' ? `Continue: ${step.title}` : `Take the ${step.moduleTitle} checkpoint`}
+                </ButtonLink>
+              )
+            }
+          />
+          <div className={s.progressLine}>
+            <ProgressBar value={p.percent} aria-label="Track progress" valueText={`${p.percent}%`} />
+            <span>
+              {p.lessonsDone} of {p.lessonsTotal} lessons · {p.checkpointsPassed} of {p.checkpointsTotal} checkpoints
+            </span>
+          </div>
         </div>
         <section aria-labelledby="remaining-title">
           <SectionHead title="Still to do" id="remaining-title" />
-          <ul className={`${s.card} ${s.items}`}>
-            {remaining.map((st) => (
-              <li key={st.kind === 'lesson' ? st.lessonSlug : `${st.moduleSlug}-cp`} className={s.item} data-kind={st.kind === 'checkpoint' ? 'checkpoint' : undefined}>
-                <Link href={stepHref(track.slug, st)}>
-                  <StateIcon state={st.kind === 'lesson' ? (lessonState.get(st.lessonSlug) ?? 'not_started') : 'not_started'} />
-                  <span className={s.itemTitle}>{st.kind === 'lesson' ? st.title : `Checkpoint: ${st.moduleTitle}`}</span>
-                  <span className={s.itemMeta}>{st.kind === 'lesson' ? minutes(st.estMinutes) : `${st.questions} questions`}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
+          <div className={s.module}>
+            <ul className={s.items}>
+              {remaining.map((st) => (
+                <li key={st.kind === 'lesson' ? st.lessonSlug : `${st.moduleSlug}-cp`} className={s.item}>
+                  <Link href={stepHref(track.slug, st)}>
+                    <StateIcon state={st.kind === 'lesson' ? (lessonState.get(st.lessonSlug) ?? 'not_started') : 'not_started'} />
+                    <span className={s.itemTitle}>{st.kind === 'lesson' ? st.title : `Checkpoint: ${st.moduleTitle}`}</span>
+                    <span className={s.itemMeta}>{st.kind === 'lesson' ? minutes(st.estMinutes) : `${st.questions} questions`}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
         </section>
       </PageShell>
     );
@@ -99,82 +111,60 @@ export default async function TrackCompletePage({ params }: { params: Promise<Pa
   const avg = scores.length
     ? Math.round((scores.reduce((n, x) => n + (x.cp.best ? x.cp.best.score / x.cp.best.total : 0), 0) / scores.length) * 100)
     : null;
+  const did = [
+    `${p.lessonsDone} lesson${p.lessonsDone === 1 ? '' : 's'} completed`,
+    `${p.checkpointsPassed} checkpoint${p.checkpointsPassed === 1 ? '' : 's'} passed`,
+    avg !== null && `average best score ${avg}%`,
+    `${minutes(p.estMinutes)} of reading`,
+  ]
+    .filter(Boolean)
+    .join(' · ');
 
   return (
     <PageShell narrow>
       {crumbs}
-      <section className={s.celebrate} aria-labelledby="complete-title">
-        <span className={s.medal} aria-hidden="true">
-          <Icon name="trophy" size={30} />
-        </span>
-        <span className={s.eyebrow}>Track complete</span>
-        <h1 className={s.celebrateTitle} id="complete-title">
-          You finished {track.title}
-        </h1>
-        <p className={s.subtitle} style={{ textAlign: 'center' }}>
-          Every lesson read and every checkpoint passed{p.completedAt ? ` — completed ${fmtDate(p.completedAt)}` : ''}.
-        </p>
-        <div className={s.row} style={{ justifyContent: 'center' }}>
-          {viewer.handle && (
-            <ButtonLink href={`/u/${viewer.handle}`} variant="default" size="sm" icon="user">
-              Your profile
-            </ButtonLink>
-          )}
-          <ButtonLink href={`/learn/${track.slug}`} variant="ghost" size="sm" icon="list">
-            Review lessons
-          </ButtonLink>
-        </div>
-      </section>
-
-      <dl className={s.metrics} style={{ margin: 0 }}>
-        <div className={`${s.card} ${s.metric}`} style={{ display: 'flex', flexDirection: 'column-reverse' }}>
-          <dt className={s.metricLabel}>Lessons completed</dt>
-          <dd className={`${s.metricValue} mono`} style={{ margin: 0 }}>
-            {p.lessonsDone}
-          </dd>
-        </div>
-        <div className={`${s.card} ${s.metric}`} style={{ display: 'flex', flexDirection: 'column-reverse' }}>
-          <dt className={s.metricLabel}>Checkpoints passed</dt>
-          <dd className={`${s.metricValue} mono`} style={{ margin: 0 }}>
-            {p.checkpointsPassed}
-          </dd>
-        </div>
-        <div className={`${s.card} ${s.metric}`} style={{ display: 'flex', flexDirection: 'column-reverse' }}>
-          <dt className={s.metricLabel}>Average best score</dt>
-          <dd className={`${s.metricValue} mono`} style={{ margin: 0 }}>
-            {avg === null ? '—' : `${avg}%`}
-          </dd>
-        </div>
-        <div className={`${s.card} ${s.metric}`} style={{ display: 'flex', flexDirection: 'column-reverse' }}>
-          <dt className={s.metricLabel}>Reading time</dt>
-          <dd className={`${s.metricValue} mono`} style={{ margin: 0 }}>
-            {minutes(p.estMinutes)}
-          </dd>
-        </div>
-      </dl>
+      <div className={s.trackHead}>
+        <PageHeader
+          title={`You finished ${track.title}`}
+          subtitle={`Every lesson read and every checkpoint passed${p.completedAt ? ` — completed ${fmtDate(p.completedAt)}` : ''}.`}
+          actions={
+            <>
+              {viewer.handle && (
+                <ButtonLink href={`/u/${viewer.handle}`} variant="default" icon="user" className={s.headBtn}>
+                  Your profile
+                </ButtonLink>
+              )}
+              <ButtonLink href={`/learn/${track.slug}`} variant="default" icon="list" className={s.headBtn}>
+                Review lessons
+              </ButtonLink>
+            </>
+          }
+        />
+        <p className={s.facts}>{did}</p>
+      </div>
 
       {scores.length > 0 && (
         <section aria-labelledby="scores-title">
           <SectionHead title="Checkpoint scores" id="scores-title" />
-          <ul className={`${s.card} ${s.scoreList}`}>
-            {scores.map(({ mod, cp }) => (
-              <li key={mod.slug}>
-                <Link href={`/learn/${track.slug}/${mod.slug}/checkpoint`} className="focus-ring" style={{ color: 'var(--fg-0)', textDecoration: 'none', borderRadius: 4 }}>
-                  {mod.title}
-                </Link>
-                <CheckpointStatus summary={cp} />
-              </li>
-            ))}
-          </ul>
+          <div className={s.module}>
+            <ul className={s.scoreList}>
+              {scores.map(({ mod, cp }) => (
+                <li key={mod.slug}>
+                  <Link href={`/learn/${track.slug}/${mod.slug}/checkpoint`} className="focus-ring">
+                    <span>{mod.title}</span>
+                    <CheckpointStatus summary={cp} />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
         </section>
       )}
 
       <section aria-labelledby="badges-title">
         <SectionHead title="Learning badges" id="badges-title" note={c.badges.length ? `${c.badges.length} earned` : undefined} />
         {c.badges.length === 0 ? (
-          <p className={s.muted} style={{ margin: 0, fontSize: 13 }}>
-            No learning badges yet — they unlock as you complete lessons and tracks.
-          </p>
+          <p className={s.note}>No learning badges yet — they unlock as you complete lessons and tracks.</p>
         ) : (
           <ul className={bs.grid}>
             {c.badges.map((b) => (
@@ -206,18 +196,20 @@ export default async function TrackCompletePage({ params }: { params: Promise<Pa
       {c.practice.length > 0 && (
         <section aria-labelledby="practice-title">
           <SectionHead title="Put it into practice" id="practice-title" />
-          <div className={s.qgrid}>
+          <ul className={s.linkGrid}>
             {c.practice.map((q) => (
-              <QuestionCard key={q.slug} slug={q.slug} question={q} kicker="Problem" />
+              <li key={q.slug}>
+                <QuestionCard slug={q.slug} question={q} kicker={null} />
+              </li>
             ))}
-          </div>
+          </ul>
         </section>
       )}
 
       {c.nextTrack && (
         <section aria-labelledby="next-title">
           <SectionHead title="Up next" id="next-title" />
-          <TrackCard item={c.nextTrack} index={c.nextTrack.track.ord} />
+          <TrackList items={[c.nextTrack]} label="Up next" />
         </section>
       )}
     </PageShell>

@@ -2,7 +2,8 @@
  * Formatting for submission metrics and times. Pure and server-safe.
  */
 import { formatKb } from '@/lib/client/format';
-import type { SupportedLanguage } from '@/lib/types';
+import { verdictTitle } from '@/lib/client/resultCopy';
+import type { SubmissionKind, SubmissionStatus, SupportedLanguage } from '@/lib/types';
 
 /**
  * Peak memory in KB → [value, unit]: `575 KB`, `2.16 MB` — the editor's
@@ -69,4 +70,44 @@ export function fmtValue(value: unknown, max = 400): string {
     text = String(value);
   }
   return text.length > max ? `${text.slice(0, max)}… (+${text.length - max} chars)` : text;
+}
+
+const testsNoun = (n: number) => `test${n === 1 ? '' : 's'}`;
+
+/**
+ * A submission's verdict in the words of the result card: a headline ("Accepted", "Wrong answer", "Time limit
+ * exceeded" …) and what is left to say after the dash ("all 10 tests passed", "4 of 9 tests passed"). A run that
+ * passed reads "All tests passed", as in the editor. `rest` is null when the headline says it all.
+ */
+export function submissionHeadline(s: {
+  status: SubmissionStatus;
+  kind: SubmissionKind;
+  totalPassed: number;
+  totalTests: number;
+}): { word: string; rest: string | null } {
+  switch (s.status) {
+    case 'queued':
+      return { word: 'Queued', rest: 'it has not been judged yet' };
+    case 'running':
+      return { word: 'Running', rest: 'it is being judged now' };
+    case 'CE':
+      return { word: verdictTitle('CE', 'submit'), rest: 'nothing ran' };
+    case 'XX':
+      return { word: verdictTitle('XX', 'submit'), rest: 'the judge couldn’t finish this run' };
+    default: {
+      const word = verdictTitle(s.status, s.kind === 'run' ? 'run' : 'submit');
+      if (s.totalTests <= 0) return { word, rest: null };
+      if (s.status === 'OK') {
+        return s.kind === 'run' ? { word, rest: null } : { word, rest: `all ${s.totalTests} ${testsNoun(s.totalTests)} passed` };
+      }
+      return { word, rest: `${s.totalPassed} of ${s.totalTests} ${testsNoun(s.totalTests)} passed` };
+    }
+  }
+}
+
+/** The status as a short label (list rows, the filter): "Accepted" · "Wrong answer" · "Queued"; the code is separate. */
+export function statusWord(status: SubmissionStatus, kind: SubmissionKind): string {
+  if (status === 'queued') return 'Queued';
+  if (status === 'running') return 'Running';
+  return verdictTitle(status, kind === 'run' ? 'run' : 'submit');
 }

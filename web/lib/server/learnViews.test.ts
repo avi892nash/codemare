@@ -55,20 +55,40 @@ async function makeLearnWorld() {
 }
 
 describe('learn home and track views', () => {
-  it('lists tracks in order with per-user progress and no continue point before any activity', async () => {
+  it('lists tracks in order with per-user progress, and recommends the first track to a learner with no activity', async () => {
     const w = await makeLearnWorld();
     const user = await makeUser();
     const home = await getLearnHome(user.id);
     expect(home.tracks.map((t) => t.track.slug)).toEqual(['basics', 'graphs']);
     expect(home.tracks[0].track.tier).toMatchObject({ ord: 0 });
     expect(home.tracks[0].progress).toMatchObject({ lessonsTotal: 3, checkpointsTotal: 1, percent: 0 });
-    expect(home.continue).toBeNull();
+    // Nothing started: "start the first track", at its first lesson.
+    expect(home.recommend?.track.track.slug).toBe('basics');
+    expect(home.recommend).toMatchObject({ started: false, step: { kind: 'lesson', lessonSlug: 'one-pass' } });
 
     await completeLesson(user.id, w.l1.id);
     const after = await getLearnHome(user.id);
-    expect(after.continue?.track.track.slug).toBe('basics');
-    expect(after.continue?.step).toMatchObject({ kind: 'lesson', lessonSlug: 'hashing' });
+    // Started: "continue where you left off", at the next step.
+    expect(after.recommend?.track.track.slug).toBe('basics');
+    expect(after.recommend).toMatchObject({ started: true, step: { kind: 'lesson', lessonSlug: 'hashing' } });
     expect(after.totals).toMatchObject({ lessonsDone: 1, lessonsTotal: 4 });
+  });
+
+  it('moves the recommendation on to the next track once one is finished, and drops it when all are', async () => {
+    const w = await makeLearnWorld();
+    const user = await makeUser();
+    for (const l of [w.l1, w.l2, w.l3]) await completeLesson(user.id, l.id);
+    await submitCheckpoint(user.id, w.m1.id, { [w.q1.id]: 0, [w.q2.id]: 'two-pointers' });
+    const next = await getLearnHome(user.id);
+    expect(next.tracks[0].progress.complete).toBe(true);
+    // The finished track is not offered again; the one that has not been started is, as "start".
+    expect(next.recommend?.track.track.slug).toBe('graphs');
+    expect(next.recommend).toMatchObject({ started: false, step: { kind: 'lesson', lessonSlug: 'layers' } });
+
+    await completeLesson(user.id, w.g1.id);
+    const done = await getLearnHome(user.id);
+    expect(done.totals.tracksComplete).toBe(2);
+    expect(done.recommend).toBeNull();
   });
 
   it('returns null for unknown tracks', async () => {

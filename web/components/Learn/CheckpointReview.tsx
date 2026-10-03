@@ -1,6 +1,5 @@
 import { ButtonLink } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
-import { Pill } from '@/components/ui/Pill';
 import type { CheckpointReview as Review } from '@/lib/server/learnViews';
 import { Prose } from './Prose';
 import s from './learn.module.css';
@@ -33,22 +32,22 @@ export function CheckpointReview({
           <span className={s.scoreOf}>/{attempt.total}</span>
         </div>
         <div>
-          <h2 id="score-title" style={{ margin: 0, fontSize: 17, fontWeight: 600, color: 'var(--fg-0)' }}>
+          <h2 id="score-title" className={s.scoreTitle}>
             <span className="sr-only">
               Score {attempt.score} of {attempt.total}.{' '}
             </span>
             {attempt.passed ? 'Checkpoint passed' : 'Not passed yet'}
           </h2>
-          <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--fg-2)' }}>
+          <p className={s.scoreText}>
             {pct}% correct · {passPercent}% needed · attempt from {fmtDate(attempt.createdAt)} UTC
           </p>
         </div>
-        <div className={s.row}>
-          <ButtonLink href={retakeHref} variant={attempt.passed ? 'default' : 'primary'} size="sm" icon="refresh">
+        <div className={s.scoreActions}>
+          <ButtonLink href={retakeHref} variant={attempt.passed ? 'default' : 'primary'} icon="refresh">
             Retake
           </ButtonLink>
           {continueTo && (
-            <ButtonLink href={continueTo.href} variant={attempt.passed ? 'primary' : 'default'} size="sm" iconRight="arrow-right">
+            <ButtonLink href={continueTo.href} variant={attempt.passed ? 'primary' : 'default'} iconRight="arrow-right">
               {continueTo.label}
             </ButtonLink>
           )}
@@ -63,12 +62,11 @@ export function CheckpointReview({
                 {i + 1}
               </span>
               <div>
-                <div className={s.row} style={{ marginBottom: 6 }}>
-                  <Pill tone={q.correct ? 'ok' : 'err'} size="xs" icon={q.correct ? 'check' : 'x'}>
-                    {q.correct ? 'Correct' : 'Incorrect'}
-                  </Pill>
-                  <span className="sr-only">Question {i + 1}:</span>
-                </div>
+                <span className={s.verdict} data-correct={q.correct}>
+                  <Icon name={q.correct ? 'check' : 'x'} size={12} />
+                  {q.correct ? 'Correct' : 'Incorrect'}
+                </span>
+                <span className="sr-only">Question {i + 1}:</span>
                 <Prose md={q.promptMd} compact />
               </div>
             </div>
@@ -102,7 +100,7 @@ export function CheckpointReview({
                     </li>
                   );
                 })}
-                {q.givenIndex === null && <li className={s.muted} style={{ fontSize: 12.5 }}>You didn’t answer this one.</li>}
+                {q.givenIndex === null && <li className={s.muted}>You didn’t answer this one.</li>}
               </ul>
             ) : (
               <div className={s.answerLine}>
@@ -119,9 +117,7 @@ export function CheckpointReview({
 
             {q.explanationMd && (
               <div className={s.explain}>
-                <div className={s.eyebrow} style={{ marginBottom: 4 }}>
-                  <Icon name="lightbulb" size={12} /> Why
-                </div>
+                <p className={s.explainLabel}>Why</p>
                 <Prose md={q.explanationMd} compact />
               </div>
             )}

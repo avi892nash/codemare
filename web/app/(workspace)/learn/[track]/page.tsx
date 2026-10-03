@@ -2,11 +2,10 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { Breadcrumb } from '@/components/ui/Breadcrumb';
 import { ButtonLink } from '@/components/ui/Button';
-import { Icon } from '@/components/ui/Icon';
-import { Pill } from '@/components/ui/Pill';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { ModuleCard } from '@/components/Learn/ModuleCard';
-import { hours, LevelPill, minutes, PageShell } from '@/components/Learn/parts';
+import { hours, LEVEL_LABEL, lessonsLabel, minutes, PageShell } from '@/components/Learn/parts';
 import s from '@/components/Learn/learn.module.css';
 import { requireViewer } from '@/components/Learn/viewer';
 import { getLearnTitles, getTrackView } from '@/lib/server/learnViews';
@@ -20,7 +19,10 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
   return { title: titles ? `${titles.track} · Learn · Codemare` : 'Learn · Codemare' };
 }
 
-/** L2 — a track: modules, lessons with completion state, checkpoint status. */
+/**
+ * L2 — a track: the shared page header with the one primary action (start, continue, or view the completion), a line
+ * of facts, how far along you are (once you are), then its modules as rows with the map's progress glyphs.
+ */
 export default async function TrackPage({ params }: { params: Promise<Params> }) {
   const { track: trackSlug } = await params;
   const viewer = await requireViewer(`/learn/${trackSlug}`);
@@ -36,69 +38,53 @@ export default async function TrackPage({ params }: { params: Promise<Params> })
       ? { href: stepHref(track.slug, step), label: p.started ? 'Continue' : 'Start the first lesson', icon: 'arrow-right' as const }
       : null;
 
+  const facts = [
+    LEVEL_LABEL[track.level],
+    track.tier && track.tier.title !== track.title ? `${track.tier.title} tier` : null,
+    `${track.modules.length} modules`,
+    lessonsLabel(lessons),
+    `${minutes(p.estMinutes)} of reading`,
+    `about ${hours(track.estHours)} with practice`,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+
   return (
     <PageShell>
       <Breadcrumb items={[{ label: 'Learn', href: '/learn', icon: 'graduation' }, { label: track.title }]} />
 
-      <div className={s.trackHeader}>
-        <header className={s.header}>
-          <div className={s.row}>
-            <LevelPill level={track.level} size="sm" />
-            {track.tier && track.tier.title !== track.title && (
-              <Pill tone="muted" size="sm" icon="layers">
-                {track.tier.title}
-              </Pill>
+      <div className={s.trackHead}>
+        <PageHeader
+          title={track.title}
+          subtitle={track.summary}
+          actions={
+            cta && (
+              <ButtonLink href={cta.href} variant="primary" size="lg" iconRight={cta.icon} className={s.headCta} data-testid="learn-primary-action">
+                {cta.label}
+              </ButtonLink>
+            )
+          }
+        />
+        <p className={s.facts}>{facts}</p>
+        {(p.started || p.complete) && (
+          <div className={s.progressLine}>
+            <ProgressBar
+              value={p.percent}
+              tone={p.complete ? 'ok' : 'accent'}
+              aria-label={`${track.title}: ${p.percent}% complete`}
+              valueText={`${p.percent}%`}
+            />
+            <span>
+              {p.lessonsDone} of {p.lessonsTotal} lessons · {p.checkpointsPassed} of {p.checkpointsTotal} checkpoints
+            </span>
+            {step && !p.complete && (
+              <span>
+                {p.resume ? 'Pick up: ' : 'Next: '}
+                <strong>{step.kind === 'lesson' ? step.title : `${step.moduleTitle} checkpoint`}</strong>
+              </span>
             )}
           </div>
-          <h1 className={s.title}>{track.title}</h1>
-          <p className={s.subtitle}>{track.summary}</p>
-          <div className={s.meta}>
-            <span className={s.metaItem}>
-              <Icon name="layers" size={13} />
-              {track.modules.length} modules
-            </span>
-            <span className={s.metaItem}>
-              <Icon name="book-open" size={13} />
-              {lessons} lessons · {minutes(p.estMinutes)} of reading
-            </span>
-            <span className={s.metaItem}>
-              <Icon name="clock" size={13} />
-              about {hours(track.estHours)} with practice
-            </span>
-          </div>
-        </header>
-
-        <aside className={`${s.card} ${s.progressCard}`} aria-label="Your progress">
-          <ProgressBar
-            label="Your progress"
-            value={p.percent}
-            tone={p.complete ? 'ok' : 'accent'}
-            showValue
-            valueText={`${p.percent}%`}
-            height={6}
-          />
-          <div className={s.meta} style={{ gap: '4px 12px' }}>
-            <span className={s.metaItem}>
-              <Icon name="check-circle" size={13} />
-              {p.lessonsDone}/{p.lessonsTotal} lessons
-            </span>
-            <span className={s.metaItem}>
-              <Icon name="target" size={13} />
-              {p.checkpointsPassed}/{p.checkpointsTotal} checkpoints
-            </span>
-          </div>
-          {step && !p.complete && (
-            <p style={{ margin: 0, fontSize: 12.5, color: 'var(--fg-2)' }}>
-              {p.resume ? 'Pick up: ' : 'Next: '}
-              <span style={{ color: 'var(--fg-0)' }}>{step.kind === 'lesson' ? step.title : `${step.moduleTitle} checkpoint`}</span>
-            </p>
-          )}
-          {cta && (
-            <ButtonLink href={cta.href} variant="primary" iconRight={cta.icon} full>
-              {cta.label}
-            </ButtonLink>
-          )}
-        </aside>
+        )}
       </div>
 
       <div className={s.modules}>

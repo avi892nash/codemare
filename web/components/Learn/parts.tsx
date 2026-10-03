@@ -1,11 +1,10 @@
 import type { ReactNode } from 'react';
-import { Icon, type IconName } from '@/components/ui/Icon';
-import { Pill, type PillTone } from '@/components/ui/Pill';
+import { StatusDot, type ProblemStatus } from '@/components/ui/StatusDot';
 import type { LessonState } from '@/lib/server/rules/learnProgress';
 import type { TrackLevel } from '@/lib/types';
 import s from './learn.module.css';
 
-/** Scrollable page + centered column, inside the workspace layout. */
+/** Scrollable page + centered column, inside the workspace layout (the same width and padding as the map). */
 export function PageShell({ children, narrow = false, label }: { children: ReactNode; narrow?: boolean; label?: string }) {
   return (
     <main className={`${s.page} scroll`} aria-label={label}>
@@ -14,37 +13,28 @@ export function PageShell({ children, narrow = false, label }: { children: React
   );
 }
 
-export const LEVEL: Record<TrackLevel, { label: string; tone: PillTone; icon: IconName }> = {
-  beginner: { label: 'Beginner', tone: 'ok', icon: 'sparkle' },
-  intermediate: { label: 'Intermediate', tone: 'warn', icon: 'gauge' },
-  advanced: { label: 'Advanced', tone: 'err', icon: 'flame' },
+export const LEVEL_LABEL: Record<TrackLevel, string> = {
+  beginner: 'Beginner',
+  intermediate: 'Intermediate',
+  advanced: 'Advanced',
 };
 
-export function LevelPill({ level, size = 'xs' }: { level: TrackLevel; size?: 'xs' | 'sm' }) {
-  const l = LEVEL[level];
-  return (
-    <Pill tone={l.tone} size={size}>
-      {l.label}
-    </Pill>
-  );
-}
-
-/** Icons per track, by position (content has no icon field for tracks). */
-export const TRACK_ICONS: IconName[] = ['layers', 'search', 'network', 'route', 'puzzle', 'graduation'];
-
-const STATE: Record<LessonState | 'failed', { icon: IconName; label: string }> = {
-  completed: { icon: 'check-circle', label: 'Completed' },
-  started: { icon: 'half-circle', label: 'In progress' },
-  not_started: { icon: 'circle', label: 'Not started' },
-  failed: { icon: 'alert-circle', label: 'Not passed yet' },
+const STATE: Record<LessonState | 'failed', { status: ProblemStatus; label: string }> = {
+  completed: { status: 'solved', label: 'Completed' },
+  started: { status: 'attempted', label: 'In progress' },
+  not_started: { status: 'unsolved', label: 'Not started' },
+  failed: { status: 'attempted', label: 'Not passed yet' },
 };
 
-/** Status glyph with its meaning for screen readers (color is never the only cue). */
-export function StateIcon({ state, size = 16 }: { state: LessonState | 'failed'; size?: number }) {
+/**
+ * Where a lesson or checkpoint stands, with the map's progress glyphs (done · half · open), and its meaning for
+ * screen readers (colour is never the only cue).
+ */
+export function StateIcon({ state }: { state: LessonState | 'failed' }) {
   const m = STATE[state];
   return (
-    <span className={s.stateIcon} data-state={state}>
-      <Icon name={m.icon} size={size} />
+    <span className={s.stateIcon}>
+      <StatusDot status={m.status} />
       <span className="sr-only">{m.label}</span>
     </span>
   );
@@ -52,16 +42,20 @@ export function StateIcon({ state, size = 16 }: { state: LessonState | 'failed';
 
 /** Durations never break between number and unit (non-breaking spaces). */
 export function minutes(n: number): string {
-  if (n < 60) return `${n}\u00a0min`;
+  if (n < 60) return `${n} min`;
   const h = Math.floor(n / 60);
   const m = n % 60;
-  return m ? `${h}\u00a0h ${m}\u00a0min` : `${h}\u00a0h`;
+  return m ? `${h} h ${m} min` : `${h} h`;
 }
 
 export function hours(n: number): string {
-  return `${Number.isInteger(n) ? n : n.toFixed(1)}\u00a0h`;
+  return `${Number.isInteger(n) ? n : n.toFixed(1)} h`;
 }
 
+/** "3 lessons" · "1 lesson". */
+export const lessonsLabel = (n: number): string => `${n} lesson${n === 1 ? '' : 's'}`;
+
+/** A section's title (sentence case) with an optional quiet note at its right. */
 export function SectionHead({ title, note, id, children }: { title: string; note?: ReactNode; id?: string; children?: ReactNode }) {
   return (
     <div className={s.sectionHead}>

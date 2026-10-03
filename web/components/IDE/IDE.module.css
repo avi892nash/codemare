@@ -1,3 +1,7 @@
+/* The IDE playground, on the shared type scale (--fs-*: nothing under 12 px, labels in sentence case). A workspace page
+ * like the problem page: its toolbar is the problem page's — the language and a reset at the left, Run at the right —
+ * and on a phone the fields are 16 px (iOS zooms into smaller ones) and the controls 44 px. */
+
 /* ─── Shell: cases | editor over output ─────────────────────────── */
 .root {
   flex: 1;
@@ -37,12 +41,11 @@
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
   min-height: 44px;
   padding: 6px 8px 6px 10px;
   border-bottom: 1px solid var(--line-2);
 }
-.hint { font-size: 12px; color: var(--fg-2); }
 .spacer { flex: 1; }
 .editorArea { flex: 1; min-height: 0; position: relative; }
 
@@ -58,11 +61,12 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 14px;
+  gap: 8px;
+  padding: 10px 14px;
   border-bottom: 1px solid var(--line-2);
 }
-.managerTitle { margin: 0; font-size: 13px; font-weight: 600; color: var(--fg-0); }
-.managerCount { font-size: 11px; color: var(--fg-2); }
+.managerTitle { margin: 0; font-size: var(--fs-md); font-weight: 600; color: var(--fg-0); }
+.managerCount { font-size: var(--fs-xs); color: var(--fg-2); }
 .managerList { position: relative; flex: 1; min-height: 0; overflow-y: auto; }
 .case { border-bottom: 1px solid var(--line-1); }
 .caseHead {
@@ -77,19 +81,20 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  min-height: 40px;
   padding: 8px 0 8px 14px;
   margin: 0;
   border: 0;
   background: none;
   font: inherit;
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   font-weight: 500;
   color: var(--fg-0);
   text-align: left;
   cursor: pointer;
   border-radius: 0;
 }
-.caseToggle > svg { color: var(--fg-3); flex: none; }
+.caseToggle > svg { color: var(--fg-2); flex: none; }
 .case[data-expanded] .caseHead { background: var(--bg-2); }
 .caseHead:hover { background: var(--bg-2); }
 .caseName { flex: none; }
@@ -99,7 +104,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 11.5px;
+  font-size: var(--fs-xs);
   font-weight: 400;
   color: var(--fg-2);
 }
@@ -117,7 +122,7 @@
   align-items: center;
   justify-content: center;
   gap: 10px;
-  font-size: 13px;
+  font-size: var(--fs-md);
   color: var(--fg-2);
 }
 .outputBody {
@@ -133,21 +138,22 @@
 .summary {
   --tone: var(--fg-3);
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
+  gap: 6px 10px;
   padding: 10px 12px;
   border-radius: var(--r-md);
   border: 1px solid color-mix(in oklab, var(--tone) 30%, var(--line-2));
   background: color-mix(in oklab, var(--tone) 7%, var(--bg-1));
-  font-size: 13px;
+  font-size: var(--fs-body);
   color: var(--fg-1);
 }
 .summary[data-tone='ok'] { --tone: var(--ok); }
 .summary[data-tone='err'] { --tone: var(--err); }
 .summary[data-tone='warn'] { --tone: var(--warn); }
 .summary[data-tone='info'] { --tone: var(--info); }
-.summaryText { flex: 1; }
-.summaryLang { font-size: 12px; color: var(--fg-2); }
+.summaryText { flex: 1 1 160px; }
+.summaryLang { font-size: var(--fs-xs); color: var(--fg-2); }
 .compileOut {
   color: var(--fg-1);
   background: var(--info-bg);
@@ -178,9 +184,9 @@
   padding: 8px 10px;
   border-bottom: 1px solid var(--line-1);
 }
-.resultName { font-size: 12.5px; font-weight: 500; color: var(--fg-0); }
-.resultNote { font-size: 11.5px; color: var(--fg-2); }
-.resultMetric { font-size: 11.5px; color: var(--fg-1); }
+.resultName { font-size: var(--fs-sm); font-weight: 500; color: var(--fg-0); }
+.resultNote { font-size: var(--fs-xs); color: var(--fg-2); }
+.resultMetric { font-size: var(--fs-xs); color: var(--fg-1); }
 .dim { color: var(--fg-2); }
 .resultBody {
   display: flex;
@@ -190,31 +196,28 @@
 }
 .block {
   display: grid;
-  grid-template-columns: 58px minmax(0, 1fr);
+  grid-template-columns: 68px minmax(0, 1fr);
   gap: 8px;
   align-items: start;
 }
 .blockLabel {
   padding-top: 6px;
-  font-size: 10.5px;
+  font-size: var(--fs-xs);
   font-weight: 600;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
   color: var(--fg-2);
 }
 .legend {
   display: block;
   margin-top: 2px;
-  font-size: 10px;
+  white-space: nowrap;
+  font-size: var(--fs-xs);
   font-weight: 400;
-  letter-spacing: 0;
-  text-transform: none;
-  color: var(--fg-3);
+  color: var(--fg-2);
 }
 .pre {
   margin: 0;
   padding: 6px 8px;
-  font-size: 12px;
+  font-size: var(--fs-sm);
   line-height: 1.5;
   color: var(--fg-0);
   background: var(--bg-2);
@@ -231,7 +234,7 @@
   background: var(--err-bg);
   border-color: color-mix(in oklab, var(--err) 25%, transparent);
 }
-.empty { color: var(--fg-3); font-style: italic; font-family: var(--font-sans); }
+.empty { color: var(--fg-2); font-style: italic; font-family: var(--font-sans); }
 .diff { padding: 4px 0; }
 .diffLine {
   display: block;
@@ -247,14 +250,52 @@
   user-select: none;
 }
 
+/* Below 1024 px one pane shows at a time — Code · Test cases · Output, the problem page's phone layout. The three share one
+ * cell; the two not shown are out of sight, out of the tab order and out of the accessibility tree (visibility), but keep
+ * their size, so the editor is laid out correctly whenever it is shown. */
+.viewSwitch { display: none; }
 @media (max-width: 1023px) {
   .root {
-    display: flex;
-    flex-direction: column;
-    overflow-y: auto;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    overflow: hidden; /* the page is as tall as the screen: every pane scrolls inside */
   }
-  .cases { max-height: 360px; flex: none; }
-  .main { display: flex; flex-direction: column; flex: none; }
-  .editorPane { height: min(60vh, 520px); min-height: 340px; }
-  .output { min-height: 260px; }
+  .viewSwitch { display: block; flex: none; }
+  /* The shared pills, stretched: three equal segments, 44 px tall. */
+  div.viewSwitch > div { display: flex; width: 100%; overflow: visible; }
+  div.viewSwitch [role='tab'] {
+    flex: 1;
+    justify-content: center;
+    min-height: 44px;
+    padding: 0 10px;
+    font-size: var(--fs-md);
+  }
+  .main { display: contents; }
+  .cases,
+  .editorPane,
+  .output { grid-area: 2 / 1; }
+  .root:not([data-view='cases']) .cases,
+  .root:not([data-view='code']) .editorPane,
+  .root:not([data-view='output']) .output {
+    visibility: hidden;
+    pointer-events: none;
+  }
+  .output:focus { outline: none; }
+  .output:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+}
+
+/* A phone: 44 px controls, 16 px fields (iOS zooms into anything smaller). The shared fields are sized by the UI
+ * kit; these selectors are as specific as its own, so they hold either way. */
+@media (max-width: 720px) {
+  .toolbar { gap: 8px; padding: 8px 10px; }
+  .toolbar select { font-size: var(--fs-body); }
+  .toolbar > div:first-child { height: 44px; padding: 0 12px; }
+  .toolbar .resetBtn { width: 44px; height: 44px; }
+  .toolbar .runBtn { height: 44px; min-width: 112px; justify-content: center; font-size: var(--fs-md); }
+  .managerHead .managerTitle { font-size: var(--fs-lg); }
+  .managerHead button { height: 44px; padding: 0 14px; font-size: var(--fs-md); }
+  .caseToggle { min-height: 44px; font-size: var(--fs-md); }
+  .caseHead .removeBtn { width: 44px; height: 44px; }
+  .caseBody .field textarea { font-size: var(--fs-lg); }
+  .caseBody .field > label { font-size: var(--fs-sm); }
 }

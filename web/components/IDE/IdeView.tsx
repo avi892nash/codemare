@@ -2,11 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
 import { Button } from '@/components/ui/Button';
-import { Pill } from '@/components/ui/Pill';
+import { Tabs } from '@/components/ui/Tabs';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { CodeEditor, type CodeEditorHandle } from '@/components/Editor/CodeEditor';
 import { LanguageSelector } from '@/components/Editor/LanguageSelector';
-import { useModKey } from '@/components/Workspace/useModKey';
+import { useModKey, useTouchOnly } from '@/components/Workspace/useModKey';
 import { runIdeCode } from '@/app/(workspace)/ide/actions';
 import { clearDraft, loadDraft, loadLanguage, saveDraft, saveLanguage } from '@/lib/client/drafts';
 import { LANGUAGE_META } from '@/lib/client/languages';
@@ -31,13 +31,27 @@ const DEFAULT_CASES: IdeTestCase[] = [
 ];
 const SCOPE = 'ide';
 
+/** Below 1024 px one pane shows at a time (the problem page's breakpoint — keep in step with IDE.module.css). */
+type PhoneView = 'code' | 'cases' | 'output';
+const PHONE_VIEWS = [
+  { value: 'code', label: 'Code' },
+  { value: 'cases', label: 'Test cases' },
+  { value: 'output', label: 'Output' },
+];
+const isNarrow = () => window.matchMedia('(max-width: 1023px)').matches;
+
 /**
  * /ide — the free playground: any of the six languages, up to ten stdin
  * cases with optional expected output (diffed), runtime and memory per
  * case. Same themed Monaco as the problem editor; drafts per language.
+ * Its toolbar is the problem page's: the language and a reset at the left,
+ * Run at the right (⌘/Ctrl+Enter, printed on a keyboard device only). Below
+ * 1024 px it is the problem page's phone layout too: Code · Test cases ·
+ * Output, one pane at a time, and a finished run takes the screen.
  */
 export function IdeView() {
   const mod = useModKey();
+  const touch = useTouchOnly();
   const [language, setLanguage] = useState<SupportedLanguage>('python');
   const [code, setCode] = useState(IDE_STARTERS.python);
   const [restored, setRestored] = useState(false);
@@ -46,6 +60,8 @@ export function IdeView() {
   const [ranLanguage, setRanLanguage] = useState<SupportedLanguage>('python');
   const [pending, startTransition] = useTransition();
   const editor = useRef<CodeEditorHandle | null>(null);
+  const outputPane = useRef<HTMLElement>(null);
+  const [view, setView] = useState<PhoneView>('code');
 
   useEffect(() => {
     const lang = loadLanguage(SCOPE) ?? 'python';
@@ -85,6 +101,15 @@ export function IdeView() {
     });
   }, [code, language, pending, testCases]);
 
+  // One pane at a time on a phone: a finished run takes the screen, and — the editor's pane being hidden then — focus moves
+  // to the output, so keyboards and screen readers land on it (the live region below announces the outcome).
+  useEffect(() => {
+    if (!results || pending || !isNarrow()) return;
+    setView('output');
+    const id = window.requestAnimationFrame(() => outputPane.current?.focus({ preventScroll: true }));
+    return () => window.cancelAnimationFrame(id);
+  }, [results, pending]);
+
   const runRef = useRef(run);
   runRef.current = run;
   const onRun = useCallback(() => runRef.current(), []);
@@ -102,24 +127,24 @@ export function IdeView() {
   }, [onRun]);
 
   return (
-    <main className={s.root}>
+    <main className={s.root} data-view={view}>
       <h1 className="sr-only">IDE playground</h1>
+      {/* Below 1024 px: which pane is showing. Hidden on a laptop, where all three are. */}
+      <div className={s.viewSwitch}>
+        <Tabs tabs={PHONE_VIEWS} value={view} onChange={(v) => setView(v as PhoneView)} variant="pills" aria-label="Code, test cases or output" />
+      </div>
       <aside className={s.cases} aria-label="Test cases">
         <TestCaseManager testCases={testCases} onTestCasesChange={setTestCases} />
       </aside>
       <div className={s.main}>
         <section className={s.editorPane} aria-label="Code">
           <div className={s.toolbar}>
-            <Pill tone="accent" size="sm" icon="terminal">
-              IDE
-            </Pill>
             <LanguageSelector value={language} onChange={switchLanguage} disabled={pending} />
-            <span className={s.hint}>Your stdin · output diffed against what you expect</span>
-            <span className={s.spacer} />
             <Tooltip content="Back to the starter snippet and sample cases">
-              <Button variant="ghost" size="sm" icon="refresh" onClick={reset} disabled={pending} aria-label="Reset the playground" />
+              <Button variant="ghost" size="sm" icon="refresh" onClick={reset} disabled={pending} aria-label="Reset the playground" className={s.resetBtn} />
             </Tooltip>
-            <Button variant="primary" size="sm" icon="play" onClick={onRun} loading={pending} kbd={`${mod}↵`} data-testid="ide-run">
+            <span className={s.spacer} />
+            <Button variant="primary" size="sm" icon="play" onClick={onRun} loading={pending} kbd={touch ? undefined : `${mod}↵`} className={s.runBtn} data-testid="ide-run">
               Run
             </Button>
           </div>
@@ -135,7 +160,7 @@ export function IdeView() {
             />
           </div>
         </section>
-        <section className={s.output} aria-label="Output" data-testid="ide-output">
+        <section ref={outputPane} className={s.output} aria-label="Output" tabIndex={-1} data-testid="ide-output">
           {/* Always mounted, so the outcome is announced when the run finishes. */}
           <div className="sr-only" role="status" aria-live="polite">
             {!pending && results ? runSummary(results) : ''}

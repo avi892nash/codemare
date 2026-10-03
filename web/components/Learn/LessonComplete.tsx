@@ -65,7 +65,7 @@ export function LessonComplete({ trackSlug, lessonSlug, completed, next, startLe
 
   return (
     <section className={s.complete} data-done={done || undefined} aria-label="Lesson progress">
-      <span aria-hidden="true" style={{ color: done ? 'var(--ok-fg)' : 'var(--fg-2)', display: 'inline-flex' }}>
+      <span aria-hidden="true" className={s.completeIcon}>
         <Icon name={done ? 'check-circle' : 'book-open'} size={22} />
       </span>
       <div className={s.completeText} role="status">
@@ -82,12 +82,12 @@ export function LessonComplete({ trackSlug, lessonSlug, completed, next, startLe
       </div>
       {done ? (
         next && (
-          <ButtonLink ref={nextRef} href={next.href} variant="primary" size="sm" iconRight="arrow-right">
+          <ButtonLink ref={nextRef} href={next.href} variant="primary" iconRight="arrow-right" className={s.completeBtn}>
             Continue
           </ButtonLink>
         )
       ) : (
-        <Button variant="primary" size="sm" icon="check" loading={pending} onClick={onComplete}>
+        <Button variant="primary" icon="check" loading={pending} onClick={onComplete} className={s.completeBtn}>
           Mark complete
         </Button>
       )}

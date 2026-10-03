@@ -29,10 +29,10 @@ export function LessonOutline({
   return (
     <nav className={`${s.card} ${s.outline}`} aria-label={`Module ${moduleIndex + 1}: ${mod.title}`}>
       <div className={s.outlineHead}>
-        <span className={s.eyebrow}>
+        <span className={s.outlineKicker}>
           Module {moduleIndex + 1} of {track.modules.length}
         </span>
-        <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg-0)' }}>{mod.title}</span>
+        <span className={s.outlineTitle}>{mod.title}</span>
       </div>
       <ol className={s.outlineList}>
         {moduleProgress.lessons.map(({ lesson, state }) => (
@@ -41,7 +41,7 @@ export function LessonOutline({
               href={`/learn/${track.slug}/${lesson.slug}`}
               aria-current={current.kind === 'lesson' && current.slug === lesson.slug ? 'page' : undefined}
             >
-              <StateIcon state={state} size={14} />
+              <StateIcon state={state} />
               <span>{lesson.title}</span>
             </Link>
           </li>
@@ -49,7 +49,7 @@ export function LessonOutline({
         {cp && (
           <li>
             <Link href={`/learn/${track.slug}/${mod.slug}/checkpoint`} aria-current={current.kind === 'checkpoint' ? 'page' : undefined}>
-              <StateIcon state={cp.passed ? 'completed' : cp.attempts > 0 ? 'failed' : 'not_started'} size={14} />
+              <StateIcon state={cp.passed ? 'completed' : cp.attempts > 0 ? 'failed' : 'not_started'} />
               <span>
                 Checkpoint <span className={s.muted}>· {cp.questions} questions</span>
               </span>
@@ -57,19 +57,18 @@ export function LessonOutline({
           </li>
         )}
       </ol>
-      <div style={{ padding: '12px 14px 4px', borderTop: '1px solid var(--line-2)', marginTop: 8 }}>
+      <div className={s.outlineFoot}>
+        <div className={s.outlineProgress}>
+          <span>{track.title}</span>
+          <span>{trackProgress.percent}%</span>
+        </div>
         <ProgressBar
           value={trackProgress.percent}
           tone={trackProgress.complete ? 'ok' : 'accent'}
-          label={track.title}
-          showValue
+          aria-label={`${track.title}: ${trackProgress.percent}% complete`}
           valueText={`${trackProgress.percent}%`}
         />
-        <Link
-          href={`/learn/${track.slug}`}
-          className="focus-ring"
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 10, fontSize: 12.5, color: 'var(--accent-hi)', textDecoration: 'none', borderRadius: 4 }}
-        >
+        <Link href={`/learn/${track.slug}`} className={`${s.outlineLink} focus-ring`}>
           All modules
           <Icon name="arrow-right" size={12} />
         </Link>

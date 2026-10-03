@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { auth } from '@/auth';
 import { Icon } from '@/components/ui/Icon';
 import { getRelatedLessons } from '@/lib/server/learnViews';
-import { minutes } from './parts';
+import { minutes, StateIcon } from './parts';
 import s from './learn.module.css';
 
 export interface RelatedLessonsProps {
@@ -25,7 +25,9 @@ export interface RelatedLessonsProps {
  *
  * Lessons that list the question in `related_question_slugs` come first;
  * without any, lessons on the question's main topic. Renders nothing when
- * there are none (or the question is unknown / a draft).
+ * there are none (or the question is unknown / a draft). Each lesson is the
+ * same row as a practice problem on a lesson page: the map's glyph (done or
+ * not), the title, one quiet line, a chevron.
  */
 export async function RelatedLessons({ questionSlug, userId, limit = 4, title = 'Learn the technique' }: RelatedLessonsProps) {
   const viewer = userId === undefined ? ((await auth().catch(() => null))?.user?.id ?? null) : userId;
@@ -34,25 +36,22 @@ export async function RelatedLessons({ questionSlug, userId, limit = 4, title = 
   const headingId = `related-lessons-${questionSlug}`;
   return (
     <section className={s.related} aria-labelledby={headingId}>
-      <h2 className={s.sectionTitle} id={headingId} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-        <Icon name="graduation" size={13} />
+      <h2 className={s.relatedTitle} id={headingId}>
         {title}
       </h2>
-      <ul className={s.relatedList}>
+      <ul className={s.linkGrid}>
         {lessons.map((l) => (
           <li key={l.href}>
-            <Link href={l.href} className={`${s.relatedLink} focus-ring`}>
-              <span style={{ color: l.completed ? 'var(--ok-fg)' : 'var(--accent-hi)', display: 'inline-flex', marginTop: 1 }}>
-                <Icon name={l.completed ? 'check-circle' : 'book-open'} size={15} />
-              </span>
-              <span>
-                <span className={s.relatedTitle}>
-                  {l.title}
-                  {l.completed && <span className="sr-only"> (completed)</span>}
-                </span>
-                <span className={s.relatedMeta}>
+            <Link href={l.href} className={`${s.linkRow} focus-ring`}>
+              <StateIcon state={l.completed ? 'completed' : 'not_started'} />
+              <span className={s.linkBody}>
+                <span className={s.linkTitle}>{l.title}</span>
+                <span className={s.linkMeta}>
                   {l.trackTitle} · {l.moduleTitle} · {minutes(l.estMinutes)}
                 </span>
+              </span>
+              <span className={s.linkSide}>
+                <Icon name="chev-right" size={16} />
               </span>
             </Link>
           </li>

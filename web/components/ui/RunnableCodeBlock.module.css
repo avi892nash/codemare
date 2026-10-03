@@ -1,3 +1,7 @@
+/* A lesson's runnable snippet. Type is the shared scale (--fs-*): nothing under --fs-xs (12 px), code at --fs-sm (13 px)
+ * — and 16 px on a phone, because iOS zooms into any field set smaller (the editor is a textarea over the highlighted
+ * code, so the gutter, the code and the field share the size). */
+
 .block {
   background: var(--bg-2);
   border: 1px solid var(--line-2);
@@ -9,19 +13,19 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  min-height: 36px;
+  min-height: 40px;
   padding: 4px 6px 4px 10px;
   background: var(--bg-3);
   border-bottom: 1px solid var(--line-2);
 }
 .title {
-  font-size: 11.5px;
+  font-size: var(--fs-xs);
   color: var(--fg-1);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.langLabel { font-size: 11px; color: var(--fg-2); white-space: nowrap; }
+.langLabel { font-size: var(--fs-xs); color: var(--fg-2); white-space: nowrap; }
 .spacer { flex: 1; }
 
 .editor {
@@ -33,7 +37,7 @@
 .gutter {
   flex: none;
   padding: 12px 0;
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   line-height: 1.55;
 }
 .surface {
@@ -46,7 +50,7 @@
   margin: 0;
   padding: 12px 14px 12px 0;
   font-family: var(--font-mono);
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   line-height: 1.55;
   white-space: pre;
   tab-size: 4;
@@ -84,10 +88,8 @@
   padding: 8px 12px;
 }
 .sectionLabel {
-  font-size: 10.5px;
+  font-size: var(--fs-xs);
   font-weight: 600;
-  letter-spacing: 0.8px;
-  text-transform: uppercase;
   color: var(--fg-2);
 }
 .stdin {
@@ -102,17 +104,18 @@
   background: transparent;
   color: var(--fg-0);
   font-family: var(--font-mono);
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   line-height: 1.55;
 }
 .stdinWrap:focus-within { box-shadow: inset 0 0 0 1px var(--accent-line); }
 
+.running { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-xs); color: var(--fg-2); }
 .metrics {
   display: inline-flex;
   align-items: center;
   gap: 12px;
   margin-left: auto;
-  font-size: 11.5px;
+  font-size: var(--fs-xs);
   color: var(--fg-1);
 }
 .metric { display: inline-flex; align-items: center; gap: 4px; }
@@ -125,7 +128,7 @@
   max-height: 240px;
   overflow: auto;
   font-family: var(--font-mono);
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   line-height: 1.55;
   white-space: pre-wrap;
   word-break: break-word;
@@ -133,3 +136,13 @@
 }
 .stderr { color: var(--err-fg); }
 .muted { color: var(--fg-2); font-style: italic; }
+
+@media (max-width: 720px) {
+  .header { min-height: 52px; padding: 4px 6px 4px 10px; }
+  .header .headBtn { height: 44px; padding: 0 14px; font-size: var(--fs-md); }
+  .gutter,
+  .pre,
+  .textarea,
+  .stdin { font-size: var(--fs-lg); }
+  .stdin { min-height: 64px; }
+}

@@ -9,7 +9,7 @@ import { SubmissionFilters } from '@/components/Submissions/SubmissionFilters';
 import { SubmissionColumnHead, SubmissionRows } from '@/components/Submissions/SubmissionRows';
 import { parseSubmissionQuery, submissionsHref } from '@/components/Submissions/query';
 import { ButtonLink } from '@/components/ui/Button';
-import { Icon } from '@/components/ui/Icon';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { listUserSubmissions } from '@/lib/server/submissionHistory';
 import s from '@/components/Submissions/Submissions.module.css';
 
@@ -30,13 +30,7 @@ export default async function SubmissionsPage({ searchParams }: { searchParams: 
   return (
     <main className={`scroll ${s.main}`}>
       <div className={s.page}>
-        <header className={s.head}>
-          <p className={s.eyebrow}>
-            <Icon name="history" size={13} /> History
-          </p>
-          <h1 className={s.title}>Submissions</h1>
-          <p className={s.sub}>Every run, submit and gate attempt, newest first.</p>
-        </header>
+        <PageHeader title="Submissions" subtitle="Every run, submit and gate attempt, newest first." />
 
         {!data.hasAny ? (
           <div className={s.empty}>
