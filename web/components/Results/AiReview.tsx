@@ -81,7 +81,7 @@ export function AiReview({ submissionId }: { submissionId: string }) {
       {reviews.map((r) => (
         <article key={r.id} className={s.review}>
           <div className={s.meta}>
-            <Pill size="xs" tone={r.depth === 'deep' ? 'accent' : 'muted'}>
+            <Pill size="xs" tone={r.depth === 'deep' ? 'accent' : 'muted'} style={{ fontSize: 'var(--fs-xs)' }}>
               {r.depth === 'deep' ? 'Deeper review' : 'Quick review'}
             </Pill>
             <span className="mono">{r.model}</span>

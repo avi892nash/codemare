@@ -93,7 +93,7 @@ test.beforeEach(async ({ context }) => {
   await context.addCookies(cookies);
 });
 
-test('runs the samples, then submits and gets Accepted with a percentile and tokens', async ({ page }) => {
+test('runs the samples, then submits and gets Accepted with its reward (and no percentile from a handful of solvers)', async ({ page }) => {
   await openProblem(page, 'two-sum', 'python');
   await expect(page.getByTestId('problem-title')).toHaveText('Two Sum');
   await setCode(page, TWO_SUM.python);
@@ -107,9 +107,11 @@ test('runs the samples, then submits and gets Accepted with a percentile and tok
 
   await page.getByTestId('submit-button').click();
   await expect(verdict(page)).toHaveText('Accepted', { timeout: 30_000 });
-  await expect(page.getByTestId('percentile')).toContainText(/Beats \d+(\.\d)?% of Python solutions/);
+  // "Faster than N% of other learners" needs 30 accepted solutions to compare against (results.spec.ts covers it shown).
+  await expect(page.getByTestId('percentile')).toHaveCount(0);
   // A fresh account's first solve pays the question's topic.
-  await expect(page.getByTestId('rewards')).toContainText('+1 Arrays & Hashing');
+  await expect(page.getByTestId('rewards')).toContainText('+1 token');
+  await expect(page.getByTestId('rewards')).toContainText('Arrays & Hashing');
   // Hidden tests show pass/fail only.
   await expect(page.getByTestId('test-row-8')).toContainText('Hidden');
   await expect(page.getByTestId('solved-pill')).toBeVisible();
@@ -119,12 +121,16 @@ test('a wrong answer names the failing test and shows its explain_on_fail note',
   await openProblem(page, 'two-sum', 'python');
   await setCode(page, TWO_SUM.wrongPython);
   await page.getByTestId('submit-button').click();
-  await expect(verdict(page)).toHaveText('Wrong Answer', { timeout: 30_000 });
-  // The first failing visible test opens by itself: input, expected, output and the author's note.
-  const failing = page.getByTestId('test-row-1');
+  await expect(verdict(page)).toHaveText('Wrong answer', { timeout: 30_000 });
+  // The first failing visible test leads, open: input, expected, your output and the author's note.
+  const failing = page.getByTestId('first-failure');
+  await expect(failing).toContainText('Test 2 failed');
   await expect(failing).toContainText('Expected');
+  await expect(failing).toContainText('Your output');
   await expect(failing).toContainText('What this test checks');
   await expect(failing).toContainText('paired with itself');
+  // …and the list of every test stays below it.
+  await expect(page.getByTestId('test-row-1')).toBeVisible();
 });
 
 test('runs in Go and C++, and links a compile error to its line', async ({ page }) => {
@@ -142,7 +148,7 @@ test('runs in Go and C++, and links a compile error to its line', async ({ page 
 
   await setCode(page, TWO_SUM.cppBroken);
   await page.getByTestId('run-button').click();
-  await expect(verdict(page)).toHaveText('Compilation Error', { timeout: 60_000 });
+  await expect(verdict(page)).toHaveText('Compilation error', { timeout: 60_000 });
   await expect(page.getByRole('button', { name: /solution\.cpp:5:\d+/ })).toBeVisible();
 });
 

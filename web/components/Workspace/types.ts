@@ -5,6 +5,8 @@
 import type { Difficulty, Signature, SubmissionKind, SubmissionStatus, SupportedLanguage } from '@/lib/types';
 import type { HintLadder } from '@/lib/server/hints';
 
+export type { NextProblem } from '@/lib/server/nextProblem';
+
 /**
  * question — a published question: Run (samples + custom inputs) and Submit.
  * gate     — a question inside a running gate attempt: Submit counts for the gate.

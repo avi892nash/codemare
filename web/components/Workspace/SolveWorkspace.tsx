@@ -13,12 +13,9 @@ import { Tooltip } from '@/components/ui/Tooltip';
 import { CodeEditor, type CodeEditorHandle, type EditorMarker } from '@/components/Editor/CodeEditor';
 import { LanguageSelector } from '@/components/Editor/LanguageSelector';
 import type { HintLadderProps } from '@/components/Hints/HintLadder';
-import { ResultsHero } from '@/components/Results/ResultsHero';
-import { RunProgress } from '@/components/Results/RunProgress';
-import { TestBreakdown } from '@/components/Results/TestBreakdown';
 import { clearDraft, loadDraft, loadLanguage, saveDraft, saveLanguage } from '@/lib/client/drafts';
-import { formatPercent } from '@/lib/client/format';
 import { LANGUAGE_META, languageLabel, linkErrorLines } from '@/lib/client/languages';
+import { verdictSummary, verdictTitle } from '@/lib/client/resultCopy';
 import type { RunKind } from '@/lib/client/runState';
 import { useRunStream } from '@/lib/client/useRunStream';
 import type { SupportedLanguage } from '@/lib/types';
@@ -26,12 +23,15 @@ import { CasesPanel, customInputs, type CustomCase } from './CasesPanel';
 import { GateBanner } from './GateBanner';
 import { RunErrorNotice } from './RunErrorNotice';
 import { StatementPane } from './StatementPane';
-import type { GateContext, SubmissionSummary, WorkspaceMode, WorkspaceProblem } from './types';
+import type { GateContext, NextProblem, SubmissionSummary, WorkspaceMode, WorkspaceProblem } from './types';
 import { useModKey } from './useModKey';
 import { useSplit } from './useSplit';
 import s from './Workspace.module.css';
 
-const AiReview = dynamic(() => import('@/components/Results/AiReview').then((m) => m.AiReview), { ssr: false });
+// The live result (progress, card, per-test list) is needed only once a run starts: its code and styles load
+// after the page is interactive (and are fetched ahead of the first run), not with the first paint.
+const loadResultPanel = () => import('@/components/Results/ResultPanel').then((m) => m.ResultPanel);
+const ResultPanel = dynamic(loadResultPanel, { ssr: false, loading: () => <p className={s.muted}>Working…</p> });
 
 export interface SolveWorkspaceProps {
   /** question (a published question) · gate (Submit counts for the attempt). */
@@ -56,6 +56,8 @@ export interface SolveWorkspaceProps {
   /** Already has an accepted submission. */
   solved?: boolean;
   bestPercentile?: number | null;
+  /** The next unsolved problem that opens for this learner — "Next problem" after an accepted solve (null: none left). */
+  nextProblem?: NextProblem | null;
   /** FEATURE_AI_REVIEW is on (and a key is configured). */
   aiReview?: boolean;
 }
@@ -122,6 +124,17 @@ export function SolveWorkspace(props: SolveWorkspaceProps) {
     return () => window.clearTimeout(t);
   }, [code, language, restored, scope, starter]);
 
+  // Fetch the result panel ahead of the first run, once the page has had its moment.
+  useEffect(() => {
+    const warm = () => void loadResultPanel();
+    if (typeof window.requestIdleCallback === 'function') {
+      const id = window.requestIdleCallback(warm, { timeout: 4000 });
+      return () => window.cancelIdleCallback(id);
+    }
+    const t = window.setTimeout(warm, 2000);
+    return () => window.clearTimeout(t);
+  }, []);
+
   const switchLanguage = (next: SupportedLanguage) => {
     if (next === language) return;
     saveDraft(scope, language, code, starter(language));
@@ -176,26 +189,13 @@ export function SolveWorkspace(props: SolveWorkspaceProps) {
       if (verdict.status === 'OK' && kind === 'submit') {
         setSolved(true);
         if (verdict.percentile != null) setBest((b) => (b == null ? verdict.percentile! : Math.max(b, verdict.percentile!)));
-        const tokens = verdict.tokensAwarded ?? [];
-        toast({
-          tone: 'ok',
-          title: mode === 'gate' ? 'Accepted — counts for the gate' : 'Accepted',
-          description: [
-            tokens.length ? tokens.map((t) => `+${t.amount} ${t.title}`).join(' · ') : null,
-            verdict.percentile != null ? `beats ${formatPercent(verdict.percentile)}%` : null,
-          ]
-            .filter(Boolean)
-            .join(' · ') || undefined,
-        });
         if (mode === 'gate' && currentSlug) setGateSolved((prev) => new Set(prev).add(currentSlug));
       }
+      // What was earned (tokens, badges) is on the result card itself — no toast on top of it.
       // Layouts don't re-render on their own: refresh so the navbar's token
       // total reflects what was just awarded (editor state is client-side and
       // survives the refresh).
       if (verdict.tokensAwarded?.length) router.refresh();
-      for (const b of verdict.badgesAwarded ?? []) {
-        toast({ tone: 'info', title: `Badge earned: ${b.name}`, description: b.description, duration: 8000 });
-      }
       if (kind === 'submit' && verdict.submissionId) {
         setSubmissions((prev) => [
           {
@@ -241,11 +241,10 @@ export function SolveWorkspace(props: SolveWorkspaceProps) {
   const splitRef = useRef<HTMLDivElement>(null);
   const rightRef = useRef<HTMLDivElement>(null);
   const cols = useSplit('cols', splitRef, { initial: 42, min: 26, max: 62, axis: 'x', label: 'Resize the problem and editor panes' });
-  const rows = useSplit('rows', rightRef, { initial: 60, min: 25, max: 82, axis: 'y', label: 'Resize the editor and console' });
+  const rows = useSplit('rows', rightRef, { initial: 56, min: 25, max: 82, axis: 'y', label: 'Resize the editor and console' });
   const layoutStyle = { '--left': `${cols.ratio}%`, '--top': `${rows.ratio}%` } as CSSProperties;
 
   const verdict = run.phase === 'done' ? run.verdict : null;
-  const firstFailing = verdict ? run.tests.find((t) => !t.passed && !t.hidden)?.idx ?? null : null;
 
   return (
     <main className={s.root} data-mode={mode} style={layoutStyle}>
@@ -373,31 +372,27 @@ export function SolveWorkspace(props: SolveWorkspaceProps) {
                       }
                     />
                   )}
-                  {run.busy && <RunProgress phase={run.phase} kind={run.kind} tests={run.tests} total={run.totalTests} language={languageLabel(language)} />}
                   {run.phase === 'failed' && run.error && <RunErrorNotice error={run.error} onRetry={() => void execute(run.kind === 'submit' ? 'submit' : 'run')} />}
                   {run.phase === 'cancelled' && (
                     <EmptyState size="sm" icon="x" headingLevel={3} title="Cancelled" description="The run was stopped before its verdict." />
                   )}
-                  {verdict && run.kind && (
-                    <>
-                      <ResultsHero
-                        verdict={verdict}
-                        kind={run.kind}
-                        tests={run.tests}
-                        language={language}
-                        timeLimitMs={problem.timeLimitMs}
-                        onLine={onLine}
-                        onSubmit={run.kind === 'run' ? onSubmit : undefined}
-                        onSelectTest={(idx) => document.querySelector<HTMLElement>(`[data-testid="test-row-${idx}"] button`)?.focus()}
-                      />
-                      {props.aiReview && verdict.status === 'OK' && run.kind === 'submit' && verdict.submissionId && (
-                        <AiReview submissionId={verdict.submissionId} />
-                      )}
-                      <TestBreakdown tests={run.tests} signature={problem.signature} openIdx={firstFailing} onLine={onLine} />
-                    </>
+                  {(run.busy || verdict) && (
+                    <ResultPanel
+                      run={run}
+                      language={language}
+                      languageName={languageLabel(language)}
+                      signature={problem.signature}
+                      timeLimitMs={problem.timeLimitMs}
+                      mode={mode}
+                      next={props.nextProblem}
+                      gateHref={gate?.backHref}
+                      aiReview={props.aiReview}
+                      onLine={onLine}
+                      onSubmit={onSubmit}
+                    />
                   )}
                   <div className="sr-only" role="status" aria-live="polite">
-                    {verdict ? `${verdict.status === 'OK' ? 'Passed' : verdict.status}: ${verdict.totalPassed} of ${verdict.totalTests} tests passed.` : ''}
+                    {verdict && run.kind ? `${verdictTitle(verdict.status, run.kind)}. ${verdictSummary(verdict, run.kind, run.tests, { timeLimitMs: problem.timeLimitMs, mode })}` : ''}
                   </div>
                 </div>
               )}

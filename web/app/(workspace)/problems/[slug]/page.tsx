@@ -12,10 +12,12 @@ import { SolveWorkspace } from '@/components/Workspace/SolveWorkspace';
 import type { GateContext, SubmissionSummary } from '@/components/Workspace/types';
 import { canAccessQuestion } from '@/lib/server/access';
 import { aiReviewEnabled } from '@/lib/server/aiReview';
+import { comparableLanguages, percentileSamples } from '@/lib/server/awards';
 import { prisma } from '@/lib/server/db';
 import { NotFoundError } from '@/lib/server/errors';
 import { getGateAttempt } from '@/lib/server/gates';
 import { getHintLadder } from '@/lib/server/hints';
+import { getNextProblem } from '@/lib/server/nextProblem';
 import { lockedTopicBlockers } from '@/lib/server/runner';
 import { codeByLanguageSchema, exampleSchema, parseJsonColumn, signatureSchema, testDefSchema } from '@/lib/server/schemas';
 import { LANGUAGES, type SupportedLanguage } from '@/lib/types';
@@ -97,7 +99,7 @@ export default async function ProblemPage({ params, searchParams }: { params: Pa
   }
   const mode = gate ? 'gate' : 'question';
 
-  const [recent, latestPerLanguage, best, hints] = await Promise.all([
+  const [recent, latestPerLanguage, acceptedByLanguage, samples, hints, nextProblem] = await Promise.all([
     prisma.submission.findMany({
       where: { userId, questionId: q.id, kind: { in: ['submit', 'gate'] } },
       orderBy: { createdAt: 'desc' },
@@ -110,14 +112,24 @@ export default async function ProblemPage({ params, searchParams }: { params: Pa
       distinct: ['language'],
       select: { language: true, code: true, createdAt: true },
     }),
-    prisma.submission.aggregate({
+    prisma.submission.groupBy({
+      by: ['language'],
       where: { userId, questionId: q.id, kind: 'submit', status: 'OK' },
       _max: { percentile: true },
       _count: { _all: true },
     }),
+    percentileSamples(q.id),
     gate ? null : getHintLadder(userId, { questionId: q.id }),
+    // "Next problem" after an accepted solve; a gate attempt goes back to the gate instead.
+    gate ? null : getNextProblem(userId, q.id),
   ]);
-  const solved = best._count._all > 0 || recent.some((s) => s.status === 'OK');
+  const solved = acceptedByLanguage.some((g) => g._count._all > 0) || recent.some((s) => s.status === 'OK');
+  // A stored percentile is shown only where enough learners' solutions stand behind it (spec §3.8).
+  const comparable = comparableLanguages(samples);
+  const bestPercentile = acceptedByLanguage.reduce<number | null>(
+    (best, g) => (comparable.has(g.language) && g._max.percentile != null ? Math.max(best ?? 0, g._max.percentile) : best),
+    null
+  );
 
   const signature = parseJsonColumn(signatureSchema, q.signature, `questions.signature (${q.slug})`);
   const tests = parseJsonColumn(z.array(testDefSchema), q.tests, `questions.tests (${q.slug})`);
@@ -138,12 +150,13 @@ export default async function ProblemPage({ params, searchParams }: { params: Pa
     language: s.language,
     runtimeUs: s.runtimeUs == null ? null : Number(s.runtimeUs),
     memoryKb: s.memoryKb,
-    percentile: s.percentile,
+    percentile: comparable.has(s.language) ? s.percentile : null,
     createdAt: s.createdAt.toISOString(),
   }));
 
   return (
     <SolveWorkspace
+      key={q.id}
       mode={mode}
       problem={{
         id: q.id,
@@ -183,7 +196,8 @@ export default async function ProblemPage({ params, searchParams }: { params: Pa
       hints={hints ? { target: { questionId: q.id }, initial: hints } : null}
       gate={gate}
       solved={solved}
-      bestPercentile={best._max.percentile}
+      bestPercentile={bestPercentile}
+      nextProblem={nextProblem}
       aiReview={aiReviewEnabled()}
     />
   );

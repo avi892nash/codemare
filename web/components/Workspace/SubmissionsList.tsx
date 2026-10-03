@@ -35,14 +35,19 @@ export function SubmissionsList({ submissions }: { submissions: SubmissionSummar
             <tr key={sub.id}>
               <td>
                 <Link href={`/submissions/${sub.id}`} className={`${s.subLink} focus-ring`} aria-label={`Open submission from ${timeAgo(sub.createdAt)}`}>
-                  <StatusPill code={code} size="xs" showLong={code === 'OK'} />
+                  <StatusPill code={code} size="xs" showLong={code === 'OK'} style={{ fontSize: 'var(--fs-xs)' }} />
                   {sub.kind === 'gate' && <span className={s.subKind}>gate</span>}
                 </Link>
               </td>
               <td>{languageLabel(sub.language)}</td>
               <td className={`${s.num} mono`}>
                 {text(formatMicros(sub.runtimeUs))}
-                {sub.percentile != null && sub.status === 'OK' && <span className={s.subBeats}> · {formatPercent(sub.percentile)}%</span>}
+                {sub.percentile != null && sub.status === 'OK' && (
+                  <span className={s.subBeats} title={`Faster than ${formatPercent(sub.percentile)}% of other learners`}>
+                    {' '}
+                    · {formatPercent(sub.percentile)}%
+                  </span>
+                )}
               </td>
               <td className={`${s.num} mono`}>{text(formatKb(sub.memoryKb))}</td>
               <td className={s.subWhen}>

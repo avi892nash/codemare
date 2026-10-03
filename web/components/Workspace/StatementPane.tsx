@@ -75,13 +75,13 @@ export function StatementPane({ mode, problem, eyebrow, statement, editorial, su
         <div className={s.titleMeta}>
           <DifficultyPill level={problem.difficulty} />
           {solved && (
-            <Pill tone="ok" size="sm" icon="check-circle" data-testid="solved-pill">
+            <Pill tone="ok" size="sm" icon="check-circle" data-testid="solved-pill" style={{ fontSize: 'var(--fs-xs)' }}>
               Solved
             </Pill>
           )}
           {bestPercentile != null && (
-            <Pill tone="muted" size="sm" icon="trend" title="Your best runtime percentile on this problem">
-              Best: beats {formatPercent(bestPercentile)}%
+            <Pill tone="muted" size="sm" icon="trend" title="Your best runtime on this problem, compared with other learners" style={{ fontSize: 'var(--fs-xs)' }}>
+              Best: faster than {formatPercent(bestPercentile)}% of learners
             </Pill>
           )}
         </div>
