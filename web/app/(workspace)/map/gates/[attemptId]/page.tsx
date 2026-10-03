@@ -1,11 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { LoopHero, LoopPage, SectionHead } from '@/components/Loop/LoopPage';
+import { LoopHero, SectionHead } from '@/components/Loop/LoopHead';
+import { LoopPage } from '@/components/Loop/LoopPage';
 import { LocalTime } from '@/components/Loop/Countdown';
 import { requireViewer } from '@/components/Learn/viewer';
 import { AttemptClock, AttemptLive, CooldownClock, FinishGateButton } from '@/components/Map/GateAttempt';
-import s from '@/components/Map/map.module.css';
+import s from '@/components/Map/attempt.module.css';
 import { Breadcrumb } from '@/components/ui/Breadcrumb';
 import { ButtonLink } from '@/components/ui/Button';
 import { DifficultyPill } from '@/components/ui/DifficultyPill';

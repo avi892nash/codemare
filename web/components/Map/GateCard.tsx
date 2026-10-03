@@ -1,25 +1,14 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useCallback, useState } from 'react';
+import { useCallback, useState, type ReactNode } from 'react';
 import { startGateAction, type ActionError } from '@/app/(workspace)/map/actions';
 import { Countdown, LocalTime } from '@/components/Loop/Countdown';
-import { plural } from '@/components/Loop/awards';
 import { Button, ButtonLink } from '@/components/ui/Button';
-import { Icon, type IconName } from '@/components/ui/Icon';
+import { Icon } from '@/components/ui/Icon';
 import { Modal } from '@/components/ui/Modal';
-import { Pill, type PillTone } from '@/components/ui/Pill';
 import type { GateCardView } from '@/lib/server/loopViews';
-import type { GateState } from '@/lib/server/gates';
 import s from './map.module.css';
-
-const STATE: Record<GateState, { label: string; tone: PillTone; icon: IconName }> = {
-  eligible: { label: 'Open to you', tone: 'accent', icon: 'play' },
-  running: { label: 'In progress', tone: 'warn', icon: 'clock' },
-  cooldown: { label: 'Cooling down', tone: 'muted', icon: 'history' },
-  passed: { label: 'Passed', tone: 'ok', icon: 'check' },
-  previous_tier_closed: { label: 'Not yet', tone: 'muted', icon: 'lock' },
-};
 
 function gateError(e: ActionError): string {
   if (e.error === 'gate_not_eligible') {
@@ -32,11 +21,13 @@ function gateError(e: ActionError): string {
 }
 
 /**
- * The gate that opens a tier: what it asks (problems, threshold, time,
- * cooldown) and its state for this learner — start it (with a
- * confirmation), continue a running attempt, a cooldown countdown, or
- * passed. Countdowns refresh the map when they run out, so the server can
- * settle the attempt.
+ * The gate that opens a closed tier, in one line: its name, what it asks
+ * ("Solve 3 of 4 in 45 min") and — when the learner can act — one button.
+ * Its problems are in the topics' lists and in the confirmation, and the
+ * cooldown is in the confirmation too: this card does not repeat them. The
+ * button starts the gate after a confirmation, continues a running attempt
+ * or opens the last one; a cooling gate counts down (and refreshes the map
+ * when it runs out, so the server can settle the state).
  */
 export function GateCard({ gate, tier }: { gate: GateCardView; tier: { slug: string; title: string } }) {
   const router = useRouter();
@@ -45,7 +36,6 @@ export function GateCard({ gate, tier }: { gate: GateCardView; tier: { slug: str
   const [error, setError] = useState<string | null>(null);
   const refresh = useCallback(() => router.refresh(), [router]);
   const titleId = `gate-${gate.id}-title`;
-  const meta = STATE[gate.state];
 
   const start = async () => {
     if (pending) return;
@@ -69,105 +59,67 @@ export function GateCard({ gate, tier }: { gate: GateCardView; tier: { slug: str
     }
   };
 
+  const asks = `Solve ${gate.passThreshold} of ${gate.questionCount} in ${gate.timeLimitMinutes} min`;
+  let line: ReactNode = asks;
+  if (gate.state === 'eligible' && gate.last && gate.last.passed === false) {
+    line = (
+      <>
+        {asks} · last try: {gate.last.passedCount} of {gate.passThreshold} needed
+      </>
+    );
+  } else if (gate.state === 'running') {
+    line = <>Attempt in progress</>;
+  } else if (gate.state === 'cooldown' && gate.nextEligibleAt) {
+    line = (
+      <>
+        Retry in <Countdown to={gate.nextEligibleAt} onExpire={refresh} expiredText="a moment" /> · at <LocalTime iso={gate.nextEligibleAt} />
+      </>
+    );
+  } else if (gate.state === 'previous_tier_closed') {
+    line = (
+      <>
+        {asks} · available once{' '}
+        {gate.previousTier ? (
+          <a href={`#tier-${gate.previousTier.slug}`} className={`${s.inlineLink} focus-ring`}>
+            {gate.previousTier.title}
+          </a>
+        ) : (
+          'the tier before it'
+        )}{' '}
+        is open
+      </>
+    );
+  } else if (gate.state === 'passed') {
+    line = <>Passed{gate.last?.finishedAt && <> · <LocalTime iso={gate.last.finishedAt} /></>}</>;
+  }
+
   return (
     <section className={s.gate} data-state={gate.state} id={`gate-${gate.id}`} aria-labelledby={titleId} data-testid={`gate-${tier.slug}`}>
       <span className={s.gateIcon} aria-hidden="true">
-        <Icon name="shield" size={18} />
+        <Icon name="shield" size={16} />
       </span>
-      <div className={s.gateMain}>
-        <div className={s.gateTop}>
-          <h3 className={s.gateTitle} id={titleId}>
-            {gate.title}
-          </h3>
-          <Pill tone={meta.tone} size="xs" icon={meta.icon} data-testid="gate-state">
-            {meta.label}
-          </Pill>
-        </div>
-        <p className={s.gateSummary}>{gate.summary}</p>
-        <ul className={s.facts}>
-          <li>
-            <Icon name="list" size={12} /> {plural(gate.questionCount, 'problem')}
-          </li>
-          <li>
-            <Icon name="target" size={12} /> pass with {gate.passThreshold}
-          </li>
-          <li>
-            <Icon name="clock" size={12} /> {gate.timeLimitMinutes} min
-          </li>
-          <li>
-            <Icon name="history" size={12} /> {gate.cooldownHours} h cooldown after a miss
-          </li>
-        </ul>
-        {gate.questions.length > 0 && (
-          <ul className={s.gateQs} aria-label={`${gate.title} problems`}>
-            {gate.questions.map((q) => (
-              <li key={q.slug} className={s.gateQ}>
-                <span className={s.diffDot} data-level={q.difficulty} aria-hidden="true" />
-                <span>
-                  {q.title}
-                  <span className="sr-only"> ({q.difficulty})</span>
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
+      <div className={s.gateText}>
+        <h3 className={s.gateTitle} id={titleId}>
+          {gate.title}
+        </h3>
+        <p className={s.gateLine}>{line}</p>
       </div>
 
       <div className={s.gateAction}>
         {gate.state === 'eligible' && (
-          <>
-            <Button variant="primary" icon="play" onClick={() => setConfirming(true)} data-testid="start-gate">
-              Start the gate
-            </Button>
-            {gate.last && gate.last.passed === false && (
-              <p className={s.gateNote}>
-                Last try: {gate.last.passedCount} of {gate.passThreshold} needed.
-              </p>
-            )}
-          </>
+          <Button variant="primary" size="sm" icon="play" onClick={() => setConfirming(true)} data-testid="start-gate">
+            Start the gate
+          </Button>
         )}
         {gate.state === 'running' && gate.running && (
-          <>
-            <span className={s.gateClock}>
-              <Icon name="clock" size={14} />
-              <Countdown to={gate.running.deadlineAt} onExpire={refresh} expiredText="Time’s up" />
-              <span className="sr-only"> left</span>
-            </span>
-            <ButtonLink href={`/map/gates/${encodeURIComponent(gate.running.attemptId)}`} variant="primary" iconRight="arrow-right">
-              Continue attempt
-            </ButtonLink>
-          </>
+          <ButtonLink href={`/map/gates/${encodeURIComponent(gate.running.attemptId)}`} variant="primary" size="sm" iconRight="arrow-right">
+            Continue attempt
+          </ButtonLink>
         )}
-        {gate.state === 'cooldown' && gate.nextEligibleAt && (
-          <>
-            <p className={s.gateNote}>
-              Retry in{' '}
-              <strong>
-                <Countdown to={gate.nextEligibleAt} onExpire={refresh} expiredText="a moment" />
-              </strong>
-              <br />
-              at <LocalTime iso={gate.nextEligibleAt} />
-            </p>
-            {gate.last && (
-              <ButtonLink href={`/map/gates/${encodeURIComponent(gate.last.attemptId)}`} size="sm" variant="ghost">
-                Last attempt · {gate.last.passedCount}/{gate.passThreshold}
-              </ButtonLink>
-            )}
-          </>
-        )}
-        {gate.state === 'passed' && (
-          <p className={s.gateNote}>
-            <strong>{tier.title}</strong> is open
-            {gate.last?.finishedAt && (
-              <>
-                <br />
-                passed <LocalTime iso={gate.last.finishedAt} />
-              </>
-            )}
-          </p>
-        )}
-        {gate.state === 'previous_tier_closed' && (
-          <p className={s.gateNote}>Opens once {gate.previousTier?.title ?? 'the tier before'} is open.</p>
+        {gate.state === 'cooldown' && gate.last && (
+          <ButtonLink href={`/map/gates/${encodeURIComponent(gate.last.attemptId)}`} size="sm" variant="ghost">
+            Last attempt · {gate.last.passedCount}/{gate.passThreshold}
+          </ButtonLink>
         )}
       </div>
 
