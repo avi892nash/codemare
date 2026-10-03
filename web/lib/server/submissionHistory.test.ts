@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { EMPTY_SUBMISSION_QUERY, type SubmissionQuery } from '@/components/Submissions/query';
 import { getSubmissionView, listUserSubmissions } from './submissionHistory';
 import { completeSubmission, createSubmission } from './submissions';
+import { MIN_PERCENTILE_SAMPLE } from './rules/scoring';
 import { prisma, setupTestDatabase } from './test/db';
 import { makeQuestion, makeSubmission, makeUser, makeWorld } from './test/factories';
 
@@ -133,3 +134,49 @@ describe('getSubmissionView', () => {
     expect(v?.tests[0].args).toEqual([{ name: null, value: 1 }]);
   });
 });
+
+describe('getSubmissionView: the percentile', () => {
+  /** An accepted submit with a stored percentile; `others` more learners with an accepted solve of the same problem. */
+  async function acceptedWithCrowd(others: number, language: 'python' | 'javascript' = 'python') {
+    const w = await makeWorld();
+    const me = await makeUser();
+    const mine = await makeSubmission(me.id, { questionId: w.q1.id, status: 'OK', kind: 'submit', language: 'python', runtimeUs: 500 });
+    await prisma.submission.update({ where: { id: mine.id }, data: { percentile: 87.5 } });
+    for (let i = 0; i < others; i++) {
+      const u = await makeUser();
+      await makeSubmission(u.id, { questionId: w.q1.id, status: 'OK', kind: 'submit', language, runtimeUs: 400 + i });
+    }
+    return { me, mine };
+  }
+
+  it('hides it while the learner is the only one with an accepted solution', async () => {
+    const alone = await acceptedWithCrowd(0);
+    expect((await getSubmissionView(alone.me.id, alone.mine.id))!.percentile).toBeNull();
+  });
+
+  it('hides it one learner short of 30', async () => {
+    const nearly = await acceptedWithCrowd(MIN_PERCENTILE_SAMPLE - 2); // 29 learners with this one
+    expect((await getSubmissionView(nearly.me.id, nearly.mine.id))!.percentile).toBeNull();
+  });
+
+  it('shows the stored value once 30 learners are behind it', async () => {
+    const enough = await acceptedWithCrowd(MIN_PERCENTILE_SAMPLE - 1); // 30 learners with this one
+    expect((await getSubmissionView(enough.me.id, enough.mine.id))!.percentile).toBe(87.5);
+  });
+
+  it('counts only solutions in the same language', async () => {
+    const elsewhere = await acceptedWithCrowd(MIN_PERCENTILE_SAMPLE + 5, 'javascript');
+    expect((await getSubmissionView(elsewhere.me.id, elsewhere.mine.id))!.percentile).toBeNull();
+  });
+
+  it('has none for a submission that was not an accepted submit', async () => {
+    const w = await makeWorld();
+    const me = await makeUser();
+    const gate = await makeSubmission(me.id, { questionId: w.q1.id, status: 'OK', kind: 'gate' });
+    const wrong = await makeSubmission(me.id, { questionId: w.q1.id, status: 'WA', kind: 'submit' });
+    await prisma.submission.updateMany({ where: { id: { in: [gate.id, wrong.id] } }, data: { percentile: 50 } });
+    expect((await getSubmissionView(me.id, gate.id))!.percentile).toBeNull();
+    expect((await getSubmissionView(me.id, wrong.id))!.percentile).toBeNull();
+  });
+});
+

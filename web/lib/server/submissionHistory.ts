@@ -2,8 +2,10 @@ import 'server-only';
 import type { Prisma } from '@prisma/client';
 import type { Difficulty, SubmissionKind, SubmissionStatus, SupportedLanguage } from '@/lib/types';
 import { SUBMISSIONS_PAGE_SIZE, type SubmissionQuery } from '@/components/Submissions/query';
+import { percentileSamples } from './awards';
 import { prisma } from './db';
 import { hasRole } from './rules/roles';
+import { percentileToShow } from './rules/scoring';
 import { signatureSchema } from './schemas';
 import { getSubmissionDetail } from './submissions';
 
@@ -150,6 +152,11 @@ export interface SubmissionView {
   memoryKb: number | null;
   compileMs: number | null;
   error: string | null;
+  /**
+   * "Faster than N% of other learners", or null: only an accepted submit has one, and it is shown only when 30
+   * learners' accepted solutions in this language stand behind it (MIN_PERCENTILE_SAMPLE) — with two or three the
+   * comparison says nothing. The stored value is unchanged.
+   */
   percentile: number | null;
   createdAt: Date;
   subject: SubmissionSubject;
@@ -197,6 +204,13 @@ export async function getSubmissionView(viewerId: string, submissionId: string):
   const detail = await getSubmissionDetail(meta.userId, submissionId);
   if (!detail) return null;
   const names = paramNames(meta.question?.signature);
+  // The percentile was stored when the solve was judged; whether it may be shown depends on how many solutions it
+  // compares with today.
+  let percentile: number | null = null;
+  if (detail.status === 'OK' && detail.kind === 'submit' && detail.question && detail.percentile != null) {
+    const samples = await percentileSamples(detail.question.id);
+    percentile = percentileToShow(detail.percentile, samples.get(detail.language) ?? 0);
+  }
 
   return {
     id: detail.id,
@@ -210,7 +224,7 @@ export async function getSubmissionView(viewerId: string, submissionId: string):
     memoryKb: detail.memoryKb,
     compileMs: detail.compileMs,
     error: detail.error,
-    percentile: detail.percentile,
+    percentile,
     createdAt: detail.createdAt,
     subject: toSubject(meta),
     owner: meta.user,
