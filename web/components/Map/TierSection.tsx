@@ -24,13 +24,14 @@ function TierHeading({ tier, titleId }: { tier: TierView; titleId: string }) {
 /**
  * One tier of the map. An open tier is shown in full: its header and every
  * topic as a row. A closed tier is ONE compact panel — its name, why it is
- * closed in a line, and its topics as a quiet row of posters and names — that
- * opens (a <details>: keyboard-operable, no script) to the gate that opens it
- * and its topics. The blocker is said once, here, instead of on every topic.
- * Either way the tier answers to `#tier-<slug>`, and a link to something
- * inside a closed panel opens it (components/Loop/HashScroll).
+ * closed in a line (the gate that opens it, and what a gate is), and its
+ * topics as a quiet row of posters and names — that opens (a <details>:
+ * keyboard-operable, no script) to that gate and its topics. The blocker is
+ * said once, here, instead of on every topic. Either way the tier answers to
+ * `#tier-<slug>`, and a link to something inside a closed panel opens it
+ * (components/Loop/HashScroll). `openTopics` are the rows that open with the page.
  */
-export function TierSection({ tier, balances, openTopic }: { tier: TierView; balances: BalanceIndex; openTopic: string | null }) {
+export function TierSection({ tier, balances, openTopics }: { tier: TierView; balances: BalanceIndex; openTopics: ReadonlySet<string> }) {
   const titleId = `tier-${tier.slug}-title`;
 
   if (tier.open) {
@@ -43,7 +44,7 @@ export function TierSection({ tier, balances, openTopic }: { tier: TierView; bal
         <ul className={s.topics} aria-label={`${tier.title} topics`}>
           {tier.topics.map((t) => (
             <li key={t.id}>
-              <TopicCard topic={t} balances={balances} defaultOpen={t.slug === openTopic} />
+              <TopicCard topic={t} balances={balances} defaultOpen={openTopics.has(t.slug)} />
             </li>
           ))}
         </ul>
@@ -63,7 +64,7 @@ export function TierSection({ tier, balances, openTopic }: { tier: TierView; bal
             </span>
           </div>
         </div>
-        <p className={s.tierReason}>{tier.gate ? `Opens after the ${tier.gate.title}` : 'Closed for now'}</p>
+        <p className={s.tierReason}>{tier.gate ? `Opens after the ${tier.gate.title} — a timed set of ${tier.gate.questionCount} problems` : 'Closed for now'}</p>
         <div className={s.tierPreview}>
           {tier.topics.map((t) => (
             <span key={t.id} className={s.previewItem}>

@@ -3,9 +3,10 @@ import { cookies } from 'next/headers';
 import { HashScroll } from '@/components/Loop/HashScroll';
 import { LoopPage } from '@/components/Loop/LoopPage';
 import { requireViewer } from '@/components/Learn/viewer';
-import { FirstRun } from '@/components/Map/FirstRun';
 import { FIRST_RUN_COOKIE } from '@/components/Map/firstRunCookie';
-import { MapHero } from '@/components/Map/MapHero';
+import { HowItWorks, HowItWorksCard } from '@/components/Map/HowItWorks';
+import { MapHeader, MapHero } from '@/components/Map/MapHero';
+import { MapMemory } from '@/components/Map/MapMemory';
 import { RunningAttemptBanner } from '@/components/Map/RunningAttemptBanner';
 import { TierSection } from '@/components/Map/TierSection';
 import type { BalanceIndex } from '@/components/Map/TopicActions';
@@ -20,14 +21,15 @@ export const metadata: Metadata = { title: 'Tier map · Codemare' };
 export const dynamic = 'force-dynamic';
 
 /**
- * T1 — the tier map, and the home page: a small header with one line of
- * progress, a hero featuring the topic to work on next (animated art, its
- * progress and one button) and, only when there is one, a single milestone
- * line under it; a first-run card while nothing is solved; then every tier —
- * the open ones in full, each closed one as a compact panel with the gate that
- * opens it — and every topic as a row that opens to its problems (listed once
- * it is unlocked), or to what is blocking it. Reading it lazily finishes an
- * expired gate attempt.
+ * T1 — the tier map, and the home page: the shared page header with one line
+ * of progress, a hero featuring what to do next (a topic's animated art, its
+ * progress and one button — or the gate, once there is nothing left to solve)
+ * and, only when there is one, a single milestone line under it; the "How it
+ * works" card while nothing is solved (and whenever the learner asks for it);
+ * then every tier — the open ones in full, each closed one as a compact panel
+ * with the gate that opens it — and every topic as a row that opens to its
+ * problems (listed once it is unlocked), or to what is blocking it. Reading it
+ * lazily finishes an expired gate attempt.
  */
 export default async function MapPage() {
   const viewer = await requireViewer('/map');
@@ -39,8 +41,11 @@ export default async function MapPage() {
   const featured = pickFeaturedTopic(view.tiers);
   const milestone = pickMilestone(view.tiers, featured);
   const firstRun = totals.solved === 0 && jar.get(FIRST_RUN_COOKIE)?.value !== 'hide';
-  // Past the first problem, the topic the hero is about has its problems open; everything else is one row.
-  const openTopic = featured && (featured.reason === 'start' || featured.reason === 'continue') && totals.solved > 0 ? featured.topic.slug : null;
+  // The rows that open with the page: past the first problem, the topic the hero is about, and the topic of the problem the
+  // learner touched last; everything else is one row. (The rows they open themselves are kept by <MapMemory>.)
+  const openTopics = new Set<string>();
+  if (featured && (featured.reason === 'start' || featured.reason === 'continue') && totals.solved > 0) openTopics.add(featured.topic.slug);
+  if (view.lastTouchedTopic) openTopics.add(view.lastTouchedTopic);
   // The first rows are the ones in view when the page opens — one on a phone (the hero and the steps come first), three
   // wider up: ask for their scenes now, at low priority, so they are in hand by the time the page hydrates and <ArtInView>
   // wants them (the rest load as their rows come near). The media queries keep a phone from fetching what it will not show.
@@ -54,12 +59,17 @@ export default async function MapPage() {
       {firstScenes.map(({ href, media }) => (
         <link key={href} rel="preload" as="fetch" href={href} media={media} crossOrigin="anonymous" fetchPriority="low" />
       ))}
-      <MapHero featured={featured} milestone={milestone} totals={totals} />
-      {view.running && <RunningAttemptBanner running={view.running} />}
-      {firstRun && <FirstRun />}
+      <HowItWorks initialOpen={firstRun}>
+        <div className={s.mapHead}>
+          <MapHeader totals={totals} />
+          <MapHero featured={featured} milestone={milestone} />
+        </div>
+        {view.running && <RunningAttemptBanner running={view.running} />}
+        <HowItWorksCard />
+      </HowItWorks>
       <div className={s.tiers}>
         {view.tiers.map((tier) => (
-          <TierSection key={tier.id} tier={tier} balances={balances} openTopic={openTopic} />
+          <TierSection key={tier.id} tier={tier} balances={balances} openTopics={openTopics} />
         ))}
         {view.unfiled.length > 0 && (
           <section className={s.tier} aria-labelledby="unfiled-title" data-testid="unfiled-problems">
@@ -77,6 +87,7 @@ export default async function MapPage() {
           </section>
         )}
       </div>
+      <MapMemory />
       <HashScroll />
     </LoopPage>
   );

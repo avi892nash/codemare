@@ -3,19 +3,26 @@
  * --fs-xs (12px), and the whole module uses six sizes: 12 · 13 · 14 · 16 · 20 · 26. */
 
 /* ── page header and hero ───────────────────────────────────── */
+/* The shared PageHeader (its own 24 px under it, less the 12 the column's gap adds) and the hero and its milestone under it. */
 .mapHead { display: flex; flex-direction: column; gap: 12px; }
-.mapTop { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 16px; }
-/* the page's h1, small on purpose: the hero below is what the page is for */
-.mapTitle {
-  margin: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: var(--fs-sm);
-  font-weight: 600;
-  color: var(--fg-1);
+.mapHead > header { margin-bottom: 12px; }
+/* "How it works", at the end of the line of progress: a link in all but name, with a hit area a thumb can find. */
+.howLink {
+  display: inline;
+  margin: 0 -8px 0 -4px;
+  padding: 13px 8px;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--accent-hi);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  border-radius: var(--r-sm);
 }
-.mapMeta { margin: 0; font-size: var(--fs-sm); color: var(--fg-2); font-variant-numeric: tabular-nums; }
+.howLink:hover { color: var(--fg-0); }
+/* a line of progress that has to wrap does so between its parts, not inside one */
+.nowrap { white-space: nowrap; }
 
 /* The featured topic: its art, its name, how far you are, and the one button. --a is the topic's hue. */
 .feature {
@@ -83,8 +90,11 @@
 .milestoneText { flex: 1; min-width: 0; }
 .milestoneText strong { font-weight: 600; color: var(--fg-0); }
 @media (max-width: 480px) {
-  .milestone { padding: 6px 6px 6px 12px; gap: 8px 10px; }
-  .milestone > :last-child { flex: none; min-height: 44px; padding: 0 14px; }
+  /* the sentence is long: it gets the width, and the button its own full-width row under it */
+  .milestone { flex-wrap: wrap; align-items: flex-start; padding: 12px; gap: 8px 10px; }
+  .milestone > svg { margin-top: 2px; }
+  .milestoneText { flex: 1 1 calc(100% - 30px); }
+  .milestone > :last-child { flex: 1 1 100%; justify-content: center; min-height: 44px; }
 }
 
 /* The first-run card: three steps in one row (stacked on a phone) and a button to be done with it. */

@@ -50,6 +50,7 @@ function Blocker({ blocker, topicTitle }: { blocker: TopicBlockerView; topicTitl
   return (
     <div className={s.blocker} data-testid="blocker">
       <p className={s.label}>What’s blocking you</p>
+      <p className={s.blockerText}>A recipe is one set of tokens that opens a topic.</p>
       <p className={s.blockerText}>
         Cheapest recipe, <strong>{blocker.recipeTitle}</strong>: {plural(blocker.missing, 'more token')}.
       </p>

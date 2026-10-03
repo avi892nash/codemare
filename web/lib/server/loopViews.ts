@@ -176,9 +176,16 @@ export interface MapView {
     topicsTotal: number;
     tiersOpen: number;
     tiersTotal: number;
-    /** Distinct published problems this learner has solved (the first-run card shows while it is 0). */
+    /** Distinct published problems (a composite question counts once). */
+    problems: number;
+    /** …of which this learner has solved (the first-run card shows while it is 0). */
     solved: number;
   };
+  /**
+   * The unlocked topic of the problem this learner ran or submitted last (its heaviest topic first, a locked one
+   * skipped), so the map can open that row; null when they have touched nothing, or only what is not open to them.
+   */
+  lastTouchedTopic: string | null;
   /** The learner's running gate attempt, if any. */
   running: {
     attemptId: string;
@@ -340,7 +347,7 @@ export async function getMapView(userId: string, now: Date = new Date()): Promis
   const balances: Balances = Object.fromEntries(map.tiers.flatMap((t) => t.topics.map((topic) => [topic.id, topic.balance.byDifficulty])));
   const unlocked = new Set(map.tiers.flatMap((t) => t.topics.filter((topic) => topic.status === 'unlocked').map((topic) => topic.id)));
 
-  const [earnable, gates, recipeTitles, problems] = await Promise.all([
+  const [earnable, gates, recipeTitles, problems, latest] = await Promise.all([
     loadEarnableQuestions(userId, unlocked),
     prisma.gate.findMany({
       select: {
@@ -353,18 +360,25 @@ export async function getMapView(userId: string, now: Date = new Date()): Promis
       select: { id: true, title: true },
     }),
     listTopicProblems(userId, now),
+    // Whatever the learner ran, submitted or attempted in a gate most recently: the row of its topic opens on the map.
+    prisma.submission.findFirst({ where: { userId, questionId: { not: null } }, orderBy: { createdAt: 'desc' }, select: { questionId: true } }),
   ]);
   const gateQuestions = new Map(gates.map((g) => [g.id, g.questions.map((q) => q.question)]));
-  // This learner's solved problems, by question — for the gates' "n solved" and the page's total.
+  // This learner's solved problems, by question — for the gates' "n solved" and the page's totals — and every published
+  // problem once (a composite sits in the lists of all its topics).
   const solvedSlugs = new Set<string>();
   const solvedIds = new Set<string>();
+  const byQuestion = new Map<string, TopicProblem>();
   for (const list of [...problems.byTopic.values(), problems.unfiled]) {
     for (const p of list) {
+      byQuestion.set(p.id, p);
       if (p.progress !== 'solved') continue;
       solvedSlugs.add(p.slug);
       solvedIds.add(p.id);
     }
   }
+  const touched = latest?.questionId ? byQuestion.get(latest.questionId) : undefined;
+  const lastTouchedTopic = touched?.topicIds.map((id) => topics.get(id)).find((t): t is TopicLite => !!t && unlocked.has(t.id))?.slug ?? null;
   const recipeTitle = new Map(recipeTitles.map((r) => [r.id, r.title]));
   const problemView = (p: TopicProblem): TopicProblemView => ({
     slug: p.slug,
@@ -467,8 +481,10 @@ export async function getMapView(userId: string, now: Date = new Date()): Promis
       topicsTotal: allTopics.length,
       tiersOpen: tiers.filter((t) => t.open).length,
       tiersTotal: tiers.length,
+      problems: byQuestion.size,
       solved: solvedIds.size,
     },
+    lastTouchedTopic,
     running,
   };
 }

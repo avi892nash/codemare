@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Difficulty } from '@/lib/types';
-import { pickFeaturedTopic, type FeaturedTopicInput } from './featuredTopic';
+import { pickFeaturedTopic, type FeaturedTierInput, type FeaturedTopicInput } from './featuredTopic';
 import type { ProblemProgress } from './topicProblems';
 
 type Problem = FeaturedTopicInput['problems']['list'][number];
@@ -28,6 +28,11 @@ function locked(slug: string, state: Exclude<FeaturedTopicInput['state'], 'unloc
 
 const tiers = (...topics: FeaturedTopicInput[][]) => topics.map((t) => ({ topics: t }));
 
+type Gate = NonNullable<FeaturedTierInput['gate']>;
+const gate = (id: string, state: Gate['state'] = 'eligible'): Gate => ({ id, title: `Gate ${id}`, state, passThreshold: 3, questionCount: 4, timeLimitMinutes: 45 });
+/** A tier with the gate that opens it. */
+const tier = (title: string, topics: FeaturedTopicInput[], g: Gate | null = null): FeaturedTierInput => ({ title, gate: g, topics });
+
 describe('pickFeaturedTopic: a topic with something to solve', () => {
   it('starts a fresh learner on the first problem of the first topic', () => {
     const f = pickFeaturedTopic(tiers([unlocked('arrays', [problem('contains-duplicate'), problem('two-sum')]), unlocked('stack', [problem('valid-parentheses')])], [locked('search', 'tier_closed', [0])]));
@@ -36,6 +41,7 @@ describe('pickFeaturedTopic: a topic with something to solve', () => {
       topic: { slug: 'arrays', title: 'ARRAYS', solved: 0, total: 2 },
       problem: { slug: 'contains-duplicate', title: 'Contains duplicate', difficulty: 'Easy' },
       missing: null,
+      gate: null,
       cta: { label: 'Start: Contains duplicate', href: '/problems/contains-duplicate' },
     });
   });
@@ -84,6 +90,7 @@ describe('pickFeaturedTopic: nothing left to solve', () => {
       topic: { slug: 'window', title: 'WINDOW', solved: 0, total: 5 },
       problem: null,
       missing: null,
+      gate: null,
       cta: { label: 'Unlock WINDOW', href: '#topic-window' },
     });
   });
@@ -100,6 +107,7 @@ describe('pickFeaturedTopic: nothing left to solve', () => {
       topic: { slug: 'search', title: 'SEARCH', solved: 0, total: 5 },
       problem: null,
       missing: 2,
+      gate: null,
       cta: { label: 'See what’s missing', href: '#topic-search' },
     });
   });
@@ -128,6 +136,7 @@ describe('pickFeaturedTopic: nothing left to solve', () => {
       topic: { slug: 'graphs', title: 'GRAPHS', solved: 2, total: 2 },
       problem: null,
       missing: null,
+      gate: null,
       cta: { label: 'See your submissions', href: '/submissions' },
     });
   });
@@ -140,5 +149,57 @@ describe('pickFeaturedTopic: nothing left to solve', () => {
   it('has nothing to feature without topics', () => {
     expect(pickFeaturedTopic([])).toBeNull();
     expect(pickFeaturedTopic(tiers([]))).toBeNull();
+  });
+});
+
+describe('pickFeaturedTopic: a gate that can be taken', () => {
+  const solved = (slug: string) => unlocked(slug, [problem(`${slug}-1`, 'solved'), problem(`${slug}-2`, 'solved')]);
+  /** Tier 0 is done; tier 1 is closed behind `g`. */
+  const closed = (g: Gate | null) => [tier('Foundations', [solved('arrays')]), tier('Core techniques', [locked('search', 'tier_closed', [1]), locked('window', 'tier_closed', [2])], g)];
+
+  it('offers it, once everything open is solved, instead of “See what’s missing”', () => {
+    const f = pickFeaturedTopic(closed(gate('g1')));
+    expect(f).toEqual({
+      reason: 'gate',
+      // the art is the first topic the gate opens; the topic's own words are not what the hero says
+      topic: { slug: 'search', title: 'SEARCH', solved: 0, total: 5 },
+      problem: null,
+      missing: null,
+      gate: { id: 'g1', title: 'Gate g1', tierTitle: 'Core techniques', passThreshold: 3, questionCount: 4, timeLimitMinutes: 45 },
+      cta: { label: 'Take the Gate g1', href: '#gate-g1' },
+    });
+  });
+
+  it('never displaces a problem to solve: a learner with something left is sent to it', () => {
+    const tiersWithWork = [tier('Foundations', [unlocked('arrays', [problem('a', 'solved'), problem('b')])]), ...closed(gate('g1')).slice(1)];
+    expect(pickFeaturedTopic(tiersWithWork)).toMatchObject({ reason: 'start', problem: { slug: 'b' }, gate: null });
+    const tried = [tier('Foundations', [unlocked('arrays', [problem('a', 'solved'), problem('b', 'attempted')])]), ...closed(gate('g1')).slice(1)];
+    expect(pickFeaturedTopic(tried)).toMatchObject({ reason: 'continue', gate: null });
+  });
+
+  it('comes after a topic that is ready to unlock: tokens in hand are spent first', () => {
+    const t = [tier('Foundations', [solved('arrays')]), tier('Core techniques', [locked('search', 'unlockable', [0])], gate('g1', 'passed')), tier('Graphs', [locked('graphs', 'tier_closed', [1])], gate('g2'))];
+    expect(pickFeaturedTopic(t)).toMatchObject({ reason: 'unlock', topic: { slug: 'search' }, gate: null });
+  });
+
+  it('is offered only while it can be taken: not running, cooling down, passed, or behind a tier that is still closed', () => {
+    for (const state of ['running', 'cooldown', 'passed', 'previous_tier_closed'] as const) {
+      expect(pickFeaturedTopic(closed(gate('g1', state))), state).toMatchObject({ reason: 'missing', gate: null, cta: { label: 'See what’s missing' } });
+    }
+  });
+
+  it('takes the first gate in curriculum order, and says which tier it opens', () => {
+    const t = [tier('Foundations', [solved('arrays')]), tier('Core techniques', [solved('search')], gate('g1', 'passed')), tier('Graphs and more', [locked('graphs', 'tier_closed', [1])], gate('g2'))];
+    expect(pickFeaturedTopic(t)).toMatchObject({ reason: 'gate', topic: { slug: 'graphs' }, gate: { id: 'g2', tierTitle: 'Graphs and more' }, cta: { href: '#gate-g2' } });
+  });
+
+  it('skips a gate whose tier has no topic to show', () => {
+    const t = [tier('Foundations', [solved('arrays')]), tier('Empty', [], gate('g1'))];
+    expect(pickFeaturedTopic(t)).toMatchObject({ reason: 'done' });
+  });
+
+  it('is not offered to a learner who has cleared everything: the congratulation stands', () => {
+    const t = [tier('Foundations', [solved('arrays')]), tier('Core techniques', [solved('search')], gate('g1', 'passed'))];
+    expect(pickFeaturedTopic(t)).toMatchObject({ reason: 'done', gate: null });
   });
 });
