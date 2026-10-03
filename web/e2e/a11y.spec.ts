@@ -4,10 +4,11 @@
  * axe-core violations and exactly one <h1>; on phones (375 px), in both
  * themes, no horizontal page scroll on the pages that must work there (the
  * map — home, with every topic's problems — learn, profile, library,
- * submissions). The editor-like pages (problem, IDE) are checked at desktop
- * width, where they are supported.
+ * submissions); the "phone gate" below extends that to every route.
  *
  * Then the floor, which the UX pass (round 2) set for the whole site:
+ *   · "phone gate" — every route of the table, at 375 px in both themes: no
+ *     page scroll, no serious axe violation, exactly one <h1>;
  *   · "type floor" — one test per route, so a failure names the page: no
  *     text a person can see is set smaller than 12 px (--fs-xs), in both
  *     themes at 1440 px and in dark at 375 px;
@@ -313,6 +314,24 @@ async function openFloorRoute(page: Page, route: FloorRoute, path: string) {
   }
   await open(page, path);
 }
+
+test.describe('phone gate: every route at 375 px, in both themes', () => {
+  for (const route of FLOOR_ROUTES) {
+    test(`${route.name} (${route.owner})`, async ({ page }) => {
+      test.setTimeout(150_000);
+      if (route.who === 'user') await signIn(page, user!.email);
+      const path = route.path({ handle: user!.handle });
+      await page.setViewportSize({ width: 375, height: 812 });
+      for (const theme of ['dark', 'light'] as const) {
+        await setTheme(page, theme);
+        await openFloorRoute(page, route, path);
+        expect(await horizontalOverflow(page), `${path} overflow at 375 px (${theme})`).toBe(0);
+        expect(await axeViolations(page), `${path} at 375 px (${theme})`).toEqual([]);
+        expect(await h1Count(page), `${path} h1 (${theme})`).toBe(1);
+      }
+    });
+  }
+});
 
 test.describe('type floor: no visible text under 12 px', () => {
   for (const route of FLOOR_ROUTES) {
