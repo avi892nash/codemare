@@ -8,6 +8,7 @@ import { Icon } from './Icon';
 import { LangMark } from './LangMark';
 import { Spinner } from './Spinner';
 import { StatusPill, STATUS_META, type StatusCode } from './StatusPill';
+import { useModKey, useTouchOnly } from '@/components/Workspace/useModKey';
 import { fmtTime } from './formatters';
 import { highlight, LANGUAGE_LABEL, normalizeLanguage } from './highlight';
 import s from './RunnableCodeBlock.module.css';
@@ -66,16 +67,13 @@ export function RunnableCodeBlock({
   const [src, setSrc] = useState(code);
   const [input, setInput] = useState(typeof stdin === 'string' ? stdin : '');
   const [phase, setPhase] = useState<Phase>({ kind: 'idle' });
-  const [modKey, setModKey] = useState('⌘');
+  const modKey = useModKey();
+  const touch = useTouchOnly();
   const runSeq = useRef(0);
   const stdinId = useId();
   const lang = normalizeLanguage(language);
   const langLabel = lang ? LANGUAGE_LABEL[lang] : language;
   const edited = src !== code;
-
-  useEffect(() => {
-    if (!/Mac|iPhone|iPad/.test(navigator.userAgent)) setModKey('Ctrl ');
-  }, []);
 
   // A new snippet (e.g. navigating between lessons) replaces any edits.
   useEffect(() => {
@@ -115,23 +113,24 @@ export function RunnableCodeBlock({
   return (
     <div className={[s.block, className].filter(Boolean).join(' ')} style={style} onKeyDown={onKeyDown}>
       <div className={s.header}>
-        {lang && <LangMark lang={lang} size={13} />}
+        {lang && <LangMark lang={lang} />}
         {filename && <span className={`${s.title} mono`}>{filename}</span>}
         {langLabel && <span className={s.langLabel}>{filename ? `· ${langLabel}` : langLabel}</span>}
         <span className={s.spacer} />
         {edited && (
-          <Button variant="ghost" size="xs" icon="refresh" onClick={() => setSrc(code)}>
+          <Button variant="ghost" size="sm" icon="refresh" onClick={() => setSrc(code)} className={s.headBtn}>
             Reset
           </Button>
         )}
         <CopyButton text={src} ariaLabel={filename ? `Copy ${filename}` : 'Copy code'} />
+        {/* Neutral, not primary: a lesson's one primary action is "Mark complete". */}
         <Button
-          variant="primary"
           size="sm"
           icon="play"
           loading={phase.kind === 'running'}
-          kbd={`${modKey}↵`}
+          kbd={touch ? undefined : `${modKey}↵`}
           onClick={() => void onRun()}
+          className={s.headBtn}
         >
           {runLabel}
         </Button>
@@ -146,7 +145,7 @@ export function RunnableCodeBlock({
       {stdin !== undefined && stdin !== false && (
         <div className={`${s.section} ${s.stdinWrap}`}>
           <div className={s.sectionHead}>
-            <label htmlFor={stdinId} className={s.sectionLabel}>Input · stdin</label>
+            <label htmlFor={stdinId} className={s.sectionLabel}>Input (stdin)</label>
           </div>
           <textarea
             id={stdinId}
@@ -165,7 +164,7 @@ export function RunnableCodeBlock({
           <div className={s.sectionHead}>
             <span className={s.sectionLabel}>Output</span>
             {phase.kind === 'running' ? (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--fg-2)' }}>
+              <span className={s.running}>
                 <Spinner size={12} /> Running…
               </span>
             ) : (
