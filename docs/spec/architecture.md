@@ -242,13 +242,14 @@ Streaks count UTC days with ≥ 1 accepted submission.
 On an accepted submit: among accepted submits of the same question and
 language (latest per user), percentile = % with `runtime_us` strictly greater
 than this one; it is stored with the submission (the `fast_solve` badge reads
-it). The problem page shows "Faster than N% of other learners" only when at
-least 30 learners' latest accepted solutions (same question and language, the
+it). The result card and a submission's detail page show "Faster than N% of
+other learners" only when at least 30 learners' latest accepted solutions (same question and language, the
 learner's own included) stand behind it — `MIN_PERCENTILE_SAMPLE` and
 `percentileToShow` in `lib/server/rules/scoring.ts` — because among two or
 three solvers the number says nothing about the code. A presentation
-threshold only: the stored value and the badges are unchanged. (The
-submission detail and profile pages still show the stored value.)
+threshold only: the stored value and the badges are unchanged
+(`getSubmissionView` applies it to the detail page; the profile shows no
+percentile).
 
 ### 3.9 Roles and flags
 - `learner < author < staff < admin`. Role rides in the JWT (set on sign-in).
@@ -421,23 +422,35 @@ problem" box that searched it (decision 39 in `docs/DECISIONS.html`).*
 **Heroes are animated topic art, not big text** (decisions 40 and 41). The
 sign-in, sign-up, forgot and reset screens show a reel of the ten topic
 scenes beside the form — a banner above it below 900 px, not hidden — with a
-topic switcher and a pause button. The map has no headline: a small `h1`
-("Tier map") and one quiet line of progress ("3/10 topics unlocked · 1/3
-tiers open"), then a hero of the learner's next topic (its animated art,
+topic switcher and a pause button. The map has no headline: the shared page
+header (a 26 px `h1`, "Tier map") and one quiet line of progress ("9/30
+problems solved · 3/10 topics unlocked · 1/3 tiers open", ending in a "How
+it works" link), then a hero of the learner's next topic (its animated art,
 name, caption, "n/m solved" and one button), chosen by the pure rule in
 `lib/server/featuredTopic.ts` over the map's own view: the first unlocked topic with an unsolved problem that opens for the
 learner ("Continue: …" for an attempted one, else "Start: …"), else the
-first topic ready to unlock ("Unlock …"), else the topic closest to
-unlocking ("See what's missing"), else "Every topic cleared".
+first topic ready to unlock ("Unlock …"), else the first tier whose gate
+is takeable — its tier closed, the tier before it open, no attempt running,
+no cooldown — ("Take the Foundations Gate", to `#gate-<id>`, kicker "Ready
+for the gate", art of the first topic that tier opens), else the topic
+closest to unlocking ("See what's missing"), else "Every topic cleared"
+(decision 43).
 
 **The map is calm** (decision 42). Under the hero at most one more line may
 appear (`lib/server/mapMilestone.ts`; it adds no restriction): a topic that is
-ready to unlock, else an open gate with at least one of its problems solved.
-While nothing is solved a first-run card gives the loop in three steps in the
-page's own words (solve problems, earn tokens, spend them), dismissed with
-the `cm-first-run` cookie so the server knows. Below that, an open tier is
-its header and one row per topic (thumbnail, name, "n/m solved · k tokens",
-the problems one click away); a closed tier is ONE collapsed panel (its name,
+ready to unlock, else a takeable gate whose pass threshold is met ("You can
+take the Foundations Gate now — 3 of its 4 problems solved", to the gate).
+"How it works" gives the loop in three steps in the page's own words (solve
+problems, earn tokens, spend them): open while nothing is solved and it has
+not been dismissed (the `cm-first-run` cookie, so the server knows), put away
+by "Got it" or by the first solve, and brought back by the link in the
+header's line of progress, in the page. Below that, an open tier is its
+header and one row per topic (thumbnail, name, "n/m solved · k tokens", the
+problems one click away; the server opens the hero's topic once a problem is
+solved and the topic last worked in, and a row or closed-tier panel the
+learner opens stays open for the session — `MapMemory`, `sessionStorage`
+keys `cm-map-open` and `cm-map-scroll`, with the scroll position restored
+after Back or Forward); a closed tier is ONE collapsed panel (its name,
 "Opens after the …", its topics as posters and names) that opens to the gate
 line and compact topics, and says what blocks it once, not on every topic. A
 link to anything inside a closed panel or row opens it. The Map's whole status
@@ -458,8 +471,35 @@ the first unsolved problem that opens for the learner after the current one
 in its topic, then in the following topics in curriculum order; none → only
 "Back to the map". Below 1024 px the problem page shows one pane at a time
 (Problem · Code · Result) with a 44 px Run/Submit bar; a new result switches
-to the Result pane and takes focus, and the statement's first example stays
-open with the rest behind "More".
+to the Result pane and takes focus, a failing one offers "Back to code"
+(focusing the Code pane, not Monaco), and the statement's first example
+stays open with the rest behind "More". A tablet upright (768–1023 px wide
+and at least 600 px tall) gets two panes — the statement, and the editor
+with the console under it — and a phone on its side keeps one pane
+(`useLayout` in `Workspace/useModKey.ts`). In a gate attempt the phone's
+banner is one 46 px line (the clock and "0/4 · pass with 3", with a toggle
+for the problems). Run and Submit wait until Monaco has mounted; the map
+prefetches Monaco's files when idle (`EditorPrefetch`, the names pinned in
+`monacoFiles.ts`, checked by `e2e/editor.spec.ts`).
+
+**The other pages follow the map** (decision 43). Every page has the shared
+`PageHeader` (a 26 px `h1`, one line of context, actions at the right, no
+eyebrow), the map's page width and `StatusDot`/`DifficultyText` for
+progress and difficulty, and verdicts in the result card's words. *Learn*:
+one recommendation ("Start Foundations" / "Continue: …", `pickRecommendation`),
+tracks as rows, the bar and counts only once a track is started, lessons and
+checkpoints as rows with the map's glyphs; lesson prose is 16 px; a snippet's
+Run is neutral. *IDE*: the problem page's toolbar; below 1024 px Code · Test
+cases · Output, one at a time, the output taking focus when a run finishes.
+*Submissions*: quiet filters, "Accepted" / "Wrong answer" with the short code
+small, two-line rows on a phone; the detail reads like the result card
+(headline, then one row of runtime, memory, compile time and time per test)
+and has no "Beats" bar. *Profile*: identity, one stats card once something is
+solved (Solved by difficulty, Streak, Tokens; acceptance and fastest run under
+"More stats"), the activity map from 7 active days, tokens and Learn blocks
+only when they have content, recent submissions, badges (`profileSections`).
+*Badges*: underline tabs with counts and horizontal cards (emblem, name,
+rarity as a word, the date or progress), the focus view in a dialog.
 
 ---
 
@@ -474,6 +514,21 @@ open with the rest behind "More".
   (`--fs-xs`), body 14 px (`--fs-body`; 16 px on phones), `--fs-lg` 16,
   `--fs-xl` 20, `--fs-2xl` 26; sentence-case labels and no tiny uppercase
   micro-labels; `Pill` sizes are 12/13/14 px.
+- **One height ladder** (decision 43): controls are `--ctl-xs/sm/md/lg` =
+  22/28/32/38 px and `--tap` = 44 px; on phones and coarse pointers
+  (`max-width: 720px` or `pointer: coarse`) fields are 16 px and 44 px tall
+  and large buttons, tabs, menu rows, breadcrumbs and dialog buttons are 44 px
+  (a page's own size wins: the kit's touch rules carry no more specificity
+  than its base rules, except field text, which is enforced at 16 px). `Pill`
+  heights are fixed (22/24/28). The language mark is a 12 px tag and avatar
+  initials are at least 12 px. The shell is `100dvh` (`.app-shell`) and the
+  viewport's `interactive-widget=resizes-content` lets the soft keyboard
+  shrink it.
+- **One page header, one dialect** (decision 43): `PageHeader` (26 px title,
+  one line, actions at the right, no eyebrow), `DifficultyText` for
+  difficulty in lists, `StatusDot` and `VerdictText` / `SubmissionStatus` for
+  status; a filled difficulty pill only where a tag is the point (the
+  editor's title row, a locked question). `/dev/system` shows them.
 - **Calm pages** (decision 42): say each thing once; collapse what the
   learner cannot use yet; one primary action per screen (the hero's button,
   the result's "Next problem"); the same words, and no constraint added to
@@ -516,11 +571,17 @@ open with the rest behind "More".
 - **A11y**: keyboard reachable, visible `focus-ring`, AA contrast in both
   themes, honor `prefers-reduced-motion` (transitions off, not shortened).
   `web/e2e/a11y.spec.ts` gates it: no serious or critical axe violation and
-  exactly one `h1` per page in both themes, no sideways scroll at 375 px.
-- **Responsive**: the problem page is three panes from 1024 px and one pane
-  at a time below it (Problem · Code · Result, a 44 px action bar); map,
-  learn, library, profile and submissions ≥ 375 px; primary touch targets
-  ≥ 44 px on phones.
+  exactly one `h1` per page in both themes, no sideways scroll at 375 px; its
+  route table `FLOOR_ROUTES` (18 routes, an owner each — add a route there)
+  also asserts, per route, no visible text under 12 px (both themes at 1440,
+  dark at 375; SVG text and screen-reader-only text are ignored), 16 px form
+  fields at 375 px and a phone gate, and the top bar's 44 px targets.
+- **Responsive**: the problem page is three panes from 1024 px, two on a
+  tablet upright (768–1023 px wide, at least 600 px tall) and one pane at a
+  time below that (Problem · Code · Result, a 44 px action bar); the IDE
+  likewise (Code · Test cases · Output); map, learn, library, profile and
+  submissions ≥ 375 px; primary touch targets ≥ 44 px on phones; form fields
+  16 px on phones (iOS Safari zooms smaller ones).
 - **Perf**: RSC by default; client components only for editor, visualizations,
   filters, interactive widgets. Monaco and visualizations are dynamically
   imported. LCP < 2 s on `/map` (home) and `/problems/[slug]`. The topic
