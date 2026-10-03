@@ -353,6 +353,26 @@ test.describe('form fields are 16 px on a phone (375 px)', () => {
   }
 });
 
+/** The design-system sheet is where the shared primitives are documented (development only). */
+test('the design system sheet shows PageHeader and DifficultyText in both themes', async ({ page }) => {
+  const res = await page.goto('/dev/system');
+  test.skip(res?.status() !== 200 || new URL(page.url()).pathname !== '/dev/system', '/dev/system is development-only (a production build does not serve it)');
+  for (const theme of ['dark', 'light']) {
+    const section = page.locator(`#${theme}-page`);
+    await section.scrollIntoViewIfNeeded();
+    // the header with actions, without them, and the title alone (samples are sub-headings, the sheet keeps its one h1)
+    await expect(section.getByRole('heading', { name: 'Submissions', level: 4 })).toBeVisible();
+    await expect(section.getByRole('button', { name: 'New run' })).toBeVisible();
+    await expect(section.getByRole('heading', { name: 'Your badges', level: 4 })).toBeVisible();
+    await expect(section.getByRole('heading', { name: 'Tier map', level: 4 })).toBeVisible();
+    // difficulty as quiet text with a dot, for the three levels
+    for (const level of ['Easy', 'Medium', 'Hard']) await expect(section.locator(`[data-level="${level}"]`)).toHaveText(level);
+    // the height ladder is shown too
+    await expect(page.locator(`#${theme}-heights`)).toBeVisible();
+  }
+  await expect(page.locator('h1')).toHaveCount(1);
+});
+
 test.describe('top bar', () => {
   test('on a phone every control is a 44 px target, the section menu says "Menu" everywhere, and nothing overflows at 320 px', async ({ page }) => {
     test.setTimeout(150_000);
