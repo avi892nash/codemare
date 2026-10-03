@@ -182,9 +182,9 @@ async function visit(page: Page, url: string) {
 }
 
 interface Census {
-  /** Text under 12 px, not counting decorative marks (aria-hidden, two characters or fewer: the language mark, avatar initials — components/ui). */
+  /** Text under 12 px, not counting marks (aria-hidden, two characters or fewer: the language mark, avatar initials). */
   small: { text: string; size: number }[];
-  /** Decorative marks under 12 px (the shared kit sizes them). */
+  /** Marks under 12 px (reported apart so a failure says which kind it is). */
   marks: { text: string; size: number }[];
   /** Distinct font sizes in the page's content. */
   sizes: number[];
@@ -227,11 +227,9 @@ async function census(page: Page): Promise<Census> {
   });
 }
 
-/** Decorative marks under 12 px belong to components/ui (LangMark, Avatar): say so in the report instead of failing this page's test. */
-function noteMarks(c: Census) {
-  if (c.marks.length) {
-    test.info().annotations.push({ type: 'kit-marks', description: `${c.marks.length} decorative mark(s) under 12 px: ${[...new Set(c.marks.map((m) => `${m.text} ${m.size}px`))].join(', ')}` });
-  }
+/** The language marks and avatar initials are on the 12 px floor too (components/ui sets them from the same scale). */
+function expectMarksOnTheFloor(c: Census, where: string) {
+  expect(c.marks, `${where}: marks (language, initials) under 12 px`).toEqual([]);
 }
 
 /** How far the page's content reaches past the viewport (the app scrolls an inner <main>, so look at both). */
@@ -264,7 +262,7 @@ test('the profile and the badges gallery set no text under 12 px, in both themes
         expect(c.sizes.length, `${where}: font sizes ${c.sizes.join(' · ')}`).toBeLessThanOrEqual(8);
         expect(c.h1.count, `${where}: h1s`).toBe(1);
         expect(c.h1.size, `${where}: h1 size`).toBe(26);
-        noteMarks(c);
+        expectMarksOnTheFloor(c, where);
       }
     }
   }
@@ -279,7 +277,7 @@ test('the activity map, with its labels, is also set in the scale', async ({ pag
     const c = await census(page);
     expect(c.small, `at ${w} px`).toEqual([]);
     expect(c.sizes.length, `at ${w} px: ${c.sizes.join(' · ')}`).toBeLessThanOrEqual(8);
-    noteMarks(c);
+    expectMarksOnTheFloor(c, `at ${w} px`);
   }
 });
 
