@@ -82,14 +82,15 @@ test.afterAll(async () => {
 
 test('learn home lists the tracks and starts one', async () => {
   await visit(page, '/learn');
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Learn the patterns behind the problems');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Learn');
   for (const title of ['Foundations', 'Search & Order', 'Graphs & Optimization']) {
     await expect(page.getByRole('heading', { level: 3, name: title })).toBeVisible();
   }
-  // No activity yet: no "continue" banner.
+  // No activity yet: it says where to start, not where you left off.
   await expect(page.getByText('Continue where you left off')).toHaveCount(0);
+  await expect(page.getByTestId('learn-recommendation')).toContainText('Start here');
 
-  await page.getByRole('link', { name: 'Start track: Foundations' }).click();
+  await page.getByRole('link', { name: 'Start Foundations' }).click();
   await expect(page).toHaveURL(/\/learn\/foundations\/arrays-and-cost$/);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Arrays and what operations cost');
 
@@ -100,7 +101,7 @@ test('learn home lists the tracks and starts one', async () => {
     .toBe(1);
   await visit(page, '/learn');
   await expect(page.getByText('Continue where you left off')).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Resume lesson' })).toHaveAttribute('href', '/learn/foundations/arrays-and-cost');
+  await expect(page.getByRole('link', { name: 'Continue: Arrays and what operations cost' })).toHaveAttribute('href', '/learn/foundations/arrays-and-cost');
 });
 
 test('a lesson runs its snippets, steps its visualization, and can be completed', async () => {
@@ -130,7 +131,7 @@ test('a lesson runs its snippets, steps its visualization, and can be completed'
   await expect(viz).toContainText('Answer: (4, 5)');
 
   // A question card links to the problem.
-  await expect(page.getByRole('link', { name: /Practice · Arrays & Hashing\s*Two Sum/ })).toHaveAttribute('href', '/problems/two-sum');
+  await expect(page.getByRole('link', { name: /Two Sum\s*Practice · Arrays & Hashing/ })).toHaveAttribute('href', '/problems/two-sum');
 
   await page.getByRole('button', { name: 'Mark complete' }).click();
   await expect(page.getByRole('status').filter({ hasText: 'Lesson complete' }).first()).toBeVisible();
@@ -219,8 +220,11 @@ test('finishing a track shows the completion page and its badges', async () => {
   await expect(page.getByRole('heading', { name: 'Up next' })).toBeVisible();
   await expect(page.getByRole('heading', { level: 3, name: 'Search & Order' })).toBeVisible();
 
+  // Learn home no longer offers the finished track: the next one is the recommendation, and Foundations says it is complete.
   await visit(page, '/learn');
-  await expect(page.getByRole('link', { name: 'Review: Foundations' })).toBeVisible();
+  await expect(page.getByTestId('learn-recommendation')).toContainText('Search & Order');
+  await expect(page.getByRole('link', { name: 'Start Search & Order' })).toHaveAttribute('href', /\/learn\/search-and-order\//);
+  await expect(page.getByRole('article', { name: 'Foundations' })).toContainText('Complete');
 });
 
 test('unknown learn URLs 404, and a module slug leads to its module', async () => {

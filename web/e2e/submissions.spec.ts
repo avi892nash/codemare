@@ -73,7 +73,7 @@ test.beforeAll(async () => {
   const visible = tests.filter((t) => !t.hidden);
   const hidden = tests.filter((t) => t.hidden);
 
-  // Accepted python submit: every test passes; runtime 412 µs total, beats 87.3%.
+  // Accepted python submit: every test passes; runtime 412 µs total, a stored percentile of 87.3 (shown only with 30 learners).
   const ok = await prisma.submission.create({
     data: {
       userId: owner.id, kind: 'submit', questionId: twoSum.id, language: 'python', status: 'OK',
@@ -141,7 +141,8 @@ test('lists your submissions newest first, filters by status and language, and p
   await expect(rows(page)).toHaveCount(20);
 
   const first = rows(page).first();
-  await expect(first).toContainText('CE');
+  await expect(first).toContainText('Compilation error'); // the verdict in words…
+  await expect(first).toContainText('CE'); // …and its short code, small
   await expect(first).toContainText('Two Sum');
   await expect(first).toContainText('C++');
   await expect(rows(page).nth(1)).toContainText('1.83 ms'); // WA javascript: 1830 µs
@@ -172,14 +173,14 @@ test('detail: verdict hero, code and tests, with hidden tests reduced to pass/fa
   await signIn(page, owner, '/submissions');
   await rows(page).nth(1).getByRole('link').click();
   await expect(page).toHaveURL(new RegExp(`/submissions/${ids.wa}$`));
-  await expect(page).toHaveTitle(/Wrong Answer · Two Sum/);
+  await expect(page).toHaveTitle(/Wrong answer · Two Sum/);
 
   await expect(page.getByRole('heading', { name: 'Two Sum', level: 1 })).toBeVisible();
   const hero = page.getByRole('region', { name: 'Result' });
   await expect(hero).toContainText('1.83');
   await expect(hero).toContainText('ms');
-  await expect(hero).toContainText(/Peak memory\s*40\s*MB/); // 40960 KB
-  await expect(page.getByText('Wrong Answer').first()).toBeVisible();
+  await expect(hero).toContainText(/Memory\s*40\s*MB/); // 40960 KB
+  await expect(page.getByTestId('submission-headline')).toHaveText(/^Wrong answer — \d+ of \d+ tests passed$/);
 
   await expect(page.getByRole('heading', { name: /^Code/ })).toBeVisible();
   await expect(page.locator('pre code').first()).toContainText('function twoSum(nums, target)');
@@ -196,9 +197,11 @@ test('detail: verdict hero, code and tests, with hidden tests reduced to pass/fa
   expect(html).not.toContain('HIDDEN-EXPLANATION-MUST-NOT-LEAK');
   expect(html).not.toContain('HIDDEN-ERROR-MUST-NOT-LEAK');
 
-  // Accepted: the percentile shows.
+  // Accepted: "Accepted — all N tests passed" and the runtime. Its stored percentile (87.34) is not shown: one learner solved
+  // it, and "faster than 87%" of one learner says nothing (calm-learn.spec.ts covers the 30-learner threshold).
   await page.goto(`/submissions/${ids.ok}`);
-  await expect(page.getByRole('progressbar', { name: 'Beats' })).toHaveAttribute('aria-valuetext', '87.3%');
+  await expect(page.getByTestId('submission-headline')).toHaveText(/^Accepted — all \d+ tests passed$/);
+  await expect(page.getByTestId('percentile')).toHaveCount(0);
   await expect(page.getByRole('region', { name: 'Result' })).toContainText('412');
 
   // Compile error: the compiler output replaces timings.
