@@ -178,10 +178,10 @@
       <div class="fact"><b>6</b><span>languages judged</span></div>
       <div class="fact"><b>30</b><span>problems · 3 tiers · 10 topics</span></div>
       <div class="fact"><b>32</b><span>tables in 2 schemas</span></div>
-      <div class="fact"><b>831</b><span>unit tests (web · backend · admin)</span></div>
-      <div class="fact"><b>220</b><span>Playwright tests</span></div>
+      <div class="fact"><b>834</b><span>unit tests (web · backend · admin)</span></div>
+      <div class="fact"><b>227</b><span>Playwright tests</span></div>
       <div class="fact"><b>6</b><span>CI jobs per push</span></div>
-      <div class="fact"><b>298</b><span>commits, Nov 2025 →</span></div>
+      <div class="fact"><b>303</b><span>commits, Nov 2025 →</span></div>
     </div>
   </header>
 
@@ -219,7 +219,7 @@
 
       <section id="s2">
         <h2><span class="n">2</span>Repo map</h2>
-        <p>Every tracked file (646) and directory (137) as <code>git ls-files</code> lists them at <code>5a1c2c3</code>. Click a folder to open it and a file to read what it does, or filter by path or description. The 30 question files share one entry; <code>node_modules</code>, <code>.next</code> and <code>dist</code> are not tracked, so they are not here. <em>Legacy</em> marks files that still exist but nothing current depends on.</p>
+        <p>Every tracked file (646) and directory (137) as <code>git ls-files</code> lists them at <code>dea0e97</code>. Click a folder to open it and a file to read what it does, or filter by path or description. The 30 question files share one entry; <code>node_modules</code>, <code>.next</code> and <code>dist</code> are not tracked, so they are not here. <em>Legacy</em> marks files that still exist but nothing current depends on.</p>
         <div class="map">
           <div class="map-left">
             <div class="tree-tools">
@@ -545,14 +545,14 @@ npm run dev            # compile service :4000 + web :4001</code></pre>
 
       <section id="s8">
         <h2><span class="n">8</span>Tests and CI</h2>
-        <p>Counts are from running each suite at <code>5a1c2c3</code> on 2 Oct 2026 (Playwright against a production build).</p>
+        <p>Counts are from running each suite at <code>dea0e97</code> on 2 Oct 2026 (Playwright against a production build).</p>
         <div class="table-wrap"><table>
           <thead><tr><th>Layer</th><th>Size</th><th>What it covers</th><th>Run</th></tr></thead>
           <tbody>
-            <tr><td>Web unit + DB (vitest)</td><td>45 files · 643 tests</td><td>The pure rules (the debit planner is cross-checked against a brute-force allocator); every domain service against a migrated Postgres test database, trigger and partial indexes included (20 parallel spends never overdraw); the seed's validation, modes and idempotency; the real content played end to end as a fresh learner; lesson markdown against hostile input; SSE framing; the runner with a fake compile client; the topic art (every topic has a scene, the markup against React’s renderer, the stylesheet in sync with its specs), the hero reel’s rules, the map’s next-topic and milestone rules (including the open gate), the next-problem choice, the result card’s words, the percentile threshold, the Learn recommendation, the profile’s sections and a submission’s headline.</td><td><code>npm test -w web</code></td></tr>
+            <tr><td>Web unit + DB (vitest)</td><td>45 files · 646 tests</td><td>The pure rules (the debit planner is cross-checked against a brute-force allocator); every domain service against a migrated Postgres test database, trigger and partial indexes included (20 parallel spends never overdraw); the seed's validation, modes and idempotency; the real content played end to end as a fresh learner; lesson markdown against hostile input; SSE framing; the runner with a fake compile client; the topic art (every topic has a scene, the markup against React’s renderer, the stylesheet in sync with its specs), the hero reel’s rules, the map’s next-topic and milestone rules (including the open gate), the next-problem choice, the result card’s words, the percentile threshold, the Learn recommendation, the profile’s sections, a submission’s headline and the verdict look table.</td><td><code>npm test -w web</code></td></tr>
             <tr><td>Backend (<code>node:test</code>)</td><td>17 files · 163 tests</td><td>The exact isolate command line per language and phase, the CPU plan, bounded box output, the harness protocol, generators compiled and run for real (<code>javac</code>, <code>go build</code>), and <code>/v1/run</code> plus <code>/v1/run/stream</code> end to end through the local adapter in all six languages. One test (the cpuset CLI) runs on Linux only.</td><td><code>npm test -w backend</code></td></tr>
             <tr><td>Admin (vitest)</td><td>3 files · 25 tests</td><td>Recipe and join-row checks, Postgres array literals, cuids, the enum parser, the recipe save payload.</td><td><code>npm --prefix admin test</code></td></tr>
-            <tr><td>Playwright</td><td>16 specs · 220 tests</td><td>Every feature through the UI against a running app and compile service: auth, the map as home with its problem lists, editor, IDE, submissions, learn, profile, authoring, the hidden library, the sign-up → solve → submit → gate → unlock journey, the sign-in hero reel, the calm map (collapsed tiers, How it works, milestone, rows kept across Back), the result card and the phone and tablet problem page, Learn, the IDE, Submissions, the profile and the badges in the map’s dialect, and an accessibility gate (axe, one <code>h1</code>, no sideways scroll; and per route in a table: no text under 12 px, 16 px fields and a phone gate) in both themes.</td><td><code>cd web &amp;&amp; PLAYWRIGHT_BASE_URL=… npx playwright test</code></td></tr>
+            <tr><td>Playwright</td><td>16 specs · 227 tests</td><td>Every feature through the UI against a running app and compile service: auth, the map as home with its problem lists, editor, IDE, submissions, learn, profile, authoring, the hidden library, the sign-up → solve → submit → gate → unlock journey, the sign-in hero reel, the calm map (collapsed tiers, How it works, milestone, rows kept across Back), the result card and the phone and tablet problem page, Learn, the IDE, Submissions, the profile and the badges in the map’s dialect, and an accessibility gate (axe, one <code>h1</code>, no sideways scroll; and per route in a table: no text under 12 px, 16 px fields and a phone gate) in both themes; learner screens are held to the quiet language too (no capsule, <code>e2e/capsules.ts</code>).</td><td><code>cd web &amp;&amp; PLAYWRIGHT_BASE_URL=… npx playwright test</code></td></tr>
             <tr><td>Isolate smoke</td><td>26 checks</td><td>The production image, privileged: six languages, verdicts, the compile cache, fork/memory/output bombs, no network, no host files, one CPU per box, the syscall filter.</td><td><code>node backend/tests/isolate/smoke.mjs</code></td></tr>
             <tr><td>Content verification</td><td>4 Python scripts</td><td>Shapes and references, every reference solution against every test, starters compiling verbatim, and the token economy simulated over every unlock order.</td><td><code>python3 web/prisma/seed/verify/verify_all.py</code></td></tr>
           </tbody>
@@ -578,9 +578,9 @@ npm run dev            # compile service :4000 + web :4001</code></pre>
             <rect class="box" x="200" y="124" width="640" height="34" rx="3"/>
             <text x="214" y="146"><tspan class="b">infra</tspan> — compose config against .env.example · admin tests and typecheck</text>
             <rect class="box" x="200" y="162" width="640" height="34" rx="3"/>
-            <text x="214" y="184"><tspan class="b">web</tspan> — migrate · seed twice · 643 vitest tests · typecheck · lint · build</text>
+            <text x="214" y="184"><tspan class="b">web</tspan> — migrate · seed twice · 646 vitest tests · typecheck · lint · build</text>
             <rect class="box hi" x="200" y="200" width="640" height="34" rx="3"/>
-            <text x="214" y="222"><tspan class="b">e2e</tspan> — next start + compile service + seeded Postgres → 220 Playwright tests</text>
+            <text x="214" y="222"><tspan class="b">e2e</tspan> — next start + compile service + seeded Postgres → 227 Playwright tests</text>
           </svg>
           </div>
           <figcaption>The two teal jobs are the ones that exercise production as it really runs: the sandbox inside the real image, and the browser against <code>next start</code> rather than the dev server (decisions 30 and 35).</figcaption>
@@ -600,6 +600,7 @@ npm run dev            # compile service :4000 + web :4001</code></pre>
               <li>Learn (3 tracks, 23 lessons), profiles, 15 badges, authoring with a re-verified publish, the hidden library</li>
               <li>The UX pass (decision 42): a calm map (closed tiers collapsed, each fact said once, three status labels, a first-run card), a result card that leads with its headline and the reward and offers “Next problem”, one pane at a time on phones, and one type scale (nothing under 12 px)</li>
               <li>One dialect (decision 43): every page follows the map — the shared page header, one type scale with nothing under 12 px, quiet difficulty and status, 44 px targets and 16 px fields on phones — carried by the kit and held by a floor test per route; Learn, the IDE, Submissions, the profile and the badges redone, and the map’s and the phone problem page’s follow-ups (rows remembered, the gate offered, a tablet layout, the editor warmed up)</li>
+              <li>The last exceptions (decision 44): verdicts, difficulty, tags, costs and states are words on every learner screen (<code>VerdictText</code>, one <code>VERDICT_LOOK</code> table, no capsule — a test fails on one), medium buttons are 44 px on phones with labels that wrap, placeholders at 4.5 : 1, and a running gate attempt owns the Map's one primary action</li>
               <li>Animated topic art (decisions 40 and 41): the sign-in reel of ten scenes with a pause button and a phone banner, the map's hero of the next topic with one button, and an art thumbnail on every topic card — +15 KB and +0.02 s first-visit LCP on the map</li>
               <li>Directus confined by Postgres roles, with editable join tables and the two seed modes</li>
               <li>Sandbox hardening proven in the production image (the 26-check smoke runs in CI); the compile cache bounded by bytes as well as entries</li>
@@ -617,8 +618,8 @@ npm run dev            # compile service :4000 + web :4001</code></pre>
               <li>Java's <code>runUs</code> counts only the calling thread; work handed to other threads is untimed</li>
               <li>The topic art was exercised only in Chromium (<code>color-mix()</code>, <code>oklch()</code>, container units, <code>transform-box: fill-box</code>, the lazy loader's in-view pause); a Safari and Firefox pass is owed</li>
               <li>The phone and tablet pages were exercised with Playwright's mobile emulation only: iOS Safari (Monaco zooming on focus, <code>100dvh</code>, the soft keyboard) and Android's keyboard-resized viewport (<code>interactive-widget</code>) need a real-device check</li>
-              <li>An intermittent React hydration error (#418) on <code>/map</code> was seen three times in builders’ runs under CPU contention and did not reproduce on the merged tree; the map’s console test would show it again</li>
-              <li>Small leftovers of the consistency pass: <code>VERDICT_LABEL</code> is Title Case and feeds the Submissions filter; <code>Pagination</code> is 12.5 px; <code>SubmissionStatus</code> and <code>VerdictText</code> are near-identical; Back-button scroll restoration exists only on the map</li>
+              <li>The <code>/map</code> hydration error (React #418) is explained and not a regression: it appears only when the browser’s main thread is badly overloaded, because React starts hydrating before the document has been fully read; the map’s document is 132 KB, 86 KB of it inline page data</li>
+              <li>Small leftovers: <code>VERDICT_LABEL</code> is Title Case and feeds the Submissions filter; the phone pane tabs have no <code>aria-controls</code>; Monaco’s own “show keyboard” button on touch is unlabeled (axe); Back-button scroll restoration exists only on the map; “Unlock” appears twice on a ready topic; the code block’s Copy and a visualization’s steps are under 44 px on phones</li>
               <li>The map's hero offers a takeable gate only when nothing else is left and keeps an earlier topic until it is finished; the Learn track cards have no art yet</li>
               <li>amd64 builds of the web, Directus and backup images, and a real Storage Box, are untested (local verification ran on Apple silicon with an SFTP stand-in; CI builds only the backend image)</li>
               <li>Rate limits are in-process (one web instance); the Redis queue does not serve <code>/v1/run</code></li>
@@ -692,7 +693,7 @@ docker compose --env-file deploy/.env -f docker-compose.prod.yml exec backup cod
 <script>
 (function () {
   // ---- repo map ---------------------------------------------------------
-  // [name, role, description, children?] — generated from `git ls-files` at 5a1c2c3;
+  // [name, role, description, children?] — generated from `git ls-files` at dea0e97;
   // a fourth element marks a directory.
   var TREE = [[".github","CI","GitHub configuration: the CI workflow.",[["workflows","CI","Workflows (one: ci.yml).",[["ci.yml","CI","Six jobs on every push to master and every PR: backend lint/build/unit tests; a six-language /v1/run smoke; the isolate smoke in the production image; compose and Directus admin checks; web migrations, seed, vitest, typecheck, lint, build; Playwright against a production build."]]]]],
 ["admin","Admin","Directus over content.*: the content model as code and one extension bundle (recipe editor, content-integrity hook, supply endpoint). A standalone npm package, deliberately not a workspace.",[["content-model","Admin","The Directus content model as data, applied through the REST API: meta only, never DDL.",[["apply.ts","Admin","Applies model.ts to a running Directus idempotently (unchanged entries are skipped); the directus-config one-shot runs it on every deploy, warns about content columns missing from the model, and deletes the meta and permissions of retired collections whose tables are gone."],
@@ -879,7 +880,7 @@ docker compose --env-file deploy/.env -f docker-compose.prod.yml exec backup cod
 ["layout.tsx","Security","notFound() in production."]]],
 ["error.tsx","Boundary","Root error boundary: the shared 500 state with a retry."],
 ["global-error.tsx","Boundary","The last resort when the root layout itself fails: renders html/body, loads the CSS and fonts, applies the saved theme on mount."],
-["globals.css","Style","The design tokens (.cm dark by default, .cm-light), AA-safe derived tones (incl. --fg-gutter, --mark-mix), the type scale (--fs-xs … --fs-2xl, --fs-body) and the control-height ladder (--ctl-*, --tap), the --art-* palette and one hue per topic for the topic art, syntax colors, the page shell every section shares (--page-max, --page-pad) and the 100dvh .app-shell, the auth grid, focus and reduced-motion rules (transitions off, not shortened), the Tailwind layers."],
+["globals.css","Style","The design tokens (.cm dark by default, .cm-light), AA-safe derived tones (incl. --fg-gutter, --mark-mix, --fg-ph for placeholders), the type scale (--fs-xs … --fs-2xl, --fs-body) and the control-height ladder (--ctl-*, --tap), the --art-* palette and one hue per topic for the topic art, syntax colors, the page shell every section shares (--page-max, --page-pad) and the 100dvh .app-shell, the auth grid, focus and reduced-motion rules (transitions off, not shortened), the Tailwind layers."],
 ["layout.tsx","Layout","Root layout: fonts, the theme class from the cm-theme cookie (no flash), the viewport (interactive-widget=resizes-content, so the soft keyboard shrinks the layout) and the session, theme and toast providers."],
 ["not-found.tsx","Boundary","Root 404."],
 ["robots.ts","Security","robots.txt: disallows /library, /author and /dev."]]],
@@ -923,17 +924,17 @@ docker compose --env-file deploy/.env -f docker-compose.prod.yml exec backup cod
 ["Filters","UI","Filtered lists (/submissions): filter navigation and the pager.",[["FilterNav.tsx","UI","Filter navigation shared by a page’s controls and results: transitions, a dimmed pending region, optimistic state so quick changes compose."],
 ["pageWindow.ts","Rule","The pager’s page numbers: first, last, the current page ± 1, gaps marked."],
 ["Pagination.module.css","Style","The pager; Previous · “Page 2 of 7” · Next on phones."],
-["Pagination.tsx","UI","“Showing 21–40 of 132” with real links; compact on phones. Server component."]]],
-["Hints","UI","The hint ladder.",[["HintLadder.module.css","Style","Ladder rungs and the reveal dialog."],
-["HintLadder.tsx","UI","nudge → concept → pseudo → line → solution: each rung’s cost shown up front, revealed only through a confirmation."]]],
+["Pagination.tsx","UI","“Showing 21–40 of 132” with real links (44 px targets on phones); compact on phones. Server component."]]],
+["Hints","UI","The hint ladder.",[["HintLadder.module.css","Style","Ladder rungs, the quiet cost and state words, and the reveal dialog."],
+["HintLadder.tsx","UI","nudge → concept → pseudo → line → solution: each rung’s cost shown up front as a word in the cost’s tone (“Free”, “-10% tokens”), the ladder’s state (“Solved · score costs waived”, “Penalty 10%”) a quiet word at its edge; revealed only through a confirmation."]]],
 ["IDE","UI","The /ide playground (04).",[["IDE.module.css","Style","Playground layout: the toolbar, the phone panes and their 44 px switch."],
-["IdeOutputDisplay.tsx","UI","Per case: status, CPU time, memory, stdout, and a line diff against the expected output."],
+["IdeOutputDisplay.tsx","UI","The playground’s output: a summary in the quiet verdict (“All matched”, “Mismatch”, or the verdict’s words), then per case its verdict (glyph and code), CPU time, memory, stdout and a line diff against the expected output; the scrolling region is a tab stop."],
 ["IdeView.tsx","UI","The playground: the problem page’s toolbar (language and reset at the left, Run at the right), editor, cases, ⌘/Ctrl+Enter to run (the hint is hidden on touch), drafts per language; below 1024 px one pane at a time — Code · Test cases · Output — and a finished run selects and focuses Output."],
 ["TestCaseManager.tsx","UI","Up to ten stdin cases in an accordion (the row header is role=button, so its remove button is valid HTML); case fields are 16 px on phones."]]],
 ["Layout","UI","The app shell (L8).",[["nav-model.ts","UI","Pure nav data shared by the server layout and the client navbar; the map is home (the logo opens it) and lists the problems, so no tab or search box opens a list."],
 ["Navbar.module.css","Style","Navbar and its responsive collapse: 44 px hit boxes with smaller drawn parts on touch; the bar stays 48 px."],
 ["Navbar.tsx","UI","Section tabs (Learn, Map, IDE, Submissions; below 768 px one “Menu” button, labelled so on every page, with the current page marked in the open menu), the logo that opens the map (home), the token chip, theme toggle and profile menu — each a 44 px hit box on phones."],
-["ProfileMenu.tsx","UI","The avatar menu: profile, badges, Author (≥ author), Library (only when visible), sign out."]]],
+["ProfileMenu.tsx","UI","The avatar menu: a card with the name, handle and role (a quiet word), then profile, badges, Author (≥ author), Library (only when visible), sign out."]]],
 ["Learn","UI","Learn pages (L1–L8).",[["CheckpointQuiz.tsx","UI","The quiz: answers stay on the client until submit; grading and answers live on the server; every answer row is at least 44 px."],
 ["CheckpointReview.tsx","UI","Score, pass/fail and per-question explanations (Correct or Incorrect as a glyph and a word), rendered from the stored attempt."],
 ["learn.module.css","Style","Learn pages, on the type scale only."],
@@ -974,38 +975,38 @@ docker compose --env-file deploy/.env -f docker-compose.prod.yml exec backup cod
 ["GateCard.tsx","UI","A tier’s gate as one line and one button: start (confirmed in a dialog that holds its problems and cooldown), continue, cooldown countdown, or passed."],
 ["HowItWorks.tsx","UI","“How it works”: the loop in three steps as a card under the hero, and a quiet link at the end of the header’s line of progress that brings it back — one disclosure with two ends. Open while nothing is solved and it has not been dismissed (the server knows, from the cookie); “Got it” or the first solve puts it away; the link reopens it in the page, with no round trip."],
 ["LinkPending.tsx","UI","Inside a problem’s link on the map: swaps the status dot for a spinner while that navigation is in flight (useLinkStatus) — the editor has no loading.tsx to show the wait."],
-["MapHero.tsx","UI","The map’s header — the shared PageHeader (“Tier map”) with one progress line (“9/30 problems solved · 3/10 topics unlocked · 1/3 tiers open” and the How it works link) — the hero of the featured topic or of an open gate (animated art, name, caption, “n/m solved” and one button; decisions 41 and 43), and the milestone line under it."],
+["MapHero.tsx","UI","The map’s header — the shared PageHeader (“Tier map”) with one progress line (“9/30 problems solved · 3/10 topics unlocked · 1/3 tiers open” and the How it works link; spaced, not dotted, on a phone) — the hero of the featured topic or of an open gate (animated art, name, caption, “n/m solved” and one button, quiet while a gate attempt runs; decisions 41, 43 and 44), and the milestone line under it."],
 ["MapMemory.tsx","UI","Keeps the rows and closed-tier panels a learner opened by clicking (sessionStorage, try/catch-guarded), applied before paint so nothing flashes, and restores the map’s scroll position after Back or Forward — the map scrolls its own <main>, which the router does not restore."],
 ["StateLabel.tsx","UI","The map’s whole status vocabulary: Open · Ready to unlock · Locked, one treatment each, shown only where it matters."],
 ["TopicThumb.tsx","UI","A topic row’s 104×58 art thumbnail: a still poster (dimmed when the topic is locked); its scene loads on demand."],
 ["attempt.module.css","Style","The gate attempt page’s styles (the map’s column, glyphs and difficulty text), split out of map.module.css so the home page does not ship them."],
 ["firstRunCookie.ts","UI","The cookie that remembers How it works was dismissed (cm-first-run=hide, one year, Lax, Secure on https); read on the server."],
 ["map.module.css","Style","Map layout on the type scale: the hero, the How it works card, tier panels, topic rows, thumbnails and problem lists."],
-["RunningAttemptBanner.tsx","UI","A running gate attempt, pinned to the top of the map."],
+["RunningAttemptBanner.tsx","UI","A running gate attempt, pinned to the top of the map: its Continue is the page’s one primary action while it runs."],
 ["TierSection.tsx","UI","One tier: an open tier is its header and a row per topic; a closed tier is one collapsed panel (its name, why it is closed — “Opens after the Foundations Gate — a timed set of 4 problems” —, its topics as posters and names) that opens to the gate line and compact topics."],
 ["TopicActions.tsx","UI","The unlock flow: pick a recipe, see the exact debits (difficulty as quiet text), confirm — “Spend one recipe — a set of tokens. X stays open for good.”; a shortfall comes back itemized. After an unlock the row opens itself and its heading takes focus."],
-["TopicCard.tsx","UI","One topic as a row (a details element): thumbnail, name and “n/m solved · k tokens” or what it needs; it opens to the blocker (said once, with “recipe” defined where it first appears), recipes with have/need per item, its problems and the unlock action."],
+["TopicCard.tsx","UI","One topic as a row (a details element): thumbnail, name and “n/m solved · k tokens” or what it needs; it opens to the blocker (said once, with “recipe” defined where it first appears), recipes with have/need per item and their state as a word (Ready, “2 missing”), its problems and the unlock action."],
 ["TopicProblems.tsx","UI","A topic’s problems inside its row: your progress, difficulty as quiet text with a dot, the title linking to the editor (the whole row is the target), a locked composite naming the topic it needs, “n/m solved”. Server component."]]],
-["Problem","UI","Problem statement pieces.",[["LockedQuestion.tsx","UI","What a locked question renders instead of the editor: what blocks each topic, and the way to the map."],
+["Problem","UI","Problem statement pieces.",[["LockedQuestion.tsx","UI","What a locked question renders instead of the editor: its difficulty as quiet text, what blocks each topic (a recipe’s items as lines — a glyph in the state’s tone, the topic, have/need), and the way to the map."],
 ["Markdown.module.css","Style","Statement prose."],
 ["Markdown.tsx","UI","Sanitized GFM with fenced code through the kit’s CodeBlock; server-rendered for statements, lazy in the browser for hints."],
 ["MoreDisclosure.tsx","UI","“More” on the problem statement: further examples, constraints, tags and companies behind one 44 px toggle on a phone (narrow or short); on a tablet upright and up everything is simply there (decided in CSS, so nothing jumps after hydration)."],
-["Problem.module.css","Style","Statement layout."],
-["ProblemStatement.tsx","UI","Topic and tag chips, the statement with its first example open and the rest behind “More” on phones (everything shown from 1024 px), constraints. Server component."]]],
+["Problem.module.css","Style","Statement layout: the tags line, the constraints, the locked page."],
+["ProblemStatement.tsx","UI","The statement with its first example open and the rest behind “More” on phones (everything shown from 768 px on a tablet upright and up), constraints, and the topic and tags as one quiet line. Server component."]]],
 ["Profile","UI","The profile page (06).",[["ActivityHeatmap.tsx","UI","The 365-day activity map as an ARIA grid (roving tabindex, arrow keys by week and day); its geometry comes from CSS variables and its labels are 12 px; a hovered or focused day replaces the summary text while the summary stays the grid’s accessible name."],
 ["profile.module.css","Style","Profile layout on the map’s page shell and the type scale."],
 ["ProfileSections.tsx","UI","ProfileHeader (avatar and PageHeader), Panel and PanelLink, StatsCard (Solved with DifficultyText, Streak, Tokens; acceptance and fastest run under “More stats”), RecentSubmissions (verdict words, DifficultyText, LangMark; an empty state), BadgesPanel, TokensPanel, LearnPanel."]]],
 ["Results","UI","Run results (03).",[["AiReview.module.css","Style","AI review panel."],
-["AiReview.tsx","UI","Optional AI review of an accepted submission, quick then deeper; advisory only."],
+["AiReview.tsx","UI","Optional AI review of an accepted submission, quick then deeper (the review’s depth is the first word of its line); advisory only."],
 ["JudgeOutput.tsx","UI","Compiler and runtime output; references to the learner’s own lines become buttons that move the cursor there."],
 ["ResultPanel.tsx","UI","The live part of the Result tab: a run’s progress while it streams, then the result card and the per-test list. One lazily loaded piece, so its code and styles stay out of the page’s first paint."],
-["Results.module.css","Style","The result card and breakdown, on the type scale (nothing under 12 px)."],
-["ResultsHero.tsx","UI","The result card: the verdict as a headline with one line under it, reward rows (+N token · topic, a badge), Next problem and Back to the map (or the gate), then runtime, memory and — with 30+ solutions to compare — “faster than N%” in one quiet row; a failing verdict leads with what happened, what to try and the first failing test, and on a phone offers “Back to code”."],
+["Results.module.css","Style","The result card, its quiet labels and the breakdown, on the type scale (nothing under 12 px)."],
+["ResultsHero.tsx","UI","The result card: the verdict as a headline with one line under it, the language and the judge’s code as small quiet labels at its edge, reward rows (+N token · topic, a badge), Next problem and Back to the map (or the gate), then runtime, memory and — with 30+ solutions to compare — “faster than N%” in one quiet row; a failing verdict leads with what happened, what to try and the first failing test, and on a phone offers “Back to code”."],
 ["RunProgress.tsx","UI","Live progress while a run streams: phase, a tick per test, a bar."],
-["TestBreakdown.tsx","UI","The per-test list, collapsed under the result: visible tests open to input/expected/output/error; hidden ones show pass or fail only."],
+["TestBreakdown.tsx","UI","The per-test list, collapsed under the result: visible tests open to input/expected/output/error; hidden ones show pass or fail only; a test’s kind (Sample, Custom, Hidden with a lock) is a quiet word beside its title (TestKindLabel)."],
 ["TestStrip.tsx","UI","One tick per test while a run streams; decorative (the count is in text), not interactive."],
-["VerdictText.module.css","Style","The verdict text’s layout."],
-["VerdictText.tsx","UI","A verdict where it is listed rather than headlined: sentence case with the result card’s glyph and tone, and the short code (OK, WA, TLE…) as a small label — no second set of pills. Used by the editor’s Submissions tab."]]],
+["VerdictText.module.css","Style","The verdict text’s layout and tones."],
+["VerdictText.tsx","UI","A verdict as quiet text — the one way a verdict is shown where it is listed rather than headlined (submission rows, the editor’s Submissions tab, the playground, a lesson snippet): glyph and name in the verdict’s tone, sentence case, the short code small; a code-only variant for dense rows, a label override (“All matched”, “Ran”) and a spinner for queued and running."]]],
 ["TopicArt","UI","The topic art (decision 40): an animated SVG scene for each of the ten topics, on a stage, as a loop, a still poster or a lazy slot. The sign-in hero reel and the map’s hero and thumbnails are made of it.",[["scenes","UI","One scene per topic and a fallback: a 320×180 canvas and a 7 s loop that runs the real algorithm and ends in a payoff (confetti and a +1 coin). Each file’s header comment tells its story.",[["arrays-hashing.tsx","UI","A hash machine eats a key, shows its number (code mod 8: K→3, M→5, R→2) and spits it into that bucket; a later lookup of M goes straight to bucket 5."],
 ["binary-search.tsx","UI","Fifteen sorted pillars and a gold line at 49: a spotlight probes the middle, the pillars outside the live range fall away (15 → 7 → 3 → 1) and the fourth probe lands on the target. The search really runs and drives the scene."],
 ["dynamic-programming.tsx","UI","A 4×5 grid-paths table filled once, in dependency order — each cell is the sum of the one above and the one to the left — up to 35 in the corner."],
@@ -1036,17 +1037,16 @@ docker compose --env-file deploy/.env -f docker-compose.prod.yml exec backup cod
 ["states.module.css","Style","State layouts."]]],
 ["Submissions","UI","Submission history and detail (05).",[["format.ts","UI","Formatting for submission metrics and times, plus statusWord and submissionHeadline (the words of a row and of a detail page)."],
 ["query.ts","Rule","The /submissions URL contract, shared by the page and its filters."],
-["SubmissionDetail.tsx","UI","The verdict as a headline (“Accepted — all 9 tests passed”), one quiet row of runtime, memory, compile time and time per test, “faster than N%” only with 30+ learners behind it, the code, and the per-test breakdown with hidden tests reduced to pass/fail."],
+["SubmissionDetail.tsx","UI","The verdict as a headline (“Accepted — all 9 tests passed”) with the judge’s code as a small label, one quiet row of runtime, memory, compile time and time per test, “faster than N%” only with 30+ learners behind it, the code, and the per-test breakdown with hidden tests reduced to pass/fail."],
 ["SubmissionFilters.tsx","UI","Quiet status, language and kind selects (44 px on phones); each change is a URL change in a transition."],
 ["SubmissionRows.tsx","UI","Newest-first rows (two lines on a phone), each linking to its detail page: the verdict in words with the short code small, DifficultyText, LangMark, runtime and memory. Server component."],
-["Submissions.module.css","Style","History and detail layout on the type scale."],
-["SubmissionStatus.tsx","UI","A submission’s status in words with the result card’s glyph and tone and the short code as a small label (queued and running included, and the run kind’s wording: “All tests passed”)."]]],
+["Submissions.module.css","Style","History and detail layout on the type scale."]]],
 ["ui","UI kit","The design system: token-only primitives, overlays, code and math blocks, the visualization player. /dev/system shows all of it.",[["Avatar.tsx","UI kit","Initials avatar with a hue derived from the name (initials at least 12 px; a disc under 28 px shows none); an image covers it when present."],
 ["BigMetric.tsx","UI kit","A 26 px tabular number with a sentence-case label, sub-rows or a percentile bar."],
 ["Breadcrumb.module.css","Style","Breadcrumb."],
 ["Breadcrumb.tsx","UI kit","Path trail; the last crumb is aria-current=page."],
-["Button.module.css","Style","Button variants, sizes and states."],
-["Button.tsx","UI kit","The one button (primary, default, ghost, outline, danger, success, accent; xs–lg; loading; a tap prop for a 44 px target) and ButtonLink for navigation; its kbd hint is hidden on touch."],
+["Button.module.css","Style","Button variants, sizes and states; on touch medium and large buttons are 44 px, a small one asks for tap, and a long label wraps instead of widening the page."],
+["Button.tsx","UI kit","The one button (primary, default, ghost, outline, danger, success, accent; xs–lg; loading; a tap prop for a 44 px target) and ButtonLink for navigation; every button carries data-variant; its kbd hint is hidden on touch."],
 ["Callout.tsx","UI kit","Lesson aside for :::callout (complexity, pitfall, note), with a sentence-case title."],
 ["Chip.module.css","Style","Chips."],
 ["Chip.tsx","UI kit","Filter chip: static, toggle, or removable (sibling buttons, never nested)."],
@@ -1055,7 +1055,7 @@ docker compose --env-file deploy/.env -f docker-compose.prod.yml exec backup cod
 ["DifficultyPill.tsx","UI kit","Easy / Medium / Hard pill."],
 ["DifficultyText.module.css","Style","Difficulty text."],
 ["DifficultyText.tsx","UI kit","Easy · Medium · Hard as quiet text with a dot — the one way difficulty is shown in a list; DifficultyPill is for where a filled tag is the point."],
-["Field.module.css","Style","Field frame: 16 px text and 44 px tall on phones."],
+["Field.module.css","Style","Field frame: 16 px text and 44 px tall on phones; placeholder text in --fg-ph (at least 4.5 : 1)."],
 ["Field.tsx","UI kit","Label, hint and error wiring (aria-describedby, aria-invalid) shared by Input, Textarea and Select."],
 ["Kbd.module.css","Style","Keyboard tag (12 px)."],
 ["Modal.module.css","Style","Dialog frame and header on the type scale; 44 px close and footer buttons on touch."],
@@ -1082,12 +1082,12 @@ docker compose --env-file deploy/.env -f docker-compose.prod.yml exec backup cod
 ["Progress.tsx","UI kit","Decorative meter bar for places that print the number beside it."],
 ["ProgressBar.tsx","UI kit","Accessible progress bar (role=progressbar)."],
 ["RunnableCodeBlock.module.css","Style","Runnable snippet on the type scale."],
-["RunnableCodeBlock.tsx","UI kit","Editable snippet with optional stdin and a neutral Run (a lesson’s one primary action is “Mark complete”); output with verdict, runtime and memory; the editor is 16 px on phones and the ⌘↵ hint is hidden on touch."],
+["RunnableCodeBlock.tsx","UI kit","Editable snippet with optional stdin and a neutral Run (a lesson’s one primary action is “Mark complete”); output with a quiet verdict (“Ran”, or the verdict’s words), runtime and memory; the editor is 16 px on phones and the ⌘↵ hint is hidden on touch."],
 ["Select.tsx","UI kit","Styled native select."],
 ["Skeleton.tsx","UI kit","Placeholder blocks with the design’s slow pulse (static under reduced motion)."],
 ["Spinner.tsx","UI kit","Indeterminate activity indicator."],
 ["StatusDot.tsx","UI kit","Round solved/attempted indicator in the map’s problem lists."],
-["StatusPill.tsx","UI kit","Verdict pill in its spec tone (OK ok, WA/RE err, TLE/MLE warn, CE info, XX neutral); screen readers hear the long name, in sentence case."],
+["StatusPill.tsx","UI kit","Verdict capsule in its spec tone (OK ok, WA/RE err, TLE/MLE warn, CE info, XX neutral); screen readers hear the long name, in sentence case. For the authoring tools and the design sheet — learners see VerdictText."],
 ["Switch.tsx","UI kit","On/off control (role=switch); Toggle is the same component."],
 ["Tabs.module.css","Style","Tabs: counts at 12 px; a 44 px minimum on touch that a page’s own size overrides."],
 ["Tabs.tsx","UI kit","WAI-ARIA tabs with roving tabindex, and TabPanel."],
@@ -1116,29 +1116,30 @@ docker compose --env-file deploy/.env -f docker-compose.prod.yml exec backup cod
 ["VizMount.tsx","UI","Mounts the visualization registered for an id, as a client-only dynamic import."]]],
 ["Workspace","UI","The solving surface of questions and gate attempts.",[["CasesPanel.tsx","UI","Learner-added inputs, one JSON value per parameter, checked against the signature while typing."],
 ["GateBanner.tsx","UI","The gate strip over the workspace: countdown, progress against the threshold, the other gate questions; on a phone one 46 px line (the clock and “0/4 · pass with 3”) with a toggle that opens the gate’s name, a link and its problems as 44 px rows."],
-["RunErrorNotice.tsx","UI","Why a run never started, with the way out: the map (403), sign-in (401), retry."],
+["RunErrorNotice.tsx","UI","Why a run never started, with the way out (full touch targets): the map (403), sign-in (401), retry."],
 ["SolveWorkspace.tsx","UI","Statement · editor · console in resizable columns from 1024 px; two panes on a tablet upright (768–1023 px wide, at least 600 px tall: the statement, and the editor with the console under it); below that, or on a short screen, one pane at a time (Problem · Code · Result) with a 44 px Run/Submit bar, the result scrolling into view and taking focus and “Back to code” after a failing run; Run and Submit wait for Monaco; question or gate mode; drafts per problem and language; ⌘/Ctrl+Enter runs, ⌘/Ctrl+Shift+Enter submits (glyphs hidden on touch)."],
-["StatementPane.tsx","UI","Statement, editorial, hints and submissions tabs, all inside the screen at 320 px; the ladder loads when its tab opens."],
+["StatementPane.tsx","UI","The problem header — the title, then difficulty (DifficultyText), “Solved” and “Best: faster than N%” as quiet words — and the statement, editorial, hints and submissions tabs, all inside the screen at 320 px; the ladder loads when its tab opens."],
 ["SubmissionsList.tsx","UI","Your recent submissions of this problem (VerdictText, not pills; rows stack on phones; the percentile shows only where 30+ solutions back it)."],
 ["types.ts","Types","The workspace’s serializable props (including the next problem), so a server component can hand them straight over."],
 ["useModKey.ts","UI","Prints ⌘ or Ctrl for shortcut hints, corrected after mount; useTouchOnly is true on devices without hover, where the glyphs are hidden; useLayout / layoutNow say whether the problem page is wide, a tablet (768–1023 px wide, at least 600 px tall) or a phone, mirroring its media queries."],
 ["useSplit.ts","UI","A resizable split remembered per browser, as a WAI-ARIA window splitter."],
 ["Workspace.module.css","Style","Workspace layout: three columns from 1024 px, two panes on a tablet upright, the one-pane phone layout with its 44 px action bar (100dvh) and one-line gate strip; panes are positioned so hidden text cannot stretch the page."]]]]],
-["e2e","Test","Playwright: 220 tests in 16 specs, run against an already-running app (PLAYWRIGHT_BASE_URL); each spec creates its own users (those that earned tokens stay: the ledger is append-only).",[["a11y.spec.ts","Test","The accessibility and layout gate: no serious or critical axe violation and exactly one h1 on a route per section in both themes, no sideways scroll at 375 px — and, from the route table FLOOR_ROUTES (18 routes, an owner each), per route: no visible text under 12 px, 16 px fields at 375 px, a phone gate, and the top bar’s 44 px targets (50 tests; axe-core loaded from cdnjs)."],
-["auth.spec.ts","Test","The login wall, sign-up, sign-in, forgot and reset; on a phone every field is 44 px with 16 px text, links are 44 px, the primary action ends inside the first screen (7 tests)."],
+["e2e","Test","Playwright: 227 tests in 16 specs, run against an already-running app (PLAYWRIGHT_BASE_URL); each spec creates its own users (those that earned tokens stay: the ledger is append-only).",[["a11y.spec.ts","Test","The accessibility and layout gate: no serious or critical axe violation and exactly one h1 on a route per section in both themes, no sideways scroll at 375 px — and, from the route table FLOOR_ROUTES (18 routes, an owner each), per route: no visible text under 12 px, 16 px fields at 375 px, a phone gate, and the top bar’s 44 px targets (50 tests; axe-core loaded from cdnjs)."],
+["auth.spec.ts","Test","The login wall, sign-up, sign-in, forgot and reset; on a phone every field is 44 px with 16 px text, links are 44 px, the primary action ends inside the first screen; placeholder text is 4.5 : 1 in both themes (8 tests)."],
 ["author.spec.ts","Test","Role gate, write → verify on the judge → publish, ownership (3 tests)."],
-["calm-learn.spec.ts","Test","Learn, the IDE and Submissions in the map’s dialect: one header and one recommendation, rows and glyphs, no text under 12 px, nothing in capitals and at most 8 font sizes in both themes at both widths, the IDE’s phone panes and toolbar, a submission’s headline and the 30-learner percentile, 44 px targets and 16 px fields on a phone (35 tests)."],
+["calm-learn.spec.ts","Test","Learn, the IDE and Submissions in the map’s dialect: one header and one recommendation, rows and glyphs, no text under 12 px, nothing in capitals, no capsule and at most 8 font sizes in both themes at both widths, the IDE’s phone panes and toolbar, the playground and a lesson snippet after a run (verdicts in words, the output a tab stop), a submission’s headline and the 30-learner percentile, 44 px targets (default-size buttons too) and 16 px fields on a phone, a 320 px page without sideways scroll (38 tests)."],
 ["calm-profile.spec.ts","Test","The profile and the badges gallery: sizes (nothing under 12 px, marks included, nothing in capitals, one 26 px h1), the activity map’s labels, the map hidden at 6 active days and shown at 7, the identity header on a phone, the empty profile as one empty state, 44 px targets, the badge dialog (7 tests)."],
+["capsules.ts","Test","The detector behind “no capsules”: finds filled or outlined pill-shaped text inside <main> (buttons, links and tabs are controls, not tags; avatar initials are marks), run in the page. Asserted on the problem screens, Learn, the IDE, Submissions and the Map; checked against the sign-in chips before it was trusted."],
 ["editor.spec.ts","Test","Run, submit (Accepted, the reward, Next problem), a wrong answer, Go and C++, a compile error linked to its line, a locked question, and that the map’s Monaco prefetch list matches what a cold problem page asks for (5 tests)."],
 ["hero.spec.ts","Test","The sign-in hero reel: it renders, switching topics changes the caption, pause works (a 44 px button on a phone), reduced motion shows a poster, the banner above the form at 375 px, no layout shift while rotating through all ten topics (14 tests)."],
 ["ide.spec.ts","Test","stdin cases, per-case runtime, the diff, Go (1 test)."],
 ["learn.spec.ts","Test","Home, a lesson with a snippet and a visualization, a checkpoint with review, track completion and its badges (5 tests)."],
 ["library.spec.ts","Test","The plain 404 below staff, noindex, robots.txt, a staff reader through index → area → article (4 tests)."],
 ["loop.spec.ts","Test","The required journey: sign up (landing on the map) → solve, the first problem opened from the map’s list → submit → pass the gate → unlock, then open the unlocked topic’s problem from its card (1 test)."],
-["map-hero.spec.ts","Test","The calm map (52 tests): the hero and its button’s target — including the open gate when nothing else is left — closed tiers collapsed and opening by click, Enter or Space and by anchor links, topic rows, How it works (shown, dismissed, brought back by its link), every milestone state and the pass threshold, rows and scroll kept across Back, posters as stills, nothing under 12 px or in capitals, at most 8 font sizes, stacking at 375 px, axe in every state collapsed and open in both themes."],
+["map-hero.spec.ts","Test","The calm map (53 tests): the hero and its button’s target — including the open gate when nothing else is left — closed tiers collapsed and opening by click, Enter or Space and by anchor links, topic rows, How it works (shown, dismissed, brought back by its link), every milestone state and the pass threshold, rows and scroll kept across Back, posters as stills, nothing under 12 px, in capitals or in a capsule and at most 8 font sizes, one primary button while a gate attempt runs, stacking at 375 px, axe in every state collapsed and open in both themes."],
 ["map.spec.ts","Test","The map as home: /, the logo and the /problems redirects; an unlocked topic’s list (progress, links, the editor opening); a locked composite; a locked topic’s count; a gate attempt’s real 404; 375 px (6 tests)."],
 ["profile.spec.ts","Test","The /profile redirect, stats (acceptance and fastest run under “More stats”), the keyboard activity map, someone else’s profile, the badge modal (5 tests)."],
-["results.spec.ts","Test","The result card and the phone and tablet problem page: card order and its Next problem target, a wrong answer leading with the first failing test, TLE/RE/CE, no toast over the card, the percentile hidden below 30 and shown at 30, a gate attempt and its one-line strip on a phone; on a phone the pane switch, 44 px one-row Run/Submit, tabs inside the screen, the result in view and focused, “Back to code”, no sideways scroll; a tablet upright’s two panes and a phone on its side; axe on each view in both themes (20 tests)."],
+["results.spec.ts","Test","The result card and the phone and tablet problem page: card order and its Next problem target, a wrong answer leading with the first failing test, TLE/RE/CE, no toast over the card, the percentile hidden below 30 and shown at 30, a gate attempt and its one-line strip on a phone; on a phone the pane switch, 44 px one-row Run/Submit, tabs inside the screen, the result in view and focused, “Back to code”, no sideways scroll; a tablet upright’s two panes and a phone on its side; the problem screen in the quiet language — difficulty, solved, tags, hint costs, the result card’s labels and the Submissions tab with no capsule, at laptop and phone width; axe on each view in both themes (22 tests)."],
 ["submissions.spec.ts","Test","History filters and pagination, the detail page, who may see a submission, the empty state, 375 px (5 tests)."]]],
 ["lib","Library","Shared code: the compile-service client, SSE, rate limits, mail, lesson markdown, client helpers and the domain layer.",[["client","Client","Browser-side helpers for the editor and IDE, the hero reel’s rules and the result card’s words. Pure where possible.",[["client.test.ts","Test","The run-state reducer, drafts, metric formatting, judge-output line links, signature helpers (15 tests)."],
 ["drafts.ts","Client","Per-problem, per-language drafts in localStorage, guarded so private mode cannot break the editor."],
@@ -1146,8 +1147,8 @@ docker compose --env-file deploy/.env -f docker-compose.prod.yml exec backup cod
 ["heroReel.test.ts","Test","The reel’s rules (16 tests)."],
 ["heroReel.ts","Rule","The hero reel’s rules as pure functions: when it may rotate and when animations play (the pause button, a mouse over it, keyboard focus, a hidden tab, scrolled off, reduced motion), wrapping and stepping, the switcher’s keys; LOOP_MS = 7000."],
 ["languages.ts","Client","Display names, Monaco ids and file names per language; turns “solution.cpp:4:14” in judge output into links to the learner’s lines."],
-["resultCopy.test.ts","Test","The result card’s words (8 tests)."],
-["resultCopy.ts","Rule","The words of a result card as pure functions: the headline, the line under it, what to try and how a reward reads. Judge vocabulary stays (Accepted, Wrong answer, Time limit exceeded…); the short codes are small labels."],
+["resultCopy.test.ts","Test","The result card’s words and the verdict look table (11 tests)."],
+["resultCopy.ts","Rule","The words of a result card as pure functions: the headline, the line under it, what to try and how a reward reads. Judge vocabulary stays (Accepted, Wrong answer, Time limit exceeded…); the short codes are small labels. Also VERDICT_LOOK, the one table of a verdict’s tone and glyph (the result card, VerdictText, the detail page and the profile share it)."],
 ["runState.ts","Client","The state of one run/submit stream as a pure reducer: phases only move forward, tests stay ordered by idx."],
 ["signature.ts","Client","Value ↔ text for custom inputs, with the judge’s own type rules, so a bad input is caught before anything runs."],
 ["useRunStream.ts","Client","POSTs to /api/run|submit and follows the SSE stream; errors before the stream keep their JSON body."]]],
