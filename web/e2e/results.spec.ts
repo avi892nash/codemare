@@ -380,10 +380,14 @@ test.describe('on a phone (375 px)', () => {
     await expect(page.locator('kbd:visible')).toHaveCount(0); // ⌘↵ is for keyboards
     expect(await overflow(page)).toEqual({ page: 0, main: 0 });
 
-    // Tapping into the editor works and typing reaches the model.
+    // Tapping into the editor works and typing reaches the model — once Monaco has laid itself out in the pane
+    // that has just appeared (it was mounted while the pane was hidden; a tap before its resize is the test's race, not a user's).
+    type MonacoWindow = { monaco: { editor: { getEditors(): { getValue(): string; getLayoutInfo(): { height: number } }[] } } };
+    await page.waitForFunction(() => (window as unknown as MonacoWindow).monaco.editor.getEditors()[0].getLayoutInfo().height > 100);
     await page.touchscreen.tap(editor.x + editor.width / 2, editor.y + 80);
+    await expect(page.locator('.monaco-editor.focused')).toBeVisible();
     await page.keyboard.type('# note');
-    expect(await page.evaluate(() => (window as unknown as { monaco: { editor: { getEditors(): { getValue(): string }[] } } }).monaco.editor.getEditors()[0].getValue().includes('# note'))).toBe(true);
+    await expect.poll(() => page.evaluate(() => (window as unknown as MonacoWindow).monaco.editor.getEditors()[0].getValue().includes('# note'))).toBe(true);
   });
 
   test('after Submit the result takes the screen: headline focused, the reward and "Next problem" in view, 44 px', async ({ page }) => {
