@@ -43,10 +43,10 @@ export function ProgressBar({
   return (
     <div className={className} style={{ display: 'flex', flexDirection: 'column', gap: 6, ...style }}>
       {(label || showValue) && (
-        <div aria-hidden="true" style={{ display: 'flex', alignItems: 'baseline', gap: 8, fontSize: 12 }}>
+        <div aria-hidden="true" style={{ display: 'flex', alignItems: 'baseline', gap: 8, fontSize: 'var(--fs-xs)' }}>
           {label && <span style={{ color: 'var(--fg-1)', fontWeight: 500 }}>{label}</span>}
           {showValue && !indeterminate && (
-            <span className="mono" style={{ marginLeft: 'auto', color: 'var(--fg-2)', fontSize: 11.5 }}>{shown}</span>
+            <span className="mono" style={{ marginLeft: 'auto', color: 'var(--fg-2)', fontSize: 'var(--fs-xs)' }}>{shown}</span>
           )}
         </div>
       )}

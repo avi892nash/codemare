@@ -29,17 +29,24 @@ interface PillProps extends Omit<HTMLAttributes<HTMLSpanElement>, 'className' | 
 
 /* Sizes sit on the app's type scale (globals.css --fs-*): nothing is set in
  * text smaller than --fs-xs (12 px). `icon` is the glyph size in px, which an
- * <svg> cannot take from a custom property — keep it equal to the font size. */
-const SIZES: Record<PillSize, { font: string; icon: number; py: number; px: number }> = {
-  xs: { font: 'var(--fs-xs)', icon: 12, py: 1, px: 8 },
-  sm: { font: 'var(--fs-sm)', icon: 13, py: 2, px: 9 },
-  md: { font: 'var(--fs-md)', icon: 14, py: 3, px: 10 },
+ * <svg> cannot take from a custom property — keep it equal to the font size.
+ * `height` is the control ladder (--ctl-*): a pill is as tall as the button or
+ * chip of its step (xs 22, sm 24, md 28), so a row of mixed capsules lines up. */
+const SIZES: Record<PillSize, { font: string; icon: number; px: number; height: number }> = {
+  xs: { font: 'var(--fs-xs)', icon: 12, px: 8, height: 22 },
+  sm: { font: 'var(--fs-sm)', icon: 13, px: 9, height: 24 },
+  md: { font: 'var(--fs-md)', icon: 14, px: 10, height: 28 },
 };
+
+/** The icon size that sits beside a pill's text (StatusPill uses it for its glyph and spinner). */
+export function pillIconSize(size: PillSize): number {
+  return SIZES[size].icon;
+}
 
 /** Status / metadata capsule. Tones: default · accent · ok · warn · err · info · muted. */
 export function Pill({ children, tone = 'default', icon, dot, size = 'sm', className = '', style, ...rest }: PillProps) {
   const t = PILL_TONES[tone];
-  const { font, icon: iconSize, py, px } = SIZES[size];
+  const { font, icon: iconSize, px, height } = SIZES[size];
   return (
     <span
       {...rest}
@@ -48,7 +55,9 @@ export function Pill({ children, tone = 'default', icon, dot, size = 'sm', class
         display: 'inline-flex',
         alignItems: 'center',
         gap: 4,
-        padding: `${py}px ${px}px`,
+        height,
+        boxSizing: 'border-box',
+        padding: `0 ${px}px`,
         fontSize: font,
         fontWeight: 500,
         lineHeight: 1.4,

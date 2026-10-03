@@ -26,6 +26,8 @@ interface ButtonLookProps {
   kbd?: string;
   /** Stretch to the container width, content centered. */
   full?: boolean;
+  /** Grow to a 44 px touch target on phones and touch devices (the look stays the same on a desktop). */
+  tap?: boolean;
   /** Shows a spinner and ignores clicks (stays focusable; sets aria-busy). */
   loading?: boolean;
 }
@@ -44,12 +46,15 @@ export interface ButtonLinkProps extends ButtonLookProps, Omit<AnchorHTMLAttribu
   scroll?: boolean;
 }
 
+/* Icons sit beside text set at 12 px (xs, sm), 13 px (md) and 14 px (lg). */
 function iconSizeFor(size: ButtonSize) {
-  return size === 'xs' ? 11 : size === 'lg' ? 16 : 14;
+  return size === 'xs' ? 12 : size === 'lg' ? 16 : 14;
 }
 
-function classFor(variant: ButtonVariant, size: ButtonSize, full: boolean | undefined, iconOnly: boolean, extra?: string) {
-  return [s.btn, s[variant], s[size], iconOnly && s.iconOnly, full && s.full, 'focus-ring', extra]
+function classFor(
+  variant: ButtonVariant, size: ButtonSize, full: boolean | undefined, iconOnly: boolean, tap: boolean | undefined, extra?: string,
+) {
+  return [s.btn, s[variant], s[size], iconOnly && s.iconOnly, full && s.full, tap && s.tap, 'focus-ring', extra]
     .filter(Boolean)
     .join(' ');
 }
@@ -69,8 +74,8 @@ function Content({
     <>
       {icon && (loading ? <Spinner size={iz} /> : <Icon name={icon} size={iz} />)}
       {children}
-      {iconRight && <Icon name={iconRight} size={size === 'xs' ? 11 : 14} />}
-      {kbd && <Kbd>{kbd}</Kbd>}
+      {iconRight && <Icon name={iconRight} size={size === 'xs' ? 12 : 14} />}
+      {kbd && <Kbd className={s.kbd}>{kbd}</Kbd>}
     </>
   );
   // No leading icon to swap: keep the label's width, overlay the spinner.
@@ -92,7 +97,7 @@ function Content({
  */
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
   {
-    children, variant = 'default', size = 'md', icon, iconRight, kbd, full, loading = false,
+    children, variant = 'default', size = 'md', icon, iconRight, kbd, full, tap, loading = false,
     className, type = 'button', onClick, disabled, ...rest
   },
   ref,
@@ -113,7 +118,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
         }
         onClick?.(e);
       }}
-      className={classFor(variant, size, full, iconOnly, className)}
+      className={classFor(variant, size, full, iconOnly, tap, className)}
       {...rest}
     >
       <Content size={size} icon={icon} iconRight={iconRight} kbd={kbd} loading={loading}>
@@ -129,7 +134,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
  */
 export const ButtonLink = forwardRef<HTMLAnchorElement, ButtonLinkProps>(function ButtonLink(
   {
-    children, href, prefetch, replace, scroll, variant = 'default', size = 'md', icon, iconRight, kbd, full,
+    children, href, prefetch, replace, scroll, variant = 'default', size = 'md', icon, iconRight, kbd, full, tap,
     loading = false, className, ...rest
   },
   ref,
@@ -144,7 +149,7 @@ export const ButtonLink = forwardRef<HTMLAnchorElement, ButtonLinkProps>(functio
       replace={replace}
       scroll={scroll}
       aria-busy={loading || undefined}
-      className={classFor(variant, size, full, iconOnly, className)}
+      className={classFor(variant, size, full, iconOnly, tap, className)}
       {...rest}
     >
       <Content size={size} icon={icon} iconRight={iconRight} kbd={kbd} loading={loading}>

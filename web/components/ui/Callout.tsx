@@ -47,10 +47,8 @@ export function Callout({ kind = 'note', title, time, space, children, className
       <div style={{ flex: 1, minWidth: 0 }}>
         <div
           style={{
-            fontSize: 11,
+            fontSize: 'var(--fs-sm)',
             fontWeight: 600,
-            letterSpacing: 0.8,
-            textTransform: 'uppercase',
             color: k.ink,
             marginBottom: 4,
           }}
@@ -64,7 +62,7 @@ export function Callout({ kind = 'note', title, time, space, children, className
           </div>
         )}
         {children != null && (
-          <div style={{ fontSize: 13.5, lineHeight: 1.6, color: 'var(--fg-1)' }}>{children}</div>
+          <div style={{ fontSize: 'var(--fs-body)', lineHeight: 1.6, color: 'var(--fg-1)' }}>{children}</div>
         )}
       </div>
     </aside>
@@ -82,10 +80,10 @@ function ComplexityChip({ label, value }: { label: string; value: string }) {
         borderRadius: 'var(--r)',
         background: 'var(--bg-2)',
         border: '1px solid var(--line-2)',
-        fontSize: 12,
+        fontSize: 'var(--fs-xs)',
       }}
     >
-      <span style={{ color: 'var(--fg-2)', fontSize: 11 }}>{label}</span>
+      <span style={{ color: 'var(--fg-2)', fontSize: 'var(--fs-xs)' }}>{label}</span>
       <span className="mono" style={{ color: 'var(--fg-0)', fontWeight: 500 }}>{value}</span>
     </span>
   );

@@ -51,7 +51,7 @@ export function CopyButton({
           border: 'none',
           color: copied ? 'var(--ok-fg)' : 'var(--fg-2)',
           cursor: 'pointer',
-          fontSize: 11,
+          fontSize: 'var(--fs-xs)',
           fontFamily: 'var(--font-sans)',
           display: 'inline-flex',
           alignItems: 'center',

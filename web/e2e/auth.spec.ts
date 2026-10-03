@@ -212,3 +212,36 @@ test('a reset link sets a new password, signs you in, and works only once', asyn
   await expect(other).toHaveURL(/\/forgot$/);
   await context.close();
 });
+
+test('on a phone the auth forms are thumb-sized: 44 px fields and links, 16 px text, and the form ends in the first screen', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  for (const path of ['/signin', '/signup', '/forgot']) {
+    await page.goto(path, { waitUntil: 'networkidle' });
+    // every field is a 44 px box with 16 px text (iOS zooms the page into anything smaller)
+    for (const input of await page.locator('form input:not([type="hidden"])').all()) {
+      const box = await input.boundingBox();
+      expect(box!.height, `${path}: a field's height`).toBeGreaterThanOrEqual(44);
+      expect(await input.evaluate((el) => parseFloat(getComputedStyle(el).fontSize)), `${path}: a field's text`).toBeGreaterThanOrEqual(16);
+    }
+    // the primary action is 44 px tall and inside the first screen
+    const primary = await page.locator('form button[type="submit"]').boundingBox();
+    expect(primary!.height).toBeGreaterThanOrEqual(44);
+    expect(primary!.y + primary!.height, `${path}: the primary action is in the first screen`).toBeLessThanOrEqual(812);
+    // the links under the form are 44 px targets, too
+    for (const link of await page.locator('main a[href]').all()) {
+      expect((await link.boundingBox())!.height, `${path}: ${await link.textContent()}`).toBeGreaterThanOrEqual(44);
+    }
+  }
+
+  // "Forgot password?" is its own row under the password field on a phone…
+  await page.goto('/signin', { waitUntil: 'networkidle' });
+  const password = await page.getByLabel('Password', { exact: true }).boundingBox();
+  const forgot = await page.getByRole('link', { name: 'Forgot password?' }).boundingBox();
+  expect(forgot!.y).toBeGreaterThan(password!.y + password!.height - 1);
+
+  // …and beside the "Password" label on a desktop, where it does not take a row of its own
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const desktopPassword = await page.getByLabel('Password', { exact: true }).boundingBox();
+  const desktopForgot = await page.getByRole('link', { name: 'Forgot password?' }).boundingBox();
+  expect(desktopForgot!.y + desktopForgot!.height).toBeLessThanOrEqual(desktopPassword!.y);
+});

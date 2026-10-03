@@ -46,7 +46,7 @@ export function ProfileMenu({ user, libraryVisible = false }: { user: NavUser; l
   return (
     <DropdownMenu
       label={`Account menu for ${user.name}`}
-      trigger={<Avatar name={user.name} src={user.image} size={26} />}
+      trigger={<Avatar name={user.name} src={user.image} size={28} />}
       triggerClassName={s.avatarTrigger}
       width={248}
       header={

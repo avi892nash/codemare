@@ -4,11 +4,13 @@ import { auth } from '@/auth';
 import { getTokenTotal } from '@/lib/server/loopViews';
 
 /**
- * Workspace layout: navbar on top, child route fills the rest. Reads the
- * session server-side so the navbar renders avatar vs "Sign in" without
- * client-side flicker. `role` / `handle` are read defensively (toNavUser) —
- * they join the session type separately. The token chip shows the sum of
- * the user's topic balances (hidden if it can't be read).
+ * Workspace layout: navbar on top, child route fills the rest — one column
+ * as tall as the visible screen (`.app-shell` in globals.css: 100dvh, with
+ * 100vh as the fallback). Reads the session server-side so the navbar
+ * renders avatar vs "Sign in" without client-side flicker. `role` / `handle`
+ * are read defensively (toNavUser) — they join the session type separately.
+ * The token chip shows the sum of the user's topic balances (hidden if it
+ * can't be read).
  */
 export default async function WorkspaceLayout({ children }: { children: React.ReactNode }) {
   const session = await auth().catch(() => null);
@@ -22,14 +24,7 @@ export default async function WorkspaceLayout({ children }: { children: React.Re
       })
     : undefined;
   return (
-    <div
-      style={{
-        height: '100vh',
-        display: 'flex',
-        flexDirection: 'column',
-        background: 'var(--bg-0)',
-      }}
-    >
+    <div className="app-shell">
       <Navbar user={user} tokenTotal={tokenTotal} libraryVisible={libraryVisible} />
       <div id="main" tabIndex={-1} style={{ flex: 1, minHeight: 0, display: 'flex', outline: 'none' }}>
         {children}

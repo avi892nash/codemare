@@ -337,10 +337,10 @@ test.describe('hero banner on a phone', () => {
     expect(overflow).toBe(0);
     expect(banner!.x + banner!.width).toBeLessThanOrEqual(375);
 
-    // the controls are big enough to hit: pause 40 px, segments at least 24 px
+    // the controls are big enough to hit: pause 44 px, segments at least 24 px (ten of them share the banner's width)
     const pause = await reel(page).getByRole('button', { name: 'Pause animation' }).boundingBox();
-    expect(pause!.width).toBeGreaterThanOrEqual(40);
-    expect(pause!.height).toBeGreaterThanOrEqual(40);
+    expect(pause!.width).toBeGreaterThanOrEqual(44);
+    expect(pause!.height).toBeGreaterThanOrEqual(44);
     for (const b of await reel(page).getByRole('toolbar').getByRole('button').all()) {
       const r = await b.boundingBox();
       expect(r!.width).toBeGreaterThanOrEqual(24);

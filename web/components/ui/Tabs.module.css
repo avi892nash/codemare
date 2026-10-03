@@ -30,14 +30,22 @@
 }
 .tab:disabled { cursor: not-allowed; opacity: 0.5; }
 
+/* Heights follow the shared control ladder (--ctl-*): an underline tab is at
+ * least as tall as a large button, a small one as a medium button, and a pills
+ * switcher (its tabs plus the 3 px frame) as a medium control; richer content
+ * (an icon, a count) makes a tab taller, never shorter. The minimums are set
+ * with :where() so they carry no specificity: a page that sizes its own tabs
+ * (the editor's, with `min-height: 44px`) always wins over the kit. */
 .underline .tab {
   padding: 10px 14px;
-  font-size: 13px;
+  font-size: var(--fs-sm);
   border-bottom: 1.5px solid transparent;
   margin-bottom: -1px;
   border-radius: var(--r-sm) var(--r-sm) 0 0;
 }
-.underline.sm .tab { padding: 8px 12px; font-size: 12px; }
+.underline.sm .tab { padding: 8px 12px; font-size: var(--fs-xs); }
+:where(.underline) .tab { min-height: var(--ctl-lg); }
+:where(.underline.sm) .tab { min-height: var(--ctl-md); }
 .underline .tab:hover:not(:disabled) { color: var(--fg-1); }
 .underline .tab[aria-selected='true'] {
   color: var(--fg-0);
@@ -46,18 +54,26 @@
 
 .pills .tab {
   padding: 5px 10px;
-  font-size: 12px;
+  font-size: var(--fs-xs);
   border-radius: var(--r-sm);
 }
+:where(.pills) .tab { min-height: 24px; }
 .pills .tab:hover:not(:disabled) { color: var(--fg-0); background: var(--bg-3); }
 .pills .tab[aria-selected='true'] {
   color: var(--fg-0);
   background: var(--bg-4);
 }
 
+/* Touch: tabs are a full 44 px target (a pills switcher is 44 px with its frame). */
+@media (max-width: 720px), (pointer: coarse) {
+  :where(.underline) .tab,
+  :where(.underline.sm) .tab { min-height: var(--tap); }
+  :where(.pills) .tab { min-height: 36px; }
+}
+
 .count {
   font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-size: var(--fs-xs);
   color: var(--fg-2);
 }
 .tab[aria-selected='true'] .count { color: var(--fg-1); }

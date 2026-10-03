@@ -50,10 +50,6 @@ export function isSectionActive(section: NavSection, pathname: string): boolean 
   return [section.href, ...(section.also ?? [])].some((p) => underPrefix(pathname, p));
 }
 
-export function activeSection(pathname: string): NavSection | null {
-  return NAV_SECTIONS.find((s) => isSectionActive(s, pathname)) ?? null;
-}
-
 /**
  * Session user → NavUser without trusting its shape: `role` and `handle` are
  * being added to the session in parallel, so read them as unknown and fall

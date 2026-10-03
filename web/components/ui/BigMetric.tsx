@@ -11,35 +11,27 @@ interface BigMetricProps {
 }
 
 /**
- * Large 64px tabular-mono number with a small uppercase label and optional
- * sub-rows or a percentile bar. Used in the auth brand panel, the Results hero
- * standalone view, and the track-completion screen.
+ * The headline number of a result: tabular-mono at the page-title size
+ * (`--fs-2xl`), a sentence-case label above it and optional sub-rows or a
+ * percentile bar. Every line is on the type scale and at least 12 px. (It was
+ * a 64 px display number with an 11 px uppercase label; a calm page leads with
+ * its sentence, not a number.) Used by the submission detail.
  */
 export function BigMetric({ label, primary, sub = [], pct, tone = 'default', extra }: BigMetricProps) {
   const numberColor = tone === 'ok' ? 'var(--ok)' : 'var(--fg-0)';
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10, position: 'relative' }}>
-      <div
-        style={{
-          fontSize: 11,
-          color: 'var(--fg-3)',
-          textTransform: 'uppercase',
-          letterSpacing: 1,
-          fontWeight: 600,
-        }}
-      >
-        {label}
-      </div>
-      <div className="mono" style={{ display: 'flex', alignItems: 'baseline', gap: 6, lineHeight: 0.95 }}>
-        <span style={{ fontSize: 64, fontWeight: 500, color: numberColor, letterSpacing: -1.6 }}>
+      <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--fg-2)', fontWeight: 500 }}>{label}</div>
+      <div className="mono" style={{ display: 'flex', alignItems: 'baseline', gap: 6, lineHeight: 1.1 }}>
+        <span style={{ fontSize: 'var(--fs-2xl)', fontWeight: 500, color: numberColor, letterSpacing: -0.6 }}>
           {primary.value}
         </span>
         {primary.unit && (
-          <span style={{ fontSize: 22, color: 'var(--fg-3)', fontWeight: 400 }}>{primary.unit}</span>
+          <span style={{ fontSize: 'var(--fs-md)', color: 'var(--fg-2)', fontWeight: 400 }}>{primary.unit}</span>
         )}
       </div>
       {sub.length > 0 && (
-        <div style={{ display: 'flex', gap: 14, fontSize: 11.5 }}>
+        <div style={{ display: 'flex', gap: 14, fontSize: 'var(--fs-xs)' }}>
           {sub.map((s, i) => (
             <span key={i} className="mono">
               <span style={{ color: 'var(--fg-2)' }}>{s.k}</span>{' '}
@@ -51,7 +43,7 @@ export function BigMetric({ label, primary, sub = [], pct, tone = 'default', ext
       {pct && (
         <div style={{ marginTop: 4 }}>
           <Progress value={pct.value} tone="accent" height={5} />
-          <div className="mono" style={{ marginTop: 6, fontSize: 11, color: 'var(--fg-2)' }}>
+          <div className="mono" style={{ marginTop: 6, fontSize: 'var(--fs-xs)', color: 'var(--fg-2)' }}>
             <span style={{ color: 'var(--accent-hi)', fontWeight: 600 }}>{pct.value}%</span> · {pct.copy}
           </div>
         </div>

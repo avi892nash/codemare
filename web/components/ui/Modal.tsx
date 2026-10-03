@@ -14,6 +14,7 @@ import type { Theme } from '@/lib/theme';
 import { Button } from './Button';
 import { focusableWithin, useIsomorphicLayoutEffect } from './hooks';
 import { Portal, PortalContainerContext, scopedTheme } from './Portal';
+import s from './Modal.module.css';
 
 const WIDTH = { sm: 400, md: 520, lg: 720 } as const;
 
@@ -183,11 +184,11 @@ export function Modal({
         >
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '16px 16px 12px 20px' }}>
             <div style={{ flex: 1, minWidth: 0, paddingTop: 3 }}>
-              <h2 id={titleId} style={{ margin: 0, fontSize: 15, fontWeight: 600, letterSpacing: -0.2, color: 'var(--fg-0)' }}>
+              <h2 id={titleId} style={{ margin: 0, fontSize: 'var(--fs-lg)', fontWeight: 600, letterSpacing: -0.2, color: 'var(--fg-0)' }}>
                 {title}
               </h2>
               {description && (
-                <p id={descId} style={{ margin: '4px 0 0', fontSize: 12.5, lineHeight: 1.5, color: 'var(--fg-2)' }}>
+                <p id={descId} style={{ margin: '4px 0 0', fontSize: 'var(--fs-sm)', lineHeight: 1.5, color: 'var(--fg-2)' }}>
                   {description}
                 </p>
               )}
@@ -196,6 +197,7 @@ export function Modal({
               <Button
                 variant="ghost"
                 size="sm"
+                tap
                 icon="close"
                 aria-label="Close dialog"
                 data-modal-close="true"
@@ -208,26 +210,13 @@ export function Modal({
               <div
                 ref={bodyRef}
                 className="scroll"
-                style={{ padding: '0 20px 18px', overflowY: 'auto', minHeight: 0, fontSize: 13, lineHeight: 1.6, color: 'var(--fg-1)' }}
+                style={{ padding: '0 20px 18px', overflowY: 'auto', minHeight: 0, fontSize: 'var(--fs-body)', lineHeight: 1.6, color: 'var(--fg-1)' }}
               >
                 {children}
               </div>
             )}
             {footer && (
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'flex-end',
-                  flexWrap: 'wrap',
-                  gap: 8,
-                  padding: '12px 16px',
-                  borderTop: '1px solid var(--line-2)',
-                  background: 'var(--bg-1)',
-                  borderRadius: '0 0 var(--r-lg) var(--r-lg)',
-                }}
-              >
-                {footer}
-              </div>
+              <div className={s.footer}>{footer}</div>
             )}
           </PortalContainerContext.Provider>
         </div>

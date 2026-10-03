@@ -1,0 +1,17 @@
+/* A keyboard shortcut tag. 12 px is the type floor; the box is sized so it
+ * fits inside the smallest Button (22 px) and sits on a text baseline. */
+.kbd {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 1px 6px;
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  line-height: 1.35;
+  white-space: nowrap;
+  color: var(--fg-2);
+  background: var(--bg-3);
+  border: 1px solid var(--line-2);
+  border-bottom-color: var(--line-3);
+  border-radius: var(--r-sm);
+}
+.bare { margin-left: 0; }

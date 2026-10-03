@@ -10,7 +10,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  font-size: var(--fs-xs);
   font-weight: 500;
   color: var(--fg-2);
 }
@@ -21,7 +21,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 32px;
+  height: var(--ctl-md);
   padding: 0 10px;
   background: var(--bg-2);
   border: 1px solid var(--line-2);
@@ -42,9 +42,9 @@
 .control[data-disabled='true'] { opacity: 0.5; cursor: not-allowed; }
 .control[data-disabled='true']:hover { border-color: var(--line-2); }
 
-.sm { height: 28px; }
-.md { height: 32px; }
-.lg { height: 38px; padding: 0 12px; }
+.sm { height: var(--ctl-sm); }
+.md { height: var(--ctl-md); }
+.lg { height: var(--ctl-lg); padding: 0 12px; }
 
 .icon { color: var(--fg-3); flex: none; }
 
@@ -60,10 +60,10 @@
   outline: none;
   color: var(--fg-0);
   font-family: var(--font-sans);
-  font-size: 13px;
+  font-size: var(--fs-sm);
 }
 .full .input { width: 100%; }
-.lg .input { font-size: 13.5px; }
+.lg .input { font-size: var(--fs-md); }
 .input::placeholder,
 .textarea::placeholder { color: var(--fg-3); opacity: 1; }
 .input:disabled { cursor: not-allowed; }
@@ -83,10 +83,10 @@
   resize: vertical;
   color: var(--fg-0);
   font-family: var(--font-sans);
-  font-size: 13px;
+  font-size: var(--fs-sm);
   line-height: 1.5;
 }
-.textarea.mono { font-family: var(--font-mono); font-size: 12.5px; }
+.textarea.mono { font-family: var(--font-mono); font-size: var(--fs-sm); }
 
 .select {
   flex: 1;
@@ -101,9 +101,10 @@
   -webkit-appearance: none;
   color: var(--fg-0);
   font-family: var(--font-sans);
-  font-size: 13px;
+  font-size: var(--fs-sm);
   cursor: pointer;
 }
+.lg .select { font-size: var(--fs-md); }
 .select:disabled { cursor: not-allowed; }
 .select option { background: var(--bg-2); color: var(--fg-0); }
 .chevron {
@@ -117,7 +118,7 @@
 .hint,
 .error {
   margin: 0;
-  font-size: 11.5px;
+  font-size: var(--fs-xs);
   line-height: 1.45;
 }
 .hint { color: var(--fg-2); }
@@ -128,3 +129,28 @@
   color: var(--err-fg);
 }
 .error svg { margin-top: 2px; }
+
+/* The shortcut hint at the edge of a field is noise on a device with no keyboard. */
+.kbdWrap { display: inline-flex; }
+@media (hover: none) {
+  .kbdWrap { display: none; }
+}
+
+/* Phones and touch devices: a field is a full 44 px target and its text is
+ * 16 px — iOS Safari zooms the whole page when a focused field is smaller.
+ * Desktop sizes stay on the scale above. The height carries no more
+ * specificity than the sizes above (a page that sizes its own fields wins);
+ * the 16 px is deliberately stronger, because it is a platform requirement. */
+@media (max-width: 720px), (pointer: coarse) {
+  .sm,
+  .md,
+  .lg { height: var(--tap); }
+  .control .input,
+  .control .select,
+  .control .textarea,
+  .control .textarea.mono { font-size: var(--fs-lg); }
+  /* the element itself is the full 44 px box too (it reaches over the 1 px border) */
+  .control .input,
+  .control .select { height: calc(100% + 2px); margin: -1px 0; }
+  .label { font-size: var(--fs-sm); }
+}

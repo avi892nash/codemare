@@ -32,7 +32,7 @@ export function Formula({ tex, label, caption, className, style }: FormulaProps)
     );
   } catch {
     body = (
-      <code className="mono" style={{ display: 'block', textAlign: 'center', fontSize: 13, color: 'var(--fg-1)', whiteSpace: 'pre-wrap' }}>
+      <code className="mono" style={{ display: 'block', textAlign: 'center', fontSize: 'var(--fs-sm)', color: 'var(--fg-1)', whiteSpace: 'pre-wrap' }}>
         {tex}
       </code>
     );
@@ -66,13 +66,13 @@ export function Formula({ tex, label, caption, className, style }: FormulaProps)
           {body}
         </div>
         {label && (
-          <span className="mono" style={{ flex: 'none', fontSize: 12, color: 'var(--fg-2)' }}>
+          <span className="mono" style={{ flex: 'none', fontSize: 'var(--fs-xs)', color: 'var(--fg-2)' }}>
             {label}
           </span>
         )}
       </div>
       {caption && (
-        <figcaption style={{ marginTop: 8, fontSize: 12, lineHeight: 1.5, color: 'var(--fg-2)', textAlign: 'center' }}>
+        <figcaption style={{ marginTop: 8, fontSize: 'var(--fs-xs)', lineHeight: 1.5, color: 'var(--fg-2)', textAlign: 'center' }}>
           {caption}
         </figcaption>
       )}

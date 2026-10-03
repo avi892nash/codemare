@@ -85,7 +85,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         {...rest}
       />
       {trailing}
-      {kbd && <span aria-hidden="true" style={{ display: 'inline-flex' }}><Kbd>{kbd}</Kbd></span>}
+      {kbd && <span aria-hidden="true" className={s.kbdWrap}><Kbd>{kbd}</Kbd></span>}
     </div>
   );
 

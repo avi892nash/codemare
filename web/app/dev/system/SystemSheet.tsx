@@ -2,22 +2,27 @@
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Theme } from '@/lib/theme';
+import { Avatar } from '@/components/ui/Avatar';
 import { Breadcrumb } from '@/components/ui/Breadcrumb';
 import { Button, ButtonLink, type ButtonSize, type ButtonVariant } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
 import { Chip } from '@/components/ui/Chip';
 import { CodeBlock } from '@/components/ui/CodeBlock';
 import { DifficultyPill } from '@/components/ui/DifficultyPill';
+import { DifficultyText } from '@/components/ui/DifficultyText';
 import { Formula } from '@/components/ui/Formula';
 import { Icon, ICON_NAMES } from '@/components/ui/Icon';
 import { Input, Textarea } from '@/components/ui/Input';
 import { Kbd } from '@/components/ui/Kbd';
+import { LangMark } from '@/components/ui/LangMark';
 import { Modal } from '@/components/ui/Modal';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { Pill, type PillTone } from '@/components/ui/Pill';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { RunnableCodeBlock, type RunCode } from '@/components/ui/RunnableCodeBlock';
 import { Select } from '@/components/ui/Select';
 import { Skeleton, SkeletonText } from '@/components/ui/Skeleton';
+import { StatusDot } from '@/components/ui/StatusDot';
 import { StatusPill, VERDICTS } from '@/components/ui/StatusPill';
 import { TabPanel, Tabs } from '@/components/ui/Tabs';
 import { Toggle } from '@/components/ui/Toggle';
@@ -172,7 +177,7 @@ function Contrast({ scope }: { scope: React.RefObject<HTMLElement> }) {
           ))}
         </tbody>
       </table>
-      <p style={{ margin: '8px 0 0', fontSize: 11.5, color: 'var(--fg-2)', lineHeight: 1.5 }}>
+      <p style={{ margin: '8px 0 0', fontSize: 'var(--fs-xs)', color: 'var(--fg-2)', lineHeight: 1.5 }}>
         AA body text needs 4.5:1; “large” (≥ 3:1) is only for ≥ 18.66 px bold / 24 px text and UI graphics.
         Small text uses fg-0…fg-2, accent-hi and the <span className="mono">*-fg</span> tones.
       </p>
@@ -181,17 +186,16 @@ function Contrast({ scope }: { scope: React.RefObject<HTMLElement> }) {
 }
 
 function TypeScale() {
+  // The one scale (globals.css --fs-*). Nothing in the app is set smaller than --fs-xs.
   const rows: Array<[string, React.CSSProperties, string]> = [
-    ['Display · 30/600', { fontSize: 30, fontWeight: 600, letterSpacing: -0.5 }, 'Train on real problems.'],
-    ['H1 · 28/600', { fontSize: 28, fontWeight: 600, letterSpacing: -0.4 }, 'Submissions'],
-    ['H2 · 22/600', { fontSize: 22, fontWeight: 600, letterSpacing: -0.3 }, 'Two Sum'],
-    ['H3 · 16/600', { fontSize: 16, fontWeight: 600, letterSpacing: -0.2 }, 'Problems'],
-    ['Body · 14/1.65', { fontSize: 14, lineHeight: 1.65, color: 'var(--fg-1)' }, 'Given an array of integers, return indices…'],
-    ['UI · 13/500', { fontSize: 13, fontWeight: 500 }, 'Run · Submit · Reset'],
-    ['Small · 12.5', { fontSize: 12.5, color: 'var(--fg-2)' }, 'Last 100 runs across every problem.'],
-    ['Label · 11/600 caps', { fontSize: 11, fontWeight: 600, letterSpacing: 1.4, textTransform: 'uppercase', color: 'var(--fg-2)' }, 'Test results'],
-    ['Mono · 12.5', { fontSize: 12.5, fontFamily: 'var(--font-mono)' }, 'O(n log n) · 12.4 ms · 9,216 KB'],
-    ['Metric · mono 28', { fontSize: 28, fontFamily: 'var(--font-mono)', fontWeight: 500, letterSpacing: -0.5 }, '0.84 ms'],
+    ['--fs-2xl · 26/600', { fontSize: 'var(--fs-2xl)', fontWeight: 600, letterSpacing: -0.4 }, 'Tier map'],
+    ['--fs-xl · 20/600', { fontSize: 'var(--fs-xl)', fontWeight: 600, letterSpacing: -0.3 }, 'Foundations'],
+    ['--fs-lg · 16', { fontSize: 'var(--fs-lg)', fontWeight: 500 }, 'Contains Duplicate'],
+    ['--fs-md · 14', { fontSize: 'var(--fs-md)', lineHeight: 1.65, color: 'var(--fg-1)' }, 'Given an array of integers, return indices…'],
+    ['--fs-sm · 13', { fontSize: 'var(--fs-sm)', color: 'var(--fg-2)' }, 'Arrays & Hashing · 3 tokens'],
+    ['--fs-xs · 12', { fontSize: 'var(--fs-xs)', color: 'var(--fg-2)' }, 'Captions, pills, hints and labels in sentence case'],
+    ['mono · --fs-sm', { fontSize: 'var(--fs-sm)', fontFamily: 'var(--font-mono)' }, 'O(n log n) · 12.4 ms · 9,216 KB'],
+    ['metric · mono --fs-xl', { fontSize: 'var(--fs-xl)', fontFamily: 'var(--font-mono)', fontWeight: 500, letterSpacing: -0.5 }, '0.84 ms'],
   ];
   return (
     <div>
@@ -201,6 +205,10 @@ function TypeScale() {
           <span className={s.typeSample} style={style}>{text}</span>
         </div>
       ))}
+      <p style={{ margin: '10px 0 0', fontSize: 'var(--fs-xs)', color: 'var(--fg-2)', lineHeight: 1.5 }}>
+        Body is <span className="mono">--fs-body</span>: 14 px, 16 px on phones. Form fields (Input, Select, Textarea) compute to
+        16 px on phones and touch devices, because iOS Safari zooms the page when a focused field is smaller.
+      </p>
     </div>
   );
 }
@@ -218,6 +226,115 @@ function Radii() {
           <div key={sh} className={`${s.shadow} mono`} style={{ boxShadow: `var(${sh})` }}>{sh}</div>
         ))}
       </div>
+    </div>
+  );
+}
+
+/* ── Page header, difficulty, marks ─────────────────────────────── */
+
+const SAMPLE_ROWS: Array<{ title: string; level: 'Easy' | 'Medium' | 'Hard'; status: 'solved' | 'attempted' | 'unsolved' }> = [
+  { title: 'Contains Duplicate', level: 'Easy', status: 'solved' },
+  { title: 'Product of Array Except Self', level: 'Medium', status: 'attempted' },
+  { title: 'Trapping Rain Water', level: 'Hard', status: 'unsolved' },
+];
+
+function PageAndDifficulty() {
+  return (
+    <div className={s.stack}>
+      <Sub>PageHeader · title, one line of context, actions at the right</Sub>
+      <PageHeader
+        as="h4"
+        title="Submissions"
+        subtitle="Every run, submit and gate attempt, newest first."
+        actions={
+          <>
+            <Button size="sm" variant="outline" icon="refresh">Refresh</Button>
+            <Button size="sm" variant="primary" icon="play">New run</Button>
+          </>
+        }
+      />
+      <Sub>PageHeader · without actions</Sub>
+      <PageHeader as="h4" title="Your badges" subtitle="Badges mark milestones across practice and lessons. Open one to see what it takes." />
+      <Sub>PageHeader · title only</Sub>
+      <PageHeader as="h4" title="Tier map" />
+      <Sub>DifficultyText · Easy · Medium · Hard, with the progress glyphs (in a list)</Sub>
+      <ul className={s.sampleList}>
+        {SAMPLE_ROWS.map((r) => (
+          <li key={r.title} className={s.sampleRow}>
+            <StatusDot status={r.status} />
+            <span className={s.sampleTitle}>{r.title}</span>
+            <DifficultyText level={r.level} />
+          </li>
+        ))}
+      </ul>
+      <Sub>DifficultyPill · only where the tag is the point (the editor’s title row)</Sub>
+      <div className={s.row}>
+        <span style={{ fontSize: 'var(--fs-xl)', fontWeight: 600, letterSpacing: -0.3 }}>Two Sum</span>
+        <DifficultyPill level="Easy" />
+      </div>
+    </div>
+  );
+}
+
+function Marks() {
+  return (
+    <div className={s.stack}>
+      <Sub>Avatar · initials are 12 px or larger (a disc under 28 px has none)</Sub>
+      <div className={s.row} style={{ gap: 14 }}>
+        <Avatar name="Ada Lovelace" size={20} />
+        <Avatar name="Ada Lovelace" size={28} />
+        <Avatar name="grace_hopper" size={36} />
+        <Avatar name="Linus Torvalds" size={64} />
+      </div>
+      <Sub>LangMark · two letters at 12 px or larger, in the language’s hue</Sub>
+      <div className={s.row} style={{ gap: 10 }}>
+        {['python', 'javascript', 'typescript', 'cpp', 'java', 'go'].map((l) => (
+          <span key={l} className={s.markPair}>
+            <LangMark lang={l} size={13} />
+            {LANGUAGE_LABEL[l as CodeLanguage]}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function Heights() {
+  // One ladder (globals.css --ctl-*): Button, Chip, Pill, Input and Tabs of a step are the same height.
+  return (
+    <div className={s.stack}>
+      <Sub>22 · Button xs · Chip small · Pill xs</Sub>
+      <div className={s.row}>
+        <Button size="xs">Button xs</Button>
+        <Chip size="sm">Chip small</Chip>
+        <Pill size="xs">Pill xs</Pill>
+      </div>
+      <Sub>24 · Pill sm (the default inline pill)</Sub>
+      <div className={s.row}>
+        <Pill>Pill sm</Pill>
+        <Pill tone="ok" dot>Solved</Pill>
+      </div>
+      <Sub>28 · Button sm · Chip · Pill md · Input sm</Sub>
+      <div className={s.row}>
+        <Button size="sm">Button sm</Button>
+        <Chip>Chip</Chip>
+        <Pill size="md">Pill md</Pill>
+        <Input size="sm" aria-label="Input small" placeholder="Input sm" />
+      </div>
+      <Sub>32 · Button md · Input md · Tabs (pills) · Menu row</Sub>
+      <div className={s.row}>
+        <Button>Button md</Button>
+        <Input aria-label="Input medium" placeholder="Input md" />
+        <Tabs variant="pills" aria-label="Heights demo" value="a" tabs={[{ value: 'a', label: 'Tabs' }, { value: 'b', label: 'pills' }]} />
+      </div>
+      <Sub>38 · Button lg · Input lg · Tabs (underline)</Sub>
+      <div className={s.row}>
+        <Button size="lg" variant="primary">Button lg</Button>
+        <Input size="lg" aria-label="Input large" placeholder="Input lg" />
+      </div>
+      <p style={{ margin: 0, fontSize: 'var(--fs-xs)', color: 'var(--fg-2)', lineHeight: 1.5 }}>
+        On phones and touch devices a large button, a field, a tab and a menu row grow to <span className="mono">--tap</span> (44 px).
+      </p>
     </div>
   );
 }
@@ -392,7 +509,7 @@ function TabsAndToggle({ theme }: { theme: Theme }) {
           { value: 'discussion', label: 'Discussion', disabled: true },
         ]}
       />
-      <TabPanel tabsId={tabsId} value={tab} style={{ padding: '10px 2px', fontSize: 13, color: 'var(--fg-1)' }}>
+      <TabPanel tabsId={tabsId} value={tab} style={{ padding: '10px 2px', fontSize: 'var(--fs-sm)', color: 'var(--fg-1)' }}>
         Panel for <span className="mono">{tab}</span>. Focus the tab list and use the arrow keys.
       </TabPanel>
       <Sub>Pills tabs · sm</Sub>
@@ -401,7 +518,7 @@ function TabsAndToggle({ theme }: { theme: Theme }) {
       <Toggle checked={hints} onChange={setHints} label="Show hint costs" description="Display the token cost before a hint is revealed." />
       <div className={s.row}>
         <Toggle checked={ai} onChange={setAi} aria-label="AI review" size="sm" />
-        <span style={{ fontSize: 12.5, color: 'var(--fg-2)' }}>bare switch (aria-label) · {ai ? 'on' : 'off'}</span>
+        <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--fg-2)' }}>bare switch (aria-label) · {ai ? 'on' : 'off'}</span>
         <Toggle checked disabled onChange={() => undefined} label="Disabled" />
       </div>
     </div>
@@ -518,7 +635,7 @@ function Progress() {
 function KbdAndBreadcrumb({ theme }: { theme: Theme }) {
   return (
     <div className={s.stack}>
-      <div className={s.row} style={{ fontSize: 13, color: 'var(--fg-1)' }}>
+      <div className={s.row} style={{ fontSize: 'var(--fs-sm)', color: 'var(--fg-1)' }}>
         <Kbd bare>⌘↵</Kbd> run · <Kbd bare>⌘⇧↵</Kbd> submit · <Kbd bare>Esc</Kbd> close · <Kbd bare>Shift</Kbd>+<Kbd bare>Tab</Kbd> back
       </div>
       <Breadcrumb label={`Breadcrumb example 1 (${theme})`} items={[{ label: 'Learn', href: '/learn', icon: 'graduation' }, { label: 'Arrays & Hashing', href: '/learn/arrays' }, { label: 'Two pointers on sorted input' }]} />
@@ -603,7 +720,7 @@ const NEW_ICONS = new Set(['map', 'route', 'book-open', 'award', 'coin', 'sun', 
 function Icons() {
   return (
     <div>
-      <p style={{ margin: '0 0 10px', fontSize: 12, color: 'var(--fg-2)' }}>
+      <p style={{ margin: '0 0 10px', fontSize: 'var(--fs-xs)', color: 'var(--fg-2)' }}>
         {ICON_NAMES.length} icons. Outlined in accent: added by the UI kit. Content JSON may only use these names.
       </p>
       <div className={s.icons}>
@@ -652,7 +769,10 @@ export function SystemSheet({ theme }: { theme: Theme }) {
       <Section theme={theme} id="contrast" title="Contrast" note="WCAG, measured live"><Contrast scope={scope} /></Section>
       <Section theme={theme} id="type" title="Type scale" note="Inter · JetBrains Mono"><TypeScale /></Section>
       <Section theme={theme} id="radii" title="Radii & shadows"><Radii /></Section>
+      <Section theme={theme} id="page" title="Page header & difficulty" note="PageHeader · DifficultyText"><PageAndDifficulty /></Section>
+      <Section theme={theme} id="marks" title="Avatar & language marks"><Marks /></Section>
       <Section theme={theme} id="buttons" title="Buttons"><Buttons /></Section>
+      <Section theme={theme} id="heights" title="Control heights" note="one ladder: 22 · 24 · 28 · 32 · 38"><Heights /></Section>
       <Section theme={theme} id="pills" title="Pills & status pills"><Pills /></Section>
       <Section theme={theme} id="chips" title="Chips"><Chips /></Section>
       <Section theme={theme} id="inputs" title="Inputs & select"><Inputs /></Section>
