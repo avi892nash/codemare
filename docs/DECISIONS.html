@@ -220,7 +220,7 @@
     <h1>Codemare Decisions</h1>
     <p class="dek">Why Codemare is shaped the way it is: every decision with the alternatives it beat, the path a submission takes, the contracts between the parts, and the bugs that set the rules.</p>
     <div class="meta">
-      <span>236 commits · Nov 2025 → Oct 2026</span>
+      <span>253 commits · Nov 2025 → Oct 2026</span>
       <span>grounded in <code>git log</code> and the merge messages</span>
       <span>companion to README.md and docs/spec/architecture.md</span>
     </div>
@@ -289,6 +289,7 @@
         </ul>
         <p>Then the owner used it. On 2 October 2026 they tested the running site and judged one piece of the brief — the Queue, where learners predicted and built reusable components into My Library — not a usable feature, so it was taken out again, tables and all (<a href="#d38">decision 38</a>). The same day the problem list went too: the tier map, which already showed every topic, became the home page and the place where each topic's problems are listed (<a href="#d39">decision 39</a>).</p>
         <p>Then the owner asked for the product to look like it was made for teenagers: images — animated SVG of the topics — instead of big text. The sign-in screens now open on a reel of ten animated scenes, one per topic, and the map on an animated hero of the topic to work on next, with a thumbnail of every topic on its card (<a href="#d40">decision 40</a>, <a href="#d41">decision 41</a>).</p>
+        <p>It still felt overwhelming. An audit by a UX expert — an agent that used the site as a first-time learner and measured it — found the home page showing the whole curriculum and its rulebook at once; the owner's direction was a site that is simple, organised, consistent and modern for preparation and coding practice, in the same words and with no new constraints. The map, the result card and the phone problem page were redone and the text put on one scale (<a href="#d42">decision 42</a>).</p>
       </section>
 
       <!-- ============================================================ 2 -->
@@ -431,9 +432,9 @@
             <text class="sm" x="555" y="436" text-anchor="middle">1 CPU · 256 MB · no net</text>
             <!-- column 4 -->
             <rect class="box hi" x="655" y="43" width="170" height="56" rx="3"/>
-            <text x="740" y="62" text-anchor="middle">Results hero</text>
+            <text x="740" y="62" text-anchor="middle">Result card</text>
             <text class="sm" x="740" y="78" text-anchor="middle">verdict · µs · KB</text>
-            <text class="sm" x="740" y="92" text-anchor="middle">beats N% · tokens</text>
+            <text class="sm" x="740" y="92" text-anchor="middle">reward · next problem</text>
             <rect class="box" x="655" y="129" width="170" height="56" rx="3"/>
             <text x="740" y="148" text-anchor="middle">Complete, then award</text>
             <text class="sm" x="740" y="164" text-anchor="middle">OK only if all passed</text>
@@ -564,9 +565,10 @@
             <tr><td>36</td><td><a href="#d36">How it was built: phased agents, an integrator, CI</a></td><td><span class="st new">new · Sep 2026</span></td></tr>
             <tr><td>37</td><td><a href="#d37">Accessibility and first paint, measured and gated</a></td><td><span class="st amended">amended by 38, 39</span></td></tr>
             <tr><td>38</td><td><a href="#d38">Remove the Queue and My Library</a></td><td><span class="st new">new · Oct 2026</span></td></tr>
-            <tr><td>39</td><td><a href="#d39">Remove the problem list; the map is home</a></td><td><span class="st amended">amended by 41</span></td></tr>
-            <tr><td>40</td><td><a href="#d40">The hero is animated topic art, not text</a></td><td><span class="st new">new · Oct 2026</span></td></tr>
-            <tr><td>41</td><td><a href="#d41">The map opens on the learner's next topic</a></td><td><span class="st new">new · Oct 2026</span></td></tr>
+            <tr><td>39</td><td><a href="#d39">Remove the problem list; the map is home</a></td><td><span class="st amended">amended by 41, 42</span></td></tr>
+            <tr><td>40</td><td><a href="#d40">The hero is animated topic art, not text</a></td><td><span class="st amended">amended by 42</span></td></tr>
+            <tr><td>41</td><td><a href="#d41">The map opens on the learner's next topic</a></td><td><span class="st amended">amended by 42</span></td></tr>
+            <tr><td>42</td><td><a href="#d42">A calm site: the map, the result card and the phone page</a></td><td><span class="st new">new · Oct 2026</span></td></tr>
           </tbody>
         </table></div>
 
@@ -1479,16 +1481,16 @@
               <rect class="box" x="200" y="124" width="640" height="34" rx="3"/>
               <text x="214" y="146"><tspan class="b">infra</tspan> — compose config against .env.example · admin tests and typecheck</text>
               <rect class="box" x="200" y="162" width="640" height="34" rx="3"/>
-              <text x="214" y="184"><tspan class="b">web</tspan> — migrate · seed twice · 572 vitest tests · typecheck · lint · build</text>
+              <text x="214" y="184"><tspan class="b">web</tspan> — migrate · seed twice · 614 vitest tests · typecheck · lint · build</text>
               <rect class="box hi" x="200" y="200" width="640" height="34" rx="3"/>
-              <text x="214" y="222"><tspan class="b">e2e</tspan> — next start + compile service + seeded Postgres → 73 Playwright tests</text>
+              <text x="214" y="222"><tspan class="b">e2e</tspan> — next start + compile service + seeded Postgres → 109 Playwright tests</text>
             </svg>
             </div>
             <figcaption>The teal jobs exercise production as it really runs: the sandbox inside the real image, and the browser against <code>next start</code> rather than the dev server. Seeding twice proves the seed idempotent.</figcaption>
           </figure>
           <dl class="drg">
             <dt>Consequences</dt><dd><p>Every production-only bug found during the build is now covered in the mode it happened in. Not covered: amd64 builds of the web, Directus and backup images (CI builds only the backend image), the compose stack actually starting, and a real Storage Box.</p></dd>
-            <dt>Evidence</dt><dd><p><code>059d122</code>, <code>2e6f235</code>, <code>02598fd</code>, <code>f8a5144</code>; test counts measured at <code>b762b72</code>.</p></dd>
+            <dt>Evidence</dt><dd><p><code>059d122</code>, <code>2e6f235</code>, <code>02598fd</code>, <code>f8a5144</code>; test counts measured at <code>330120f</code>.</p></dd>
           </dl>
         </article>
 
@@ -1549,7 +1551,7 @@
             <figcaption>Each filled dot is a branch merged into master; hollow dots are the integrator's own integration commits. Agents in a phase worked at the same time in separate worktrees — the dot is when their branch was verified and merged, not when the work started.</figcaption>
           </figure>
           <dl class="drg">
-            <dt>Consequences</dt><dd><p>About thirteen hours from the spec to the last merge: 128 commits, 16 merges. The price is integration work and the discipline of writing the contract first; the benefit is that every merge carries its own verification record — the evidence cited throughout this page. What the process can't replace is a human look at the product against its design, which is still owed (15). This page and the repo guide were themselves written by one agent while a QA agent worked on the UI in parallel; a fifth phase merged them, the QA pass (<a href="#d37">decision 37</a>) and the removal of the legacy compile-service surface. A sixth round followed on 2 October, after the owner tested the running site: the removal of the Queue, the removal of the problem list and the animated topic art with its map follow-up (decisions 38–41) — each a single agent in its own worktree, merged by the same checks, and the same agent wrote the art and then extended it to the map.</p></dd>
+            <dt>Consequences</dt><dd><p>About thirteen hours from the spec to the last merge: 128 commits, 16 merges. The price is integration work and the discipline of writing the contract first; the benefit is that every merge carries its own verification record — the evidence cited throughout this page. What the process can't replace is a human look at the product against its design, which is still owed (15). This page and the repo guide were themselves written by one agent while a QA agent worked on the UI in parallel; a fifth phase merged them, the QA pass (<a href="#d37">decision 37</a>) and the removal of the legacy compile-service surface. A sixth round followed on 2 October, after the owner tested the running site: the removal of the Queue, the removal of the problem list and the animated topic art with its map follow-up (decisions 38–41) — each a single agent in its own worktree, merged by the same checks, and the same agent wrote the art and then extended it to the map. After that came a UX audit by an agent and two builders working in parallel on the map and on the problem page (<a href="#d42">decision 42</a>).</p></dd>
             <dt>Evidence</dt><dd><p>The merge commits <code>a2c9e1f</code> … <code>5f8c924</code> (<code>git log --merges</code>).</p></dd>
           </dl>
         </article>
@@ -1591,9 +1593,9 @@
         </article>
 
         <article class="dr" id="d39">
-          <div class="eyebrow">Decision 39 · <span class="st amended">amended by 41</span></div>
+          <div class="eyebrow">Decision 39 · <span class="st amended">amended by 41, 42</span></div>
           <h3>Remove the problem list; the map is home</h3>
-          <p class="note amended"><span class="tag">Amended</span>The map's header — a headline, a paragraph and three big totals — became a hero of animated topic art with one button, and its totals small chips (<a href="#d41">decision 41</a>); its topic cards gained art thumbnails (<a href="#d40">decision 40</a>).</p>
+          <p class="note amended"><span class="tag">Amended</span>The map's header — a headline, a paragraph and three big totals — became a hero of animated topic art with one button, and its totals small chips (<a href="#d41">decision 41</a>); its topic cards gained art thumbnails (<a href="#d40">decision 40</a>). The topic lists are still on the map but one click away: each topic is a row that opens to its problems, a closed tier is one collapsed panel, and only the hero's topic opens by itself once a problem is solved (<a href="#d42">decision 42</a>).</p>
           <dl class="drg">
             <dt>Context</dt><dd><p>The brief's first screen (01, with the empty state 08b) was a problem catalog at <code>/problems</code>: search over titles and tags, difficulty chips, status, topic, tag and company filters, curriculum order, 20 per page, and locked questions listed with a padlock linking to the map. It was the home page — <code>/</code>, the logo and the default after sign-in led there — and a ⌘/Ctrl+K “Jump to problem” box in the top bar searched it. The tier map already showed every topic with its balance, recipes and what was blocking it, and sent each unlocked topic's learners to <code>/problems?topic=&lt;slug&gt;</code>. On 2 October 2026, after the Queue went (<a href="#d38">decision 38</a>), the owner asked for the problem list to be removed too, and for the map to become home — which means the map has to let a learner reach every problem they can open.</p></dd>
             <dt>Options</dt><dd><ul><li>Keep the list and only move the home page to the map.</li><li>Hide the list: keep the route, drop the links.</li><li>Remove it, and let the map list each topic's problems.</li></ul></dd>
@@ -1616,7 +1618,8 @@
         </article>
 
         <article class="dr" id="d40">
-          <div class="eyebrow">Decision 40 · <span class="st new">new</span></div>
+          <div class="eyebrow">Decision 40 · <span class="st amended">amended by 42</span></div>
+          <p class="note amended"><span class="tag">Amended</span>The thumbnails in the map's topic rows are still posters, dimmed when the topic is locked and without the lock glyph; no card animates and only the hero does (<a href="#d42">decision 42</a>). The in-view pause stays for the hero.</p>
           <h3>The hero is animated topic art, not text</h3>
           <dl class="drg">
             <dt>Context</dt><dd><p>The sign-in screens led with a 30 px headline, a paragraph and three feature rows, and hid all of it below 900 px — so on a phone, where many teenagers arrive, they were only a form. The map's header was a 28 px headline and a paragraph. On 2 October 2026, after the removals (<a href="#d38">38</a>, <a href="#d39">39</a>), the owner asked for images — animated SVG of the topics — instead of big text, to be “more attractive to a normal teenager”.</p></dd>
@@ -1644,7 +1647,8 @@
         </article>
 
         <article class="dr" id="d41">
-          <div class="eyebrow">Decision 41 · <span class="st new">new</span></div>
+          <div class="eyebrow">Decision 41 · <span class="st amended">amended by 42</span></div>
+          <p class="note amended"><span class="tag">Amended</span>The rule that picks the featured topic and its button is unchanged. The header is now the small <code>h1</code> and one quiet line of progress (the chips and the token chip are gone), and the hero gets at most one more line under it — a topic ready to unlock, else an open gate with a problem solved (<code>lib/server/mapMilestone.ts</code>; it adds no restriction) (<a href="#d42">decision 42</a>).</p>
           <h3>The map opens on the learner's next topic</h3>
           <dl class="drg">
             <dt>Context</dt><dd><p>With the problem list gone (<a href="#d39">decision 39</a>) the home page had no primary action — a learner landed on a page of cards — and its header was the headline and paragraph the owner wanted replaced by art.</p></dd>
@@ -1663,6 +1667,31 @@
               <li><strong>Tests</strong>: 15 unit tests for the rule (start, attempted before untouched, curriculum order across tiers, closed and gate-opened composites, unlock before missing and its tie-breaks, a topic without a recipe, done, empty) and the map-hero e2e spec: the hero for a fresh learner and its button's target, the other states, posters on locked cards, thumbnails pausing off screen, stacking at 375 px.</li>
             </ul></dd>
             <dt>Evidence</dt><dd><p><code>d0e9938</code> (the rule), <code>d08fe7d</code> (the hero), <code>1d68af5</code> (the end-to-end tests), merged in <code>b762b72</code>.</p></dd>
+          </dl>
+        </article>
+
+        <article class="dr" id="d42">
+          <div class="eyebrow">Decision 42 · <span class="st new">new</span></div>
+          <h3>A calm site: the map, the result card and the phone page</h3>
+          <dl class="drg">
+            <dt>Context</dt><dd><p>On 2 October 2026, after the removals and the animated art (<a href="#d38">38</a>–<a href="#d41">41</a>), the owner said the site "still feels very overwhelming". A UX expert — an agent hired for the purpose — used it as a first-time learner on a private copy and measured it. For a brand-new learner the map showed ten topic cards, two gate cards and seven identical “What's blocking you” boxes; 14 different status labels; 15 font sizes, most under 14 px; about ten new terms (token, bucket, topic, tier, gate, recipe, unlock, cooldown, blocker, composite) before the first solve, explained nowhere; and 2.9 laptop screens (6.5 on a phone). The first accepted solve read like a judge's report — the reward in a 12.5 px pill, “Beats 0%”, two toasts over the card, no next step, and on a phone the card 935 px down an 812 px screen. On a phone the editor started 1,065–1,291 px down, Submit was 28 px tall and the Hints tab was clipped. Contrast was fine; quantity and size were the problem. (The audit's first figure, 930 words on the map, counted text inside collapsed panels; counted as text on screen or open by default, today's map was 762 words.)</p>
+              <p>The expert framed it as a game for teenagers — coins, worlds, bosses, avatars, sounds, a Kenney art pack. The owner's direction was different: the site is for <em>preparation and coding practice</em> and should be “simple, organised, similar looking and modern”; no renaming into game words; no new constraints; the rest left to us.</p></dd>
+            <dt>Options</dt><dd><ul><li>The expert's gamified redesign: a renamed vocabulary, a path-style map, avatars, celebrations and sounds.</li><li>Keep the structure and shorten the text.</li><li>Take out what repeats and what the learner cannot use yet, keep the words and the rules, and put all text on one scale.</li></ul></dd>
+            <dt>Decision</dt><dd><p>The third. The words (token, tier, gate, topic, problem, recipe), the economy and the data are unchanged, and nothing is added that restricts a learner.</p>
+              <ul>
+                <li><strong>The map</strong> says each thing once. An open tier is its header and one row per topic (thumbnail, name, “n/m solved · k tokens”); a row opens to its problems, its blocker and its recipes. A closed tier is one collapsed panel — its name, “Opens after the …”, its topics as posters and names — that opens to the gate line and compact topics; a link to anything inside opens it. The “What's blocking you” box appears once per tier, not on every topic; the three Easy/Medium/Hard counts on every card are one token count; difficulty is quiet text with a dot, not a filled pill; the gate card is one line and one button, its problems and cooldown living in the confirmation dialog. The status vocabulary is three labels — Open, Ready to unlock, Locked. A dismissible first-run card gives the loop in three steps in the page's own words while nothing is solved (a cookie, so the server renders the right state with no flash).</li>
+                <li><strong>The result card</strong> leads with the verdict as a headline and one line, then the reward as a clear row, then “Next problem” and “Back to the map” (“Back to the gate” in an attempt), then runtime, memory and the percentile as one quiet row. A failing verdict leads with what happened, what to try and the first failing visible test. Rewards and badges are no longer toasts over the card. The percentile (“Faster than N% of other learners”) is shown only when 30 learners' latest accepted solutions back it — a presentation threshold: the stored value, and the <code>fast_solve</code> badge that reads it, are unchanged. “Next problem” (<code>lib/server/nextProblem.ts</code>) is forward only: the first unsolved problem that opens for the learner after the current one in its topic, then in the following topics.</li>
+                <li><strong>The phone problem page</strong>: below 1024 px one pane at a time — Problem, Code, Result — with a 44 px Run/Submit bar; a new result switches to the Result pane and takes focus; the statement's first example stays open and the rest sits behind “More”; the tabs fit at 320 px; keyboard glyphs are hidden on touch. The result panel is a lazy chunk, so the first paint is unchanged.</li>
+                <li><strong>One type scale</strong>: <code>--fs-xs … --fs-2xl</code> in <code>globals.css</code> — nothing below 12 px, body 14 px (16 on phones) — and <code>Pill</code> follows it (12/13/14 px).</li>
+                <li><strong>Left out on purpose</strong>: game words, a “practice first” lock on the gate, levels, streak flames, avatars, sounds and the Kenney art (CC0, but a second art style would work against “similar looking”), lessons earning tokens, a landing page, play-before-sign-up, a bottom tab bar and a trail-style map.</li>
+              </ul></dd>
+            <dt>Consequences</dt><dd><ul>
+              <li><strong>Map, fresh learner</strong> (production build, dark and light, 1440 and 375 px): first laptop screen 185 → 95 words and 20 → 14 controls; first phone screen 79 → 66 words; the page as it opens 762 → 116 words; length 2,583 px (2.9 screens) → 1,121 px (1.2) on a laptop and 5,307 px (6.5) → 1,277 px (1.6) on a phone; status labels 14 → 3; font sizes on the page 14 → 9 (6 in its body, nothing under 12 px there; the rest are the top bar's); HTML 58.6 → 31.9 KB gzipped. LCP is unchanged (cold 1.49 → 1.50 s, warm 0.72 → 0.69 s, CLS 0.00006 → 0), measured as in decision 39.</li>
+              <li><strong>Problem page</strong>: the phone editor starts at 178 px instead of 1,065–1,291; the result card after Submit is in view and focused (it was at y=935, under two toasts); Run and Submit are 165×44 on one row (they were 99×28 and 123×28 on two); the smallest text in a result is 12 px (it was 10.5); words under 12 px on the page 52 → 4; LCP unchanged at about 1.43 s; the route's JS 22.4 → 17.9 kB.</li>
+              <li><strong>Costs</strong>: the problem lists decision 39 put on the map are one click away instead of open — that is what makes the first screen small — and open by themselves only for the hero's topic once a problem is solved (one line in <code>map/page.tsx</code> flips it). The tier summary text is no longer shown (the data stays). <code>Pill</code> is about 1.5 px larger in its roughly 150 uses; 19 routes at two widths in both themes were compared with no new overflow, but the profile's “This is you” pill now wraps to its own line at 375 px and submissions rows are a few pixels taller. The first-run dismissal is a cookie, not <code>localStorage</code>.</li>
+              <li><strong>Tests</strong>: web 572 → 614 (41 → 44 files) — the milestone rule 13, the next-problem choice 12, the result card's words 8, the percentile threshold and the map's counts; Playwright 73 → 109 — 13 in a new <code>results.spec.ts</code> (card order, the Next target, a failing test first, no toast over the card, the percentile at 29 and 30, the phone panes, 44 px targets, axe on each view) and the map spec 16 → 39 (collapsed tiers by click, key and anchor, the first-run card, every milestone, no text under 12 px, at most 8 font sizes, axe collapsed and open in both themes). The accessibility gate still passes everywhere.</li>
+            </ul></dd>
+            <dt>Evidence</dt><dd><p>The problem page: <code>e8777da</code>, <code>10ffb7a</code>, <code>29d9e94</code>, <code>9909c31</code>, <code>bd46dff</code>, <code>b338cff</code> (merged in <code>36a7231</code>, with <code>b5353a5</code>). The map: <code>62a39bc</code>, <code>55ba547</code>, <code>de8ef14</code>, <code>5bec37e</code>, <code>f9483e7</code>, <code>e10fb9f</code> (merged in <code>330120f</code>); the type scale <code>5d81bc8</code>. Screenshots of every state, both themes and both widths were reviewed before merging, and the expert's measuring scripts were reused before and after.</p></dd>
           </dl>
         </article>
       </section>
@@ -1732,7 +1761,7 @@ event: verdict     { status, totalPassed, totalTests, runtimeUs, memoryKb, compi
                      badgesAwarded?: [{slug, name, …}], error? }
 event: error       { message }
 : keep-alive       every 15 s</code></pre>
-        <p>Hidden tests never carry <code>input</code>, <code>expected</code> or <code>actual</code>, and their error is reduced to its class (decision 20). <code>percentile</code> comes only with an accepted submit; <code>tokensAwarded</code> only with the first accepted submit. The browser side is one hook, <code>useRunStream</code>, over a pure reducer in which phases only move forward.</p>
+        <p>Hidden tests never carry <code>input</code>, <code>expected</code> or <code>actual</code>, and their error is reduced to its class (decision 20). <code>percentile</code> comes only with an accepted submit, and only once 30 learners' accepted solutions stand behind it (<a href="#d42">decision 42</a>); <code>tokensAwarded</code> only with the first accepted submit. The browser side is one hook, <code>useRunStream</code>, over a pure reducer in which phases only move forward.</p>
 
         <h3>Verdict semantics</h3>
         <div class="table-wrap"><table>
@@ -1951,6 +1980,12 @@ GET  /v1/queue/stats          { enabled, counts }   enabled:false without Redis<
           <p>Next compresses pages but not a route handler's response. The ten art scenes would have gone out as about 80 KB where brotli makes about 9 KB — about 1.2 KB a scene — and the build's size table, which does not see route handlers, showed nothing.</p>
           <p class="rule"><span class="tag">Rule</span>Compress in the handler (once per asset, with <code>Vary: Accept-Encoding</code>), and judge a payload by the bytes on the wire, not by the build output (<code>46bcc38</code>).</p>
         </div>
+
+        <div class="lesson" id="l-visible">
+          <h3>Count what the learner can see</h3>
+          <p>The audit's counter said the map had 930 words. It had included text inside collapsed panels, which is not on screen; counted as text on screen or open by default the same page was 762 words. The finding stood — the page was far too much — but a baseline that is off by a fifth would have made the improvement look bigger than it was.</p>
+          <p class="rule"><span class="tag">Rule</span>Measure what is visible (not what is in the DOM), re-measure the "before" with the same script as the "after", and say so when a figure changes.</p>
+        </div>
       </section>
 
       <!-- ============================================================ 7 -->
@@ -1965,6 +2000,8 @@ GET  /v1/queue/stats          { enabled, counts }   enabled:false without Redis<
           <li><strong>Scaling out</strong>: rate limits are in-process (one web instance), the Redis queue doesn't serve <code>/v1/run</code>, and the sandbox shares the one VPS.</li>
           <li><strong>Directus leftovers</strong> of the Queue's tables: their field and relation meta rows stay in Directus, inert; tidying them is an optional SQL step (<code>deploy/README.md</code> §7.3, <a href="#d38">decision 38</a>).</li>
           <li><strong>The topic art outside Chromium</strong>: only Chromium was exercised for the art (<code>color-mix()</code>, <code>oklch()</code>, container units, <code>transform-box: fill-box</code>) and for the map's lazy loader and in-view pause (<a href="#d40">decision 40</a>). A Safari and Firefox pass is owed.</li>
+          <li><strong>The phone problem page on a real device</strong>: it was exercised with Playwright's mobile emulation (Monaco takes focus and typing, the keyboard-sized viewport keeps Run and Submit in view); iOS Safari — Monaco zooming the page on focus, <code>100dvh</code>, the soft keyboard — needs a real-device check (<a href="#d42">decision 42</a>).</li>
+          <li><strong>Left on the old scale</strong>: the top bar's avatar initials (10.4 px) and a few navbar texts, <code>Kbd</code>, tab counts and small buttons are under 12 px; the IDE still prints ⌘↵ on touch; the submission detail and the profile show the stored percentile without the 30-learner threshold; the workspace layout is <code>100vh</code> while the problem page uses <code>100dvh</code>. Learn, the IDE, Submissions and the profile have not had the calm treatment.</li>
           <li><strong>The next-topic rule</strong> keeps the earlier topic until it is finished and never features a gate, even an open one — whether it should is a product decision (<a href="#d41">decision 41</a>). The Learn track cards have no art yet; they are the natural next place for it.</li>
           <li><strong>Books and monetization</strong> from <code>docs/authoring-v1.md</code> — not started.</li>
         </ul>

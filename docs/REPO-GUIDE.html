@@ -178,10 +178,10 @@
       <div class="fact"><b>6</b><span>languages judged</span></div>
       <div class="fact"><b>30</b><span>problems · 3 tiers · 10 topics</span></div>
       <div class="fact"><b>32</b><span>tables in 2 schemas</span></div>
-      <div class="fact"><b>760</b><span>unit tests (web · backend · admin)</span></div>
-      <div class="fact"><b>73</b><span>Playwright tests</span></div>
+      <div class="fact"><b>802</b><span>unit tests (web · backend · admin)</span></div>
+      <div class="fact"><b>109</b><span>Playwright tests</span></div>
       <div class="fact"><b>6</b><span>CI jobs per push</span></div>
-      <div class="fact"><b>236</b><span>commits, Nov 2025 →</span></div>
+      <div class="fact"><b>253</b><span>commits, Nov 2025 →</span></div>
     </div>
   </header>
 
@@ -219,7 +219,7 @@
 
       <section id="s2">
         <h2><span class="n">2</span>Repo map</h2>
-        <p>Every tracked file (618) and directory (137) as <code>git ls-files</code> lists them at <code>b762b72</code>. Click a folder to open it and a file to read what it does, or filter by path or description. The 30 question files share one entry; <code>node_modules</code>, <code>.next</code> and <code>dist</code> are not tracked, so they are not here. <em>Legacy</em> marks files that still exist but nothing current depends on.</p>
+        <p>Every tracked file (632) and directory (137) as <code>git ls-files</code> lists them at <code>330120f</code>. Click a folder to open it and a file to read what it does, or filter by path or description. The 30 question files share one entry; <code>node_modules</code>, <code>.next</code> and <code>dist</code> are not tracked, so they are not here. <em>Legacy</em> marks files that still exist but nothing current depends on.</p>
         <div class="map">
           <div class="map-left">
             <div class="tree-tools">
@@ -463,7 +463,7 @@ npm run dev            # compile service :4000 + web :4001</code></pre>
             <tr><td><code>/forgot</code>, <code>/reset?token=</code></td><td>Password reset (Resend, or the server log without it).</td><td>public; rate-limited</td></tr>
             <tr><td><code>/auth</code>, <code>/p/[id]</code>, <code>/profile</code></td><td>Old routes: redirect to <code>/signin</code>, <code>/problems/[slug]</code>, <code>/u/&lt;handle&gt;</code>.</td><td>—</td></tr>
             <tr><td><code>/problems</code></td><td>The removed problem list (<a href="DECISIONS.html#d39">decision 39</a>): redirects to <code>/map</code>, whatever the query string; <code>?topic=&lt;slug&gt;</code> lands on that topic's card.</td><td>login</td></tr>
-            <tr><td><code>/problems/[slug]</code></td><td>Statement, editor, results, hints, related lessons; <code>?attempt=</code> is gate mode. A locked question renders what's blocking it.</td><td>login; drafts 404 unless yours</td></tr>
+            <tr><td><code>/problems/[slug]</code></td><td>Statement, editor, a result card (headline, reward, Next problem, then the numbers), hints, related lessons; <code>?attempt=</code> is gate mode. Below 1024 px one pane at a time (Problem · Code · Result). A locked question renders what's blocking it.</td><td>login; drafts 404 unless yours</td></tr>
             <tr><td><code>/ide</code></td><td>Playground with stdin cases, six languages.</td><td>login</td></tr>
             <tr><td><code>/submissions</code></td><td>Your history, filtered in the URL.</td><td>login (own only)</td></tr>
             <tr><td><code>/submissions/[id]</code></td><td>Verdict hero, code, per-test breakdown.</td><td>owner or staff+ (DB); else 404</td></tr>
@@ -472,7 +472,7 @@ npm run dev            # compile service :4000 + web :4001</code></pre>
             <tr><td><code>/learn/[track]/[lesson]</code></td><td>A lesson; a module slug here redirects to the track page.</td><td>login</td></tr>
             <tr><td><code>/learn/[track]/[module]/checkpoint</code></td><td>The module quiz; <code>?attempt=</code> shows a graded review.</td><td>login</td></tr>
             <tr><td><code>/learn/[track]/complete</code></td><td>Track completion.</td><td>login</td></tr>
-            <tr><td><code>/map</code></td><td>Home: a small h1 and the totals, the hero of the learner's next topic (animated art, one button), then tiers, gates, and topics with art thumbnails, balances, recipes, what's blocking you and each topic's problems (listed once it is unlocked, counted before); unlock and start-gate flows.</td><td>login</td></tr>
+            <tr><td><code>/map</code></td><td>Home: a small h1 and one progress line, the hero of the learner's next topic (animated art, one button) with a milestone line under it, a first-run card while nothing is solved, then the tiers — an open tier as one row per topic (its problems one click away), a closed tier as one collapsed panel that says what opens it; what a topic needs is said once; unlock and start-gate flows.</td><td>login</td></tr>
             <tr><td><code>/map/gates/[attemptId]</code></td><td>A gate attempt: countdown, progress, problems, Finish.</td><td>login; your own attempt, else 404</td></tr>
             <tr><td><code>/author</code>, <code>/author/new</code>, <code>/author/[id]/edit</code></td><td>Write, verify and publish questions.</td><td>role ≥ author (DB), own questions unless staff; else 404; noindex</td></tr>
             <tr><td><code>/library</code>, <code>/library/[area]</code>, <code>/library/[area]/[article]</code></td><td>The hidden algorithms library.</td><td>staff+ (DB) unless <code>FEATURE_LIBRARY_PUBLIC</code>; else 404; noindex; robots Disallow</td></tr>
@@ -545,14 +545,14 @@ npm run dev            # compile service :4000 + web :4001</code></pre>
 
       <section id="s8">
         <h2><span class="n">8</span>Tests and CI</h2>
-        <p>Counts are from running each suite at <code>b762b72</code> on 2 Oct 2026 (Playwright against a production build).</p>
+        <p>Counts are from running each suite at <code>330120f</code> on 2 Oct 2026 (Playwright against a production build).</p>
         <div class="table-wrap"><table>
           <thead><tr><th>Layer</th><th>Size</th><th>What it covers</th><th>Run</th></tr></thead>
           <tbody>
-            <tr><td>Web unit + DB (vitest)</td><td>41 files · 572 tests</td><td>The pure rules (the debit planner is cross-checked against a brute-force allocator); every domain service against a migrated Postgres test database, trigger and partial indexes included (20 parallel spends never overdraw); the seed's validation, modes and idempotency; the real content played end to end as a fresh learner; lesson markdown against hostile input; SSE framing; the runner with a fake compile client; the topic art (every topic has a scene, the markup against React’s renderer, the stylesheet in sync with its specs), the hero reel’s rules and the map’s next-topic rule.</td><td><code>npm test -w web</code></td></tr>
+            <tr><td>Web unit + DB (vitest)</td><td>44 files · 614 tests</td><td>The pure rules (the debit planner is cross-checked against a brute-force allocator); every domain service against a migrated Postgres test database, trigger and partial indexes included (20 parallel spends never overdraw); the seed's validation, modes and idempotency; the real content played end to end as a fresh learner; lesson markdown against hostile input; SSE framing; the runner with a fake compile client; the topic art (every topic has a scene, the markup against React’s renderer, the stylesheet in sync with its specs), the hero reel’s rules, the map’s next-topic and milestone rules, the next-problem choice, the result card’s words and the percentile threshold.</td><td><code>npm test -w web</code></td></tr>
             <tr><td>Backend (<code>node:test</code>)</td><td>17 files · 163 tests</td><td>The exact isolate command line per language and phase, the CPU plan, bounded box output, the harness protocol, generators compiled and run for real (<code>javac</code>, <code>go build</code>), and <code>/v1/run</code> plus <code>/v1/run/stream</code> end to end through the local adapter in all six languages. One test (the cpuset CLI) runs on Linux only.</td><td><code>npm test -w backend</code></td></tr>
             <tr><td>Admin (vitest)</td><td>3 files · 25 tests</td><td>Recipe and join-row checks, Postgres array literals, cuids, the enum parser, the recipe save payload.</td><td><code>npm --prefix admin test</code></td></tr>
-            <tr><td>Playwright</td><td>13 specs · 73 tests</td><td>Every feature through the UI against a running app and compile service: auth, the map as home with its problem lists, editor, IDE, submissions, learn, profile, authoring, the hidden library, the sign-up → solve → submit → gate → unlock journey, the sign-in hero reel, the map’s hero and thumbnails, and an accessibility gate (axe, one <code>h1</code>, no sideways scroll) on a route per section in both themes.</td><td><code>cd web &amp;&amp; PLAYWRIGHT_BASE_URL=… npx playwright test</code></td></tr>
+            <tr><td>Playwright</td><td>14 specs · 109 tests</td><td>Every feature through the UI against a running app and compile service: auth, the map as home with its problem lists, editor, IDE, submissions, learn, profile, authoring, the hidden library, the sign-up → solve → submit → gate → unlock journey, the sign-in hero reel, the calm map (collapsed tiers, first-run card, milestone), the result card and the phone problem page, and an accessibility gate (axe, one <code>h1</code>, no sideways scroll) on a route per section in both themes.</td><td><code>cd web &amp;&amp; PLAYWRIGHT_BASE_URL=… npx playwright test</code></td></tr>
             <tr><td>Isolate smoke</td><td>26 checks</td><td>The production image, privileged: six languages, verdicts, the compile cache, fork/memory/output bombs, no network, no host files, one CPU per box, the syscall filter.</td><td><code>node backend/tests/isolate/smoke.mjs</code></td></tr>
             <tr><td>Content verification</td><td>4 Python scripts</td><td>Shapes and references, every reference solution against every test, starters compiling verbatim, and the token economy simulated over every unlock order.</td><td><code>python3 web/prisma/seed/verify/verify_all.py</code></td></tr>
           </tbody>
@@ -578,9 +578,9 @@ npm run dev            # compile service :4000 + web :4001</code></pre>
             <rect class="box" x="200" y="124" width="640" height="34" rx="3"/>
             <text x="214" y="146"><tspan class="b">infra</tspan> — compose config against .env.example · admin tests and typecheck</text>
             <rect class="box" x="200" y="162" width="640" height="34" rx="3"/>
-            <text x="214" y="184"><tspan class="b">web</tspan> — migrate · seed twice · 572 vitest tests · typecheck · lint · build</text>
+            <text x="214" y="184"><tspan class="b">web</tspan> — migrate · seed twice · 614 vitest tests · typecheck · lint · build</text>
             <rect class="box hi" x="200" y="200" width="640" height="34" rx="3"/>
-            <text x="214" y="222"><tspan class="b">e2e</tspan> — next start + compile service + seeded Postgres → 73 Playwright tests</text>
+            <text x="214" y="222"><tspan class="b">e2e</tspan> — next start + compile service + seeded Postgres → 109 Playwright tests</text>
           </svg>
           </div>
           <figcaption>The two teal jobs are the ones that exercise production as it really runs: the sandbox inside the real image, and the browser against <code>next start</code> rather than the dev server (decisions 30 and 35).</figcaption>
@@ -598,6 +598,7 @@ npm run dev            # compile service :4000 + web :4001</code></pre>
               <li>The Queue and My Library removed at the owner's request (decision 38): migration, Directus clean-up, and the economy re-simulated with questions as the only earn — no dead ends</li>
               <li>The problem list removed at the owner's request (decision 39): the map is home and lists every topic's problems with your progress; <code>/problems</code> redirects there</li>
               <li>Learn (3 tracks, 23 lessons), profiles, 15 badges, authoring with a re-verified publish, the hidden library</li>
+              <li>The UX pass (decision 42): a calm map (closed tiers collapsed, each fact said once, three status labels, a first-run card), a result card that leads with its headline and the reward and offers “Next problem”, one pane at a time on phones, and one type scale (nothing under 12 px)</li>
               <li>Animated topic art (decisions 40 and 41): the sign-in reel of ten scenes with a pause button and a phone banner, the map's hero of the next topic with one button, and an art thumbnail on every topic card — +15 KB and +0.02 s first-visit LCP on the map</li>
               <li>Directus confined by Postgres roles, with editable join tables and the two seed modes</li>
               <li>Sandbox hardening proven in the production image (the 26-check smoke runs in CI); the compile cache bounded by bytes as well as entries</li>
@@ -614,6 +615,8 @@ npm run dev            # compile service :4000 + web :4001</code></pre>
               <li>Directus asks a project owner to accept its license and DPA on first login: the deployment owner's call</li>
               <li>Java's <code>runUs</code> counts only the calling thread; work handed to other threads is untimed</li>
               <li>The topic art was exercised only in Chromium (<code>color-mix()</code>, <code>oklch()</code>, container units, <code>transform-box: fill-box</code>, the lazy loader's in-view pause); a Safari and Firefox pass is owed</li>
+              <li>The phone problem page was exercised with Playwright's mobile emulation only: iOS Safari (Monaco zooming on focus, <code>100dvh</code>, the soft keyboard) needs a real-device check</li>
+              <li>Left on the old scale: the top bar's avatar initials (10.4 px) and a few navbar texts, <code>Kbd</code> and tab counts under 12 px; the IDE still prints ⌘↵ on touch; the submission detail and profile pages show the stored percentile without the 30-learner threshold</li>
               <li>The map's next-topic rule never features a gate (even an open one) and keeps an earlier topic until it is finished; the Learn track cards have no art yet</li>
               <li>amd64 builds of the web, Directus and backup images, and a real Storage Box, are untested (local verification ran on Apple silicon with an SFTP stand-in; CI builds only the backend image)</li>
               <li>Rate limits are in-process (one web instance); the Redis queue does not serve <code>/v1/run</code></li>
@@ -628,6 +631,7 @@ npm run dev            # compile service :4000 + web :4001</code></pre>
               <li>First production deploy: license decision, amd64 images, a restore drill against the real Storage Box, an LCP check on the real host</li>
               <li>Time Java across threads, or say in the UI that only the calling thread counts</li>
               <li>A Safari and Firefox pass over the topic art; art for the Learn track cards</li>
+              <li>The same calm treatment for Learn, the IDE, Submissions and the profile</li>
               <li>User-authored books and monetization (<code>docs/authoring-v1.md</code>) — not started</li>
             </ul>
           </div>
@@ -686,7 +690,7 @@ docker compose --env-file deploy/.env -f docker-compose.prod.yml exec backup cod
 <script>
 (function () {
   // ---- repo map ---------------------------------------------------------
-  // [name, role, description, children?] — generated from `git ls-files` at b762b72;
+  // [name, role, description, children?] — generated from `git ls-files` at 330120f;
   // a fourth element marks a directory.
   var TREE = [[".github","CI","GitHub configuration: the CI workflow.",[["workflows","CI","Workflows (one: ci.yml).",[["ci.yml","CI","Six jobs on every push to master and every PR: backend lint/build/unit tests; a six-language /v1/run smoke; the isolate smoke in the production image; compose and Directus admin checks; web migrations, seed, vitest, typecheck, lint, build; Playwright against a production build."]]]]],
 ["admin","Admin","Directus over content.*: the content model as code and one extension bundle (recipe editor, content-integrity hook, supply endpoint). A standalone npm package, deliberately not a workspace.",[["content-model","Admin","The Directus content model as data, applied through the REST API: meta only, never DDL.",[["apply.ts","Admin","Applies model.ts to a running Directus idempotently (unchanged entries are skipped); the directus-config one-shot runs it on every deploy, warns about content columns missing from the model, and deletes the meta and permissions of retired collections whose tables are gone."],
@@ -835,13 +839,13 @@ docker compose --env-file deploy/.env -f docker-compose.prod.yml exec backup cod
 ["layout.tsx","Layout","noindex/nofollow for every library page."],
 ["page.tsx","Page","/library: the index with reading progress."],
 ["viewer.ts","Security","The viewer if the library is open to them (staff+, or anyone with the flag); otherwise the same 404 as an unknown URL."]]],
-["map","Page","The tier map (T1) — the home page, opening on the learner’s next topic and listing every topic’s problems — and gate attempts.",[["gates","Page","Gate attempts.",[["[attemptId]","Page","One running or finished attempt.",[["page.tsx","Page","/map/gates/[attemptId]: countdown, progress against the threshold, the gate’s problems, Finish; settles lazily after the deadline."]]]]],
+["map","Page","The tier map (T1) — the home page, opening on the learner’s next topic — and gate attempts.",[["gates","Page","Gate attempts.",[["[attemptId]","Page","One running or finished attempt.",[["page.tsx","Page","/map/gates/[attemptId]: countdown, progress against the threshold, the gate’s problems, Finish; settles lazily after the deadline."]]]]],
 ["actions.ts","Server action","unlockTopicAction, startGateAction, finishGateAction; expected failures come back as the DomainError’s JSON (e.g. the shortfall per token topic)."],
-["page.tsx","Page","/map, the home page: a small h1 and the totals, the hero of the learner’s next topic (animated art and one button), then every tier with its gate and every topic — thumbnail, balances, recipes, what’s blocking it and its problems (listed once unlocked); questions with no topic on their own. No route-level loading.tsx: its skeleton held the first real paint back (decision 39)."]]],
+["page.tsx","Page","/map, the home page: a small h1 and one quiet progress line, the hero of the learner’s next topic with a milestone line under it, a first-run card while nothing is solved, then the tiers — an open tier as one row per topic (its problems one click away), a closed tier as one collapsed panel; questions with no topic on their own. No route-level loading.tsx: its skeleton held the first real paint back (decision 39)."]]],
 ["p","Legacy","The old editor route.",[["[id]","Legacy","Redirects to /problems/[slug].",[["page.tsx","Legacy","/p/<slug> → /problems/<slug>, query string kept."]]]]],
 ["problems","Page","The editor (02/03); /problems itself only redirects to the map.",[["[slug]","Page","One question: statement, editor, results.",[["error.tsx","Boundary","The editor’s error boundary: a retry of just this segment; users only see the digest."],
 ["not-found.tsx","Boundary","Unknown slug, or someone else’s draft."],
-["page.tsx","Page","/problems/[slug]: statement and SolveWorkspace, hint ladder, related lessons; the locked page when a topic is locked; ?attempt= switches to gate mode. No route-level loading.tsx: a skeleton delayed the first real paint (decision 37)."]]],
+["page.tsx","Page","/problems/[slug]: statement and SolveWorkspace, hint ladder, related lessons and the learner’s next problem for the result card; the locked page when a topic is locked; ?attempt= switches to gate mode. No route-level loading.tsx: a skeleton delayed the first real paint (decision 37)."]]],
 ["page.tsx","Legacy","/problems → /map, whatever the query string; ?topic=<slug> → /map#topic-<slug>. The problem list that lived here was removed (decision 39)."]]],
 ["profile","Legacy","The old /profile route.",[["page.tsx","Legacy","/profile → /u/<handle>."]]],
 ["reset","Page","Choose a new password.",[["page.tsx","Page","/reset?token=: choose a new password (single-use, 30-minute link)."]]],
@@ -955,39 +959,46 @@ docker compose --env-file deploy/.env -f docker-compose.prod.yml exec backup cod
 ["markdown.module.css","Style","Article prose."],
 ["Markdown.tsx","UI","Sanitized GFM rendered on the server, so the library ships no markdown JS."],
 ["MarkRead.tsx","UI","“Mark as read” → app.library_progress."]]],
-["Loop","UI","Pieces shared by the learning-loop pages.",[["awards.ts","Types","A badge as the loop’s server actions return it."],
+["Loop","UI","Pieces shared by the learning-loop pages (header, page scaffolding, fragment scrolling).",[["LoopHead.tsx","UI","A loop page’s header: eyebrow, title, one line of context and stat tiles on the right (split out of LoopPage so the map does not carry it)."],
+["awards.ts","Types","A badge as the loop’s server actions return it."],
 ["Countdown.tsx","UI","A live h:mm:ss countdown and a local-time stamp, both rendered after mount (server and browser clocks differ)."],
-["HashScroll.tsx","UI","Scrolls to the #fragment once the streamed page has rendered."],
+["HashScroll.tsx","UI","Opens every collapsed panel or row that holds the #fragment target (on load, on hashchange and on in-page link clicks), then scrolls to it once the streamed page has rendered."],
 ["loop.module.css","Style","Shared loop styles."],
 ["LoopPage.tsx","UI","Page scaffolding for the loop pages."],
-["TokenBuckets.tsx","UI","A topic balance split into its Easy · Medium · Hard buckets."]]],
-["Map","UI","The tier map (T1) and gate attempts.",[["GateAttempt.tsx","UI","Gate-attempt pieces: live re-render while it runs, the countdown, the cooldown clock, Finish (asks first when below the threshold)."],
-["GateCard.tsx","UI","A tier’s gate and its state for you: start (confirmed), continue, cooldown countdown, or passed."],
+["loopHead.module.css","Style","The loop header’s styles."]]],
+["Map","UI","The tier map (T1) and gate attempts.",[["FirstRun.tsx","UI","The map’s first-run card: while a learner has solved nothing, three short steps in the page’s own words (solve problems, earn tokens, spend them) above the tiers, and “Got it” to dismiss it for good. The server renders it only when due, so nothing flashes or shifts."],
+["GateAttempt.tsx","UI","Gate-attempt pieces: live re-render while it runs, the countdown, the cooldown clock, Finish (asks first when below the threshold)."],
+["GateCard.tsx","UI","A tier’s gate as one line and one button: start (confirmed in a dialog that holds its problems and cooldown), continue, cooldown countdown, or passed."],
 ["LinkPending.tsx","UI","Inside a problem’s link on the map: swaps the status dot for a spinner while that navigation is in flight (useLinkStatus) — the editor has no loading.tsx to show the wait."],
-["MapHero.tsx","UI","The map’s header: a small h1 “Tier map” with the three totals as chips, and the hero of the featured topic — its animated art, name, caption, “n/m solved” and one button (decision 41)."],
-["TopicThumb.tsx","UI","A topic card’s 104×58 art thumbnail: animated while an unlocked topic is on screen, a dimmed poster with a lock or open-lock glyph otherwise; its scene loads on demand."],
-["map.module.css","Style","Map layout (topic cards keep their own height; items wrap on phones), the hero and chips, the art thumbnails and the problem lists."],
+["MapHero.tsx","UI","The map’s header: a small h1 “Tier map” with one quiet progress line, the hero of the featured topic — its animated art, name, caption, “n/m solved” and one button (decision 41) — and the milestone line under it."],
+["StateLabel.tsx","UI","The map’s whole status vocabulary: Open · Ready to unlock · Locked, one treatment each, shown only where it matters."],
+["TopicThumb.tsx","UI","A topic row’s 104×58 art thumbnail: a still poster (dimmed when the topic is locked); its scene loads on demand."],
+["attempt.module.css","Style","The gate attempt page’s styles, split out of map.module.css so the home page does not ship them."],
+["firstRunCookie.ts","UI","The cookie that remembers the first-run card was dismissed (cm-first-run=hide, one year, Lax, Secure on https); read on the server."],
+["map.module.css","Style","Map layout on the type scale: the hero, the first-run card, tier panels, topic rows, thumbnails and problem lists."],
 ["RunningAttemptBanner.tsx","UI","A running gate attempt, pinned to the top of the map."],
-["TierSection.tsx","UI","One tier: header, the gate that opens it, its topics."],
-["TopicActions.tsx","UI","The unlock flow: pick a recipe, see the exact debits, confirm; a shortfall comes back itemized."],
-["TopicCard.tsx","UI","One topic: its art thumbnail, state, balance by bucket, what’s blocking it, recipes with have/need per item, its problems."],
-["TopicProblems.tsx","UI","A topic’s problems at the foot of its card. Unlocked: every one with your progress and difficulty, the title linking to the editor (the whole row is the target), a locked composite naming the topic it needs, “n/m solved”. Locked: how many it holds. Server component."]]],
+["TierSection.tsx","UI","One tier: an open tier is its header and a row per topic; a closed tier is one collapsed panel (its name, why it is closed, its topics as posters and names) that opens to the gate line and compact topics."],
+["TopicActions.tsx","UI","The unlock flow: pick a recipe, see the exact debits, confirm; a shortfall comes back itemized. After an unlock the row opens itself and its heading takes focus."],
+["TopicCard.tsx","UI","One topic as a row (a details element): thumbnail, name and “n/m solved · k tokens” or what it needs; it opens to the blocker (said once), recipes with have/need per item, its problems and the unlock action."],
+["TopicProblems.tsx","UI","A topic’s problems inside its row: your progress, difficulty as quiet text with a dot, the title linking to the editor (the whole row is the target), a locked composite naming the topic it needs, “n/m solved”. Server component."]]],
 ["Problem","UI","Problem statement pieces.",[["LockedQuestion.tsx","UI","What a locked question renders instead of the editor: what blocks each topic, and the way to the map."],
 ["Markdown.module.css","Style","Statement prose."],
 ["Markdown.tsx","UI","Sanitized GFM with fenced code through the kit’s CodeBlock; server-rendered for statements, lazy in the browser for hints."],
+["MoreDisclosure.tsx","UI","“More” on the problem statement: further examples, constraints, tags and companies behind one 44 px toggle below 1024 px, always open from 1024 px (decided in CSS, so nothing jumps after hydration)."],
 ["Problem.module.css","Style","Statement layout."],
-["ProblemStatement.tsx","UI","Topic and tag chips, the statement, examples and constraints. Server component."]]],
+["ProblemStatement.tsx","UI","Topic and tag chips, the statement with its first example open and the rest behind “More” on phones (everything shown from 1024 px), constraints. Server component."]]],
 ["Profile","UI","The profile page (06).",[["ActivityHeatmap.tsx","UI","The 365-day heatmap as an ARIA grid (roving tabindex, arrow keys by week and day)."],
 ["profile.module.css","Style","Profile layout."],
 ["ProfileSections.tsx","UI","Header, stat tiles, panels, recent submissions, tokens and learn progress."]]],
 ["Results","UI","Run results (03).",[["AiReview.module.css","Style","AI review panel."],
 ["AiReview.tsx","UI","Optional AI review of an accepted submission, quick then deeper; advisory only."],
 ["JudgeOutput.tsx","UI","Compiler and runtime output; references to the learner’s own lines become buttons that move the cursor there."],
-["Results.module.css","Style","Results hero and breakdown."],
-["ResultsHero.tsx","UI","The results hero (03): verdict in its color, runtime in µs, memory, compile time, beats N%, tokens and badges; Accepted and TLE get their own composition."],
+["ResultPanel.tsx","UI","The live part of the Result tab: a run’s progress while it streams, then the result card and the per-test list. One lazily loaded piece, so its code and styles stay out of the page’s first paint."],
+["Results.module.css","Style","The result card and breakdown, on the type scale (nothing under 12 px)."],
+["ResultsHero.tsx","UI","The result card: the verdict as a headline with one line under it, reward rows (+N token · topic, a badge), Next problem and Back to the map (or the gate), then runtime, memory and — with 30+ solutions to compare — “faster than N%” in one quiet row; a failing verdict leads with what happened, what to try and the first failing test."],
 ["RunProgress.tsx","UI","Live progress while a run streams: phase, a tick per test, a bar."],
-["TestBreakdown.tsx","UI","Per-test results: visible tests open to input/expected/output/error; hidden ones show pass or fail only."],
-["TestStrip.tsx","UI","One tick per test, filling in as test events arrive."]]],
+["TestBreakdown.tsx","UI","The per-test list, collapsed under the result: visible tests open to input/expected/output/error; hidden ones show pass or fail only."],
+["TestStrip.tsx","UI","One tick per test while a run streams; decorative (the count is in text), not interactive."]]],
 ["TopicArt","UI","The topic art (decision 40): an animated SVG scene for each of the ten topics, on a stage, as a loop, a still poster or a lazy slot. The sign-in hero reel and the map’s hero and thumbnails are made of it.",[["scenes","UI","One scene per topic and a fallback: a 320×180 canvas and a 7 s loop that runs the real algorithm and ends in a payoff (confetti and a +1 coin). Each file’s header comment tells its story.",[["arrays-hashing.tsx","UI","A hash machine eats a key, shows its number (code mod 8: K→3, M→5, R→2) and spits it into that bucket; a later lookup of M goes straight to bucket 5."],
 ["binary-search.tsx","UI","Fifteen sorted pillars and a gold line at 49: a spotlight probes the middle, the pillars outside the live range fall away (15 → 7 → 3 → 1) and the fourth probe lands on the target. The search really runs and drives the scene."],
 ["dynamic-programming.tsx","UI","A 4×5 grid-paths table filled once, in dependency order — each cell is the sum of the one above and the one to the left — up to 35 in the corner."],
@@ -1052,7 +1063,7 @@ docker compose --env-file deploy/.env -f docker-compose.prod.yml exec backup cod
 ["MetricChip.tsx","UI kit","A bold tabular number with a smaller unit and an optional percentile bar."],
 ["Modal.tsx","UI kit","Dialog: portal, focus trapped and returned, Esc, scroll lock, the rest of the page inert."],
 ["package.json","Config","Marks the kit side-effect free (CSS excepted) so unused re-exports drop out of client bundles."],
-["Pill.tsx","UI kit","Status and metadata capsule in the tone palette (AA-safe text tones)."],
+["Pill.tsx","UI kit","Status and metadata capsule in the tone palette (AA-safe text tones); sizes xs/sm/md are 12/13/14 px on the type scale."],
 ["Portal.tsx","UI kit","Where overlays render; a modal provides its own layer."],
 ["primitives.tsx","UI kit","Barrel re-export kept for older imports; new code imports each module directly."],
 ["Progress.tsx","UI kit","Decorative meter bar for places that print the number beside it."],
@@ -1093,32 +1104,35 @@ docker compose --env-file deploy/.env -f docker-compose.prod.yml exec backup cod
 ["Workspace","UI","The solving surface of questions and gate attempts.",[["CasesPanel.tsx","UI","Learner-added inputs, one JSON value per parameter, checked against the signature while typing."],
 ["GateBanner.tsx","UI","The gate strip over the workspace: countdown, progress against the threshold, the other gate questions."],
 ["RunErrorNotice.tsx","UI","Why a run never started, with the way out: the map (403), sign-in (401), retry."],
-["SolveWorkspace.tsx","UI","Statement · editor · console in resizable columns (stacked below 1024 px), in question or gate mode; drafts per problem and language; ⌘/Ctrl+Enter runs, ⌘/Ctrl+Shift+Enter submits."],
-["StatementPane.tsx","UI","Statement, editorial, hints and submissions tabs; the ladder loads when its tab opens."],
-["SubmissionsList.tsx","UI","Your recent submissions of this problem."],
-["types.ts","Types","The workspace’s serializable props, so a server component can hand them straight over."],
-["useModKey.ts","UI","Prints ⌘ or Ctrl for shortcut hints, corrected after mount."],
+["SolveWorkspace.tsx","UI","Statement · editor · console in resizable columns from 1024 px; below it one pane at a time (Problem · Code · Result) with a 44 px Run/Submit bar, the result scrolling into view and taking focus; question or gate mode; drafts per problem and language; ⌘/Ctrl+Enter runs, ⌘/Ctrl+Shift+Enter submits (glyphs hidden on touch)."],
+["StatementPane.tsx","UI","Statement, editorial, hints and submissions tabs, all inside the screen at 320 px; the ladder loads when its tab opens."],
+["SubmissionsList.tsx","UI","Your recent submissions of this problem (rows stack on phones; the percentile shows only where 30+ solutions back it)."],
+["types.ts","Types","The workspace’s serializable props (including the next problem), so a server component can hand them straight over."],
+["useModKey.ts","UI","Prints ⌘ or Ctrl for shortcut hints, corrected after mount; useTouchOnly is true on devices without hover, where the glyphs are hidden."],
 ["useSplit.ts","UI","A resizable split remembered per browser, as a WAI-ARIA window splitter."],
-["Workspace.module.css","Style","Workspace layout (panes are positioned so hidden text cannot stretch the page)."]]]]],
-["e2e","Test","Playwright: 73 tests in 13 specs, run against an already-running app (PLAYWRIGHT_BASE_URL); each spec creates its own users (those that earned tokens stay: the ledger is append-only).",[["a11y.spec.ts","Test","The accessibility and layout gate: no serious or critical axe violation and exactly one h1 on a route per section in both themes, no sideways scroll at 375 px in both themes (3 tests; axe-core loaded from cdnjs)."],
+["Workspace.module.css","Style","Workspace layout: three columns from 1024 px, the one-pane phone layout with its 44 px action bar (100dvh); panes are positioned so hidden text cannot stretch the page."]]]]],
+["e2e","Test","Playwright: 109 tests in 14 specs, run against an already-running app (PLAYWRIGHT_BASE_URL); each spec creates its own users (those that earned tokens stay: the ledger is append-only).",[["a11y.spec.ts","Test","The accessibility and layout gate: no serious or critical axe violation and exactly one h1 on a route per section in both themes, no sideways scroll at 375 px in both themes (3 tests; axe-core loaded from cdnjs)."],
 ["auth.spec.ts","Test","The login wall, sign-up, sign-in, forgot and reset (6 tests)."],
 ["author.spec.ts","Test","Role gate, write → verify on the judge → publish, ownership (3 tests)."],
-["editor.spec.ts","Test","Run, submit (Accepted, beats N%, +1 token), a wrong answer, Go and C++, a compile error linked to its line, a locked question (4 tests)."],
+["editor.spec.ts","Test","Run, submit (Accepted, the reward, Next problem), a wrong answer, Go and C++, a compile error linked to its line, a locked question (4 tests)."],
 ["hero.spec.ts","Test","The sign-in hero reel: it renders, switching topics changes the caption, pause works, reduced motion shows a poster, the banner above the form at 375 px, no layout shift while rotating through all ten topics (14 tests)."],
 ["ide.spec.ts","Test","stdin cases, per-case runtime, the diff, Go (1 test)."],
 ["learn.spec.ts","Test","Home, a lesson with a snippet and a visualization, a checkpoint with review, track completion and its badges (5 tests)."],
 ["library.spec.ts","Test","The plain 404 below staff, noindex, robots.txt, a staff reader through index → area → article (4 tests)."],
 ["loop.spec.ts","Test","The required journey: sign up (landing on the map) → solve, the first problem opened from the map’s list → submit → pass the gate → unlock, then open the unlocked topic’s problem from its card (1 test)."],
-["map-hero.spec.ts","Test","The map’s hero and thumbnails: the featured topic and its button’s target for a fresh learner, the other states (continue, unlock, missing, done), posters on locked cards, thumbnails pausing off screen, stacking at 375 px (16 tests)."],
+["map-hero.spec.ts","Test","The calm map (39 tests): the hero and its button’s target, closed tiers collapsed and opening by click, Enter or Space and by anchor links, topic rows, the first-run card (shown, dismissed, gone after a solve), every milestone state, posters as stills, nothing under 12 px or in capitals, at most 8 font sizes, stacking at 375 px, axe in every state collapsed and open in both themes."],
 ["map.spec.ts","Test","The map as home: /, the logo and the /problems redirects; an unlocked topic’s list (progress, links, the editor opening); a locked composite; a locked topic’s count; a gate attempt’s real 404; 375 px (6 tests)."],
 ["profile.spec.ts","Test","The /profile redirect, stats, the keyboard heatmap, someone else’s profile, the badge modal (5 tests)."],
+["results.spec.ts","Test","The result card and the phone problem page: card order and its Next problem target, a wrong answer leading with the first failing test, TLE/RE/CE, no toast over the card, the percentile hidden below 30 and shown at 30, a gate attempt; on a phone the pane switch, 44 px one-row Run/Submit, tabs inside the screen, the result in view and focused, no sideways scroll, axe on each view in both themes (13 tests)."],
 ["submissions.spec.ts","Test","History filters and pagination, the detail page, who may see a submission, the empty state, 375 px (5 tests)."]]],
-["lib","Library","Shared code: the compile-service client, SSE, rate limits, mail, lesson markdown, client helpers and the domain layer.",[["client","Client","Browser-side helpers for the editor and IDE, and the hero reel’s rules. Pure where possible.",[["client.test.ts","Test","The run-state reducer, drafts, metric formatting, judge-output line links, signature helpers (15 tests)."],
+["lib","Library","Shared code: the compile-service client, SSE, rate limits, mail, lesson markdown, client helpers and the domain layer.",[["client","Client","Browser-side helpers for the editor and IDE, the hero reel’s rules and the result card’s words. Pure where possible.",[["client.test.ts","Test","The run-state reducer, drafts, metric formatting, judge-output line links, signature helpers (15 tests)."],
 ["drafts.ts","Client","Per-problem, per-language drafts in localStorage, guarded so private mode cannot break the editor."],
 ["format.ts","Client","Formats CPU µs, KB, ms and percentiles the way the results hero shows them."],
 ["heroReel.test.ts","Test","The reel’s rules (16 tests)."],
 ["heroReel.ts","Rule","The hero reel’s rules as pure functions: when it may rotate and when animations play (the pause button, a mouse over it, keyboard focus, a hidden tab, scrolled off, reduced motion), wrapping and stepping, the switcher’s keys; LOOP_MS = 7000."],
 ["languages.ts","Client","Display names, Monaco ids and file names per language; turns “solution.cpp:4:14” in judge output into links to the learner’s lines."],
+["resultCopy.test.ts","Test","The result card’s words (8 tests)."],
+["resultCopy.ts","Rule","The words of a result card as pure functions: the headline, the line under it, what to try and how a reward reads. Judge vocabulary stays (Accepted, Wrong answer, Time limit exceeded…); the short codes are small labels."],
 ["runState.ts","Client","The state of one run/submit stream as a pure reducer: phases only move forward, tests stay ordered by idx."],
 ["signature.ts","Client","Value ↔ text for custom inputs, with the judge’s own type rules, so a bad input is caught before anything runs."],
 ["useRunStream.ts","Client","POSTs to /api/run|submit and follows the SSE stream; errors before the stream keep their JSON body."]]],
@@ -1143,7 +1157,7 @@ docker compose --env-file deploy/.env -f docker-compose.prod.yml exec backup cod
 ["recipes.ts","Rule","Token math: bucket and qualifying balances, recipe progress, the cheapest recipe, ascending debit planning."],
 ["roles.ts","Rule","Role order: learner < author < staff < admin."],
 ["scoring.test.ts","Test","Solve awards, penalties, percentile (8 tests)."],
-["scoring.ts","Rule","Awards: round(BASE × weight × (1 − penalty%)) with BASE 1/2/3, and the “beats N%” percentile."],
+["scoring.ts","Rule","Awards: round(BASE × weight × (1 − penalty%)) with BASE 1/2/3; the stored percentile (“faster than N%”) and percentileToShow, which hides it below MIN_PERCENTILE_SAMPLE = 30."],
 ["testResults.ts","Rule","Per-test shaping: hidden tests never carry input/expected/actual; explain_on_fail only on failures; OK only if every test passed."]]],
 ["test","Test","Test database plumbing and row factories.",[["database-url.ts","Test","The test database: TEST_DATABASE_URL, else DATABASE_URL renamed to codemare_test; the name must end in _test."],
 ["db.ts","Test","TRUNCATE every table between tests (TRUNCATE bypasses the ledger trigger)."],
@@ -1157,7 +1171,7 @@ docker compose --env-file deploy/.env -f docker-compose.prod.yml exec backup cod
 ["author.model.test.ts","Test","The pure authoring rules, incl. stubs reproducing all 30 seeded starters byte for byte (20 tests)."],
 ["author.test.ts","Test","Save, publish (re-verified on a fake judge), ownership and roles (19 tests)."],
 ["author.ts","Domain","Authoring: viewer role read fresh from the database, ownership, zod validation, drafts, and publishing that re-runs every reference solution through /v1/run."],
-["awards.ts","Domain","What an accepted verdict earns: tokens, badges and the percentile, for the SSE verdict event."],
+["awards.ts","Domain","What an accepted verdict earns: tokens, badges and the percentile, for the SSE verdict event. The percentile handed back is null below 30 solutions (percentileSamples / comparableLanguages hide it elsewhere); the stored one is always the real number."],
 ["badges.test.ts","Test","Every criteria kind through its hook; idempotent awards (9 tests)."],
 ["badges.ts","Domain","evaluateBadges after solves, unlocks, gates, lessons and checkpoints; idempotent, never revoked."],
 ["db.ts","Domain","Db/Tx types and withUserLock: pg_advisory_xact_lock(hashtextextended(user_id, 0)) around balance-changing work."],
@@ -1177,7 +1191,11 @@ docker compose --env-file deploy/.env -f docker-compose.prod.yml exec backup cod
 ["library.test.ts","Test","Access, drafts, progress and the snippet runner (14 tests)."],
 ["library.ts","Domain","The hidden Library: access (staff+ or the flag, read fresh from the database), index, areas, articles, progress, runnable C++."],
 ["loopViews.test.ts","Test","Map, gate and navbar view models, incl. the map’s earn options and each topic’s problems (11 tests)."],
-["loopViews.ts","Domain","View models for /map (with the questions that pay what a recipe misses, and each topic’s problems), the gate attempt page and the navbar token total."],
+["loopViews.ts","Domain","View models for /map (the questions that pay what a recipe misses, each topic’s problems, solved counts), the gate attempt page and the navbar token total."],
+["mapMilestone.test.ts","Test","The milestone rule’s cases (13 tests)."],
+["mapMilestone.ts","Rule","The one line under the map’s hero (pure): a topic ready to unlock (other than the hero’s), else an open gate with at least one of its problems solved, else nothing. Adds no restriction."],
+["nextProblem.test.ts","Test","The next-problem choice (12 tests)."],
+["nextProblem.ts","Domain","The result card’s “Next problem”: a pure choice plus a loader — the first unsolved problem that opens for the learner after the current one in its topic, then in the following topics in curriculum order; forward only; none means only “Back to the map”."],
 ["passwordReset.test.ts","Test","Hashed single-use tokens, throttles, identical answers for unknown emails (13 tests)."],
 ["passwordReset.ts","Domain","Password reset: SHA-256 of a random token in verification_tokens (reset:<email>), 30 minutes, single use, consumed in a transaction."],
 ["profile.test.ts","Test","Public profile and badge gallery (7 tests)."],

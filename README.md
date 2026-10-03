@@ -12,12 +12,16 @@ first, with a light theme.
   an editor workspace (`/problems/[slug]`) in **Python, JavaScript,
   TypeScript, C++, Java and Go**. Runs and submissions stream live over SSE
   (queued → compiling → running → each test → verdict) into a results hero
-  with runtime in µs, memory, a "beats N%" percentile, and a per-test
-  breakdown that explains failures. A free-form `/ide` with custom stdin.
-- **The learning loop** — `/map`, the home page, shows three tiers and ten
-  topics with token balances, unlock recipes and "what's blocking you", with
-  the problems that pay the missing tokens; every unlocked topic lists its
-  problems with your progress, and a locked one says how many it holds.
+  with runtime in µs, memory, a "faster than N%" percentile (once 30
+  learners have solved it) and a per-test breakdown that explains failures;
+  a result leads with its headline and reward and offers "Next problem". On a
+  phone the problem page shows one pane at a time. A free-form `/ide` with
+  custom stdin.
+- **The learning loop** — `/map`, the home page, opens on your next topic
+  and shows three tiers and ten topics: an open tier is one row per topic
+  (its problems one click away, with your progress), a closed tier is one
+  collapsed panel that says what opens it; what a topic still needs, with the
+  problems that pay it, shows where it matters.
   Unlocking spends tokens from an append-only ledger that can never go
   negative. Gate exams (`/map/gates/…`) open each tier, with cooldowns. A
   five-level hint ladder (nudge → solution) shows each hint's cost before

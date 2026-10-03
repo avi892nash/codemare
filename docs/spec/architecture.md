@@ -241,7 +241,14 @@ Streaks count UTC days with ≥ 1 accepted submission.
 ### 3.8 Percentile
 On an accepted submit: among accepted submits of the same question and
 language (latest per user), percentile = % with `runtime_us` strictly greater
-than this one. UI shows "Beats N%".
+than this one; it is stored with the submission (the `fast_solve` badge reads
+it). The problem page shows "Faster than N% of other learners" only when at
+least 30 learners' latest accepted solutions (same question and language, the
+learner's own included) stand behind it — `MIN_PERCENTILE_SAMPLE` and
+`percentileToShow` in `lib/server/rules/scoring.ts` — because among two or
+three solvers the number says nothing about the code. A presentation
+threshold only: the stored value and the badges are unchanged. (The
+submission detail and profile pages still show the stored value.)
 
 ### 3.9 Roles and flags
 - `learner < author < staff < admin`. Role rides in the JWT (set on sign-in).
@@ -415,15 +422,44 @@ problem" box that searched it (decision 39 in `docs/DECISIONS.html`).*
 sign-in, sign-up, forgot and reset screens show a reel of the ten topic
 scenes beside the form — a banner above it below 900 px, not hidden — with a
 topic switcher and a pause button. The map has no headline: a small `h1`
-("Tier map") with the three totals as chips, then a hero of the learner's
-next topic (its animated art, name, caption, "n/m solved" and one button),
-chosen by the pure rule in `lib/server/featuredTopic.ts` over the map's own
-view: the first unlocked topic with an unsolved problem that opens for the
+("Tier map") and one quiet line of progress ("3/10 topics unlocked · 1/3
+tiers open"), then a hero of the learner's next topic (its animated art,
+name, caption, "n/m solved" and one button), chosen by the pure rule in
+`lib/server/featuredTopic.ts` over the map's own view: the first unlocked topic with an unsolved problem that opens for the
 learner ("Continue: …" for an attempted one, else "Start: …"), else the
 first topic ready to unlock ("Unlock …"), else the topic closest to
-unlocking ("See what's missing"), else "Every topic cleared". Every topic
-card carries a 104×58 art thumbnail: an unlocked topic's animates only while
-on screen, the others are dimmed posters with a lock glyph.
+unlocking ("See what's missing"), else "Every topic cleared".
+
+**The map is calm** (decision 42). Under the hero at most one more line may
+appear (`lib/server/mapMilestone.ts`; it adds no restriction): a topic that is
+ready to unlock, else an open gate with at least one of its problems solved.
+While nothing is solved a first-run card gives the loop in three steps in the
+page's own words (solve problems, earn tokens, spend them), dismissed with
+the `cm-first-run` cookie so the server knows. Below that, an open tier is
+its header and one row per topic (thumbnail, name, "n/m solved · k tokens",
+the problems one click away); a closed tier is ONE collapsed panel (its name,
+"Opens after the …", its topics as posters and names) that opens to the gate
+line and compact topics, and says what blocks it once, not on every topic. A
+link to anything inside a closed panel or row opens it. The Map's whole status
+vocabulary is three labels — Open, Ready to unlock, Locked — and difficulty is
+quiet text with a dot, not a filled pill. Card thumbnails are still posters
+(dimmed when locked); only the hero animates.
+
+**The result card** (decision 42). After a run or submit the Result tab leads
+with the verdict as a headline and one line ("Accepted — all 8 tests
+passed"; "Wrong answer — 4 of 8 tests passed"), then the reward rows ("+1
+token · Arrays & Hashing", a badge earned), then "Next problem" (primary; in a
+gate attempt "Back to the gate") and "Back to the map", then runtime, memory
+and the percentile (§3.8) as one quiet row. A failing verdict leads with what
+happened, what to try, and the first failing visible test (input, expected,
+your output); the per-test list sits below, collapsed. Rewards and badges are
+not also toasts. "Next problem" is `lib/server/nextProblem.ts`: forward only —
+the first unsolved problem that opens for the learner after the current one
+in its topic, then in the following topics in curriculum order; none → only
+"Back to the map". Below 1024 px the problem page shows one pane at a time
+(Problem · Code · Result) with a 44 px Run/Submit bar; a new result switches
+to the Result pane and takes focus, and the statement's first example stays
+open with the rest behind "More".
 
 ---
 
@@ -434,7 +470,16 @@ on screen, the others are dimmed posters with a lock glyph.
   default; `.cm-light` swaps the palette. Theme persists in a `cm-theme`
   cookie so SSR renders the right class (no flash).
 - **Type**: Inter (UI), JetBrains Mono (code, numbers, IDs — class `mono`).
-  Dense, tool-like scale: 11–14 px body, 20–30 px headings, tight tracking.
+  One scale, the `--fs-*` tokens in `globals.css`: nothing below 12 px
+  (`--fs-xs`), body 14 px (`--fs-body`; 16 px on phones), `--fs-lg` 16,
+  `--fs-xl` 20, `--fs-2xl` 26; sentence-case labels and no tiny uppercase
+  micro-labels; `Pill` sizes are 12/13/14 px.
+- **Calm pages** (decision 42): say each thing once; collapse what the
+  learner cannot use yet; one primary action per screen (the hero's button,
+  the result's "Next problem"); the same words, and no constraint added to
+  make a page simpler. The measures used for the map, fresh learner: first
+  laptop screen under ~100 words and ~14 controls, the page under ~2
+  screens, at most 8 font sizes.
 - **Surfaces**: `--bg-0` page, `--bg-1` panels/navbar, `--bg-2` cards/inputs,
   1 px `--line-2` borders, radii 6–12, shadows only on overlays.
 - **Status colors**: OK → `--ok`, WA/RE → `--err`, TLE/MLE → `--warn`,
@@ -472,8 +517,10 @@ on screen, the others are dimmed posters with a lock glyph.
   themes, honor `prefers-reduced-motion` (transitions off, not shortened).
   `web/e2e/a11y.spec.ts` gates it: no serious or critical axe violation and
   exactly one `h1` per page in both themes, no sideways scroll at 375 px.
-- **Responsive**: editor ≥ 1024 px; map, learn, library, profile and
-  submissions ≥ 375 px.
+- **Responsive**: the problem page is three panes from 1024 px and one pane
+  at a time below it (Problem · Code · Result, a 44 px action bar); map,
+  learn, library, profile and submissions ≥ 375 px; primary touch targets
+  ≥ 44 px on phones.
 - **Perf**: RSC by default; client components only for editor, visualizations,
   filters, interactive widgets. Monaco and visualizations are dynamically
   imported. LCP < 2 s on `/map` (home) and `/problems/[slug]`. The topic
