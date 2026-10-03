@@ -290,11 +290,6 @@
 .problem[data-locked] .problemTitle { color: var(--fg-1); }
 .problemNeeds { flex-basis: 100%; padding-left: 26px; font-size: var(--fs-sm); color: var(--fg-2); }
 /* Easy · Medium · Hard: quiet text with a small dot, not a traffic-light pill. */
-.diff { flex: none; display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-sm); color: var(--fg-2); white-space: nowrap; }
-.diff::before { content: ''; width: 6px; height: 6px; border-radius: 999px; background: var(--fg-3); }
-.diff[data-level='Easy']::before { background: var(--ok); }
-.diff[data-level='Medium']::before { background: var(--warn); }
-.diff[data-level='Hard']::before { background: var(--err); }
 @media (max-width: 720px) {
   .problem { padding: 11px 8px; }
 }

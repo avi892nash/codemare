@@ -1,22 +1,13 @@
 import Link from 'next/link';
 import { Fragment } from 'react';
+import { DifficultyText } from '@/components/ui/DifficultyText';
 import { Icon } from '@/components/ui/Icon';
 import { StatusDot } from '@/components/ui/StatusDot';
 import type { TopicProblemView } from '@/lib/server/loopViews';
-import type { Difficulty } from '@/lib/types';
 import { LinkPending } from './LinkPending';
 import s from './map.module.css';
 
 const PROGRESS_TEXT = { solved: 'Solved', attempted: 'Attempted', todo: 'Not started' } as const;
-
-/** Easy · Medium · Hard as quiet text with a small dot — information a learner preparing wants, not a traffic light. */
-export function DifficultyText({ level }: { level: Difficulty }) {
-  return (
-    <span className={s.diff} data-level={level}>
-      {level}
-    </span>
-  );
-}
 
 /**
  * One problem. The title links to the editor (the whole row is the target)
