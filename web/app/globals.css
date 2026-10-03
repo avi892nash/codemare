@@ -201,12 +201,6 @@
   --art-fallback: var(--accent);
 }
 
-/* ─── Page shell ─────────────────────────────────────────────────── */
-/* One container for every scrolling page — map, submissions, learn,
- * profile, author, library — so switching sections
- * never moves the content edge. Page modules read these; their headers
- * share one rhythm too (eyebrow 11/600 caps + icon, title 28/600 → 23 on
- * phones, subtitle 14/1.6 fg-2, 10 px apart). */
 /* ─── Type scale ─────────────────────────────────────────────────── */
 /* One scale for the whole app (the UX pass, 2026-10-03): nothing set in text
  * is smaller than --fs-xs (12 px); running text is --fs-md (14 px, 16 px on
@@ -216,7 +210,10 @@
  *   --fs-md  body, card text
  *   --fs-lg  list rows, emphasised lines
  *   --fs-xl  section titles
- *   --fs-2xl page and hero titles */
+ *   --fs-2xl page and hero titles
+ * Form fields are the one exception to "13 px on desktop": on a phone (or
+ * any touch device) Input, Textarea and Select compute to --fs-lg (16 px),
+ * because iOS Safari zooms the page when a focused field is smaller. */
 :root {
   --fs-xs: 12px;
   --fs-sm: 13px;
@@ -230,6 +227,23 @@
   :root { --fs-body: var(--fs-lg); }
 }
 
+/* ─── Control heights ────────────────────────────────────────────── */
+/* One ladder for everything that is a control or a capsule: Button, Chip,
+ * Pill, Input/Select, Tabs and the top bar's controls use the same four
+ * steps, so a row of mixed controls lines up. --tap is the minimum touch
+ * target (44 px); components grow to it on phones and touch devices. */
+:root {
+  --ctl-xs: 22px;
+  --ctl-sm: 28px;
+  --ctl-md: 32px;
+  --ctl-lg: 38px;
+  --tap: 44px;
+}
+
+/* ─── Page shell ─────────────────────────────────────────────────── */
+/* One container for every scrolling page — map, submissions, learn,
+ * profile, author, library — so switching sections never moves the content
+ * edge. Page modules read these. Headers are components/ui/PageHeader. */
 :root {
   --page-max: 1120px;
   --page-narrow: 860px;
@@ -237,6 +251,17 @@
 }
 @media (max-width: 720px) {
   :root { --page-pad: 18px 16px 56px; }
+}
+
+/* The workspace shell (app/(workspace)/layout.tsx): top bar + the page, one
+ * viewport tall. 100dvh follows the phone's real visible height (the address
+ * bar and the keyboard); 100vh is the fallback for browsers without it. */
+.app-shell {
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-0);
 }
 
 /* ─── Base ───────────────────────────────────────────────────────── */
@@ -278,7 +303,8 @@ body {
 
 .cd-inline {
   font-family: var(--font-mono);
-  font-size: 0.875em;
+  /* a touch smaller than the sentence around it, but never under the 12 px floor */
+  font-size: max(0.875em, var(--fs-xs));
   background: var(--bg-2);
   color: var(--fg-1);
   border: 1px solid var(--line-1);
@@ -292,7 +318,7 @@ body {
   border-radius: var(--r);
   padding: 12px 14px;
   font-family: var(--font-mono);
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   line-height: 1.55;
   color: var(--fg-1);
   white-space: pre;

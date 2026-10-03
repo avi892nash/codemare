@@ -1,0 +1,17 @@
+/* The dialog's action row: the primary action last. */
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--line-2);
+  background: var(--bg-1);
+  border-radius: 0 0 var(--r-lg) var(--r-lg);
+}
+
+/* Touch: the buttons of a dialog are full 44 px targets, whatever size the caller gave them. */
+@media (max-width: 720px), (pointer: coarse) {
+  .footer > button,
+  .footer > a { min-height: var(--tap); }
+}

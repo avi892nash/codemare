@@ -89,8 +89,8 @@ export function Switch({
     >
       {button}
       <span style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
-        <span style={{ fontSize: 13, color: 'var(--fg-1)', fontWeight: 500, lineHeight: `${d.h}px` }}>{label}</span>
-        {description && <span style={{ fontSize: 12, color: 'var(--fg-2)', lineHeight: 1.45 }}>{description}</span>}
+        <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--fg-1)', fontWeight: 500, lineHeight: `${d.h}px` }}>{label}</span>
+        {description && <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--fg-2)', lineHeight: 1.45 }}>{description}</span>}
       </span>
     </label>
   );

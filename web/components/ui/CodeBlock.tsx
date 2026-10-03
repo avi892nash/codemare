@@ -78,12 +78,12 @@ export function CodeBlock({
         >
           {lang && <LangMark lang={lang} size={13} />}
           {title && (
-            <span className="mono" style={{ fontSize: 11.5, color: 'var(--fg-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <span className="mono" style={{ fontSize: 'var(--fs-xs)', color: 'var(--fg-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {title}
             </span>
           )}
           {langLabel && (
-            <span style={{ fontSize: 11, color: 'var(--fg-2)', whiteSpace: 'nowrap' }}>
+            <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--fg-2)', whiteSpace: 'nowrap' }}>
               {title ? `· ${langLabel}` : langLabel}
             </span>
           )}
@@ -99,7 +99,7 @@ export function CodeBlock({
           margin: 0,
           padding: '12px 0',
           background: 'var(--bg-2)',
-          fontSize: 12.5,
+          fontSize: 'var(--fs-sm)',
           lineHeight: 1.55,
           overflow: 'auto',
           maxHeight,

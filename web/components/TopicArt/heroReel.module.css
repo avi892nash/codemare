@@ -144,7 +144,7 @@
   align-items: center;
   gap: 10px;
   margin: 0;
-  font-size: 22px;
+  font-size: var(--fs-xl);
   font-weight: 650;
   letter-spacing: -0.4px;
   line-height: 1.2;
@@ -161,7 +161,7 @@
 }
 .caption {
   margin: 5px 0 0;
-  font-size: 15px;
+  font-size: var(--fs-lg);
   line-height: 1.4;
   color: var(--fg-1);
 }
@@ -216,11 +216,11 @@
     align-items: center;
   }
   .name {
-    font-size: 16px;
+    font-size: var(--fs-lg);
   }
   .caption {
     margin-top: 2px;
-    font-size: 13.5px;
+    font-size: var(--fs-md);
   }
 }
 

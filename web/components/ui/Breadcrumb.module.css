@@ -6,7 +6,7 @@
   margin: 0;
   padding: 0;
   list-style: none;
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   min-width: 0;
 }
 .item {
@@ -42,3 +42,9 @@
 .link:hover { color: var(--fg-0); text-decoration: underline; text-underline-offset: 3px; }
 .current { color: var(--fg-0); font-weight: 500; }
 .sep { color: var(--fg-3); flex: none; }
+
+/* Touch: each crumb is a full 44 px target (the trail is the way back). */
+@media (max-width: 720px), (pointer: coarse) {
+  .link,
+  .current { min-height: var(--tap); }
+}

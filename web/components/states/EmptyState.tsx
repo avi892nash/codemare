@@ -56,11 +56,11 @@ export function EmptyState({
       >
         <Icon name={icon} size={size === 'sm' ? 16 : 20} />
       </span>
-      <H style={{ margin: 0, fontSize: size === 'sm' ? 14 : 15.5, fontWeight: 600, letterSpacing: -0.2, color: 'var(--fg-0)' }}>
+      <H style={{ margin: 0, fontSize: size === 'sm' ? 'var(--fs-md)' : 'var(--fs-lg)', fontWeight: 600, letterSpacing: -0.2, color: 'var(--fg-0)' }}>
         {title}
       </H>
       {description && (
-        <p style={{ margin: 0, maxWidth: 420, fontSize: size === 'sm' ? 12.5 : 13, lineHeight: 1.55, color: 'var(--fg-2)' }}>
+        <p style={{ margin: 0, maxWidth: 420, fontSize: size === 'sm' ? 'var(--fs-sm)' : 'var(--fs-md)', lineHeight: 1.55, color: 'var(--fg-2)' }}>
           {description}
         </p>
       )}

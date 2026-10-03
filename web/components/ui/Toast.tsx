@@ -182,14 +182,15 @@ function ToastItem({ item, paused, onDismiss }: { item: ToastRecord; paused: boo
     >
       {meta.icon && <Icon name={meta.icon} size={16} style={{ color: meta.color, marginTop: 1 }} />}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.4, color: 'var(--fg-0)' }}>{item.title}</div>
+        <div style={{ fontSize: 'var(--fs-md)', fontWeight: 600, lineHeight: 1.4, color: 'var(--fg-0)' }}>{item.title}</div>
         {item.description && (
-          <div style={{ fontSize: 12.5, lineHeight: 1.5, color: 'var(--fg-2)', marginTop: 2 }}>{item.description}</div>
+          <div style={{ fontSize: 'var(--fs-sm)', lineHeight: 1.5, color: 'var(--fg-2)', marginTop: 2 }}>{item.description}</div>
         )}
         {item.action && (
           <Button
-            size="xs"
+            size="sm"
             variant="accent"
+            tap
             style={{ marginTop: 8 }}
             onClick={() => {
               item.action?.onClick();
@@ -200,7 +201,7 @@ function ToastItem({ item, paused, onDismiss }: { item: ToastRecord; paused: boo
           </Button>
         )}
       </div>
-      <Button variant="ghost" size="xs" icon="x" aria-label="Dismiss notification" onClick={onDismiss} />
+      <Button variant="ghost" size="sm" tap icon="x" aria-label="Dismiss notification" onClick={onDismiss} />
     </div>
   );
 }

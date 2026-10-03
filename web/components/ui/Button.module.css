@@ -11,10 +11,10 @@
   align-items: center;
   justify-content: flex-start;
   gap: 6px;
-  height: 32px;
+  height: var(--ctl-md);
   padding: 0 12px;
   font-family: var(--font-sans);
-  font-size: 13px;
+  font-size: var(--fs-sm);
   font-weight: 500;
   line-height: 1;
   white-space: nowrap;
@@ -46,17 +46,34 @@
   opacity: 0.85;
 }
 
-/* sizes */
-.xs { height: 22px; padding: 0 8px; font-size: 11px; gap: 4px; }
-.sm { height: 28px; padding: 0 10px; font-size: 12px; }
-.md { height: 32px; padding: 0 12px; font-size: 13px; }
-.lg { height: 38px; padding: 0 16px; font-size: 14px; gap: 8px; }
+/* sizes: heights come from the shared control ladder (--ctl-*, globals.css),
+ * text from the type scale (--fs-*); xs and sm differ in height, not in size
+ * of type (12 px is the floor). */
+.xs { height: var(--ctl-xs); padding: 0 8px; font-size: var(--fs-xs); gap: 4px; }
+.sm { height: var(--ctl-sm); padding: 0 10px; font-size: var(--fs-xs); }
+.md { height: var(--ctl-md); padding: 0 12px; font-size: var(--fs-sm); }
+.lg { height: var(--ctl-lg); padding: 0 16px; font-size: var(--fs-md); gap: 8px; }
 .iconOnly { padding: 0; justify-content: center; }
-.iconOnly.xs { width: 22px; }
-.iconOnly.sm { width: 28px; }
-.iconOnly.md { width: 32px; }
-.iconOnly.lg { width: 38px; }
+.iconOnly.xs { width: var(--ctl-xs); }
+.iconOnly.sm { width: var(--ctl-sm); }
+.iconOnly.md { width: var(--ctl-md); }
+.iconOnly.lg { width: var(--ctl-lg); }
 .full { width: 100%; justify-content: center; }
+
+/* Touch: on a phone (or any coarse pointer) a large button is a full 44 px
+ * target with 16 px text, and any button that asks for `tap` grows to 44 px
+ * (the top bar's theme toggle, a toast's buttons, a dialog's close). */
+@media (max-width: 720px), (pointer: coarse) {
+  .btn.lg { height: var(--tap); font-size: var(--fs-lg); }
+  .btn.iconOnly.lg { width: var(--tap); }
+  .btn.tap { min-height: var(--tap); }
+  .btn.iconOnly.tap { min-width: var(--tap); }
+}
+
+/* The shortcut hint on a button is noise on a device with no keyboard. */
+@media (hover: none) {
+  .btn .kbd { display: none; }
+}
 
 /* variants */
 .primary {

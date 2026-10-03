@@ -143,7 +143,7 @@ export function Tooltip({ content, children, side = 'top', delay = 350, disabled
               maxWidth: 260,
               padding: '5px 8px',
               fontFamily: 'var(--font-sans)',
-              fontSize: 11.5,
+              fontSize: 'var(--fs-xs)',
               fontWeight: 500,
               lineHeight: 1.4,
               color: 'var(--fg-0)',

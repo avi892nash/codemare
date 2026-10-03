@@ -188,7 +188,7 @@ export function VisualizationFrame<T>({
 
       <div className={s.stage} style={{ minHeight: stageMinHeight }}>
         {current !== undefined ? render(current, index) : (
-          <span style={{ fontSize: 12.5, color: 'var(--fg-2)' }}>No steps to show.</span>
+          <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--fg-2)' }}>No steps to show.</span>
         )}
       </div>
 
@@ -199,18 +199,19 @@ export function VisualizationFrame<T>({
       <div className={s.controls}>
         {/* aria-disabled (not disabled) so focus stays put at either end. */}
         <div className={s.transport}>
-          <Button variant="ghost" size="sm" icon="skip-back" aria-label="First step" aria-disabled={index === 0} onClick={() => { setPlaying(false); go(0); }} />
-          <Button variant="ghost" size="sm" icon="chev-left" aria-label="Previous step" aria-disabled={index === 0} onClick={() => step(-1)} />
+          <Button variant="ghost" size="sm" tap icon="skip-back" aria-label="First step" aria-disabled={index === 0} onClick={() => { setPlaying(false); go(0); }} />
+          <Button variant="ghost" size="sm" tap icon="chev-left" aria-label="Previous step" aria-disabled={index === 0} onClick={() => step(-1)} />
           <Button
             variant="accent"
             size="sm"
+            tap
             icon={playing ? 'pause' : 'play'}
             aria-label={playing ? 'Pause' : 'Play'}
             onClick={togglePlay}
             disabled={n < 2}
           />
-          <Button variant="ghost" size="sm" icon="chev-right" aria-label="Next step" aria-disabled={index >= last} onClick={() => step(1)} />
-          <Button variant="ghost" size="sm" icon="skip-forward" aria-label="Last step" aria-disabled={index >= last} onClick={() => { setPlaying(false); go(last); }} />
+          <Button variant="ghost" size="sm" tap icon="chev-right" aria-label="Next step" aria-disabled={index >= last} onClick={() => step(1)} />
+          <Button variant="ghost" size="sm" tap icon="skip-forward" aria-label="Last step" aria-disabled={index >= last} onClick={() => { setPlaying(false); go(last); }} />
         </div>
         <input
           type="range"
