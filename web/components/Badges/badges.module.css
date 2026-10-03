@@ -1,24 +1,17 @@
-/* Badges (B1–B3, profile strip). Rarity maps onto status tokens:
- * common → neutral, rare → info, epic → accent, legendary → warn. */
+/* Badges: the gallery (B1–B3), the profile's strip and the medallion. Calm, like the Map: one accent says "earned", a dashed
+ * neutral ring says "locked", and rarity is a word, not a colour. Type is the --fs-* scale only; nothing under 12 px. */
 
 .medallion {
-  --tone: var(--line-3);
-  --tone-bg: var(--bg-3);
-  --tone-fg: var(--fg-1);
   position: relative;
   flex: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border-radius: 999px;
-  border: 2px solid var(--tone);
-  background: radial-gradient(circle at 50% 35%, var(--tone-bg), transparent 75%), var(--bg-2);
-  color: var(--tone-fg);
-  box-shadow: inset 0 0 0 3px var(--bg-1);
+  border: 2px solid var(--accent);
+  background: var(--accent-bg);
+  color: var(--accent-hi);
 }
-.medallion[data-rarity='rare'] { --tone: var(--info); --tone-bg: var(--info-bg); --tone-fg: var(--info-fg); }
-.medallion[data-rarity='epic'] { --tone: var(--accent); --tone-bg: var(--accent-bg); --tone-fg: var(--accent-hi); }
-.medallion[data-rarity='legendary'] { --tone: var(--warn); --tone-bg: var(--warn-bg); --tone-fg: var(--warn-fg); }
 .medallion[data-locked='true'] {
   border-style: dashed;
   border-color: var(--line-3);
@@ -29,8 +22,8 @@
   position: absolute;
   right: -3px;
   bottom: -3px;
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -40,7 +33,99 @@
   color: var(--fg-2);
 }
 
-/* ── gallery ────────────────────────────────────────────────── */
+/* ── the gallery: one card per badge ────────────────────────── */
+.head { display: flex; flex-direction: column; gap: 12px; }
+.head > header { margin: 0; }
+@media (max-width: 720px) {
+  /* the way back to the profile is a 44 px target; its box grows without moving the page */
+  .head nav a { display: inline-flex; align-items: center; min-height: 44px; margin: -12px 0; }
+}
+.filter { display: flex; flex-direction: column; gap: 20px; }
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  gap: 12px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.card {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 16px;
+  background: var(--bg-1);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-lg);
+  color: var(--fg-1);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.card:hover { border-color: var(--line-3); background: var(--bg-2); }
+.card[data-earned='true'] { border-color: color-mix(in oklab, var(--accent) 28%, var(--line-2)); }
+.cardBody { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.cardTop { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.cardName { min-width: 0; font-size: var(--fs-body); line-height: 1.35; font-weight: 600; color: var(--fg-0); }
+.card[data-earned='false'] .cardName { color: var(--fg-1); }
+.cardRarity { flex: none; font-size: var(--fs-sm); color: var(--fg-2); }
+.cardState { display: flex; flex-direction: column; gap: 6px; font-size: var(--fs-sm); line-height: 1.4; color: var(--fg-2); }
+.cardDate { display: inline-flex; align-items: center; gap: 5px; color: var(--ok-fg); }
+.empty { margin: 24px 0; font-size: var(--fs-md); color: var(--fg-2); text-align: center; }
+@media (max-width: 720px) {
+  .cards { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .card { gap: 12px; padding: 12px 14px; }
+  /* a phone's filter is a row of 44 px targets */
+  .filter [role='tab'] { min-height: 44px; }
+}
+
+/* ── the focus view in the modal ────────────────────────────── */
+.focus {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+  padding: 4px 0 2px;
+}
+.focusDesc { margin: 0; font-size: var(--fs-md); line-height: 1.6; color: var(--fg-1); max-width: 380px; }
+.howto {
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line-2);
+  text-align: left;
+}
+.howtoLabel { margin: 0; font-size: var(--fs-sm); font-weight: 600; color: var(--fg-2); }
+.howtoText { margin: 0; font-size: var(--fs-md); line-height: 1.5; color: var(--fg-1); }
+.focusProgress { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+.focusProgressRow { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; font-size: var(--fs-sm); color: var(--fg-2); }
+.earnedLine { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-md); font-weight: 500; color: var(--ok-fg); }
+
+/* ── the profile's strip ────────────────────────────────────── */
+.strip { display: flex; flex-wrap: wrap; gap: 2px 22px; list-style: none; margin: 0; padding: 0; }
+.stripLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  color: var(--fg-1);
+  font-size: var(--fs-md);
+  text-decoration: none;
+  border-radius: var(--r-md);
+}
+.stripLink:hover { color: var(--fg-0); text-decoration: underline; text-underline-offset: 3px; }
+@media (max-width: 720px) {
+  .stripLink { min-height: 44px; }
+}
+
+/* ── the tiles the Learn "track complete" page still lays out with (a vertical card per earned badge) ── */
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
@@ -64,72 +149,14 @@
   font: inherit;
   text-align: center;
   cursor: pointer;
-  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+  transition: border-color 0.15s ease, background 0.15s ease;
 }
 .tile:hover { border-color: var(--line-3); background: var(--bg-2); }
-.tile[data-earned='true'] { border-color: color-mix(in oklab, var(--accent) 22%, var(--line-2)); }
-.tileName { font-size: 14px; font-weight: 600; color: var(--fg-0); line-height: 1.3; }
-.tileState { width: 100%; margin-top: auto; display: flex; flex-direction: column; gap: 6px; font-size: 11.5px; color: var(--fg-2); }
+.tile[data-earned='true'] { border-color: color-mix(in oklab, var(--accent) 28%, var(--line-2)); }
+.tileName { font-size: var(--fs-md); font-weight: 600; color: var(--fg-0); line-height: 1.3; }
+.tileState { width: 100%; margin-top: auto; display: flex; flex-direction: column; gap: 6px; font-size: var(--fs-sm); color: var(--fg-2); }
 .tileDate { display: inline-flex; align-items: center; justify-content: center; gap: 5px; color: var(--ok-fg); }
 @media (max-width: 520px) {
   .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   .tile { padding: 14px 10px 12px; gap: 8px; }
-  .tileName { font-size: 13px; }
 }
-
-.summary {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 18px;
-  align-items: center;
-  padding: 16px 18px;
-}
-.summaryCount { font-size: 34px; font-weight: 500; letter-spacing: -0.8px; color: var(--fg-0); line-height: 1; }
-.summaryOf { font-size: 16px; color: var(--fg-2); }
-
-/* ── modal focus view ───────────────────────────────────────── */
-.focus {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: 12px;
-  padding: 4px 0 2px;
-}
-.focusDesc { margin: 0; font-size: 13.5px; line-height: 1.6; color: var(--fg-1); max-width: 380px; }
-.howto {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 12px 14px;
-  border-radius: var(--r-md);
-  background: var(--bg-2);
-  border: 1px solid var(--line-2);
-  text-align: left;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.howtoLabel {
-  font-size: 10.5px;
-  font-weight: 600;
-  letter-spacing: 0.7px;
-  text-transform: uppercase;
-  color: var(--fg-2);
-}
-.earnedLine { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ok-fg); font-weight: 500; }
-
-/* ── profile strip ──────────────────────────────────────────── */
-.strip { display: flex; flex-wrap: wrap; gap: 10px; list-style: none; margin: 0; padding: 0; }
-.stripLink {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 5px 12px 5px 5px;
-  border-radius: 999px;
-  border: 1px solid var(--line-2);
-  background: var(--bg-2);
-  color: var(--fg-1);
-  font-size: 12.5px;
-  text-decoration: none;
-}
-.stripLink:hover { border-color: var(--line-3); color: var(--fg-0); }

@@ -19,7 +19,7 @@ export function badgeCta(criteria: BadgeCriteria | null): { href: string; label:
   }
 }
 
-/** Earned badges as chips linking to their focus view in the gallery. Server-safe. */
+/** Earned badges as quiet links (emblem and name) to their focus view in the gallery. Server-safe. */
 export function BadgeStrip({
   handle,
   badges,
@@ -34,7 +34,7 @@ export function BadgeStrip({
       {badges.slice(0, max).map((b) => (
         <li key={b.slug}>
           <Link href={`/u/${handle}/badges?badge=${b.slug}`} className={`${s.stripLink} focus-ring`}>
-            <BadgeMedallion icon={b.icon} rarity={b.rarity} size={26} />
+            <BadgeMedallion icon={b.icon} rarity={b.rarity} size={28} />
             {b.name}
           </Link>
         </li>
