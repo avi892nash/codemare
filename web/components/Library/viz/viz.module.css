@@ -39,14 +39,14 @@
 .cellSmall { height: 24px; font-size: 12px; background: transparent; border-color: transparent; color: var(--fg-2); }
 .cellSmall[data-state='new'] { color: var(--accent-hi); font-weight: 700; }
 .cellSmall[data-state='set'] { color: var(--fg-0); }
-.idx { font-family: var(--font-mono); font-size: 10.5px; color: var(--fg-2); width: 34px; text-align: center; }
+.idx { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--fg-2); width: 34px; text-align: center; }
 @media (max-width: 520px) { .idx { width: 30px; } }
-.rowLabel { width: 28px; flex: none; font-family: var(--font-mono); font-size: 11px; color: var(--fg-2); text-align: right; padding-right: 6px; }
-.marker { font-family: var(--font-mono); font-size: 10.5px; color: var(--accent-hi); height: 14px; width: 34px; text-align: center; }
+.rowLabel { width: 28px; flex: none; font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--fg-2); text-align: right; padding-right: 6px; }
+.marker { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--accent-hi); height: 14px; width: 34px; text-align: center; }
 @media (max-width: 520px) { .marker { width: 30px; } }
 
 /* ─── Legend & key/value panels ──────────────────────────────────── */
-.legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 14px; font-size: 11.5px; color: var(--fg-2); }
+.legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 14px; font-size: var(--fs-xs); color: var(--fg-2); }
 .legendItem { display: inline-flex; align-items: center; gap: 6px; }
 .swatch { width: 12px; height: 12px; border-radius: 3px; border: 1px solid var(--line-3); background: var(--bg-2); }
 .swatch[data-state='prime'], .swatch[data-state='done'] { background: var(--ok-bg); border-color: var(--ok); }
@@ -70,7 +70,7 @@
   font-size: 12.5px;
   min-width: min(100%, 320px);
 }
-.key { font-size: 10.5px; font-weight: 600; letter-spacing: 0.8px; text-transform: uppercase; color: var(--fg-2); }
+.key { font-size: var(--fs-xs); font-weight: 600; letter-spacing: 0.8px; text-transform: uppercase; color: var(--fg-2); }
 .val { font-family: var(--font-mono); color: var(--fg-0); overflow-wrap: anywhere; }
 .valMuted { font-family: var(--font-mono); color: var(--fg-2); }
 .hot { color: var(--accent-hi); font-weight: 600; }
@@ -85,7 +85,7 @@
   border: 1px solid var(--line-2);
   background: var(--bg-2);
   font-family: var(--font-mono);
-  font-size: 11.5px;
+  font-size: var(--fs-xs);
   color: var(--fg-1);
 }
 .chip[data-state='hot'] { border-color: var(--accent); background: var(--accent-bg); color: var(--accent-hi); }
@@ -109,7 +109,7 @@
   font-size: 15px;
   color: var(--fg-1);
 }
-.bit small { font-size: 9.5px; color: var(--fg-2); }
+.bit small { font-size: var(--fs-xs); color: var(--fg-2); }
 .bit[data-state='current'] { border-color: var(--accent); background: var(--accent-bg); color: var(--accent-hi); }
 .bit[data-state='done'] { opacity: 0.5; }
 
@@ -125,7 +125,7 @@
   border: 1px solid var(--line-3);
   background: var(--bg-3);
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--fs-xs);
   color: var(--fg-1);
   white-space: nowrap;
   overflow: hidden;
