@@ -12,14 +12,14 @@
 }
 .title {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--fs-md);
   font-weight: 600;
   color: var(--fg-0);
   letter-spacing: -0.1px;
 }
 .sub {
   margin: 3px 0 0;
-  font-size: 12px;
+  font-size: var(--fs-xs);
   color: var(--fg-2);
 }
 
@@ -59,11 +59,11 @@
   align-items: center;
   justify-content: center;
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--fs-xs);
   font-weight: 600;
   border: 1px solid var(--line-2);
   background: var(--bg-2);
-  color: var(--fg-3);
+  color: var(--fg-2);
   margin-top: 1px;
 }
 .rung[data-state='open'] .marker {
@@ -89,7 +89,7 @@
   flex-wrap: wrap;
 }
 .level {
-  font-size: 13px;
+  font-size: var(--fs-sm);
   font-weight: 600;
   color: var(--fg-0);
 }
@@ -100,7 +100,7 @@
   align-items: center;
   gap: 4px;
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--fs-xs);
   color: var(--fg-2);
   padding: 1px 6px;
   border: 1px solid var(--line-2);
@@ -114,7 +114,7 @@
 
 .blurb {
   margin: 3px 0 0;
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   color: var(--fg-2);
 }
 .short { color: var(--warn-fg); }
@@ -142,7 +142,7 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   color: var(--fg-2);
 }
 
@@ -152,7 +152,7 @@
   gap: 6px;
   margin: 0;
   padding: 8px 10px;
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   line-height: 1.5;
   color: var(--err-fg);
   background: var(--err-bg);
@@ -160,3 +160,13 @@
   border-radius: var(--r);
 }
 .modalError svg { margin-top: 2px; }
+
+/* On a phone the one button on a rung is a real touch target. */
+@media (max-width: 1023px) {
+  .rung .revealBtn {
+    height: 44px;
+    padding: 0 14px;
+    font-size: var(--fs-sm);
+  }
+  .rung .rungHead { min-height: 44px; }
+}

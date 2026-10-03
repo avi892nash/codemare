@@ -200,11 +200,11 @@ export function HintLadder({ target, initial, solved = false, onReveal }: HintLa
           </p>
         </div>
         {solved ? (
-          <Pill tone="ok" size="xs" icon="check">
+          <Pill tone="ok" size="xs" icon="check" style={{ fontSize: 'var(--fs-xs)' }}>
             Solved · score costs waived
           </Pill>
         ) : (
-          <Pill tone={penalty > 0 ? 'warn' : 'muted'} size="xs" title="Score penalty on this problem's token award">
+          <Pill tone={penalty > 0 ? 'warn' : 'muted'} size="xs" title="Score penalty on this problem's token award" style={{ fontSize: 'var(--fs-xs)' }}>
             Penalty {penalty}%
           </Pill>
         )}
@@ -230,6 +230,7 @@ export function HintLadder({ target, initial, solved = false, onReveal }: HintLa
                   {state === 'open' && (
                     <Button
                       size="xs"
+                      className={s.revealBtn}
                       variant={rung.costAmount === 0 ? 'default' : 'outline'}
                       icon="eye"
                       onClick={() => {
