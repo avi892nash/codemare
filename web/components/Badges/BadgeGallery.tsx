@@ -2,6 +2,7 @@
 
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { EmptyState } from '@/components/states/EmptyState';
 import { Button, ButtonLink } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
 import { Modal } from '@/components/ui/Modal';
@@ -105,9 +106,16 @@ export function BadgeGallery({ items, ownerName, isOwner }: { items: GalleryItem
         />
         <TabPanel tabsId="badge-filter" value={filter} style={{ borderRadius: 'var(--r-lg)' }}>
           {shown.length === 0 ? (
-            <p className={s.empty}>
-              {filter === 'earned' ? `${isOwner ? 'You have' : `${ownerName} has`} not earned a badge yet.` : 'Every badge is earned. Impressive.'}
-            </p>
+            filter === 'earned' ? (
+              <EmptyState
+                size="sm"
+                icon="award"
+                title="No badges earned yet"
+                description={`${isOwner ? 'You have' : `${ownerName} has`} not earned one. Open a locked badge to see what it takes.`}
+              />
+            ) : (
+              <EmptyState size="sm" icon="award" title="Every badge is earned" description="Impressive." />
+            )
           ) : (
             <ul className={s.cards} aria-label={`${shown.length} badges`}>
               {shown.map((b) => {
@@ -170,11 +178,11 @@ export function BadgeGallery({ items, ownerName, isOwner }: { items: GalleryItem
           selected && (
             <>
               {isOwner && !selected.awardedAt && selected.cta && (
-                <ButtonLink href={selected.cta.href} variant="default" size="sm" iconRight="arrow-right">
+                <ButtonLink href={selected.cta.href} variant="default" size="sm" iconRight="arrow-right" className={s.dialogButton}>
                   {selected.cta.label}
                 </ButtonLink>
               )}
-              <Button variant="primary" size="sm" onClick={close}>
+              <Button variant="primary" size="sm" onClick={close} className={s.dialogButton}>
                 Close
               </Button>
             </>

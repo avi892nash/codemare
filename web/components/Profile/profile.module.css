@@ -175,6 +175,8 @@
 
 /* ── phones ─────────────────────────────────────────────────── */
 @media (max-width: 720px) {
+  /* the empty state's one button is a 44 px target */
+  .cta.cta { height: auto; min-height: 44px; padding: 0 18px; font-size: var(--fs-md); }
   .identity { gap: 12px; }
   .head { min-height: 48px; padding: 0 14px; }
   .link { min-height: 44px; }

@@ -1,7 +1,9 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { BadgeStrip } from '@/components/Badges/BadgeStrip';
+import { EmptyState } from '@/components/states/EmptyState';
 import { Avatar } from '@/components/ui/Avatar';
+import { ButtonLink } from '@/components/ui/Button';
 import { DifficultyText } from '@/components/ui/DifficultyText';
 import { Icon, type IconName } from '@/components/ui/Icon';
 import { LangMark } from '@/components/ui/LangMark';
@@ -214,18 +216,20 @@ function describeStatus(status: SubmissionStatus, kind: SubmissionKind) {
 export function RecentSubmissions({ view, now }: { view: ProfileView; now: Date }) {
   if (view.recent.length === 0) {
     return (
-      <p className={s.empty}>
-        No submissions yet.
-        {view.isOwner && (
-          <>
-            {' '}
-            <Link href="/map" className="focus-ring">
-              Pick a problem on the map
-            </Link>
-            .
-          </>
-        )}
-      </p>
+      <EmptyState
+        size="sm"
+        icon="history"
+        headingLevel={3}
+        title="No submissions yet"
+        description={view.isOwner ? 'Open a problem and your attempts show up here with their runtime.' : undefined}
+        action={
+          view.isOwner ? (
+            <ButtonLink href="/map" variant="primary" size="sm" className={s.cta}>
+              Open the tier map
+            </ButtonLink>
+          ) : undefined
+        }
+      />
     );
   }
   return (

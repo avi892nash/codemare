@@ -74,7 +74,6 @@
 .cardRarity { flex: none; font-size: var(--fs-sm); color: var(--fg-2); }
 .cardState { display: flex; flex-direction: column; gap: 6px; font-size: var(--fs-sm); line-height: 1.4; color: var(--fg-2); }
 .cardDate { display: inline-flex; align-items: center; gap: 5px; color: var(--ok-fg); }
-.empty { margin: 24px 0; font-size: var(--fs-md); color: var(--fg-2); text-align: center; }
 @media (max-width: 720px) {
   .cards { grid-template-columns: minmax(0, 1fr); gap: 10px; }
   .card { gap: 12px; padding: 12px 14px; }
@@ -83,6 +82,10 @@
 }
 
 /* ── the focus view in the modal ────────────────────────────── */
+/* the dialog's buttons are 44 px targets on a phone (the doubled class outranks the button's own size) */
+@media (max-width: 720px) {
+  .dialogButton.dialogButton { height: auto; min-height: 44px; padding: 0 18px; font-size: var(--fs-md); }
+}
 .focus {
   display: flex;
   flex-direction: column;
