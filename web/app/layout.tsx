@@ -20,6 +20,10 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
+  // With the keyboard open the layout viewport shrinks to what is visible
+  // (Chrome and Firefox on Android; Safari ignores it), so the shell's 100dvh
+  // follows it and a focused field is never hidden behind the keyboard.
+  interactiveWidget: 'resizes-content',
 };
 
 /**
