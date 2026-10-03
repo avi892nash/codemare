@@ -1,3 +1,8 @@
+/* The result of a run: one card (headline, one line, then what to do next),
+ * the first failing test, a quiet row of numbers, the per-test list.
+ * Type comes from the --fs-* scale (nothing under 12 px); labels are
+ * sentence case; touch targets are 44 px below 1024 px.                  */
+
 /* ─── Test strip ─────────────────────────────────────────────── */
 .strip {
   display: flex;
@@ -8,14 +13,10 @@
   display: block;
   width: 16px;
   height: 6px;
-  padding: 0;
-  border: 0;
   border-radius: 2px;
   background: var(--bg-3);
   transition: background-color 0.2s ease;
 }
-button.tick { cursor: pointer; }
-button.tick:hover { filter: brightness(1.2); }
 .tick[data-state='pass'] { background: var(--ok); }
 .tick[data-state='fail'] { background: var(--err); }
 .tick[data-state='current'] {
@@ -47,16 +48,16 @@ button.tick:hover { filter: brightness(1.2); }
   min-width: 0;
 }
 .progressTitle {
-  font-size: 14px;
+  font-size: var(--fs-md);
   font-weight: 600;
   color: var(--fg-0);
 }
 .progressPhase {
-  font-size: 12px;
+  font-size: var(--fs-xs);
   color: var(--fg-2);
 }
 .progressLang {
-  font-size: 11.5px;
+  font-size: var(--fs-xs);
   color: var(--fg-2);
 }
 
@@ -65,7 +66,7 @@ button.tick:hover { filter: brightness(1.2); }
   margin: 0;
   padding: 10px 12px;
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   line-height: 1.55;
   white-space: pre-wrap;
   word-break: break-word;
@@ -107,78 +108,17 @@ button.tick:hover { filter: brightness(1.2); }
 .output[data-tone='info'] .lineRef { color: var(--info-fg); }
 .lineRef:hover { text-decoration-style: solid; }
 
-/* ─── Per-test breakdown ─────────────────────────────────────── */
-.tests {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.test {
-  border: 1px solid var(--line-2);
-  border-radius: var(--r-md);
-  background: var(--bg-1);
-  overflow: hidden;
-}
-.test[data-passed='false'] { border-color: color-mix(in oklab, var(--err) 26%, var(--line-2)); }
-.testHead {
-  width: 100%;
-  min-height: 36px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 10px;
-  margin: 0;
-  background: none;
-  border: 0;
-  color: var(--fg-0);
-  font: inherit;
-  font-size: 12.5px;
-  text-align: left;
-}
-button.testHead { cursor: pointer; }
-button.testHead:hover { background: var(--bg-2); }
-.testIcon { flex: none; }
-.testName { font-weight: 500; white-space: nowrap; }
-.testErr {
-  min-width: 0;
-  flex: 0 1 auto;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-family: var(--font-mono);
-  font-size: 11.5px;
-  color: var(--err-fg);
-}
-.testSpacer { flex: 1; }
-.testMetric {
-  flex: none;
-  font-size: 11.5px;
-  color: var(--fg-1);
-  white-space: nowrap;
-}
-.testMetricDim { color: var(--fg-2); }
-.testChev { flex: none; color: var(--fg-3); }
-.testBody {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 2px 12px 12px 32px;
-}
+/* ─── One test: the input / expected / your output block ─────── */
 .io {
   display: grid;
-  grid-template-columns: 70px minmax(0, 1fr);
-  gap: 6px 10px;
-  margin: 6px 0 0;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 6px 14px;
+  margin: 0;
 }
 .io dt {
   padding-top: 6px;
-  font-size: 10.5px;
-  font-weight: 600;
-  letter-spacing: 0.6px;
-  text-transform: uppercase;
+  font-size: var(--fs-xs);
+  font-weight: 500;
   color: var(--fg-2);
 }
 .io dd {
@@ -190,7 +130,7 @@ button.testHead:hover { background: var(--bg-2); }
 }
 .value {
   padding: 5px 8px;
-  font-size: 12px;
+  font-size: var(--fs-sm);
   line-height: 1.5;
   color: var(--fg-1);
   background: var(--bg-2);
@@ -208,10 +148,79 @@ button.testHead:hover { background: var(--bg-2); }
 }
 .argName { color: var(--fg-2); }
 .none { color: var(--fg-2); font-style: italic; font-family: var(--font-sans); }
-.hiddenNote { margin: 6px 0 0; font-size: 12px; color: var(--fg-2); }
-.hiddenErr { margin: 0; font-family: var(--font-mono); font-size: 12px; color: var(--err-fg); }
+.hiddenNote { margin: 0; font-size: var(--fs-sm); line-height: 1.5; color: var(--fg-2); }
+.hiddenErr { margin: 0; font-family: var(--font-mono); font-size: var(--fs-sm); color: var(--err-fg); }
+.testDetails {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
 
-/* ─── Results hero (artboard 03) ─────────────────────────────── */
+/* ─── Per-test list ──────────────────────────────────────────── */
+.listTitle {
+  margin: 0 0 8px;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--fg-1);
+}
+.tests {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.test {
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-md);
+  background: var(--bg-1);
+  overflow: hidden;
+}
+.test[data-passed='false'] { border-color: color-mix(in oklab, var(--err) 26%, var(--line-2)); }
+.testHead {
+  width: 100%;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  margin: 0;
+  background: none;
+  border: 0;
+  color: var(--fg-0);
+  font: inherit;
+  font-size: var(--fs-sm);
+  text-align: left;
+}
+button.testHead { cursor: pointer; }
+button.testHead:hover { background: var(--bg-2); }
+.testIcon { flex: none; }
+.testName { font-weight: 500; white-space: nowrap; }
+.testErr {
+  min-width: 0;
+  flex: 0 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--err-fg);
+}
+.testSpacer { flex: 1; }
+.testMetric {
+  flex: none;
+  font-size: var(--fs-xs);
+  color: var(--fg-1);
+  white-space: nowrap;
+}
+.testMetricDim { color: var(--fg-2); }
+.testChev { flex: none; color: var(--fg-3); }
+.testBody {
+  padding: 4px 12px 12px 32px;
+}
+
+/* ─── The result card ────────────────────────────────────────── */
 .hero {
   --tone: var(--fg-3);
   --tone-fg: var(--fg-1);
@@ -221,10 +230,8 @@ button.testHead:hover { background: var(--bg-2); }
   gap: 14px;
   padding: 16px 18px;
   border-radius: var(--r-lg);
-  border: 1px solid color-mix(in oklab, var(--tone) 32%, var(--line-2));
-  background:
-    radial-gradient(120% 90% at 0% 0%, color-mix(in oklab, var(--tone) 11%, transparent), transparent 60%),
-    var(--bg-1);
+  border: 1px solid color-mix(in oklab, var(--tone) 30%, var(--line-2));
+  background: color-mix(in oklab, var(--tone) 5%, var(--bg-1));
   animation: cm-pop-in 0.18s ease-out;
 }
 .hero[data-tone='ok'] { --tone: var(--ok); --tone-fg: var(--ok-fg); }
@@ -233,6 +240,7 @@ button.testHead:hover { background: var(--bg-2); }
 .hero[data-tone='info'] { --tone: var(--info); --tone-fg: var(--info-fg); }
 .hero[data-tone='muted'] { --tone: var(--fg-3); --tone-fg: var(--fg-1); }
 
+/* Headline and its one line; the verdict code and the language are small labels. */
 .heroTop {
   display: flex;
   align-items: flex-start;
@@ -240,12 +248,12 @@ button.testHead:hover { background: var(--bg-2); }
 }
 .heroIcon {
   flex: none;
-  width: 38px;
-  height: 38px;
+  width: 36px;
+  height: 36px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 10px;
+  border-radius: var(--r-md);
   color: var(--tone-fg);
   background: color-mix(in oklab, var(--tone) 16%, transparent);
   border: 1px solid color-mix(in oklab, var(--tone) 30%, transparent);
@@ -256,19 +264,21 @@ button.testHead:hover { background: var(--bg-2); }
 }
 .heroTitle {
   margin: 0;
-  font-size: 22px;
+  font-size: var(--fs-xl);
   font-weight: 600;
-  line-height: 1.2;
-  letter-spacing: -0.4px;
+  line-height: 1.25;
+  letter-spacing: -0.2px;
   color: var(--tone-fg);
 }
+.heroTitle:focus { outline: none; }
+.heroTitle:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: var(--r-sm); }
 .heroSummary {
   margin: 4px 0 0;
-  font-size: 13px;
+  font-size: var(--fs-md);
   line-height: 1.5;
   color: var(--fg-1);
 }
-.heroPills {
+.heroTags {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -276,61 +286,149 @@ button.testHead:hover { background: var(--bg-2); }
   justify-content: flex-end;
 }
 
-.metrics {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 14px 30px;
-  padding-top: 12px;
-  border-top: 1px solid color-mix(in oklab, var(--tone) 16%, var(--line-2));
-}
-
-.beats {
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-  padding: 10px 12px;
-  border-radius: var(--r-md);
-  background: var(--bg-2);
-  border: 1px solid var(--line-2);
-}
-.beatsHead {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 4px 10px;
-  flex-wrap: wrap;
-}
-.beatsLabel {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  color: var(--fg-1);
-}
-.beatsLabel strong { color: var(--ok-fg); font-size: 15px; font-weight: 600; }
-.beatsLabel svg { color: var(--ok-fg); }
-.beatsNote { font-size: 11px; color: var(--fg-2); }
-
+/* What to try: one short paragraph. */
 .advice {
   margin: 0;
   padding: 8px 12px;
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   line-height: 1.55;
   color: var(--fg-1);
   border-left: 2px solid var(--tone);
   background: color-mix(in oklab, var(--tone) 7%, transparent);
   border-radius: 0 var(--r) var(--r) 0;
 }
+.advice strong { color: var(--fg-0); font-weight: 600; }
 
+/* The author's note on why a test is there (shown on a failure). */
+.note {
+  margin: 0;
+  padding: 8px 12px;
+  font-size: var(--fs-sm);
+  line-height: 1.55;
+  color: var(--fg-1);
+  border-left: 2px solid var(--warn);
+  background: color-mix(in oklab, var(--warn) 7%, transparent);
+  border-radius: 0 var(--r) var(--r) 0;
+}
+.note strong { color: var(--warn-fg); font-weight: 600; }
+
+/* What was earned: one clear row each (a token award, a badge). */
 .rewards {
+  list-style: none;
+  margin: 0;
+  padding: 0;
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 6px;
 }
+.reward {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 6px 12px;
+  font-size: var(--fs-md);
+  line-height: 1.4;
+  color: var(--fg-1);
+  background: var(--bg-2);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-md);
+}
+.rewardIcon {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  color: var(--warn-fg);
+  background: var(--warn-bg);
+}
+.reward[data-kind='badge'] .rewardIcon { color: var(--accent-hi); background: var(--accent-bg); }
+.reward strong { color: var(--fg-0); font-weight: 600; }
+.rewardMore { color: var(--fg-2); }
 
-.heroActions {
+/* The next step. */
+.actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   align-items: center;
+}
+.actions .actionBtn { height: 40px; padding: 0 16px; font-size: var(--fs-md); }
+
+/* The first failing test, in words and monospace. */
+.failure {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--bg-1);
+  border: 1px solid color-mix(in oklab, var(--err) 26%, var(--line-2));
+  border-radius: var(--r-md);
+}
+.failureTitle {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: var(--fs-md);
+  font-weight: 600;
+  color: var(--fg-0);
+}
+
+/* Runtime, memory, speed: smaller than the headline, labelled in words. */
+.facts {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 12px;
+  border-top: 1px solid color-mix(in oklab, var(--tone) 14%, var(--line-2));
+}
+.factList {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 20px;
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--fg-1);
+}
+.fact {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.fact dt { color: var(--fg-2); }
+.fact dd { margin: 0; color: var(--fg-0); font-weight: 500; }
+.fact dd abbr { text-decoration: none; cursor: help; }
+.fact dd small { font-size: inherit; color: var(--fg-2); font-weight: 400; }
+.fact dd.speed {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--fg-1);
+  font-weight: 400;
+}
+.speed svg { color: var(--ok-fg); flex: none; }
+.speed strong { color: var(--ok-fg); font-weight: 600; }
+.unitNote {
+  margin: 0;
+  font-size: var(--fs-xs);
+  color: var(--fg-2);
+}
+
+/* ─── Narrow screens: bigger targets ─────────────────────────── */
+@media (max-width: 1023px) {
+  .hero { padding: 14px; }
+  .actions .actionBtn { height: 44px; }
+  .actions { gap: 8px; }
+  .testHead { min-height: 44px; }
+}
+@media (max-width: 480px) {
+  .actions .actionBtn { flex: 1 1 auto; justify-content: center; }
+  .heroTop { flex-wrap: wrap; }
+  .heroTags { flex: 1 1 100%; justify-content: flex-start; padding-left: 48px; }
 }

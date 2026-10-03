@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { computePercentile, onAcceptedSubmit } from './awards';
+import { comparableLanguages, computePercentile, onAcceptedSubmit, percentileSamples } from './awards';
 import { InvalidInput } from './errors';
 import { completeSubmission, createSubmission, getSubmissionDetail, markSubmissionRunning } from './submissions';
 import { prisma, setupTestDatabase } from './test/db';
+import { MIN_PERCENTILE_SAMPLE } from './rules/scoring';
 import { balanceOf, makeSubmission, makeUser, makeWorld } from './test/factories';
 
 setupTestDatabase();
@@ -80,7 +81,8 @@ describe('onAcceptedSubmit', () => {
     const first = await makeSubmission(user.id, { questionId: w.q1.id, runtimeUs: 500 });
     const r1 = await onAcceptedSubmit(user.id, first.id);
     expect(r1.tokensAwarded).toEqual([{ topic: 'arrays', title: 'arrays', amount: 1 }]);
-    expect(r1.percentile).toBe(0); // alone: nobody is slower
+    expect(r1.percentile).toBeNull(); // alone: "faster than 0%" says nothing — not shown…
+    expect((await prisma.submission.findUniqueOrThrow({ where: { id: first.id } })).percentile).toBe(0); // …but stored (badges read it)
     expect(r1.badgesAwarded.map((b) => b.slug)).toEqual(['first-blood']);
 
     const again = await makeSubmission(user.id, { questionId: w.q1.id, runtimeUs: 400 });
@@ -127,3 +129,48 @@ describe('percentile', () => {
     expect((await prisma.submission.findUniqueOrThrow({ where: { id: mine.id } })).percentile).toBe(66.67);
   });
 });
+
+describe('percentile presentation (spec §3.8)', () => {
+  /** `others` learners with an accepted python submit of q1 (1000 µs and up), then the learner's own at 500 µs. */
+  async function crowd(others: number) {
+    const w = await makeWorld();
+    for (let i = 0; i < others; i++) {
+      const u = await makeUser();
+      await makeSubmission(u.id, { questionId: w.q1.id, runtimeUs: 1000 + i });
+    }
+    const me = await makeUser();
+    const mine = await makeSubmission(me.id, { questionId: w.q1.id, runtimeUs: 500 });
+    return { w, me, mine };
+  }
+
+  it('hands the interface no percentile while fewer than MIN_PERCENTILE_SAMPLE solutions stand behind it', async () => {
+    const { me, mine } = await crowd(MIN_PERCENTILE_SAMPLE - 2); // 28 others + me = 29
+    const awards = await onAcceptedSubmit(me.id, mine.id);
+    expect(awards.percentile).toBeNull();
+    // The real number is still stored: the fast-solve badge and the history read it.
+    expect((await prisma.submission.findUniqueOrThrow({ where: { id: mine.id } })).percentile).toBe(96.55); // 28 of 29 slower
+  });
+
+  it('shows it from MIN_PERCENTILE_SAMPLE solutions on (the learner’s own counted)', async () => {
+    const { me, mine } = await crowd(MIN_PERCENTILE_SAMPLE - 1); // 29 others + me = 30
+    const awards = await onAcceptedSubmit(me.id, mine.id);
+    expect(awards.percentile).toBe(96.67); // 29 of 30 slower
+    expect((await prisma.submission.findUniqueOrThrow({ where: { id: mine.id } })).percentile).toBe(96.67);
+  });
+
+  it('counts each learner once and only their language: samples per language, and which of them may show a percentile', async () => {
+    const w = await makeWorld();
+    const [a, b, c] = await Promise.all([makeUser(), makeUser(), makeUser()]);
+    await makeSubmission(a.id, { questionId: w.q1.id, runtimeUs: 100 });
+    await makeSubmission(a.id, { questionId: w.q1.id, runtimeUs: 200 }); // same learner twice → one
+    await makeSubmission(b.id, { questionId: w.q1.id, runtimeUs: 300 });
+    await makeSubmission(c.id, { questionId: w.q1.id, runtimeUs: 300, language: 'cpp' });
+    await makeSubmission(c.id, { questionId: w.q1.id, runtimeUs: 300, status: 'WA' }); // not accepted
+    await makeSubmission(c.id, { questionId: w.q2.id, runtimeUs: 300 }); // another question
+    const samples = await percentileSamples(w.q1.id);
+    expect(Object.fromEntries(samples)).toEqual({ python: 2, cpp: 1 });
+    expect([...comparableLanguages(samples)]).toEqual([]);
+    expect([...comparableLanguages(new Map([['python', MIN_PERCENTILE_SAMPLE], ['cpp', MIN_PERCENTILE_SAMPLE - 1]]))]).toEqual(['python']);
+  });
+});
+

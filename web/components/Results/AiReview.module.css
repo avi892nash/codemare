@@ -17,19 +17,19 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
+  font-size: var(--fs-sm);
   font-weight: 600;
   color: var(--fg-0);
 }
 .title svg { color: var(--accent-hi); }
-.note { font-size: 11.5px; color: var(--fg-2); }
+.note { font-size: var(--fs-xs); color: var(--fg-2); }
 .spacer { flex: 1; }
 .status {
   display: inline-flex;
   align-items: center;
   gap: 8px;
   margin: 0;
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   color: var(--fg-2);
 }
 .error {
@@ -37,7 +37,7 @@
   align-items: center;
   gap: 6px;
   margin: 0;
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   color: var(--err-fg);
 }
 .review {
@@ -50,6 +50,6 @@
   flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 8px;
-  font-size: 11px;
+  font-size: var(--fs-xs);
   color: var(--fg-2);
 }

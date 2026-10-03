@@ -1,7 +1,10 @@
 /* ─── Shell ──────────────────────────────────────────────────────
  * ≥ 1024 px: statement | editor over console, both splits resizable.
- * < 1024 px: one scrolling column (statement, editor, console).        */
+ * < 1024 px: one pane at a time — Problem · Code · Result — picked by the
+ *            switch above them (data-view on the root), so the editor is
+ *            one tap away and a new result takes the screen.            */
 .root {
+  --nav-h: 48px; /* Navbar.module.css */
   flex: 1;
   min-width: 0;
   min-height: 0;
@@ -37,8 +40,11 @@
   min-width: 0;
   min-height: 0;
   display: grid;
-  grid-template-rows: minmax(180px, var(--top, 60%)) 8px minmax(140px, 1fr);
+  grid-template-rows: minmax(180px, var(--top, 56%)) 8px minmax(140px, 1fr);
 }
+
+/* The Problem · Code · Result switch exists only below 1024 px. */
+.viewSwitch { display: none; }
 
 /* Window splitters: a wide hit area, a hairline that lights up on use. */
 .sep {
@@ -68,12 +74,12 @@
 }
 .eyebrow {
   margin-bottom: 4px;
-  font-size: 11.5px;
+  font-size: var(--fs-xs);
   color: var(--fg-2);
 }
 .problemTitle {
   margin: 0;
-  font-size: 20px;
+  font-size: var(--fs-xl);
   font-weight: 600;
   line-height: 1.25;
   letter-spacing: -0.3px;
@@ -90,7 +96,13 @@
   flex: none;
   padding: 0 12px;
   border-bottom: 1px solid var(--line-2);
+  overflow-x: auto;
+  scrollbar-width: none;
 }
+.paneTabs::-webkit-scrollbar { display: none; }
+/* The tab counts are 12 px like everything else here (the shared Tabs size theirs smaller). */
+.paneTabs [role='tab'] span,
+.consoleHead [role='tab'] span { font-size: var(--fs-xs); }
 .paneBody {
   position: relative;
   flex: 1;
@@ -102,8 +114,18 @@
   padding: 16px 18px 24px;
   border-radius: 0;
 }
+/* The statement, then what follows it (the related lessons strip), with room between — in the page's
+ * own type: a sentence-case title, 12 px under each lesson (the strip's own styles live with Learn). */
+.panel > * + * { margin-top: 20px; }
+.panel > section > h2 {
+  font-size: var(--fs-sm);
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--fg-1);
+}
+.panel > section a > span:last-child > span:last-child { font-size: var(--fs-xs); }
 .panel:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); }
-.muted { margin: 0; padding: 16px 18px; font-size: 12.5px; color: var(--fg-2); }
+.muted { margin: 0; padding: 16px 18px; font-size: var(--fs-sm); color: var(--fg-2); }
 
 .spoiler {
   display: flex;
@@ -114,9 +136,11 @@
   text-align: center;
   color: var(--fg-2);
 }
-.spoiler p { margin: 0; max-width: 340px; font-size: 13px; line-height: 1.55; }
+.spoiler p { margin: 0; max-width: 340px; font-size: var(--fs-sm); line-height: 1.55; }
 
 /* ─── Editor pane ────────────────────────────────────────────── */
+/* Desktop: language and reset on the left, Cancel · Run · Submit on the right, one row.
+ * Phone: language and reset on top, the editor, then Run and Submit as a bar of their own. */
 .toolbar {
   flex: none;
   display: flex;
@@ -127,7 +151,27 @@
   padding: 6px 8px 6px 10px;
   border-bottom: 1px solid var(--line-2);
 }
-.toolbarSpacer { flex: 1; }
+.toolbarMain {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+.editorNotice {
+  flex: none;
+  margin: 0;
+  padding: 7px 12px;
+  font-size: var(--fs-sm);
+  color: var(--warn-fg);
+  background: var(--warn-bg);
+  border-bottom: 1px solid color-mix(in oklab, var(--warn) 25%, transparent);
+}
 .editorArea {
   flex: 1;
   min-height: 0;
@@ -159,7 +203,7 @@
 .inlineError {
   margin: 0 0 10px;
   padding: 8px 10px;
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   color: var(--err-fg);
   background: var(--err-bg);
   border: 1px solid color-mix(in oklab, var(--err) 30%, transparent);
@@ -191,7 +235,7 @@
   gap: 4px;
 }
 .caseLabel {
-  font-size: 12px;
+  font-size: var(--fs-xs);
   font-weight: 500;
   color: var(--fg-1);
   font-family: var(--font-mono);
@@ -199,14 +243,14 @@
 .caseType {
   margin-left: 4px;
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--fs-xs);
   font-weight: 400;
   color: var(--fg-2);
 }
 .caseValue {
   margin: 0;
   padding: 7px 10px;
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   line-height: 1.5;
   color: var(--fg-0);
   background: var(--bg-2);
@@ -228,10 +272,13 @@
   align-items: center;
   gap: 5px;
   margin: 10px 0 0;
-  font-size: 12px;
+  font-size: var(--fs-xs);
   color: var(--fg-2);
 }
 .caseFoot .caseHint { margin: 0; }
+
+/* The shared xs buttons are 11 px; here they are 12. */
+.cases button { font-size: var(--fs-xs); }
 
 /* ─── Gate banner ────────────────────────────────────────────── */
 .gate {
@@ -259,8 +306,8 @@
   flex-direction: column;
   min-width: 0;
 }
-.gateTitle { font-size: 13px; font-weight: 600; color: var(--fg-0); white-space: nowrap; }
-.gateMeta { font-size: 11.5px; color: var(--fg-2); white-space: nowrap; }
+.gateTitle { font-size: var(--fs-sm); font-weight: 600; color: var(--fg-0); white-space: nowrap; }
+.gateMeta { font-size: var(--fs-xs); color: var(--fg-2); white-space: nowrap; }
 .gatePass { color: var(--ok-fg); font-weight: 500; }
 .gateQuestions {
   flex: 1;
@@ -276,7 +323,7 @@
   gap: 5px;
   max-width: 190px;
   padding: 3px 8px;
-  font-size: 12px;
+  font-size: var(--fs-xs);
   color: var(--fg-1);
   text-decoration: none;
   border: 1px solid var(--line-2);
@@ -293,7 +340,7 @@
   align-items: center;
   gap: 6px;
   padding: 3px 9px;
-  font-size: 14px;
+  font-size: var(--fs-md);
   font-weight: 600;
   color: var(--tone-fg);
   border-radius: var(--r);
@@ -305,15 +352,13 @@
 .subs {
   width: 100%;
   border-collapse: collapse;
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
 }
 .subs th {
   padding: 0 8px 8px;
   text-align: left;
-  font-size: 10.5px;
+  font-size: var(--fs-xs);
   font-weight: 600;
-  letter-spacing: 0.6px;
-  text-transform: uppercase;
   color: var(--fg-2);
   border-bottom: 1px solid var(--line-2);
 }
@@ -332,10 +377,8 @@
   border-radius: 999px;
 }
 .subKind {
-  font-size: 10.5px;
+  font-size: var(--fs-xs);
   color: var(--fg-2);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
 }
 .subBeats { color: var(--ok-fg); }
 .subWhen { color: var(--fg-2); }
@@ -357,34 +400,169 @@
   color: var(--warn-fg);
 }
 .noticeMain { flex: 1; min-width: 0; }
-.noticeTitle { margin: 0; font-size: 14px; font-weight: 600; color: var(--fg-0); }
-.noticeText { margin: 3px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--fg-1); }
+.noticeTitle { margin: 0; font-size: var(--fs-md); font-weight: 600; color: var(--fg-0); }
+.noticeText { margin: 3px 0 0; font-size: var(--fs-sm); line-height: 1.5; color: var(--fg-1); }
 .noticeList {
   margin: 6px 0 0;
   padding-left: 18px;
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   color: var(--fg-1);
 }
 
-/* ─── Narrow screens: one scrolling column ───────────────────── */
+/* ─── Below 1024 px: one pane at a time ──────────────────────── */
 @media (max-width: 1023px) {
-  .root { overflow-y: auto; }
-  .split {
+  /* The workspace is exactly the visible screen below the top bar (dvh: the
+   * phone's address bar doesn't hide its bottom edge); every pane scrolls inside. */
+  .root {
+    height: calc(100dvh - var(--nav-h));
+    max-height: calc(100dvh - var(--nav-h));
+    overflow: hidden;
+  }
+
+  .viewSwitch {
+    display: block;
     flex: none;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
+    padding: 8px 8px 0;
   }
-  .right {
+  /* The shared pills, stretched: three equal segments, 44 px tall. */
+  div.viewSwitch > div {
     display: flex;
-    flex-direction: column;
-    gap: 8px;
+    width: 100%;
+    overflow: visible;
   }
+  div.viewSwitch [role='tab'] {
+    flex: 1;
+    justify-content: center;
+    min-height: 44px;
+    padding: 0 10px;
+    font-size: var(--fs-md);
+  }
+
+  /* All three panes share one cell; the ones not shown are out of sight, out of
+   * the tab order and out of the accessibility tree (visibility), but keep their
+   * size — so the editor is laid out correctly whenever it is shown. */
+  .split {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    padding: 8px;
+  }
+  .right { display: contents; }
   .sep { display: none; }
-  .left { overflow: visible; }
-  .left .paneBody { overflow: visible; }
-  .editorPane { height: min(62vh, 560px); min-height: 360px; }
-  .console { min-height: 280px; max-height: 80vh; }
+  .split .pane { grid-area: 1 / 1; }
+  .root:not([data-view='problem']) .left,
+  .root:not([data-view='code']) .editorPane,
+  .root:not([data-view='result']) .console {
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  /* Problem: the statement's own sections must all be reachable at 375 px — icons go, the row scrolls if it must. */
+  .statementHead { padding: 12px 14px 8px; }
+  .paneTabs { padding: 0 6px; }
+  .paneTabs [role='tablist'][aria-label] [role='tab'] {
+    min-height: 44px;
+    padding: 0 10px;
+    font-size: var(--fs-sm);
+  }
+  .paneTabs [role='tab'] svg { display: none; }
+  .panel { padding: 14px 14px 24px; }
+
+  /* Submissions: a table of five columns doesn't fit; each row becomes two lines
+   * (verdict … when / language · runtime · memory). The column titles stay for screen readers. */
+  .subs thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .subs,
+  .subs tbody { display: block; }
+  .subs tr {
+    display: grid;
+    grid-template-columns: auto auto 1fr auto;
+    grid-template-areas:
+      'status status status when'
+      'lang run mem mem';
+    gap: 4px 14px;
+    align-items: center;
+    padding: 10px 2px;
+    border-bottom: 1px solid var(--line-1);
+  }
+  .subs td,
+  .subs td.num { padding: 0; border: 0; text-align: left; }
+  .subs td:nth-child(1) { grid-area: status; }
+  .subs td:nth-child(2) { grid-area: lang; }
+  .subs td:nth-child(3) { grid-area: run; }
+  .subs td:nth-child(4) { grid-area: mem; }
+  .subs td:nth-child(5) { grid-area: when; }
+
+  /* Code: language and reset on top, the editor, then Run and Submit as a bar. */
+  .toolbar { display: contents; }
+  .toolbarMain {
+    order: 1;
+    flex: none;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--line-2);
+  }
+  .editorNotice { order: 2; }
+  .editorArea { order: 3; }
+  .actions {
+    order: 4;
+    flex: none;
+    margin: 0;
+    padding: 8px 10px calc(8px + env(safe-area-inset-bottom, 0px));
+    gap: 8px;
+    border-top: 1px solid var(--line-2);
+    background: var(--bg-1);
+  }
+  .toolbarMain > div:first-child { height: 44px; padding: 0 12px; }
+  .toolbarMain select { font-size: var(--fs-body); } /* 16 px: iOS zooms into smaller fields */
+  .toolbar .toolbarMain .resetBtn { width: 44px; height: 44px; }
+  .actions button {
+    flex: 1;
+    justify-content: center;
+    height: 44px;
+    font-size: var(--fs-md);
+  }
+
+  /* Result: its two tabs and the result card below them. */
+  .consoleHead { padding: 0 6px; }
+  .consoleHead [role='tablist'][aria-label] [role='tab'] {
+    min-height: 44px;
+    padding: 0 12px;
+    font-size: var(--fs-sm);
+  }
+  .consoleBody { padding: 12px 10px 20px; }
+  .cases button { min-height: 44px; font-size: var(--fs-sm); }
+  .cases .caseBar [role='tab'] { padding: 0 12px; font-size: var(--fs-sm); }
+
   .gate { flex-wrap: wrap; }
   .gateQuestions { order: 5; flex-basis: 100%; }
+}
+
+/* A phone on its side has height to spare for nothing: language, reset, Run and Submit share one row above the editor. */
+@media (max-width: 1023px) and (orientation: landscape) and (max-height: 520px) {
+  .toolbar {
+    order: 1;
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 8px;
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--line-2);
+  }
+  .toolbarMain { order: 0; padding: 0; border-bottom: 0; }
+  .actions { order: 0; margin-left: auto; padding: 0; border-top: 0; background: none; }
+  .actions button { flex: none; min-width: 128px; }
+  .toolbarMain > div:first-child,
+  .toolbar .toolbarMain .resetBtn,
+  .actions button { height: 40px; }
+  .toolbar .toolbarMain .resetBtn { width: 40px; }
+}
+
+/* The narrowest phones: the statement's four sections still fit. */
+@media (max-width: 340px) {
+  .paneTabs [role='tablist'][aria-label] [role='tab'] { padding: 0 7px; }
 }
