@@ -161,7 +161,9 @@ export function IdeOutputDisplay({ results, pending = false, language }: IdeOutp
                   {wrong ? (
                     <div className={s.block}>
                       <span className={s.blockLabel}>
-                        diff <span className={s.legend}>− expected + yours</span>
+                        diff
+                        <span className={s.legend}>− expected</span>
+                        <span className={s.legend}>+ yours</span>
                       </span>
                       <pre className={`${s.pre} ${s.diff} mono`} aria-label="Expected output versus your output">
                         {diffLines(r.expectedOutput, r.actualOutput).map((l, k) => (

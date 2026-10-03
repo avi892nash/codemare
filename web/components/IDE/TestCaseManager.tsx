@@ -44,8 +44,8 @@ export function TestCaseManager({ testCases, onTestCasesChange, maxTestCases = 1
       <div className={s.managerHead}>
         <div>
           <h2 className={s.managerTitle}>Test cases</h2>
-          <span className={`${s.managerCount} mono`}>
-            {testCases.length} / {maxTestCases}
+          <span className={s.managerCount}>
+            {testCases.length} of {maxTestCases}
           </span>
         </div>
         <Button size="sm" icon="plus" onClick={addTest} disabled={testCases.length >= maxTestCases}>
@@ -67,11 +67,12 @@ export function TestCaseManager({ testCases, onTestCasesChange, maxTestCases = 1
                 </button>
                 <Button
                   variant="ghost"
-                  size="xs"
+                  size="sm"
                   icon="x"
                   aria-label={`Remove case ${i + 1}`}
                   disabled={testCases.length <= 1}
                   onClick={() => removeTest(i)}
+                  className={s.removeBtn}
                 />
               </div>
 
@@ -84,6 +85,7 @@ export function TestCaseManager({ testCases, onTestCasesChange, maxTestCases = 1
                     placeholder={'2\n3'}
                     rows={3}
                     mono
+                    className={s.field}
                     data-testid={`ide-stdin-${i}`}
                   />
                   <Textarea
@@ -94,6 +96,7 @@ export function TestCaseManager({ testCases, onTestCasesChange, maxTestCases = 1
                     placeholder="5"
                     rows={2}
                     mono
+                    className={s.field}
                     data-testid={`ide-expected-${i}`}
                   />
                 </div>
