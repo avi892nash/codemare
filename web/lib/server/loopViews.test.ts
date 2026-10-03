@@ -36,7 +36,7 @@ describe('loop views (DB)', () => {
       await makeRecipe(w.graphs.id, [{ topicId: w.arrays.id, quantity: 1 }], { title: 'Scan' });
       const map = await getMapView(user.id);
 
-      expect(map.totals).toEqual({ tokens: 0, topicsUnlocked: 2, topicsTotal: 4, tiersOpen: 1, tiersTotal: 2 });
+      expect(map.totals).toEqual({ tokens: 0, topicsUnlocked: 2, topicsTotal: 4, tiersOpen: 1, tiersTotal: 2, solved: 0 });
       const [tier0, tier1] = map.tiers;
       expect(tier0).toMatchObject({ open: true, gate: null });
       expect(tier0.topics.map((t) => t.state)).toEqual(['unlocked', 'unlocked']);
@@ -50,6 +50,7 @@ describe('loop views (DB)', () => {
         ],
         running: null,
         previousTier: null,
+        solvedCount: 0,
       });
       const graphs = tier1.topics.find((t) => t.slug === 'graphs')!;
       expect(graphs.state).toBe('tier_closed');
@@ -182,6 +183,30 @@ describe('loop views (DB)', () => {
       await makeQuestion({ slug: 'no-topic', difficulty: 'Medium' });
       const map = await getMapView(user.id);
       expect(map.unfiled).toEqual([{ slug: 'no-topic', title: 'no-topic', difficulty: 'Medium', progress: 'todo', needs: [] }]);
+    });
+
+    it('counts the problems solved so far, in total and among a gate’s own (the first-run card and the gate nudge read them)', async () => {
+      const w = await makeWorld();
+      const user = await makeUser();
+      await makeQuestion({ slug: 'arrays-extra', topics: [{ topicId: w.arrays.id }] });
+      const fresh = await getMapView(user.id);
+      expect(fresh.totals.solved).toBe(0);
+      expect(fresh.tiers[1].gate).toMatchObject({ solvedCount: 0 });
+
+      // An accepted submit counts once however often it is repeated; a failed one and a run do not count.
+      await makeSubmission(user.id, { questionId: w.q1.id, kind: 'submit', status: 'OK' });
+      await makeSubmission(user.id, { questionId: w.q1.id, kind: 'submit', status: 'OK' });
+      const extra = await prisma.question.findUniqueOrThrow({ where: { slug: 'arrays-extra' } });
+      await makeSubmission(user.id, { questionId: extra.id, kind: 'submit', status: 'WA' });
+      const one = await getMapView(user.id);
+      expect(one.totals.solved).toBe(1);
+      // q-arrays is one of the gate's two problems, solved outside any attempt: it counts toward the nudge.
+      expect(one.tiers[1].gate).toMatchObject({ solvedCount: 1, questionCount: 2 });
+
+      await makeSubmission(user.id, { questionId: extra.id, kind: 'submit', status: 'OK' });
+      const two = await getMapView(user.id);
+      expect(two.totals.solved).toBe(2);
+      expect(two.tiers[1].gate).toMatchObject({ solvedCount: 1 });
     });
 
     it('reports a running gate attempt with its progress', async () => {

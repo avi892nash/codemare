@@ -54,6 +54,8 @@ export interface GateCardView {
   timeLimitMinutes: number;
   questionCount: number;
   questions: { slug: string; title: string; difficulty: Difficulty }[];
+  /** How many of the gate's problems this learner has solved at all (an accepted submit anywhere, not only inside an attempt). */
+  solvedCount: number;
   state: GateState;
   eligible: boolean;
   /** cooldown: when the gate can be retried (ISO). */
@@ -168,7 +170,15 @@ export interface MapView {
   tiers: TierView[];
   /** Published questions without a topic, which no topic card lists (a content gap; normally empty). */
   unfiled: TopicProblemView[];
-  totals: { tokens: number; topicsUnlocked: number; topicsTotal: number; tiersOpen: number; tiersTotal: number };
+  totals: {
+    tokens: number;
+    topicsUnlocked: number;
+    topicsTotal: number;
+    tiersOpen: number;
+    tiersTotal: number;
+    /** Distinct published problems this learner has solved (the first-run card shows while it is 0). */
+    solved: number;
+  };
   /** The learner's running gate attempt, if any. */
   running: {
     attemptId: string;
@@ -248,7 +258,12 @@ export function earnOptionsFor(item: { topicId: string; minDifficulty: Difficult
     .map(({ q, amount }) => ({ slug: q.slug, title: q.title, difficulty: q.difficulty, amount }));
 }
 
-function gateCard(status: GateStatus, questions: GateCardView['questions'], previousTier: GateCardView['previousTier']): GateCardView {
+function gateCard(
+  status: GateStatus,
+  questions: GateCardView['questions'],
+  previousTier: GateCardView['previousTier'],
+  solvedCount: number
+): GateCardView {
   const { gate } = status;
   return {
     id: gate.id,
@@ -259,6 +274,7 @@ function gateCard(status: GateStatus, questions: GateCardView['questions'], prev
     timeLimitMinutes: gate.timeLimitMinutes,
     questionCount: gate.questionCount,
     questions,
+    solvedCount,
     state: status.state,
     eligible: status.eligible,
     nextEligibleAt: iso(status.nextEligibleAt),
@@ -339,6 +355,16 @@ export async function getMapView(userId: string, now: Date = new Date()): Promis
     listTopicProblems(userId, now),
   ]);
   const gateQuestions = new Map(gates.map((g) => [g.id, g.questions.map((q) => q.question)]));
+  // This learner's solved problems, by question — for the gates' "n solved" and the page's total.
+  const solvedSlugs = new Set<string>();
+  const solvedIds = new Set<string>();
+  for (const list of [...problems.byTopic.values(), problems.unfiled]) {
+    for (const p of list) {
+      if (p.progress !== 'solved') continue;
+      solvedSlugs.add(p.slug);
+      solvedIds.add(p.id);
+    }
+  }
   const recipeTitle = new Map(recipeTitles.map((r) => [r.id, r.title]));
   const problemView = (p: TopicProblem): TopicProblemView => ({
     slug: p.slug,
@@ -347,6 +373,9 @@ export async function getMapView(userId: string, now: Date = new Date()): Promis
     progress: p.progress,
     needs: p.open ? [] : p.topicIds.filter((id) => !unlocked.has(id)).flatMap((id) => topics.get(id) ?? []),
   });
+
+  const gateQuestionsOf = (gateId: string) => gateQuestions.get(gateId) ?? [];
+  const solvedOf = (gateId: string) => gateQuestionsOf(gateId).filter((q) => solvedSlugs.has(q.slug)).length;
 
   const tiers: TierView[] = map.tiers.map((tier, i) => {
     const previous = i > 0 ? map.tiers[i - 1] : null;
@@ -357,9 +386,7 @@ export async function getMapView(userId: string, now: Date = new Date()): Promis
       title: tier.title,
       summary: tier.summary,
       open: tier.open,
-      gate: tier.gate
-        ? gateCard(tier.gate, gateQuestions.get(tier.gate.gate.id) ?? [], previous ? { slug: previous.slug, title: previous.title } : null)
-        : null,
+      gate: tier.gate ? gateCard(tier.gate, gateQuestionsOf(tier.gate.gate.id), previous ? { slug: previous.slug, title: previous.title } : null, solvedOf(tier.gate.gate.id)) : null,
       topics: tier.topics.map((t): TopicCardView => {
         const recipes = t.recipes.map((r) => recipeCard(r, balances, topics));
         let blocker: TopicBlockerView | null = null;
@@ -440,6 +467,7 @@ export async function getMapView(userId: string, now: Date = new Date()): Promis
       topicsTotal: allTopics.length,
       tiersOpen: tiers.filter((t) => t.open).length,
       tiersTotal: tiers.length,
+      solved: solvedIds.size,
     },
     running,
   };
