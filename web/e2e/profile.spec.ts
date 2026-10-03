@@ -190,7 +190,7 @@ test('any signed-in user can view another profile, which never shows an email', 
   await visit(page, `/u/${other.handle.toUpperCase()}`);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(other.name);
   await expect(page.getByText('This is you')).toHaveCount(0);
-  await expect(page.getByText('No submissions yet.')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'No submissions yet' })).toBeVisible();
   expect(await page.content()).not.toContain(other.email);
 
   const res = await visit(page, '/u/nobody_goes_by_this');

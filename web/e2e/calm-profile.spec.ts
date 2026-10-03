@@ -41,6 +41,7 @@ interface Who {
 /** A credentials sign-up names the account after its handle. */
 const signUpLike = (key: string, handle = `e2e_calm_${key}_${tag}`) => ({ email: `e2e-calm-${key}-${tag}@codemare.test`, handle, name: handle });
 
+let fresh: Who; // nothing yet: one empty state and no empty blocks
 let short: Who; // a short handle: the identity header fits on one line on a phone
 let some: Who; // a few solves on 3 days, a badge, a lesson started: no activity map
 let week: Who; // 6 active days, one more is added mid-test
@@ -75,6 +76,7 @@ async function solveDays(userId: string, days: number, from = 0) {
 }
 
 test.beforeAll(async () => {
+  fresh = await makeUser(signUpLike('fresh'));
   short = await makeUser(signUpLike('short', `cm_${tag}`));
   some = await makeUser(signUpLike('some'));
   week = await makeUser(signUpLike('week'));
@@ -313,6 +315,32 @@ test('the identity header is the page header: one h1, the name, one line of cont
   expect(await sidewaysScroll(page)).toBe(0);
 });
 
+test('a profile with nothing on it is one empty state, not a page of empty blocks', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await signIn(page, fresh);
+  await visit(page, `/u/${fresh.handle}`);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(fresh.handle);
+  // no stats, no activity map, no tokens, no learn card — and no zeros
+  await expect(page.getByRole('region', { name: 'Stats' })).toHaveCount(0);
+  await expect(page.getByRole('grid')).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Tokens by topic' })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Learn progress' })).toHaveCount(0);
+  // the owner is offered the one next step, as a 44 px target
+  await expect(page.getByRole('heading', { name: 'No submissions yet' })).toBeVisible();
+  const next = page.getByRole('link', { name: 'Open the tier map', exact: true });
+  expect((await next.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  await expect(page.getByText('No badges yet')).toBeVisible();
+  const c = await census(page);
+  expect(c.upper).toEqual([]);
+
+  // someone else's empty profile has nothing to offer: no button
+  await signIn(page, short);
+  await visit(page, `/u/${fresh.handle}`);
+  await expect(page.getByRole('heading', { name: 'No submissions yet' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Open the tier map', exact: true })).toHaveCount(0);
+  await expect(page.getByText('This is you')).toHaveCount(0);
+});
+
 test('on a phone the page’s primary actions are 44 px targets', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await signIn(page, some);
@@ -367,6 +395,13 @@ test('the badge dialog opens, closes on Esc and returns focus, at both widths', 
     await locked.click();
     const warm = page.getByRole('dialog', { name: 'Getting Warm' });
     await expect(warm.getByRole('progressbar', { name: 'Your progress' })).toHaveAttribute('aria-valuetext', '3 / 10 problems solved');
+    // the dialog's own buttons are 44 px targets on a phone
+    if (w < 720) {
+      for (const b of [warm.getByRole('button', { name: 'Close', exact: true }), warm.getByRole('link', { name: 'Find a problem on the map' })]) {
+        // layout height: the dialog is still scaling in (a transform) for a moment after it opens
+        expect(await b.evaluate((el) => (el as HTMLElement).offsetHeight), 'dialog button').toBeGreaterThanOrEqual(44);
+      }
+    }
     await warm.getByRole('button', { name: 'Close', exact: true }).click();
     await expect(warm).toBeHidden();
     await expect(locked).toBeFocused();
