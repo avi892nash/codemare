@@ -23,7 +23,7 @@ import { GateBanner } from './GateBanner';
 import { RunErrorNotice } from './RunErrorNotice';
 import { StatementPane } from './StatementPane';
 import type { GateContext, NextProblem, SubmissionSummary, WorkspaceMode, WorkspaceProblem } from './types';
-import { useModKey, useTouchOnly } from './useModKey';
+import { useModKey, useNarrow, useTouchOnly } from './useModKey';
 import { useSplit } from './useSplit';
 import s from './Workspace.module.css';
 
@@ -96,6 +96,7 @@ export function SolveWorkspace(props: SolveWorkspaceProps) {
   const { mode, problem, gate } = props;
   const mod = useModKey();
   const touch = useTouchOnly();
+  const narrow = useNarrow();
   const scope = `q:${problem.id}`;
   const languages = problem.languages;
   const starter = useCallback((l: SupportedLanguage) => problem.starterCode[l] ?? '', [problem.starterCode]);
@@ -110,6 +111,8 @@ export function SolveWorkspace(props: SolveWorkspaceProps) {
   const [consoleTab, setConsoleTab] = useState<ConsoleTab>('cases');
   const [view, setView] = useState<PhoneView>('problem');
   const [notice, setNotice] = useState<string | null>(null);
+  // Monaco comes from a CDN and is the slowest thing on the page: until it has mounted there is nothing to edit, so nothing to run.
+  const [editorReady, setEditorReady] = useState(false);
   const [cases, setCases] = useState<CustomCase[]>([]);
   const [selectedCase, setSelectedCase] = useState('s0');
   const [casesError, setCasesError] = useState<string | null>(null);
@@ -121,6 +124,7 @@ export function SolveWorkspace(props: SolveWorkspaceProps) {
   const [gateOver, setGateOver] = useState(false);
   const editor = useRef<CodeEditorHandle | null>(null);
   const consoleBody = useRef<HTMLDivElement>(null);
+  const viewSwitch = useRef<HTMLDivElement>(null);
   const verdictHeading = useRef<HTMLHeadingElement>(null);
   const run = useRunStream();
 
@@ -178,7 +182,7 @@ export function SolveWorkspace(props: SolveWorkspaceProps) {
 
   const execute = useCallback(
     async (action: 'run' | 'submit') => {
-      if (run.busy) return;
+      if (run.busy || !editorReady) return;
       if (!code.trim()) {
         setNotice('Nothing to run — write some code first.');
         return;
@@ -239,7 +243,7 @@ export function SolveWorkspace(props: SolveWorkspaceProps) {
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [run.busy, run.start, code, language, cases, mode, problem.id, problem.signature, gate, gateOver, currentSlug, router]
+    [run.busy, run.start, editorReady, code, language, cases, mode, problem.id, problem.signature, gate, gateOver, currentSlug, router]
   );
 
   const executeRef = useRef(execute);
@@ -265,6 +269,13 @@ export function SolveWorkspace(props: SolveWorkspaceProps) {
   const onLine = useCallback((line: number, column?: number) => {
     setView('code');
     window.requestAnimationFrame(() => editor.current?.revealLine(line, column));
+  }, []);
+
+  // "Back to code" on a result: the Code pane is one tap away at the top, and this is the same tap from where the learner is reading.
+  // Focus goes to the switch's Code segment, not into the editor — on a phone that would bring the keyboard up over what they came to look at.
+  const onBackToCode = useCallback(() => {
+    setView('code');
+    window.requestAnimationFrame(() => viewSwitch.current?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')?.focus());
   }, []);
 
   // A result has arrived (or the run never started): start it from its top. Below
@@ -303,7 +314,7 @@ export function SolveWorkspace(props: SolveWorkspaceProps) {
       {gate && <GateBanner gate={gate} currentSlug={currentSlug} solved={gateSolved} onExpire={() => setGateOver(true)} />}
 
       {/* Below 1024 px: which pane is showing. Hidden on a desktop, where all three are. */}
-      <div className={s.viewSwitch}>
+      <div ref={viewSwitch} className={s.viewSwitch}>
         <Tabs
           tabs={PHONE_VIEWS}
           value={view}
@@ -353,7 +364,8 @@ export function SolveWorkspace(props: SolveWorkspaceProps) {
                   icon="play"
                   onClick={onRun}
                   loading={run.busy && run.kind !== 'submit'}
-                  disabled={run.busy && run.kind === 'submit'}
+                  disabled={!editorReady || (run.busy && run.kind === 'submit')}
+                  title={editorReady ? undefined : 'Loading the editor…'}
                   kbd={kbd('↵')}
                   data-testid="run-button"
                 >
@@ -365,7 +377,8 @@ export function SolveWorkspace(props: SolveWorkspaceProps) {
                   icon="send"
                   onClick={onSubmit}
                   loading={run.busy && run.kind === 'submit'}
-                  disabled={(run.busy && run.kind !== 'submit') || (mode === 'gate' && gateOver)}
+                  disabled={!editorReady || (run.busy && run.kind !== 'submit') || (mode === 'gate' && gateOver)}
+                  title={editorReady ? undefined : 'Loading the editor…'}
                   kbd={kbd('⇧↵')}
                   data-testid="submit-button"
                 >
@@ -392,6 +405,7 @@ export function SolveWorkspace(props: SolveWorkspaceProps) {
                 markers={markers}
                 ariaLabel={`${LANGUAGE_META[language].label} code for ${problem.title}`}
                 handleRef={editor}
+                onReady={() => setEditorReady(true)}
               />
             </div>
           </section>
@@ -403,7 +417,8 @@ export function SolveWorkspace(props: SolveWorkspaceProps) {
               <Tabs
                 tabs={[
                   { value: 'cases', label: 'Test cases', icon: 'list', count: problem.samples.length + cases.length || undefined },
-                  { value: 'result', label: 'Result', icon: 'terminal' },
+                  // One pane at a time, the switch above already has a "Result": this one is the last run's.
+                  { value: 'result', label: narrow ? 'Last result' : 'Result', icon: 'terminal' },
                 ]}
                 value={consoleTab}
                 onChange={(v) => setConsoleTab(v as ConsoleTab)}
@@ -469,6 +484,7 @@ export function SolveWorkspace(props: SolveWorkspaceProps) {
                       aiReview={props.aiReview}
                       onLine={onLine}
                       onSubmit={onSubmit}
+                      onBackToCode={onBackToCode}
                       headingRef={verdictHeading}
                     />
                   )}

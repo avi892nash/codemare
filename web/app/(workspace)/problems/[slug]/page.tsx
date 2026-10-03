@@ -155,50 +155,54 @@ export default async function ProblemPage({ params, searchParams }: { params: Pa
   }));
 
   return (
-    <SolveWorkspace
-      key={q.id}
-      mode={mode}
-      problem={{
-        id: q.id,
-        slug: q.slug,
-        title: q.title,
-        difficulty: q.difficulty,
-        functionName: q.functionName,
-        signature,
-        languages: languages.length ? [...languages] : [...LANGUAGES],
-        starterCode,
-        // Hidden tests never leave the server.
-        samples: tests.filter((t) => !t.hidden).map((t) => ({ input: t.input, expected: t.expected })),
-        timeLimitMs: q.timeLimitMs,
-        customInputs: Object.values(references).some((code) => !!code?.trim()),
-      }}
-      statement={
-        <>
-          <ProblemStatement
-            statementMd={q.statementMd}
-            examples={examples}
-            constraints={constraints}
-            topics={q.topics.map((t) => t.topic)}
-            tags={q.tags}
-            companies={q.companies}
-          />
-          {!gate && (
-            <Suspense fallback={null}>
-              <RelatedLessons questionSlug={q.slug} userId={userId} />
-            </Suspense>
-          )}
-        </>
-      }
-      editorial={q.editorialMd ? <Markdown>{q.editorialMd}</Markdown> : undefined}
-      submissions={submissions}
-      latestCode={latestCode}
-      initialLanguage={initialLanguage}
-      hints={hints ? { target: { questionId: q.id }, initial: hints } : null}
-      gate={gate}
-      solved={solved}
-      bestPercentile={bestPercentile}
-      nextProblem={nextProblem}
-      aiReview={aiReviewEnabled()}
-    />
+    <>
+      {/* The editor (Monaco) comes from a CDN: open the connection while the page is still arriving. */}
+      <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+      <SolveWorkspace
+        key={q.id}
+        mode={mode}
+        problem={{
+          id: q.id,
+          slug: q.slug,
+          title: q.title,
+          difficulty: q.difficulty,
+          functionName: q.functionName,
+          signature,
+          languages: languages.length ? [...languages] : [...LANGUAGES],
+          starterCode,
+          // Hidden tests never leave the server.
+          samples: tests.filter((t) => !t.hidden).map((t) => ({ input: t.input, expected: t.expected })),
+          timeLimitMs: q.timeLimitMs,
+          customInputs: Object.values(references).some((code) => !!code?.trim()),
+        }}
+        statement={
+          <>
+            <ProblemStatement
+              statementMd={q.statementMd}
+              examples={examples}
+              constraints={constraints}
+              topics={q.topics.map((t) => t.topic)}
+              tags={q.tags}
+              companies={q.companies}
+            />
+            {!gate && (
+              <Suspense fallback={null}>
+                <RelatedLessons questionSlug={q.slug} userId={userId} />
+              </Suspense>
+            )}
+          </>
+        }
+        editorial={q.editorialMd ? <Markdown>{q.editorialMd}</Markdown> : undefined}
+        submissions={submissions}
+        latestCode={latestCode}
+        initialLanguage={initialLanguage}
+        hints={hints ? { target: { questionId: q.id }, initial: hints } : null}
+        gate={gate}
+        solved={solved}
+        bestPercentile={bestPercentile}
+        nextProblem={nextProblem}
+        aiReview={aiReviewEnabled()}
+      />
+    </>
   );
 }

@@ -1,0 +1,23 @@
+/* A verdict as quiet text: its glyph and its name in the verdict's own tone, the short code a small label after it.
+ * Type is on the --fs-* scale (nothing under 12 px). */
+.verdict {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  color: var(--tone-fg);
+  white-space: nowrap;
+}
+.verdict[data-tone='ok'] { --tone-fg: var(--ok-fg); }
+.verdict[data-tone='err'] { --tone-fg: var(--err-fg); }
+.verdict[data-tone='warn'] { --tone-fg: var(--warn-fg); }
+.verdict[data-tone='info'] { --tone-fg: var(--info-fg); }
+.verdict[data-tone='muted'] { --tone-fg: var(--fg-1); }
+.verdict svg { flex: none; }
+.code {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-weight: 400;
+  color: var(--fg-2);
+}

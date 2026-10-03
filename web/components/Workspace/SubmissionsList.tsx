@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { StatusPill, isStatusCode } from '@/components/ui/StatusPill';
 import { EmptyState } from '@/components/states/EmptyState';
+import { VerdictText } from '@/components/Results/VerdictText';
 import { formatKb, formatMicros, formatPercent, text, timeAgo } from '@/lib/client/format';
 import { languageLabel } from '@/lib/client/languages';
 import type { SubmissionSummary } from './types';
@@ -30,12 +30,11 @@ export function SubmissionsList({ submissions }: { submissions: SubmissionSummar
       </thead>
       <tbody>
         {submissions.map((sub) => {
-          const code = isStatusCode(sub.status) ? sub.status : 'PND';
           return (
             <tr key={sub.id}>
               <td>
                 <Link href={`/submissions/${sub.id}`} className={`${s.subLink} focus-ring`} aria-label={`Open submission from ${timeAgo(sub.createdAt)}`}>
-                  <StatusPill code={code} size="xs" showLong={code === 'OK'} style={{ fontSize: 'var(--fs-xs)' }} />
+                  <VerdictText status={sub.status} />
                   {sub.kind === 'gate' && <span className={s.subKind}>gate</span>}
                 </Link>
               </td>

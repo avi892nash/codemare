@@ -32,3 +32,19 @@ export function useTouchOnly(): boolean {
   }, []);
   return touch;
 }
+
+/**
+ * True below 1024 px, where the workspace shows one pane at a time (Problem · Code · Result) — the same breakpoint as
+ * Workspace.module.css. Starts false (what the server renders) and corrects itself after mount.
+ */
+export function useNarrow(): boolean {
+  const [narrow, setNarrow] = useState(false);
+  useEffect(() => {
+    const query = window.matchMedia('(max-width: 1023px)');
+    setNarrow(query.matches);
+    const onChange = (e: MediaQueryListEvent) => setNarrow(e.matches);
+    query.addEventListener('change', onChange);
+    return () => query.removeEventListener('change', onChange);
+  }, []);
+  return narrow;
+}

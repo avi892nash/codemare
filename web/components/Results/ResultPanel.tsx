@@ -27,6 +27,8 @@ interface ResultPanelProps {
   aiReview?: boolean;
   onLine?: (line: number, column?: number) => void;
   onSubmit?: () => void;
+  /** Below 1024 px, where the editor is another pane: the way back to it from a failing result. */
+  onBackToCode?: () => void;
   headingRef?: Ref<HTMLHeadingElement>;
 }
 
@@ -36,7 +38,7 @@ interface ResultPanelProps {
  * page is interactive (it is needed only once a run starts) so its code and
  * styles stay out of the page's first paint.
  */
-export function ResultPanel({ run, language, languageName, signature, timeLimitMs, mode, next, gateHref, aiReview, onLine, onSubmit, headingRef }: ResultPanelProps) {
+export function ResultPanel({ run, language, languageName, signature, timeLimitMs, mode, next, gateHref, aiReview, onLine, onSubmit, onBackToCode, headingRef }: ResultPanelProps) {
   if (run.phase === 'connecting' || run.phase === 'queued' || run.phase === 'compiling' || run.phase === 'running') {
     return <RunProgress phase={run.phase} kind={run.kind} tests={run.tests} total={run.totalTests} language={languageName} />;
   }
@@ -56,6 +58,7 @@ export function ResultPanel({ run, language, languageName, signature, timeLimitM
         gateHref={gateHref}
         onLine={onLine}
         onSubmit={run.kind === 'run' ? onSubmit : undefined}
+        onBackToCode={onBackToCode}
         headingRef={headingRef}
       />
       {aiReview && verdict.status === 'OK' && run.kind === 'submit' && verdict.submissionId && <AiReview submissionId={verdict.submissionId} />}
