@@ -9,15 +9,18 @@ import { expect, test, type Page } from '@playwright/test';
  *
  *   PLAYWRIGHT_BASE_URL=http://localhost:4205 npx playwright test e2e/loop.spec.ts
  *
- *  1. sign up a fresh learner through /signup — they land on the map
+ *  1. sign up a fresh learner through /signup — they land on the map,
+ *     with its first-run card
  *  2. solve three tier-0 questions in the editor (the first opened from
- *     the map's list), watching the navbar's token total rise with each
- *     accepted submit, and the map's list mark them solved
- *  3. /map: Binary Search (tier 1) is blocked by the Foundations Gate
+ *     its topic's row on the map), watching the navbar's token total rise
+ *     with each accepted submit, and the map's list mark them solved
+ *  3. /map: Core Techniques (tier 1) is one closed panel — its gate opens
+ *     it; the gate is one line and one button
  *  4. start the gate, solve three of its four problems in gate mode, finish
- *     → Core Techniques opens
+ *     → Core Techniques opens, and the line under the hero says that
+ *     Binary Search is ready to unlock
  *  5. unlock Binary Search with the "Scan, then search" recipe → it opens,
- *     and its card lists its questions, which open in the editor
+ *     and its row lists its questions, which open in the editor
  */
 
 const DATA = join(__dirname, '..', 'prisma', 'seed');
@@ -69,10 +72,11 @@ async function solve(page: Page, path: string, code: string): Promise<void> {
 test('sign-up → solve → submit → unlock', async ({ page }) => {
   test.setTimeout(10 * 60_000);
 
-  await test.step('sign up a fresh learner, who lands on the map', async () => {
+  await test.step('sign up a fresh learner, who lands on the map, with the three steps of how it works', async () => {
     await signUp(page);
     await expect(page).toHaveURL(/\/map$/);
     await expect(tokenChip(page)).toHaveText('0');
+    await expect(page.getByTestId('first-run')).toContainText('Earn tokens — 1, 2 or 3 for Easy, Medium, Hard');
   });
 
   await test.step('solve tier-0 questions and watch the token total rise', async () => {
@@ -81,7 +85,8 @@ test('sign-up → solve → submit → unlock', async ({ page }) => {
       { slug: 'valid-anagram', reward: '+1 Arrays & Hashing' },
       { slug: 'reverse-string', reward: '+1 Two Pointers' },
     ];
-    // The first one opened the way a learner finds it: from its topic's list on the map.
+    // The first one opened the way a learner finds it: from its topic's row on the map (a row opens to its problems).
+    await page.getByTestId('topic-arrays-hashing').locator(':scope > details > summary').click();
     await page.getByRole('list', { name: 'Arrays & Hashing problems' }).getByRole('link', { name: 'Two Sum', exact: true }).click();
     await expect(page).toHaveURL(/\/problems\/two-sum$/);
     for (const [i, s] of solves.entries()) {
@@ -93,23 +98,30 @@ test('sign-up → solve → submit → unlock', async ({ page }) => {
   });
 
   let attemptUrl = '';
-  await test.step('the map shows a tier-1 topic blocked by its gate', async () => {
+  await test.step('the map shows tier 1 as one closed panel; opening it shows its gate in one line', async () => {
     await tokenChip(page).click();
     await expect(page).toHaveURL(/\/map$/);
-    await expect(page.getByTestId('map-tokens')).toHaveText('3');
+    await expect(tokenChip(page)).toHaveText('3');
+    await expect(page.getByTestId('first-run')).toHaveCount(0); // solved something: the card is gone for good
+    // Arrays & Hashing is where the hero is: its problems are open already, with what is solved marked
     const arrays = page.getByRole('list', { name: 'Arrays & Hashing problems' });
     for (const title of ['Two Sum', 'Valid Anagram']) {
       await expect(arrays.getByRole('listitem').filter({ has: page.getByRole('link', { name: title, exact: true }) })).toContainText('Solved');
     }
+    // none of the gate's problems is solved yet: no nudge about it
+    await expect(page.getByTestId('map-milestone')).toHaveCount(0);
+
+    const panel = page.getByTestId('tier-core-techniques');
+    await expect(panel.getByTestId('tier-state')).toHaveText('Locked');
+    await expect(panel).toContainText('Opens after the Foundations Gate');
+    await panel.locator(':scope > summary').click();
     const topic = page.getByTestId('topic-binary-search');
-    await expect(topic.getByTestId('topic-state')).toHaveText('Tier closed');
-    await expect(topic.getByTestId('blocker')).toContainText('Core Techniques is closed');
-    await expect(topic.getByTestId('blocker')).toContainText('Foundations Gate');
-    // Its recipe is already covered — only the gate stands in the way.
-    await expect(topic.getByTestId('recipe').first()).toContainText('Scan, then search');
+    await expect(topic).toHaveAttribute('data-state', 'tier_closed');
+    await expect(topic).toContainText('Halve the search space');
 
     const gate = page.getByTestId('gate-core-techniques');
-    await expect(gate.getByTestId('gate-state')).toHaveText('Open to you');
+    await expect(gate).toHaveAttribute('data-state', 'eligible');
+    await expect(gate).toContainText('Solve 3 of 4 in 45 min');
     await gate.getByTestId('start-gate').click();
     await page.getByTestId('confirm-start-gate').click();
     await page.waitForURL(/\/map\/gates\/[^/]+$/, { timeout: 30_000 });
@@ -137,9 +149,11 @@ test('sign-up → solve → submit → unlock', async ({ page }) => {
     await expect(page.getByTestId('gate-result')).toContainText('Passed — Core Techniques is open', { timeout: 30_000 });
   });
 
-  await test.step('unlock Binary Search with a recipe and see it open', async () => {
+  await test.step('the map says Binary Search is ready to unlock; unlock it with a recipe and see it open', async () => {
     await page.goto('/map');
     const topic = page.getByTestId('topic-binary-search');
+    // the hero still has problems to offer, so the one line under it carries the news
+    await expect(page.getByTestId('map-milestone')).toContainText('Binary Search is ready to unlock');
     await expect(topic.getByTestId('topic-state')).toHaveText('Ready to unlock');
     await topic.getByTestId('unlock-button').click();
     const dialog = page.getByRole('alertdialog', { name: 'Unlock Binary Search?' });
@@ -150,11 +164,13 @@ test('sign-up → solve → submit → unlock', async ({ page }) => {
     await expect(spend).toContainText('Two Pointers');
     await dialog.getByTestId('confirm-unlock').click();
     await expect(page.getByText('Binary Search unlocked')).toBeVisible({ timeout: 30_000 });
-    await expect(topic.getByTestId('topic-state')).toHaveText('Unlocked');
+    await expect(page.getByText(/Its problems are now open\./)).toBeVisible();
+    await expect(topic).toHaveAttribute('data-state', 'unlocked');
     await expect(topic).toContainText('Unlocked with “Scan, then search”');
     await expect(tokenChip(page)).toHaveText('0');
+    await expect(page.getByTestId('map-milestone')).toHaveCount(0); // nothing is ready to unlock any more
 
-    // Its questions open with it: the card lists them now, and they open in the editor.
+    // Its questions open with it: the row shows them now (it opened itself), and they open in the editor.
     await topic.getByRole('list', { name: 'Binary Search problems' }).getByRole('link', { name: 'Binary Search', exact: true }).click();
     await expect(page).toHaveURL(/\/problems\/binary-search$/);
     await waitForEditor(page);

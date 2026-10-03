@@ -5,22 +5,25 @@ import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
 /**
- * The tier map's hero and the art on its cards (components/Map/MapHero.tsx,
- * TopicThumb.tsx, components/TopicArt): the page features ONE topic — the
+ * The tier map's hero, the quiet page around it and the art on its rows
+ * (components/Map/*, components/TopicArt): the page features ONE topic — the
  * learner's next up, picked by lib/server/featuredTopic.ts — as animated art
  * with its name, caption, "n/m solved" and the page's one primary button,
  * whose label and target follow where the learner is (start, continue,
- * unlock, all done). Cards show their topic's art as a thumbnail that
- * animates only for an unlocked topic, only while it is on screen, and is a
- * dimmed still poster otherwise; the scenes load lazily, so the page itself
- * carries just the hero's.
+ * unlock, all done). Under it, only when there is one, a single milestone line
+ * (lib/server/mapMilestone.ts); while nothing is solved, a dismissible
+ * first-run card; then the tiers — an open tier in full, a closed one as ONE
+ * collapsed panel that opens (and opens for a link into it) to its gate and
+ * topics. Topic rows show their art as a still poster — only the hero moves —
+ * and load their scenes lazily, so the page itself carries just the hero's.
  *
  * Needs the seeded content in the app's database (DATABASE_URL, else
  * web/.env.local — export it for this process when pointing at a scratch
- * database). Creates its own learners and removes them — all but one: the
- * "ready" learner holds tokens, and the token ledger is append-only (no
- * DELETE, and its rows keep the user), so that learner is kept between runs
- * (e2e-map-ready@test.dev) and topped up instead of created again.
+ * database). Creates its own learners and removes them — all but two: the
+ * "ready" and "nudge" learners hold tokens, and the token ledger is
+ * append-only (no DELETE, and its rows keep the user), so those learners are
+ * kept between runs (e2e-map-ready@test.dev, e2e-map-nudge@test.dev) and
+ * topped up instead of created again.
  */
 
 function envValue(key: string): string | undefined {
@@ -36,17 +39,40 @@ function envValue(key: string): string | undefined {
 const AXE_URL = 'https://cdnjs.cloudflare.com/ajax/libs/axe-core/4.10.2/axe.min.js';
 const prisma = new PrismaClient({ datasourceUrl: envValue('DATABASE_URL') });
 
-type Kind = 'fresh' | 'midway' | 'ready' | 'unlocked' | 'done';
+type Kind = 'fresh' | 'midway' | 'ready' | 'unlocked' | 'done' | 'gate' | 'running' | 'stuck' | 'nudge' | 'solving';
 type Learner = { id: string; email: string; password: string };
 const learners = {} as Record<Kind, Learner>;
 
 const hero = (page: Page) => page.getByTestId('map-hero');
 const card = (page: Page, slug: string) => page.getByTestId(`topic-${slug}`);
+const tier = (page: Page, slug: string) => page.getByTestId(`tier-${slug}`);
 const cardStage = (page: Page, slug: string) => card(page, slug).locator('[data-topic]');
 const heroStage = (page: Page) => hero(page).locator('[data-topic]');
+const milestone = (page: Page) => page.getByTestId('map-milestone');
+const firstRun = (page: Page) => page.getByTestId('first-run');
+const tokenChip = (page: Page) => page.getByRole('link', { name: /tokens? — open the tier map$/ });
+const TOPIC_SLUGS = ['arrays-hashing', 'two-pointers', 'stack', 'binary-search', 'sliding-window', 'recursion', 'sorting', 'graphs', 'dynamic-programming', 'heaps-greedy'];
+/** Every picture on a topic row or in a closed tier's preview (not the hero's). */
+const POSTERS = '[data-testid^="topic-"] [data-topic], [data-testid^="tier-"] [data-topic]';
+
+/** Opens a topic row's disclosure (its problems, or what blocks it). */
+async function openRow(page: Page, slug: string) {
+  const d = card(page, slug).locator(':scope > details');
+  if ((await d.getAttribute('open')) === null) await d.locator(':scope > summary').click();
+  await expect(d).toHaveAttribute('open', '');
+}
+
+/** Opens every panel and row on the page at once (to look at all of it). */
+async function openEverything(page: Page) {
+  await page.evaluate(() => document.querySelectorAll('details').forEach((d) => ((d as HTMLDetailsElement).open = true)));
+}
 
 async function signIn(page: Page, kind: Kind) {
   const l = learners[kind];
+  // a test that visits the map as several learners in turn starts each from a signed-out browser (the theme cookie stays): leave the
+  // page first, or its own background requests could write the previous learner's session cookie back over the new one
+  if (page.url() !== 'about:blank') await page.goto('about:blank');
+  await page.context().clearCookies({ name: /^(__Secure-)?authjs\./ });
   const ip = `10.${[0, 0, 0].map(() => Math.floor(Math.random() * 250) + 1).join('.')}`;
   const { csrfToken } = await (await page.request.get('/api/auth/csrf')).json();
   await page.request.post('/api/auth/callback/credentials', {
@@ -69,15 +95,15 @@ async function setTheme(page: Page, theme: 'dark' | 'light') {
   await page.context().addCookies([{ name: 'cm-theme', value: theme, url: base }]);
 }
 
-/** Play states of the CSS animations inside the first element matching `selector` (the stage itself counts: its dot grid drifts). */
+/** Play states of the CSS animations inside the elements matching `selector` (the stage itself counts: its dot grid drifts). */
 async function animationsIn(page: Page, selector: string): Promise<{ total: number; running: number; paused: number }> {
   return page.evaluate((sel) => {
-    const root = document.querySelector(sel);
-    if (!root) return { total: -1, running: 0, paused: 0 };
+    const roots = [...document.querySelectorAll(sel)];
+    if (roots.length === 0) return { total: -1, running: 0, paused: 0 };
     // CSS animations only: the lazily loaded scene's fade-in is a transition, which getAnimations() lists too
     const all = document.getAnimations().filter((a) => {
       const t = (a.effect as KeyframeEffect | null)?.target as Element | null;
-      return a instanceof CSSAnimation && t && root.contains(t);
+      return a instanceof CSSAnimation && t && roots.some((r) => r.contains(t));
     });
     return { total: all.length, running: all.filter((a) => a.playState === 'running').length, paused: all.filter((a) => a.playState === 'paused').length };
   }, selector);
@@ -97,9 +123,36 @@ async function axeViolations(page: Page) {
   });
 }
 
+/** The font sizes of the text on the page (inside <main>: the top bar belongs to the layout), with a sample of each. Text in a closed panel is not on screen and is left out. */
+async function fontSizes(page: Page): Promise<{ size: number; sample: string }[]> {
+  return page.evaluate(() => {
+    const root = document.querySelector('main')!;
+    const seen = new Map<number, string>();
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+      const text = n.nodeValue?.trim();
+      const el = n.parentElement;
+      if (!text || !el || el.closest('.sr-only, svg')) continue;
+      let closed = false;
+      for (let e: Element | null = el; e && e !== root; e = e.parentElement) {
+        const p = e.parentElement;
+        if (p instanceof HTMLDetailsElement && !p.open && e.tagName !== 'SUMMARY') closed = true;
+      }
+      const cs = getComputedStyle(el);
+      const r = el.getBoundingClientRect();
+      if (closed || cs.display === 'none' || cs.visibility === 'hidden' || r.width < 1 || r.height < 1) continue;
+      const size = parseFloat(cs.fontSize);
+      if (!seen.has(size)) seen.set(size, text.slice(0, 30));
+    }
+    return [...seen.entries()].map(([size, sample]) => ({ size, sample })).sort((a, b) => a.size - b.size);
+  });
+}
+
 test.describe.configure({ mode: 'serial' });
 
 const READY_EMAIL = 'e2e-map-ready@test.dev';
+const NUDGE_EMAIL = 'e2e-map-nudge@test.dev';
+let gateId = '';
 
 test.beforeAll(async () => {
   const run = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
@@ -111,14 +164,16 @@ test.beforeAll(async () => {
     learners[kind] = { id: u.id, email: u.email, password };
     return u.id;
   };
-  const [midway, unlocked, done] = await Promise.all([mk('midway'), mk('unlocked'), mk('done'), mk('fresh')]);
-  // the one learner that is kept: it holds tokens (see the header), so it is found again by its email
-  const readyPassword = 'e2e-map-ready-pw';
-  const readyUser =
-    (await prisma.user.findUnique({ where: { email: READY_EMAIL } })) ??
-    (await prisma.user.create({ data: { email: READY_EMAIL, handle: 'e2e_map_ready', name: 'Map Ready E2E', passwordHash: await bcrypt.hash(readyPassword, 4) } }));
-  learners.ready = { id: readyUser.id, email: READY_EMAIL, password: readyPassword };
-  const ready = readyUser.id;
+  const [midway, unlocked, done, gate, running, stuck] = await Promise.all([mk('midway'), mk('unlocked'), mk('done'), mk('gate'), mk('running'), mk('stuck'), mk('fresh'), mk('solving')]);
+  // the two learners that are kept: they hold tokens (see the header), so each is found again by its email
+  const keep = async (kind: 'ready' | 'nudge', email: string, handle: string, name: string) => {
+    const password = `e2e-map-${kind}-pw`;
+    const user = (await prisma.user.findUnique({ where: { email } })) ?? (await prisma.user.create({ data: { email, handle, name, passwordHash: await bcrypt.hash(password, 4) } }));
+    learners[kind] = { id: user.id, email, password };
+    return user.id;
+  };
+  const ready = await keep('ready', READY_EMAIL, 'e2e_map_ready', 'Map Ready E2E');
+  const nudge = await keep('nudge', NUDGE_EMAIL, 'e2e_map_nudge', 'Map Nudge E2E');
 
   const questions = await prisma.question.findMany({
     where: { status: 'published' },
@@ -129,21 +184,39 @@ test.beforeAll(async () => {
   const topic = (slug: string) => prisma.topic.findUniqueOrThrow({ where: { slug }, select: { id: true, tierId: true } });
   const sub = (userId: string, questionId: string, status: 'OK' | 'WA') =>
     ({ userId, kind: 'submit' as const, language: 'python' as const, code: 'pass', totalTests: 1, questionId, status, totalPassed: status === 'OK' ? 1 : 0, runtimeUs: 400n });
-  const grant = (userId: string, topicId: string, amount: number) =>
-    prisma.tokenLedger.create({ data: { userId, topicId, amount, sourceDifficulty: 'Easy', reason: 'admin', refType: 'admin', refId: `e2e-map-ready-${topicId}` } });
+  const grant = (userId: string, topicId: string, amount: number, key: string) =>
+    prisma.tokenLedger.create({ data: { userId, topicId, amount, sourceDifficulty: 'Easy', reason: 'admin', refType: 'admin', refId: `e2e-map-${key}-${topicId}` } });
+  const theGate = await prisma.gate.findFirstOrThrow({ where: { tier: { slug: 'core-techniques' } }, select: { id: true } });
+  gateId = theGate.id;
 
   // midway: Two Sum solved, Valid Anagram tried and failed
   await prisma.submission.createMany({ data: [sub(midway, idOf('two-sum'), 'OK'), sub(midway, idOf('valid-anagram'), 'WA')] });
 
-  // ready: every problem open in tier 0 solved, the Foundations gate passed (tier 1 open) and tokens for one recipe of Binary Search
+  // gate: one of the Foundations Gate's four problems solved — the gate is open to them
+  await prisma.submission.createMany({ data: [sub(gate, idOf('contains-duplicate'), 'OK')] });
+
+  // running: the same, and a gate attempt under way (it has its own banner, so no milestone)
+  await prisma.submission.createMany({ data: [sub(running, idOf('contains-duplicate'), 'OK')] });
+  await prisma.gateAttempt.create({ data: { userId: running, gateId: theGate.id, deadlineAt: new Date(Date.now() + 40 * 60_000) } });
+
+  // stuck: every problem open in tier 0 solved, no tokens, the gate not taken: nothing left to start, every recipe short
+  await prisma.submission.createMany({ data: byTier0.map((q) => sub(stuck, q.id, 'OK')) });
+
+  // ready / nudge: tier 1 is open (the gate passed), tokens for one recipe of Binary Search, and the tier-0 problems solved — all of them
+  // for "ready" (the hero offers the unlock), all but Product of Array Except Self for "nudge" (the hero still has a problem to start, so the
+  // ready topic gets the milestone line)
   const bs = await topic('binary-search');
-  await prisma.unlock.upsert({ where: { userId_kind_refId: { userId: ready, kind: 'tier', refId: bs.tierId } }, create: { userId: ready, kind: 'tier', refId: bs.tierId }, update: {} });
-  const solvedBefore = new Set((await prisma.submission.findMany({ where: { userId: ready, status: 'OK' }, select: { questionId: true } })).map((r) => r.questionId));
-  await prisma.submission.createMany({ data: byTier0.filter((q) => !solvedBefore.has(q.id)).map((q) => sub(ready, q.id, 'OK')) });
-  if ((await prisma.tokenLedger.count({ where: { userId: ready } })) === 0) {
-    await grant(ready, (await topic('arrays-hashing')).id, 2);
-    await grant(ready, (await topic('two-pointers')).id, 1);
-  }
+  const keepSolved = async (userId: string, key: string, skip: string[]) => {
+    await prisma.unlock.upsert({ where: { userId_kind_refId: { userId, kind: 'tier', refId: bs.tierId } }, create: { userId, kind: 'tier', refId: bs.tierId }, update: {} });
+    const solvedBefore = new Set((await prisma.submission.findMany({ where: { userId, status: 'OK' }, select: { questionId: true } })).map((r) => r.questionId));
+    await prisma.submission.createMany({ data: byTier0.filter((q) => !skip.includes(q.slug) && !solvedBefore.has(q.id)).map((q) => sub(userId, q.id, 'OK')) });
+    if ((await prisma.tokenLedger.count({ where: { userId } })) === 0) {
+      await grant(userId, (await topic('arrays-hashing')).id, 2, key);
+      await grant(userId, (await topic('two-pointers')).id, 1, key);
+    }
+  };
+  await keepSolved(ready, 'ready', []);
+  await keepSolved(nudge, 'nudge', ['product-of-array-except-self']);
 
   // unlocked: tier 1 open and Binary Search unlocked, one tier-0 problem solved and one tried
   const recipe = await prisma.unlockRecipe.findFirstOrThrow({ where: { topicId: bs.id }, orderBy: { ord: 'asc' } });
@@ -160,7 +233,7 @@ test.beforeAll(async () => {
 });
 
 test.afterAll(async () => {
-  const ids = Object.entries(learners).filter(([kind]) => kind !== 'ready').map(([, l]) => l.id);
+  const ids = Object.entries(learners).filter(([kind]) => kind !== 'ready' && kind !== 'nudge').map(([, l]) => l.id);
   await prisma.user.deleteMany({ where: { id: { in: ids } } });
   await prisma.$disconnect();
 });
@@ -177,6 +250,7 @@ test.describe('the hero features the learner’s next topic', () => {
     await expect(hero(page).getByTestId('map-hero-progress')).toContainText(/^0\/\d+ solved$/);
 
     // the button is the first problem of that topic's list, in curriculum order
+    await openRow(page, 'arrays-hashing');
     const first = card(page, 'arrays-hashing').getByRole('list', { name: 'Arrays & Hashing problems' }).getByRole('link').first();
     const firstTitle = (await first.innerText()).split('\n')[0].trim();
     const cta = page.getByTestId('map-hero-cta');
@@ -197,7 +271,7 @@ test.describe('the hero features the learner’s next topic', () => {
     await expect(hero(page).getByRole('link')).toHaveCount(1); // one clear action
   });
 
-  test('with everything open solved and a recipe affordable, the button unlocks the topic and lands on its card', async ({ page }) => {
+  test('with everything open solved and a recipe affordable, the button unlocks the topic and lands on its row', async ({ page }) => {
     await openMap(page, 'ready');
     await expect(hero(page)).toHaveAttribute('data-reason', 'unlock');
     await expect(hero(page)).toHaveAttribute('data-topic', 'binary-search');
@@ -210,12 +284,15 @@ test.describe('the hero features the learner’s next topic', () => {
     await expect(card(page, 'binary-search').getByTestId('unlock-button')).toBeVisible();
   });
 
-  test('once the learner has unlocked a topic the hero still follows the curriculum, and the new card plays', async ({ page }) => {
+  test('once the learner has unlocked a topic the hero still follows the curriculum, and the new row is just a row', async ({ page }) => {
     await openMap(page, 'unlocked');
     await expect(hero(page)).toHaveAttribute('data-reason', 'continue');
     await expect(hero(page)).toHaveAttribute('data-topic', 'arrays-hashing');
-    await expect(page.getByTestId('map-tokens')).toHaveText('0');
-    await expect(card(page, 'binary-search').getByTestId('topic-state')).toHaveText('Unlocked');
+    await expect(tokenChip(page)).toHaveText('0');
+    // an unlocked topic says nothing about being unlocked — its row shows its progress
+    await expect(card(page, 'binary-search')).toHaveAttribute('data-state', 'unlocked');
+    await expect(card(page, 'binary-search').getByTestId('topic-state')).toHaveCount(0);
+    await expect(card(page, 'binary-search').getByTestId('topic-problems')).toHaveText(/^0\/\d+ solved$/);
   });
 
   test('when every topic is open and every problem solved it congratulates, on the last topic’s art', async ({ page }) => {
@@ -229,22 +306,288 @@ test.describe('the hero features the learner’s next topic', () => {
     await expect(page).toHaveURL(/\/submissions$/);
   });
 
-  test('the totals are compact chips, one h1 stays small, and the totals keep their test id', async ({ page }) => {
+  test('the header is one small h1 and one quiet line of progress; the token total is in the top bar, once', async ({ page }) => {
     await openMap(page, 'ready');
-    const chips = page.getByRole('list', { name: 'Your progress' }).getByRole('listitem');
-    await expect(chips).toHaveCount(3);
-    await expect(chips.nth(0)).toHaveText('3 tokens');
-    await expect(chips.nth(1)).toHaveText(/^\d+\/10 topics unlocked$/);
-    await expect(chips.nth(2)).toHaveText('2/3 tiers open');
-    await expect(page.getByTestId('map-tokens')).toHaveText('3');
+    await expect(page.getByTestId('map-progress')).toHaveText(/^3\/10 topics unlocked · 2\/3 tiers open$/);
+    await expect(page.getByRole('list', { name: 'Your progress' })).toHaveCount(0); // the three chips are gone
+    await expect(page.getByTestId('map-tokens')).toHaveCount(0); // so is the second token total
+    await expect(tokenChip(page)).toHaveText('3');
+    await expect(page.getByRole('main').getByText(/\btokens?\b/i).filter({ hasText: /^\d+ tokens?$/ })).toHaveCount(0); // none repeated as a headline number
     const size = await page.getByRole('heading', { level: 1 }).evaluate((h) => parseFloat(getComputedStyle(h).fontSize));
     expect(size).toBeLessThanOrEqual(13);
-    const chipHeight = await chips.first().evaluate((el) => el.getBoundingClientRect().height);
-    expect(chipHeight).toBeLessThan(34);
+    const line = await page.getByTestId('map-progress').evaluate((el) => ({ size: parseFloat(getComputedStyle(el).fontSize), height: el.getBoundingClientRect().height }));
+    expect(line.size).toBeGreaterThanOrEqual(12);
+    expect(line.height).toBeLessThan(24);
+  });
+
+  test('a token count reads "1 token", not "1 tokens"', async ({ page }) => {
+    await openMap(page, 'ready');
+    // Two Pointers holds exactly one token; Arrays & Hashing two
+    await expect(card(page, 'two-pointers').getByTestId('topic-problems')).toContainText(/ · 1 token$/);
+    await expect(card(page, 'arrays-hashing').getByTestId('topic-problems')).toContainText(/ · 2 tokens$/);
+    expect(await page.getByRole('main').innerText()).not.toMatch(/\b1 tokens\b/);
   });
 });
 
-test.describe('the hero art and the card thumbnails', () => {
+test.describe('the milestone line', () => {
+  test('a fresh learner has none: nothing is said that the hero does not', async ({ page }) => {
+    await openMap(page, 'fresh');
+    await expect(milestone(page)).toHaveCount(0);
+  });
+
+  test('an open gate with a problem of it solved gets one line under the hero, and its link opens the gate', async ({ page }) => {
+    await openMap(page, 'gate');
+    const line = milestone(page);
+    await expect(line).toHaveAttribute('data-kind', 'gate');
+    await expect(line).toContainText('Foundations Gate is open');
+    await expect(line.getByRole('link', { name: 'View Foundations Gate' })).toHaveAttribute('href', `#gate-${gateId}`);
+
+    // one line, under the hero — never a second hero — and the hero is untouched: its button is still a problem
+    const [lineBox, heroBox] = [await line.boundingBox(), await hero(page).boundingBox()];
+    expect(lineBox!.y).toBeGreaterThanOrEqual(heroBox!.y + heroBox!.height);
+    expect(lineBox!.height).toBeLessThan(64);
+    await expect(hero(page)).toHaveAttribute('data-reason', /^(start|continue)$/);
+    await expect(hero(page).getByRole('link')).toHaveCount(1);
+
+    // the tier it opens is a closed panel; the link opens it and shows the gate
+    await expect(tier(page, 'core-techniques')).not.toHaveAttribute('open', '');
+    await line.getByRole('link').click();
+    await expect(page).toHaveURL(new RegExp(`#gate-${gateId}$`));
+    await expect(tier(page, 'core-techniques')).toHaveAttribute('open', '');
+    await expect(page.getByTestId('gate-core-techniques')).toBeInViewport();
+    await expect(page.getByTestId('start-gate')).toBeVisible();
+  });
+
+  test('a topic that is ready to unlock is named under a hero that is about a problem', async ({ page }) => {
+    await openMap(page, 'nudge');
+    await expect(hero(page)).toHaveAttribute('data-reason', 'start');
+    await expect(page.getByTestId('map-hero-cta')).toHaveText('Start: Product of Array Except Self');
+    const line = milestone(page);
+    await expect(line).toHaveAttribute('data-kind', 'unlock');
+    await expect(line).toContainText('Binary Search is ready to unlock');
+    await line.getByRole('link', { name: 'Unlock Binary Search' }).click();
+    await expect(page).toHaveURL(/\/map#topic-binary-search$/);
+    await expect(card(page, 'binary-search')).toBeInViewport();
+    await expect(card(page, 'binary-search').getByTestId('unlock-button')).toBeVisible();
+  });
+
+  test('it says nothing when the hero already says it, or when an attempt is running (it has its banner)', async ({ page }) => {
+    await openMap(page, 'ready'); // the hero is "Ready to unlock · Binary Search"
+    await expect(hero(page)).toHaveAttribute('data-reason', 'unlock');
+    await expect(milestone(page)).toHaveCount(0);
+
+    await openMap(page, 'running');
+    await expect(page.getByTestId('running-attempt')).toBeVisible();
+    await expect(milestone(page)).toHaveCount(0);
+  });
+
+  test('beside a hero that is short of tokens it still names the open gate', async ({ page }) => {
+    await openMap(page, 'stuck');
+    await expect(hero(page)).toHaveAttribute('data-reason', 'missing');
+    await expect(milestone(page)).toHaveAttribute('data-kind', 'gate');
+    await expect(milestone(page)).toContainText('Foundations Gate is open');
+  });
+
+  test('a learner who has done it all gets none', async ({ page }) => {
+    await openMap(page, 'done');
+    await expect(milestone(page)).toHaveCount(0);
+  });
+});
+
+test.describe('the first-run card', () => {
+  test('a learner with nothing solved sees three short steps — rendered by the server — and “Got it” puts them away for good', async ({ page }) => {
+    await openMap(page, 'fresh');
+    const card1 = firstRun(page);
+    await expect(card1).toBeVisible();
+    await expect(card1.getByRole('listitem')).toHaveCount(3);
+    await expect(card1.getByRole('listitem').nth(0)).toContainText('Solve problems');
+    await expect(card1.getByRole('listitem').nth(1)).toContainText('Earn tokens — 1, 2 or 3 for Easy, Medium, Hard');
+    await expect(card1.getByRole('listitem').nth(2)).toContainText('Spend them to unlock topics and open tiers');
+    // above the tiers, under the hero
+    const [cardBox, heroBox, tierBox] = [await card1.boundingBox(), await hero(page).boundingBox(), await tier(page, 'foundations').boundingBox()];
+    expect(cardBox!.y).toBeGreaterThanOrEqual(heroBox!.y + heroBox!.height);
+    expect(cardBox!.y + cardBox!.height).toBeLessThanOrEqual(tierBox!.y);
+    // the server sends it: no flash of a card that arrives (and shifts the page) after the page is up
+    expect(await (await page.request.get('/map')).text()).toContain('data-testid="first-run"');
+
+    await card1.getByRole('button', { name: 'Got it' }).click();
+    await expect(card1).toHaveCount(0);
+    await expect(page.getByTestId('map-hero-cta')).toBeFocused(); // focus does not fall to the page when the button leaves
+
+    // remembered — after a reload, and in the very HTML the server sends next
+    await page.reload();
+    await expect(hero(page)).toBeVisible();
+    await expect(firstRun(page)).toHaveCount(0);
+    expect(await (await page.request.get('/map')).text()).not.toContain('data-testid="first-run"');
+  });
+
+  test('a learner who has solved a problem does not see it', async ({ page }) => {
+    await openMap(page, 'midway');
+    await expect(firstRun(page)).toHaveCount(0);
+    expect(await (await page.request.get('/map')).text()).not.toContain('data-testid="first-run"');
+  });
+
+  test('it is gone with the first solve, whether or not it was dismissed', async ({ page }) => {
+    await openMap(page, 'solving');
+    await expect(firstRun(page)).toBeVisible();
+    const q = await prisma.question.findUniqueOrThrow({ where: { slug: 'two-sum' }, select: { id: true } });
+    await prisma.submission.create({ data: { userId: learners.solving.id, kind: 'submit', language: 'python', code: 'pass', totalTests: 1, questionId: q.id, status: 'OK', totalPassed: 1, runtimeUs: 400n } });
+    await page.reload();
+    await expect(hero(page)).toBeVisible();
+    await expect(firstRun(page)).toHaveCount(0);
+  });
+
+  test('a learner who dismissed it on another visit is not shown it again (the cookie, set before the page loads)', async ({ page }) => {
+    await signIn(page, 'fresh');
+    const base = test.info().project.use.baseURL ?? 'http://localhost:4001';
+    await page.context().addCookies([{ name: 'cm-first-run', value: 'hide', url: base }]);
+    await page.goto('/map', { waitUntil: 'load' });
+    await expect(hero(page)).toBeVisible();
+    await expect(firstRun(page)).toHaveCount(0);
+  });
+});
+
+test.describe('closed tiers', () => {
+  test('each is one collapsed panel: its name, why it is closed, and its topics as a quiet row of names — and nothing else', async ({ page }) => {
+    await openMap(page, 'fresh');
+    for (const [slug, title, reason, names] of [
+      ['core-techniques', 'Core Techniques', 'Opens after the Foundations Gate', ['Binary Search', 'Sliding Window', 'Recursion & Backtracking', 'Sorting']],
+      ['graphs-optimization', 'Graphs & Optimization', 'Opens after the Core Techniques Gate', ['Graphs', 'Dynamic Programming', 'Heaps & Greedy']],
+    ] as const) {
+      const panel = tier(page, slug);
+      expect(await panel.evaluate((el) => el.tagName)).toBe('DETAILS');
+      await expect(panel).not.toHaveAttribute('open', '');
+      await expect(panel.getByRole('heading', { level: 2 })).toContainText(title);
+      await expect(panel.getByTestId('tier-state')).toHaveText('Locked');
+      await expect(panel).toContainText(reason);
+      for (const name of names) await expect(panel.locator(':scope > summary').getByText(name, { exact: true })).toBeVisible();
+      // collapsed: no gate, no topic rows, no rules text
+      await expect(page.getByTestId(`gate-${slug}`)).toBeHidden();
+      await expect(card(page, TOPIC_SLUGS[names[0] === 'Binary Search' ? 3 : 7])).toBeHidden();
+    }
+    // the rules are said once, where they belong — not on every topic
+    await expect(page.getByText('What’s blocking you')).toHaveCount(0);
+    await expect(page.getByText(/unlock the topic to open them/)).toHaveCount(0);
+  });
+
+  test('a click, Enter or Space on the summary opens it; the panel then holds the gate in one line and compact topics', async ({ page }) => {
+    await openMap(page, 'fresh');
+    const panel = tier(page, 'core-techniques');
+    const summary = panel.locator(':scope > summary');
+    await summary.focus();
+    await page.keyboard.press('Enter');
+    await expect(panel).toHaveAttribute('open', '');
+    await page.keyboard.press('Space');
+    await expect(panel).not.toHaveAttribute('open', '');
+    await summary.click();
+    await expect(panel).toHaveAttribute('open', '');
+
+    // the gate: one line and one button, its problems not repeated as chips
+    const gate = page.getByTestId('gate-core-techniques');
+    await expect(gate).toBeVisible();
+    await expect(gate).toHaveAttribute('data-state', 'eligible');
+    await expect(gate).toContainText('Foundations Gate');
+    await expect(gate).toContainText('Solve 3 of 4 in 45 min');
+    await expect(gate.getByRole('button')).toHaveCount(1);
+    await expect(gate.getByTestId('start-gate')).toBeVisible();
+    await expect(gate).not.toContainText('Contains Duplicate');
+    expect((await gate.boundingBox())!.height).toBeLessThan(64);
+    // …they are in the confirmation, with the cooldown
+    await gate.getByTestId('start-gate').click();
+    const dialog = page.getByRole('alertdialog', { name: 'Start the Foundations Gate?' });
+    await expect(dialog).toContainText('Contains Duplicate');
+    await expect(dialog).toContainText('cools down for 12 hours');
+    await dialog.getByRole('button', { name: 'Not yet' }).click();
+    await expect(dialog).toBeHidden();
+
+    // compact topics: a poster, a name, a line about it and how many problems — no rules, no recipes, no state label on each
+    for (const slug of ['binary-search', 'sliding-window', 'recursion', 'sorting']) {
+      const c = card(page, slug);
+      await expect(c).toBeVisible();
+      await expect(c).toHaveAttribute('data-state', 'tier_closed');
+      await expect(c.getByTestId('topic-problems')).toHaveText(/^\d+ problems$/);
+      await expect(c.getByTestId('topic-state')).toHaveCount(0);
+      await expect(c.locator('details')).toHaveCount(0);
+      await expect(c.getByTestId('recipe')).toHaveCount(0);
+    }
+    await expect(panel.getByText('What’s blocking you')).toHaveCount(0);
+  });
+
+  test('a link to anything inside a closed panel opens it, on load and on a click: a topic, a tier, a gate', async ({ page }) => {
+    await openMap(page, 'fresh');
+    await page.goto('/map#topic-sorting', { waitUntil: 'load' });
+    await expect(tier(page, 'core-techniques')).toHaveAttribute('open', '');
+    await expect(card(page, 'sorting')).toBeInViewport();
+
+    await page.goto('/map#tier-graphs-optimization', { waitUntil: 'load' });
+    await expect(tier(page, 'graphs-optimization')).toHaveAttribute('open', '');
+    await expect(tier(page, 'graphs-optimization')).toBeInViewport();
+
+    await page.goto(`/map#gate-${gateId}`, { waitUntil: 'load' });
+    await expect(tier(page, 'core-techniques')).toHaveAttribute('open', '');
+    await expect(page.getByTestId('gate-core-techniques')).toBeInViewport();
+
+    // an in-page link: "Also needs Sorting" on a composite problem, in a row that has to be opened first
+    await page.goto('/map', { waitUntil: 'load' });
+    await openRow(page, 'two-pointers');
+    await expect(tier(page, 'core-techniques')).not.toHaveAttribute('open', '');
+    await card(page, 'two-pointers').locator('li[data-slug="three-sum"]').getByRole('link', { name: 'Sorting' }).click();
+    await expect(page).toHaveURL(/#topic-sorting$/);
+    await expect(tier(page, 'core-techniques')).toHaveAttribute('open', '');
+    await expect(card(page, 'sorting')).toBeInViewport();
+
+    // the old link to a topic's problems lands on its row, with the problems showing
+    await page.goto('/problems?topic=two-pointers', { waitUntil: 'load' });
+    await expect(page).toHaveURL(/\/map#topic-two-pointers$/);
+    await expect(card(page, 'two-pointers')).toBeInViewport();
+    await expect(card(page, 'two-pointers').getByRole('list', { name: 'Two Pointers problems' })).toBeVisible();
+  });
+
+  test('the hero’s “See what’s missing” opens the panel that holds the topic, and lands on it', async ({ page }) => {
+    await openMap(page, 'stuck');
+    const cta = page.getByTestId('map-hero-cta');
+    await expect(cta).toHaveText('See what’s missing');
+    const slug = (await cta.getAttribute('href'))!.replace('#topic-', '');
+    await expect(card(page, slug)).toBeHidden();
+    await cta.click();
+    await expect(card(page, slug).locator('xpath=ancestor::details[1]')).toHaveAttribute('open', '');
+    await expect(card(page, slug)).toBeInViewport();
+  });
+
+  test('an open tier is shown in full, and a topic short of tokens says so in a line and keeps its detail one click away', async ({ page }) => {
+    await openMap(page, 'ready');
+    const t = tier(page, 'core-techniques');
+    expect(await t.evaluate((el) => el.tagName)).toBe('SECTION'); // not collapsible: it is open
+    await expect(t.getByTestId('tier-state')).toHaveText('Open');
+    for (const slug of ['binary-search', 'sliding-window', 'recursion', 'sorting']) await expect(card(page, slug)).toBeVisible();
+    // ready to unlock: the label and the button, nothing else
+    const ready = card(page, 'binary-search');
+    await expect(ready.getByTestId('topic-state')).toHaveText('Ready to unlock');
+    await expect(ready.getByTestId('unlock-button')).toBeVisible();
+    // short of tokens: one line; what blocks it and its recipes are in the row, closed
+    const short = card(page, 'sliding-window');
+    await expect(short.getByTestId('topic-state')).toHaveText('Locked');
+    await expect(short.getByTestId('topic-problems')).toHaveText('Needs 1 more token');
+    await expect(short.getByTestId('blocker')).toBeHidden();
+    await openRow(page, 'sliding-window');
+    await expect(short.getByTestId('blocker')).toContainText('Cheapest recipe');
+    await expect(short.getByTestId('recipe').first()).toBeVisible();
+  });
+
+  test('the whole status vocabulary is three labels — Open · Ready to unlock · Locked — and the old noise is gone', async ({ page }) => {
+    await openMap(page, 'ready');
+    const labels = await page.locator('[data-testid="tier-state"], [data-testid="topic-state"]').allTextContents();
+    expect(new Set(labels.map((l) => l.trim()))).toEqual(new Set(['Open', 'Ready to unlock', 'Locked']));
+    await openEverything(page);
+    const text = await page.getByRole('main').innerText();
+    expect(text).not.toMatch(/\bFree\b|Always open|Tier closed|Needs tokens|Not yet|Open to you|Cooling down|In progress/);
+    // no filled traffic-light difficulty pills: the rows say Easy, Medium, Hard as quiet text
+    const pills = await page.getByRole('main').locator('ol[aria-label$="problems"] li').first().locator('xpath=.//span[contains(@style,"border-radius")]').count();
+    expect(pills).toBe(0);
+  });
+});
+
+test.describe('the art: the hero moves, the rows are posters', () => {
   test('the hero draws the featured topic’s scene and loops; the art is decoration', async ({ page }) => {
     await openMap(page, 'midway');
     const stage = heroStage(page);
@@ -255,11 +598,29 @@ test.describe('the hero art and the card thumbnails', () => {
     await expect.poll(async () => (await animationsIn(page, '[data-testid="map-hero"] [data-topic]')).running).toBeGreaterThan(10);
   });
 
-  test('the page carries only the hero’s scene: the thumbnails are empty stages that load as they come near', async ({ page }) => {
+  test('every topic’s picture on the page is a still poster — in an open tier, a closed one and its preview — and nothing in them runs', async ({ page }) => {
+    await openMap(page, 'unlocked');
+    for (const slug of TOPIC_SLUGS) {
+      for (const stage of await cardStage(page, slug).all()) await expect(stage, `${slug}: a row's poster`).toHaveAttribute('data-motion', 'off');
+    }
+    const previews = page.locator('[data-testid^="tier-"] > summary [data-topic]');
+    expect(await previews.count()).toBe(3); // tier 2 is closed: its three topics
+    for (const stage of await previews.all()) await expect(stage).toHaveAttribute('data-motion', 'off');
+    // scroll through the page so every poster that can load has: still, none of them runs; the hero's loop does
+    await expect(cardStage(page, 'arrays-hashing').locator('svg')).toHaveCount(1);
+    await scrollMap(page, 100000);
+    await expect(previews.last().locator('svg')).toHaveCount(1);
+    await scrollMap(page, 0);
+    expect(await animationsIn(page, POSTERS), 'no poster runs an animation').toMatchObject({ running: 0, total: 0 });
+    await expect.poll(async () => (await animationsIn(page, '[data-testid="map-hero"] [data-topic]')).running).toBeGreaterThan(10);
+  });
+
+  test('the page carries only the hero’s scene: the posters are empty stages that load as they come near', async ({ page }) => {
     await openMap(page, 'unlocked');
     const html = await (await page.request.get('/map')).text();
     expect(html.match(/viewBox="0 0 320 180"/g)?.length, 'scene svgs in the page itself').toBe(1);
-    expect(html.match(/data-lazy=""/g)?.length, 'lazy slots (one per topic card)').toBe(10);
+    // a poster slot for each of the ten topics' rows, and one for each topic in the preview of a closed tier (tier 2: three)
+    expect(html.match(/data-lazy=""/g)?.length, 'lazy slots').toBe(13);
 
     const asked: string[] = [];
     page.on('request', (r) => {
@@ -270,8 +631,9 @@ test.describe('the hero art and the card thumbnails', () => {
     // nothing below the fold is fetched until it is near
     expect(asked, 'fetched before any scrolling').not.toContain('heaps-greedy');
     expect(asked).toContain('arrays-hashing');
+    const preview = tier(page, 'graphs-optimization').locator(':scope > summary [data-topic="heaps-greedy"]');
     await scrollMap(page, 100000);
-    await expect(cardStage(page, 'heaps-greedy').locator('svg')).toHaveCount(1);
+    await expect(preview.locator('svg')).toHaveCount(1);
     await scrollMap(page, 0);
     await page.waitForTimeout(300);
     expect(asked.filter((a) => a === 'arrays-hashing'), 'each scene is fetched once').toHaveLength(1);
@@ -291,57 +653,169 @@ test.describe('the hero art and the card thumbnails', () => {
     }
   });
 
-  test('an unlocked card plays while it is on screen and pauses when it is far off; a locked one is a still poster', async ({ page }) => {
-    await openMap(page, 'unlocked');
-    const playing = '[data-testid="topic-binary-search"] [data-topic]';
-    const locked = '[data-testid="topic-sliding-window"] [data-topic]';
-    await card(page, 'binary-search').scrollIntoViewIfNeeded();
-    await expect(cardStage(page, 'binary-search').locator('svg')).toHaveCount(1);
-    await expect(cardStage(page, 'binary-search')).not.toHaveAttribute('data-motion', 'off');
-    await expect.poll(async () => (await animationsIn(page, playing)).running, { message: 'the unlocked card in view runs its loop' }).toBeGreaterThan(10);
-
-    await card(page, 'sliding-window').scrollIntoViewIfNeeded();
-    await expect(cardStage(page, 'sliding-window').locator('svg')).toHaveCount(1);
-    await expect(cardStage(page, 'sliding-window')).toHaveAttribute('data-motion', 'off');
-    expect(await animationsIn(page, locked), 'a locked card is a poster: nothing runs').toMatchObject({ running: 0, total: 0 });
-    await expect(card(page, 'sliding-window').getByTestId('topic-state')).toHaveText('Needs tokens');
-
-    // far from the viewport the unlocked card holds its loop; back in view it plays on
-    await scrollMap(page, 0);
-    await expect.poll(async () => (await animationsIn(page, playing)).running, { message: 'held once far off screen' }).toBe(0);
-    expect((await animationsIn(page, playing)).paused).toBeGreaterThan(10);
-    await card(page, 'binary-search').scrollIntoViewIfNeeded();
-    await expect.poll(async () => (await animationsIn(page, playing)).running).toBeGreaterThan(10);
-  });
-
-  test('the state still reads on a poster: a lock, an open lock when it is ready, and the status pill for the name', async ({ page }) => {
+  test('a locked topic’s poster is dimmed, the picture adds no name of its own, and the state is read from the label next to it', async ({ page }) => {
     await openMap(page, 'ready');
-    for (const [slug, state, glyph] of [
-      ['binary-search', 'unlockable', true],
+    for (const [slug, state, dimmed] of [
+      ['binary-search', 'unlockable', false],
       ['sliding-window', 'needs_tokens', true],
-      ['graphs', 'tier_closed', true],
       ['arrays-hashing', 'unlocked', false],
     ] as const) {
       const c = card(page, slug);
       await expect(c).toHaveAttribute('data-state', state);
       const thumb = c.locator('div[aria-hidden="true"][data-state]');
       await expect(thumb).toHaveAttribute('data-state', state);
-      await expect(thumb.locator(':scope > span'), `${slug}: the glyph`).toHaveCount(glyph ? 1 : 0);
+      expect(await thumb.locator('[data-topic]').evaluate((el) => getComputedStyle(el).opacity !== '1'), `${slug}: dimmed`).toBe(dimmed);
+      await expect(thumb.locator(':scope > span'), `${slug}: no glyph on the picture`).toHaveCount(0);
       await expect(c.getByRole('heading', { level: 3 })).toBeVisible();
-      await expect(c.getByTestId('topic-state')).toBeVisible();
     }
-    // the picture adds no name of its own: the heading and the pill are what a screen reader gets
     expect(await card(page, 'binary-search').getByRole('img').count()).toBe(0);
   });
 
-  test('with reduced motion the hero and the cards are stills', async ({ page }) => {
+  test('with reduced motion the hero is a still too', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await openMap(page, 'unlocked');
-    await card(page, 'binary-search').scrollIntoViewIfNeeded();
-    await expect(cardStage(page, 'binary-search').locator('svg')).toHaveCount(1);
     await scrollMap(page, 0);
     expect((await animationsIn(page, '[data-testid="map-hero"] [data-topic]')).running).toBe(0);
-    expect((await animationsIn(page, '[data-testid="topic-binary-search"] [data-topic]')).running).toBe(0);
+    expect((await animationsIn(page, POSTERS)).running).toBe(0);
+  });
+});
+
+test.describe('the type scale', () => {
+  for (const kind of ['fresh', 'ready'] as const) {
+    test(`nothing on the page is set below 12 px or in capitals, and it uses at most eight sizes, everything open (${kind})`, async ({ page }) => {
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await openMap(page, kind);
+      for (const width of [1440, 375]) {
+        await page.setViewportSize({ width, height: 812 });
+        await page.waitForTimeout(150);
+        await openEverything(page);
+        const sizes = await fontSizes(page);
+        expect(Math.min(...sizes.map((s) => s.size)), `${kind} at ${width}: ${JSON.stringify(sizes)}`).toBeGreaterThanOrEqual(12);
+        expect(sizes.length, `${kind} at ${width}: ${JSON.stringify(sizes)}`).toBeLessThanOrEqual(8);
+        const upper = await page.getByRole('main').evaluate((main) => [...main.querySelectorAll('*')].filter((e) => getComputedStyle(e).textTransform === 'uppercase').length);
+        expect(upper, `${kind} at ${width}: text in capitals`).toBe(0);
+      }
+    });
+  }
+});
+
+test.describe('on a phone', () => {
+  test.use({ viewport: { width: 375, height: 812 }, hasTouch: true, isMobile: true });
+
+  test('the art stacks above the text, the button is full width and at least 44 px tall, and nothing scrolls sideways', async ({ page }) => {
+    await openMap(page, 'midway');
+    const art = await hero(page).locator('[data-topic]').boundingBox();
+    const heading = await page.getByTestId('map-hero-title').boundingBox();
+    const cta = await page.getByTestId('map-hero-cta').boundingBox();
+    const banner = await hero(page).boundingBox();
+    expect(art!.y + art!.height, 'the art ends before the title starts').toBeLessThanOrEqual(heading!.y);
+    expect(cta!.height).toBeGreaterThanOrEqual(44);
+    expect(cta!.width).toBeGreaterThan(banner!.width - 40);
+    expect(cta!.y + cta!.height, 'the button is in the first screen').toBeLessThanOrEqual(812);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
+    // the progress line and the h1 share the top of the page without wrapping into three lines
+    expect((await page.getByTestId('map-progress').boundingBox())!.height).toBeLessThan(40);
+  });
+
+  test('a fresh learner’s first screen is the hero and its button, the three steps stack, and rows, panels and problems are tap-sized', async ({ page }) => {
+    await openMap(page, 'fresh');
+    // first screen: the hero (with its button) is complete, and the steps start under it
+    expect((await page.getByTestId('map-hero-cta').boundingBox())!.y).toBeLessThan(812);
+    const steps = await firstRun(page).getByRole('listitem').evaluateAll((els) => els.map((e) => ({ top: Math.round(e.getBoundingClientRect().top), left: Math.round(e.getBoundingClientRect().left) })));
+    expect(steps.map((s) => s.top)).toEqual([...steps.map((s) => s.top)].sort((a, b) => a - b));
+    expect(new Set(steps.map((s) => s.top)).size, 'the steps stack: one per line').toBe(3);
+    expect(new Set(steps.map((s) => s.left)).size).toBe(1);
+    // a row: the picture, then the name, and what it says about it under the name
+    const title = await card(page, 'arrays-hashing').getByRole('heading', { level: 3 }).boundingBox();
+    const meta = await card(page, 'arrays-hashing').getByTestId('topic-problems').boundingBox();
+    expect(meta!.y).toBeGreaterThanOrEqual(title!.y + title!.height - 1);
+    for (const slug of ['arrays-hashing', 'two-pointers', 'stack']) {
+      expect((await card(page, slug).locator(':scope > details > summary').boundingBox())!.height, `${slug}: the row`).toBeGreaterThanOrEqual(44);
+    }
+    expect((await tier(page, 'core-techniques').locator(':scope > summary').boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    // a closed tier's preview is just the names on a phone: two short lines, no ragged stack of posters
+    await expect(tier(page, 'core-techniques').locator(':scope > summary [data-topic]').first()).toBeHidden();
+    expect((await tier(page, 'core-techniques').boundingBox())!.height).toBeLessThan(150);
+    // problems are tap-sized
+    await openRow(page, 'two-pointers');
+    for (const row of await card(page, 'two-pointers').locator('ol > li:not([data-locked])').all()) expect((await row.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  });
+
+  test('with every panel and row open, nothing scrolls sideways', async ({ page }) => {
+    for (const kind of ['fresh', 'ready'] as const) {
+      await openMap(page, kind);
+      await openEverything(page);
+      await page.waitForTimeout(200);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth), kind).toBeLessThanOrEqual(0);
+      expect(await page.evaluate(() => document.querySelector('main')!.scrollWidth - document.querySelector('main')!.clientWidth), `${kind}: main`).toBeLessThanOrEqual(0);
+    }
+  });
+});
+
+test.describe('console', () => {
+  test('the map logs no errors or warnings, no hydration mismatch, in any state (production build)', async ({ page }) => {
+    const logged: string[] = [];
+    page.on('console', (m) => {
+      if (m.type() === 'error' || m.type() === 'warning') logged.push(`${m.type()}: ${m.text().slice(0, 200)}`);
+    });
+    page.on('pageerror', (e) => logged.push(`pageerror: ${String(e).slice(0, 200)}`));
+    for (const kind of ['fresh', 'gate', 'ready', 'unlocked', 'running'] as const) {
+      await openMap(page, kind);
+      await page.waitForLoadState('networkidle').catch(() => undefined);
+      await openEverything(page);
+    }
+    await page.goto('/map#topic-sorting', { waitUntil: 'load' });
+    await page.waitForLoadState('networkidle').catch(() => undefined);
+    expect(logged).toEqual([]);
+  });
+});
+
+test.describe('accessibility', () => {
+  for (const theme of ['dark', 'light'] as const) {
+    test(`the map in each of its states has no serious axe violations, collapsed and with everything open (${theme})`, async ({ page }) => {
+      test.setTimeout(150_000);
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await setTheme(page, theme);
+      for (const kind of ['fresh', 'gate', 'ready', 'running', 'done'] as const) {
+        await openMap(page, kind);
+        await page.waitForLoadState('networkidle').catch(() => undefined);
+        expect(await axeViolations(page), `${kind} (${theme})`).toEqual([]);
+        await openEverything(page);
+        expect(await axeViolations(page), `${kind}, everything open (${theme})`).toEqual([]);
+        await expect(page.locator('h1')).toHaveCount(1);
+      }
+    });
+  }
+
+  test('on a phone too: collapsed and with everything open, in both themes', async ({ page }) => {
+    test.setTimeout(150_000);
+    await page.setViewportSize({ width: 375, height: 812 });
+    for (const theme of ['dark', 'light'] as const) {
+      await setTheme(page, theme);
+      for (const kind of ['fresh', 'ready'] as const) {
+        await openMap(page, kind);
+        await page.waitForLoadState('networkidle').catch(() => undefined);
+        expect(await axeViolations(page), `${kind} at 375 px (${theme})`).toEqual([]);
+        await openEverything(page);
+        expect(await axeViolations(page), `${kind} at 375 px, everything open (${theme})`).toEqual([]);
+      }
+    }
+  });
+
+  test('keyboard: the hero’s button comes first, a hash button moves to the row, the summaries are tab stops and Enter opens them', async ({ page }) => {
+    await openMap(page, 'ready');
+    await page.getByTestId('map-hero-cta').focus();
+    await expect(page.getByTestId('map-hero-cta')).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(page).toHaveURL(/#topic-binary-search$/);
+    await expect(card(page, 'binary-search')).toBeInViewport();
+
+    const row = card(page, 'sliding-window').locator(':scope > details > summary');
+    await row.focus();
+    await expect(row).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(card(page, 'sliding-window').locator(':scope > details')).toHaveAttribute('open', '');
+    await expect(card(page, 'sliding-window').getByTestId('blocker')).toBeVisible();
   });
 });
 
@@ -360,50 +834,5 @@ test.describe('the scenes’ route', () => {
     const anonymous = await playwright.request.newContext({ baseURL });
     expect((await anonymous.get('/api/topic-art/stack')).status()).toBe(401);
     await anonymous.dispose();
-  });
-});
-
-test.describe('on a phone', () => {
-  test.use({ viewport: { width: 375, height: 812 }, hasTouch: true, isMobile: true });
-
-  test('the art stacks above the text, the button is full width and at least 44 px tall, and nothing scrolls sideways', async ({ page }) => {
-    await openMap(page, 'midway');
-    const art = await hero(page).locator('[data-topic]').boundingBox();
-    const heading = await page.getByTestId('map-hero-title').boundingBox();
-    const cta = await page.getByTestId('map-hero-cta').boundingBox();
-    const banner = await hero(page).boundingBox();
-    expect(art!.y + art!.height, 'the art ends before the title starts').toBeLessThanOrEqual(heading!.y);
-    expect(cta!.height).toBeGreaterThanOrEqual(44);
-    expect(cta!.width).toBeGreaterThan(banner!.width - 40);
-    expect(cta!.y + cta!.height, 'the button is in the first screen').toBeLessThanOrEqual(812);
-    expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
-
-    const chips = await page.getByRole('list', { name: 'Your progress' }).getByRole('listitem').evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().top)));
-    expect(new Set(chips).size, 'the three chips share one line').toBe(1);
-  });
-});
-
-test.describe('accessibility', () => {
-  for (const theme of ['dark', 'light'] as const) {
-    test(`the hero in each of its states has no serious axe violations (${theme})`, async ({ page }) => {
-      test.setTimeout(90_000);
-      await page.setViewportSize({ width: 1440, height: 900 });
-      await setTheme(page, theme);
-      for (const kind of ['fresh', 'ready', 'done'] as const) {
-        await openMap(page, kind);
-        await page.waitForLoadState('networkidle').catch(() => undefined);
-        expect(await axeViolations(page), `${kind} (${theme})`).toEqual([]);
-        await expect(page.locator('h1')).toHaveCount(1);
-      }
-    });
-  }
-
-  test('keyboard: the button is the first thing the hero offers, and a hash button moves focus to the card', async ({ page }) => {
-    await openMap(page, 'ready');
-    await page.getByTestId('map-hero-cta').focus();
-    await expect(page.getByTestId('map-hero-cta')).toBeFocused();
-    await page.keyboard.press('Enter');
-    await expect(page).toHaveURL(/#topic-binary-search$/);
-    await expect(card(page, 'binary-search')).toBeInViewport();
   });
 });
