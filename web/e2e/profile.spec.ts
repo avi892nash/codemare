@@ -1,7 +1,10 @@
 /**
- * Profile (06) and badges (B1–B3) end to end: the /profile redirect, stats,
- * the keyboard-navigable activity heatmap, viewing someone else's profile,
- * 404 for unknown handles, and the badge gallery's deep-linked modal.
+ * Profile (06) and badges (B1–B3) end to end: the /profile redirect, stats
+ * (the figures a learner looks at, the rest under "More stats"), the
+ * keyboard-navigable activity heatmap (shown from a week of activity),
+ * viewing someone else's profile, 404 for unknown handles, and the badge
+ * gallery's deep-linked modal. The calm look of both pages is in
+ * calm-profile.spec.ts.
  *
  * Needs the app (PLAYWRIGHT_BASE_URL) and the seeded database from
  * web/.env.local. Creates its own users and removes them.
@@ -25,9 +28,12 @@ const prisma = new PrismaClient({ datasourceUrl: databaseUrl() });
 const tag = randomBytes(4).toString('hex');
 const me = { email: `e2e-prof-${tag}@codemare.test`, handle: `e2e_prof_${tag}`, name: 'E2E Profile', password: randomBytes(12).toString('base64url') };
 const other = { email: `e2e-other-${tag}@codemare.test`, handle: `e2e_other_${tag}`, name: 'E2E Other' };
+/** Seven active UTC days (today and the six before it): the least activity that shows the heatmap. */
+const busy = { email: `e2e-busy-${tag}@codemare.test`, handle: `e2e_busy_${tag}`, name: 'E2E Busy', password: randomBytes(12).toString('base64url') };
 const ids: string[] = [];
 let context: BrowserContext;
 let page: Page;
+let busyPage: Page;
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -59,7 +65,10 @@ test.beforeAll(async ({ browser }) => {
     data: { email: me.email, handle: me.handle, name: me.name, passwordHash: await bcrypt.hash(me.password, 10) },
   });
   const o = await prisma.user.create({ data: { email: other.email, handle: other.handle, name: other.name } });
-  ids.push(u.id, o.id);
+  const b = await prisma.user.create({
+    data: { email: busy.email, handle: busy.handle, name: busy.name, passwordHash: await bcrypt.hash(busy.password, 10) },
+  });
+  ids.push(u.id, o.id, b.id);
 
   // Three accepted solves on the last three UTC days (a streak of 3), one wrong answer.
   const today = utcMidnight(Date.now());
@@ -86,6 +95,14 @@ test.beforeAll(async ({ browser }) => {
   const firstAccept = await prisma.badge.findUniqueOrThrow({ where: { slug: 'first-accept' } });
   await prisma.badgeAward.create({ data: { userId: u.id, badgeId: firstAccept.id } });
 
+  // busy: one accepted solve a day for the last seven days, and a wrong answer today — 8 submissions on 7 days.
+  await prisma.submission.createMany({
+    data: [
+      ...Array.from({ length: 7 }, (_, d) => ({ ...solve('two-sum', d, 800 + d * 10), userId: b.id })),
+      { ...solve('two-sum', 0, 5_000, 'WA'), userId: b.id },
+    ],
+  });
+
   context = await browser.newContext({
     reducedMotion: 'reduce',
     // Distinct client address so repeated runs never share the login rate-limit bucket.
@@ -97,9 +114,22 @@ test.beforeAll(async ({ browser }) => {
     form: { email: me.email, password: me.password, csrfToken, callbackUrl: '/profile', json: 'true' },
   });
   expect(res.ok()).toBeTruthy();
+
+  // The busy learner signs in on a context of their own.
+  const busyContext = await browser.newContext({
+    reducedMotion: 'reduce',
+    extraHTTPHeaders: { 'x-forwarded-for': `10.79.${randomBytes(1)[0]}.${randomBytes(1)[0]}` },
+  });
+  busyPage = await busyContext.newPage();
+  const token = (await (await busyPage.request.get('/api/auth/csrf')).json()).csrfToken;
+  const busyRes = await busyPage.request.post('/api/auth/callback/credentials', {
+    form: { email: busy.email, password: busy.password, csrfToken: token, callbackUrl: '/profile', json: 'true' },
+  });
+  expect(busyRes.ok()).toBeTruthy();
 });
 
 test.afterAll(async () => {
+  await busyPage?.context().close();
   await context?.close();
   await prisma.user.deleteMany({ where: { id: { in: ids } } }).catch(() => undefined);
   await prisma.$disconnect();
@@ -112,18 +142,25 @@ test('/profile redirects to the viewer’s public profile with their stats', asy
   await expect(page.getByText(`@${me.handle}`)).toBeVisible();
   await expect(page.getByText('This is you')).toBeVisible();
 
+  // The figures a learner looks at are on the page: solved (by difficulty), the streak.
+  await expect(page.getByText(/^Longest 3 days/)).toBeVisible();
+  await expect(page.getByText('Easy', { exact: true }).first()).toBeVisible();
+  // Acceptance and the fastest run are one click away, under "More stats".
+  await expect(page.getByText('3 of 4 submissions accepted')).toBeHidden();
+  await page.getByText('More stats').click();
   await expect(page.getByText('3 of 4 submissions accepted')).toBeVisible();
   await expect(page.getByText('75', { exact: true })).toBeVisible(); // acceptance %
   await expect(page.getByText('350', { exact: true })).toBeVisible(); // fastest run, µs
   await expect(page.getByRole('link', { name: 'Valid Anagram' }).first()).toHaveAttribute('href', '/problems/valid-anagram');
-  await expect(page.getByText(/^Longest 3 days/)).toBeVisible();
   await expect(page.getByRole('link', { name: /First Accept/ })).toHaveAttribute('href', `/u/${me.handle}/badges?badge=first-accept`);
   await expect(page.getByRole('heading', { name: 'Recent submissions' })).toBeVisible();
+  // Three active days are not enough for the activity map.
+  await expect(page.getByRole('grid')).toHaveCount(0);
 });
 
-test('the activity heatmap is a labelled, keyboard-navigable grid', async () => {
-  await visit(page, `/u/${me.handle}`);
-  const grid = page.getByRole('grid', { name: /4 submissions in the last year, on 3 days/ });
+test('the activity heatmap (from seven active days) is a labelled, keyboard-navigable grid', async () => {
+  await visit(busyPage, `/u/${busy.handle}`);
+  const grid = busyPage.getByRole('grid', { name: /8 submissions in the last year, on 7 days/ });
   await expect(grid).toBeVisible();
   const today = utcMidnight(Date.now());
 
@@ -133,18 +170,18 @@ test('the activity heatmap is a labelled, keyboard-navigable grid', async () => 
   await expect(current).toHaveAttribute('aria-label', `2 submissions on ${longDate(today)}`);
   await current.focus();
 
-  await page.keyboard.press('ArrowLeft'); // one week back
-  await expect(page.locator(':focus')).toHaveAttribute('aria-label', `No submissions on ${longDate(today - 7 * DAY)}`);
-  await page.keyboard.press('ArrowRight');
-  await expect(page.locator(':focus')).toHaveAttribute('aria-label', `2 submissions on ${longDate(today)}`);
+  await busyPage.keyboard.press('ArrowLeft'); // one week back
+  await expect(busyPage.locator(':focus')).toHaveAttribute('aria-label', `No submissions on ${longDate(today - 7 * DAY)}`);
+  await busyPage.keyboard.press('ArrowRight');
+  await expect(busyPage.locator(':focus')).toHaveAttribute('aria-label', `2 submissions on ${longDate(today)}`);
   if (new Date(today).getUTCDay() > 0) {
-    await page.keyboard.press('ArrowUp'); // one day back, same week
-    await expect(page.locator(':focus')).toHaveAttribute('aria-label', `1 submission on ${longDate(today - DAY)}`);
+    await busyPage.keyboard.press('ArrowUp'); // one day back, same week
+    await expect(busyPage.locator(':focus')).toHaveAttribute('aria-label', `1 submission on ${longDate(today - DAY)}`);
   }
-  await page.keyboard.press('Control+Home'); // the first day shown
-  await expect(page.locator(':focus')).toHaveAttribute('aria-label', `No submissions on ${longDate(today - 364 * DAY)}`);
-  await page.keyboard.press('Control+End');
-  await expect(page.locator(':focus')).toHaveAttribute('aria-label', `2 submissions on ${longDate(today)}`);
+  await busyPage.keyboard.press('Control+Home'); // the first day shown
+  await expect(busyPage.locator(':focus')).toHaveAttribute('aria-label', `No submissions on ${longDate(today - 364 * DAY)}`);
+  await busyPage.keyboard.press('Control+End');
+  await expect(busyPage.locator(':focus')).toHaveAttribute('aria-label', `2 submissions on ${longDate(today)}`);
   // Roving tabindex follows focus.
   await expect(grid.locator('[role="gridcell"][tabindex="0"]')).toHaveCount(1);
 });
