@@ -157,7 +157,7 @@ function UnlockDialog({
         description:
           res.status === 'already_unlocked'
             ? 'It was already open — nothing was spent.'
-            : `Spent ${[...spent].map(([id, n]) => `${n} ${balances[id]?.title ?? 'tokens'}`).join(' · ')}. Its problems and components are open.`,
+            : `Spent ${[...spent].map(([id, n]) => `${n} ${balances[id]?.title ?? 'tokens'}`).join(' · ')}. Its problems are now open.`,
       });
       toastBadges(toast, res.badges);
       router.refresh();
