@@ -34,7 +34,6 @@
 }
 .link:hover { text-decoration: underline; text-underline-offset: 3px; }
 .empty { margin: 0; padding: 0 18px 16px; font-size: var(--fs-md); line-height: 1.5; color: var(--fg-2); }
-.empty a { color: var(--accent-hi); text-underline-offset: 3px; border-radius: 3px; }
 
 /* ── stats: three numbers and the difficulty breakdown; the rest behind "More stats" ── */
 .figures { display: flex; flex-wrap: wrap; gap: 14px 32px; margin: 0; padding: 16px 18px; }
