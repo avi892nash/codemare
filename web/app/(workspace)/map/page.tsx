@@ -51,13 +51,14 @@ export default async function MapPage() {
   // many as fit under the header, the hero and any line before them (an open row pushes the ones after it down by its problems):
   // ask for their scenes now, at low priority, so they are in hand by the time the page hydrates and <ArtInView> wants them (the
   // rest load as their rows come near). The media queries keep a phone from fetching what it will not show, and a short laptop
-  // from fetching a third scene that sits below its fold — a preload nothing uses within seconds is only a warning.
+  // from fetching a third scene that sits below its fold, or a phone on its side (under 480 px tall) any — a preload nothing uses
+  // within seconds is only a warning.
   const [first, second, third] = view.tiers.flatMap((tier) => tier.topics).slice(0, 3);
   const firstScenes = [
-    first && { href: sceneSrc(first.slug), media: undefined },
+    first && { href: sceneSrc(first.slug), media: '(min-height: 480px)' },
     first && second && !openTopics.has(first.slug) && { href: sceneSrc(second.slug), media: '(min-width: 720px)' },
     first && second && third && !openTopics.has(first.slug) && !openTopics.has(second.slug) && { href: sceneSrc(third.slug), media: '(min-width: 720px) and (min-height: 820px)' },
-  ].filter((scene): scene is { href: string; media: string | undefined } => !!scene);
+  ].filter((scene): scene is { href: string; media: string } => !!scene);
 
   return (
     <LoopPage label="Tier map">
