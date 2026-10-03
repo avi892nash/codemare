@@ -115,7 +115,7 @@ export function ActivityHeatmap({ weeks, total, activeDays }: { weeks: Array<Arr
     <div className={s.heat}>
       <div className={`${s.heatScroll} scroll`} ref={scroller}>
         <div className={s.heatInner}>
-          <span />
+          <span className={s.corner} aria-hidden="true" />
           <div className={s.months} aria-hidden="true" style={{ width: `calc(${weeks.length} * var(--step))` }}>
             {months.map((m) => (
               <span key={`${m.w}-${m.label}`} style={{ '--w': m.w } as CSSProperties}>

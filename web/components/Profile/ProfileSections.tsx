@@ -150,9 +150,11 @@ export function StatsCard({ view }: { view: ProfileView }) {
       </dl>
       <details className={s.more}>
         <summary>
-          More stats
-          <span className={s.chev} aria-hidden="true">
-            <Icon name="chev-down" size={16} />
+          <span className={s.moreBar}>
+            More stats
+            <span className={s.chev} aria-hidden="true">
+              <Icon name="chev-down" size={16} />
+            </span>
           </span>
         </summary>
         <div className={s.moreBody}>
