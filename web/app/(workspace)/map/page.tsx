@@ -47,13 +47,17 @@ export default async function MapPage() {
   const openTopics = new Set<string>();
   if (featured && (featured.reason === 'start' || featured.reason === 'continue') && totals.solved > 0) openTopics.add(featured.topic.slug);
   if (view.lastTouchedTopic) openTopics.add(view.lastTouchedTopic);
-  // The first rows are the ones in view when the page opens — one on a phone (the hero and the steps come first), three
-  // wider up: ask for their scenes now, at low priority, so they are in hand by the time the page hydrates and <ArtInView>
-  // wants them (the rest load as their rows come near). The media queries keep a phone from fetching what it will not show.
-  const firstScenes = view.tiers
-    .flatMap((tier) => tier.topics)
-    .slice(0, 3)
-    .map((t, i) => ({ href: sceneSrc(t.slug), media: i === 0 ? undefined : '(min-width: 720px)' }));
+  // The first rows are the ones in view when the page opens — one on a phone (the hero and the steps come first), more wider up, as
+  // many as fit under the header, the hero and any line before them (an open row pushes the ones after it down by its problems):
+  // ask for their scenes now, at low priority, so they are in hand by the time the page hydrates and <ArtInView> wants them (the
+  // rest load as their rows come near). The media queries keep a phone from fetching what it will not show, and a short laptop
+  // from fetching a third scene that sits below its fold — a preload nothing uses within seconds is only a warning.
+  const [first, second, third] = view.tiers.flatMap((tier) => tier.topics).slice(0, 3);
+  const firstScenes = [
+    first && { href: sceneSrc(first.slug), media: undefined },
+    first && second && !openTopics.has(first.slug) && { href: sceneSrc(second.slug), media: '(min-width: 720px)' },
+    first && second && third && !openTopics.has(first.slug) && !openTopics.has(second.slug) && { href: sceneSrc(third.slug), media: '(min-width: 720px) and (min-height: 820px)' },
+  ].filter((scene): scene is { href: string; media: string | undefined } => !!scene);
 
   return (
     <LoopPage label="Tier map">

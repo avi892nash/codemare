@@ -870,6 +870,14 @@ test.describe('the art: the hero moves, the rows are posters', () => {
     }
   });
 
+  test('only the scenes of rows near the top are preloaded: three on a fresh map, the first alone once its row is open (nothing is preloaded that will not be used)', async ({ page }) => {
+    const preloaded = async () => ((await (await page.request.get('/map')).text()).match(/<link[^>]*href="\/api\/topic-art\/[^"]*"[^>]*>/g) ?? []).map((l) => l.match(/topic-art\/([a-z-]+)/)![1]);
+    await openMap(page, 'fresh');
+    expect(await preloaded()).toEqual(['arrays-hashing', 'two-pointers', 'stack']);
+    await openMap(page, 'midway'); // the hero's topic is open: the rows after it are a screen away
+    expect(await preloaded()).toEqual(['arrays-hashing']);
+  });
+
   test('a locked topic’s poster is dimmed, the picture adds no name of its own, and the state is read from the label next to it', async ({ page }) => {
     await openMap(page, 'ready');
     for (const [slug, state, dimmed] of [
