@@ -207,6 +207,29 @@
  * never moves the content edge. Page modules read these; their headers
  * share one rhythm too (eyebrow 11/600 caps + icon, title 28/600 → 23 on
  * phones, subtitle 14/1.6 fg-2, 10 px apart). */
+/* ─── Type scale ─────────────────────────────────────────────────── */
+/* One scale for the whole app (the UX pass, 2026-10-03): nothing set in text
+ * is smaller than --fs-xs (12 px); running text is --fs-md (14 px, 16 px on
+ * phones via --fs-body); one step per role instead of half-pixel variants.
+ *   --fs-xs  captions, pills, labels (sentence case, not tiny uppercase)
+ *   --fs-sm  secondary text
+ *   --fs-md  body, card text
+ *   --fs-lg  list rows, emphasised lines
+ *   --fs-xl  section titles
+ *   --fs-2xl page and hero titles */
+:root {
+  --fs-xs: 12px;
+  --fs-sm: 13px;
+  --fs-md: 14px;
+  --fs-lg: 16px;
+  --fs-xl: 20px;
+  --fs-2xl: 26px;
+  --fs-body: var(--fs-md);
+}
+@media (max-width: 720px) {
+  :root { --fs-body: var(--fs-lg); }
+}
+
 :root {
   --page-max: 1120px;
   --page-narrow: 860px;
