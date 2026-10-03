@@ -124,7 +124,9 @@ test.describe('a result on a desktop', () => {
     const metrics = page.getByTestId('verdict-metrics');
     await expect(metrics).toContainText(/Runtime\s+\d+(\.\d+)?\s*(µs|ms|s)/);
     await expect(metrics).toContainText('Memory');
-    await expect(metrics).toContainText('µs = microseconds');
+    // µs is spelled out once, and only when the runtime is in µs (a slower machine prints ms).
+    if (/Runtime\s+\d+(\.\d+)?\s*µs/.test(await metrics.innerText())) await expect(metrics).toContainText('µs = microseconds');
+    else await expect(metrics).not.toContainText('µs = microseconds');
     const sizes = await page.evaluate(() => {
       const px = (id: string) => parseFloat(getComputedStyle(document.querySelector(`[data-testid="${id}"]`)!).fontSize);
       return { title: px('verdict-title'), metrics: px('verdict-metrics') };
