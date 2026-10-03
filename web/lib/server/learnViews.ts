@@ -177,10 +177,30 @@ export async function getQuestionRefs(slugs: readonly string[], userId?: string 
 
 // ─── L3: learn home ──────────────────────────────────────────────────────
 
+/** What Learn home recommends doing next: one track and one step in it. */
+export interface LearnRecommendation {
+  track: TrackWithProgress;
+  step: LearnStep;
+  /** The learner has already begun this track ("continue where you left off", not "start"). */
+  started: boolean;
+}
+
 export interface LearnHome {
   tracks: TrackWithProgress[];
-  continue: { track: TrackWithProgress; step: LearnStep } | null;
+  /** The one thing to do next (null once every track is complete). */
+  recommend: LearnRecommendation | null;
   totals: { lessonsDone: number; lessonsTotal: number; checkpointsPassed: number; tracksComplete: number };
+}
+
+/**
+ * The step Learn home puts first: where the learner left off (the track worked on last), else the first step of the
+ * first track that is not finished yet — so a learner who has not started anything is still told where to begin.
+ */
+export function pickRecommendation(items: readonly TrackWithProgress[]): LearnRecommendation | null {
+  const cont = pickContinue(items);
+  if (cont) return { track: cont.track, step: cont.step, started: cont.track.progress.started };
+  const fresh = items.find((t) => !t.progress.complete && t.progress.next);
+  return fresh ? { track: fresh, step: fresh.progress.next!, started: false } : null;
 }
 
 export async function getLearnHome(userId: string): Promise<LearnHome> {
@@ -190,7 +210,7 @@ export async function getLearnHome(userId: string): Promise<LearnHome> {
   const items = tracks.map((track) => ({ track, progress: trackProgress(track, state.lessons, state.attempts) }));
   return {
     tracks: items,
-    continue: pickContinue(items),
+    recommend: pickRecommendation(items),
     totals: {
       lessonsDone: items.reduce((n, t) => n + t.progress.lessonsDone, 0),
       lessonsTotal: items.reduce((n, t) => n + t.progress.lessonsTotal, 0),

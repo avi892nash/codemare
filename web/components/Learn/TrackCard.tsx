@@ -1,128 +1,93 @@
 import Link from 'next/link';
 import { ButtonLink } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
-import { Pill } from '@/components/ui/Pill';
 import { ProgressBar } from '@/components/ui/ProgressBar';
-import type { TrackWithProgress } from '@/lib/server/learnViews';
-import { continueStep, stepHref, type LearnStep } from '@/lib/server/rules/learnProgress';
-import { hours, LevelPill, minutes, TRACK_ICONS } from './parts';
+import type { LearnRecommendation, TrackWithProgress } from '@/lib/server/learnViews';
+import { stepHref } from '@/lib/server/rules/learnProgress';
+import { LEVEL_LABEL, lessonsLabel, minutes } from './parts';
 import s from './learn.module.css';
 
-function progressText(p: TrackWithProgress['progress']) {
+/** "2 of 7 lessons · 1 of 3 checkpoints". */
+export function progressText(p: TrackWithProgress['progress']): string {
   return `${p.lessonsDone} of ${p.lessonsTotal} lessons · ${p.checkpointsPassed} of ${p.checkpointsTotal} checkpoints`;
 }
 
-/** L3 track tile: level, summary, modules, progress and the one next action. */
-export function TrackCard({ item, index }: { item: TrackWithProgress; index: number }) {
+/**
+ * A track as one row of the list: its title (the link, whole row), one line about it, the facts, and — once started —
+ * how far along the learner is. A track that has not been started shows no empty bar and no zeros.
+ */
+function TrackRow({ item }: { item: TrackWithProgress }) {
   const { track, progress: p } = item;
   const lessons = track.modules.reduce((n, m) => n + m.lessons.length, 0);
   const headingId = `track-${track.slug}`;
-  const step = continueStep(p);
-  const cta = p.complete
-    ? { href: `/learn/${track.slug}/complete`, label: 'Review', icon: 'trophy' as const, variant: 'default' as const }
-    : step
-      ? { href: stepHref(track.slug, step), label: p.started ? 'Continue' : 'Start track', icon: 'arrow-right' as const, variant: p.started ? ('primary' as const) : ('default' as const) }
-      : null;
+  const facts = [LEVEL_LABEL[track.level], lessonsLabel(lessons), minutes(p.estMinutes)].join(' · ');
   return (
-    <article className={s.trackCard} aria-labelledby={headingId}>
-      <div className={s.trackTop}>
-        <span className={s.trackIcon} aria-hidden="true">
-          <Icon name={TRACK_ICONS[index % TRACK_ICONS.length]} size={16} />
-        </span>
-        <LevelPill level={track.level} />
-        {track.tier && track.tier.title !== track.title && (
-          <Pill tone="muted" size="xs">
-            {track.tier.title}
-          </Pill>
-        )}
-        <span className={s.spacer} />
-        {p.complete && (
-          <Pill tone="ok" size="xs" icon="check">
-            Complete
-          </Pill>
-        )}
+    <article className={s.trackRow} aria-labelledby={headingId} data-complete={p.complete || undefined}>
+      <div className={s.trackMain}>
+        <h3 className={s.trackTitle} id={headingId}>
+          <Link href={`/learn/${track.slug}`} className="focus-ring">
+            {track.title}
+          </Link>
+        </h3>
+        <p className={s.trackSummary}>{track.summary}</p>
+        <p className={s.facts}>{facts}</p>
       </div>
-      <h3 className={s.trackTitle} id={headingId}>
-        <Link href={`/learn/${track.slug}`} className="focus-ring">
-          {track.title}
-        </Link>
-      </h3>
-      <p className={s.trackSummary}>{track.summary}</p>
-      <div className={s.moduleChips} aria-label="Modules">
-        {track.modules.map((m) => (
-          <Pill key={m.slug} tone="default" size="xs">
-            {m.title}
-          </Pill>
-        ))}
-      </div>
-      <div className={s.meta}>
-        <span className={s.metaItem}>
-          <Icon name="layers" size={13} />
-          {track.modules.length} modules
-        </span>
-        <span className={s.metaItem}>
-          <Icon name="book-open" size={13} />
-          {lessons} lessons
-        </span>
-        <span className={s.metaItem}>
-          <Icon name="clock" size={13} />
-          {hours(track.estHours)}
-        </span>
-      </div>
-      <ProgressBar
-        value={p.percent}
-        max={100}
-        tone={p.complete ? 'ok' : 'accent'}
-        showValue
-        valueText={`${p.percent}%`}
-        aria-label={`${track.title}: ${progressText(p)}`}
-        style={{ marginTop: 2 }}
-      />
-      <div className={s.trackFoot}>
-        <span className={s.muted} style={{ fontSize: 12 }}>
-          {progressText(p)}
-        </span>
-        <span className={s.spacer} />
-        {cta && (
-          <ButtonLink href={cta.href} size="sm" variant={cta.variant} iconRight={cta.icon} aria-label={`${cta.label}: ${track.title}`}>
-            {cta.label}
-          </ButtonLink>
-        )}
-      </div>
+      {(p.started || p.complete) && (
+        <div className={s.trackProgress}>
+          <ProgressBar
+            value={p.percent}
+            max={100}
+            tone={p.complete ? 'ok' : 'accent'}
+            aria-label={`${track.title}: ${progressText(p)}`}
+            valueText={`${p.percent}%`}
+          />
+          <span className={s.trackCount}>{p.complete ? 'Complete' : progressText(p)}</span>
+        </div>
+      )}
+      <Icon name="chev-right" size={16} className={s.chev} />
     </article>
   );
 }
 
-/** "Continue where you left off" banner — or "Up next" when it suggests a track not started yet. */
-export function ContinueCard({ track, step }: { track: TrackWithProgress; step: LearnStep }) {
-  const isLesson = step.kind === 'lesson';
-  const fresh = !track.progress.started;
+/** The tracks, one container with a row each. */
+export function TrackList({ items, label = 'Tracks' }: { items: readonly TrackWithProgress[]; label?: string }) {
   return (
-    <section className={s.continue} aria-labelledby="continue-title">
-      <span className={s.continueIcon} aria-hidden="true">
-        <Icon name={isLesson ? 'book-open' : 'target'} size={20} />
-      </span>
-      <div className={s.continueBody}>
-        <span className={s.eyebrow}>{fresh ? `Up next · ${track.track.title}` : 'Continue where you left off'}</span>
-        <h2 className={s.continueTitle} id="continue-title">
-          {step.title}
-        </h2>
-        <div className={s.meta}>
-          <span className={s.metaItem}>
-            {track.track.title} · {step.moduleTitle}
-          </span>
-          <span className={s.metaItem}>
-            <Icon name={isLesson ? 'clock' : 'list'} size={13} />
-            {isLesson ? minutes(step.estMinutes) : `${step.questions} questions`}
-          </span>
-          <span className={s.metaItem}>
-            <Icon name="trend" size={13} />
-            {track.progress.percent}% of the track done
-          </span>
-        </div>
-      </div>
-      <ButtonLink href={stepHref(track.track.slug, step)} variant="primary" iconRight="arrow-right">
-        {isLesson ? (fresh ? 'Start lesson' : 'Resume lesson') : 'Take the checkpoint'}
+    <ul className={s.tracks} aria-label={label}>
+      {items.map((item) => (
+        <li key={item.track.slug}>
+          <TrackRow item={item} />
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/**
+ * The one thing Learn home asks you to do: start the first track, or pick up where you left off. A calm card and a
+ * single primary button; the tracks below it are links, not more buttons.
+ */
+export function Recommendation({ rec, firstVisit }: { rec: LearnRecommendation; firstVisit: boolean }) {
+  const { track, step, started } = rec;
+  const kicker = started ? 'Continue where you left off' : firstVisit ? 'Start here' : 'Up next';
+  const size = step.kind === 'lesson' ? minutes(step.estMinutes) : `${step.questions} questions`;
+  // Started: where in the track the next step is. Not started: what the first step is.
+  const line = started ? `${step.moduleTitle} · ${size}` : `${step.kind === 'lesson' ? 'First lesson' : 'First step'}: ${step.title} · ${size}`;
+  return (
+    <section className={s.feature} aria-labelledby="up-next-title" data-testid="learn-recommendation">
+      <p className={s.kicker}>{kicker}</p>
+      <h2 className={s.featureTitle} id="up-next-title">
+        {track.track.title}
+      </h2>
+      <p className={s.featureLine}>{line}</p>
+      <ButtonLink
+        href={stepHref(track.track.slug, step)}
+        variant="primary"
+        size="lg"
+        iconRight="arrow-right"
+        className={s.featureCta}
+        data-testid="learn-primary-action"
+      >
+        {started ? `Continue: ${step.title}` : `Start ${track.track.title}`}
       </ButtonLink>
     </section>
   );

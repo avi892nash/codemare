@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { Breadcrumb } from '@/components/ui/Breadcrumb';
-import { Icon } from '@/components/ui/Icon';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { CheckpointQuiz } from '@/components/Learn/CheckpointQuiz';
 import { CheckpointReview } from '@/components/Learn/CheckpointReview';
 import { CheckpointStatus } from '@/components/Learn/ModuleCard';
@@ -57,38 +57,28 @@ export default async function CheckpointPage({ params, searchParams }: { params:
       />
       <div className={s.lessonLayout}>
         <article className={s.article} aria-labelledby="checkpoint-title">
-          <header className={s.header}>
-            <span className={s.eyebrow}>
-              <Icon name="target" size={13} /> Module {moduleIndex + 1} checkpoint
-            </span>
-            <h1 className={s.title} id="checkpoint-title">
-              {review ? `Results: ${mod.title}` : mod.title}
-            </h1>
-            <div className={s.meta}>
-              <span className={s.metaItem}>
-                <Icon name="list" size={13} />
-                {view.questions.length} questions
-              </span>
-              <span className={s.metaItem}>
-                <Icon name="check-circle" size={13} />
-                Pass with {passPercent}%
-              </span>
-              {summary.attempts > 0 && (
-                <>
-                  <CheckpointStatus summary={summary} />
-                  <span className={s.metaItem}>
+          <PageHeader
+            title={review ? `Results: ${mod.title}` : mod.title}
+            titleId="checkpoint-title"
+            subtitle={
+              <>
+                Module {moduleIndex + 1} checkpoint · {view.questions.length} questions · pass with {passPercent}%
+                {summary.attempts > 0 && (
+                  <>
+                    {' · '}
+                    <CheckpointStatus summary={summary} />
+                    {' · '}
                     {summary.attempts} attempt{summary.attempts === 1 ? '' : 's'}
-                  </span>
-                </>
-              )}
-            </div>
-            {!review && (
-              <p className={s.subtitle}>
-                Check what stuck from this module. Answers are graded when you submit, then you get an explanation for every
-                question. Retake it as often as you like.
-              </p>
-            )}
-          </header>
+                  </>
+                )}
+              </>
+            }
+          />
+          {!review && (
+            <p className={s.note}>
+              Answers are graded when you submit, and every question comes with an explanation. Retake it as often as you like.
+            </p>
+          )}
 
           {review ? (
             <CheckpointReview review={review} passPercent={passPercent} retakeHref={base} continueTo={review.attempt.passed ? continueTo : null} />
