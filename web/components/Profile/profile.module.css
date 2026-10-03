@@ -1,137 +1,165 @@
-/* Profile (artboard 06). Tokens only. */
+/* The profile (/u/[handle]), in the Map's look: cards and rows from the tokens, block titles 16 px, secondary text 13 px,
+ * numbers 20 px. Type is the --fs-* scale only (12 · 13 · 14 · 16 · 20 · 26): nothing under 12 px, no uppercase labels. */
 
-.identity {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: 18px;
-  align-items: center;
-  padding: 20px 22px;
-  background: var(--bg-1);
-  border: 1px solid var(--line-2);
-  border-radius: var(--r-lg);
-}
-.name { margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -0.4px; color: var(--fg-0); line-height: 1.2; }
-.handleLine { margin: 4px 0 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; font-size: 12.5px; color: var(--fg-2); }
-.quick { display: flex; gap: 22px; }
-.quickItem { display: flex; flex-direction: column-reverse; align-items: flex-end; }
-.quickValue { margin: 0; font-size: 22px; font-weight: 500; color: var(--fg-0); letter-spacing: -0.3px; }
-.quickLabel { font-size: 10.5px; font-weight: 500; letter-spacing: 0.6px; text-transform: uppercase; color: var(--fg-2); }
-@media (max-width: 640px) {
-  .identity { grid-template-columns: auto minmax(0, 1fr); }
-  .quick { grid-column: 1 / -1; justify-content: flex-start; }
-  .quickItem { align-items: flex-start; }
-  .name { font-size: 20px; }
-}
+/* ── identity: an avatar beside the shared page header ──────── */
+.identity { display: flex; align-items: center; gap: 14px; min-width: 0; }
+/* PageHeader brings its own bottom margin; the page's column gap already spaces the blocks. */
+.identity > header { flex: 1 1 auto; min-width: 0; margin: 0; }
+/* The context line breaks between its parts, never inside one: "This is you" and "Joined October 2026" stay whole. */
+.seg { white-space: nowrap; }
+/* A handle can be 24 characters with no break in it: at 26 px that is wider than a phone, so it wraps instead of scrolling the page. */
+.identity h1 { overflow-wrap: anywhere; }
 
-/* ── stat tiles ─────────────────────────────────────────────── */
-.tiles {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-  margin: 0;
-}
-@media (max-width: 1000px) { .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 460px) { .tiles { grid-template-columns: minmax(0, 1fr); } }
-.tile {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-width: 0;
-  padding: 16px 18px;
-  background: var(--bg-1);
-  border: 1px solid var(--line-2);
-  border-radius: var(--r-lg);
-}
-.tileLabel {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 10.5px;
-  font-weight: 500;
-  letter-spacing: 0.6px;
-  text-transform: uppercase;
-  color: var(--fg-2);
-}
-.tileValue { margin: 0; display: flex; align-items: baseline; gap: 5px; flex-wrap: wrap; }
-.big { font-size: 28px; font-weight: 500; letter-spacing: -0.6px; color: var(--fg-0); line-height: 1.1; }
-.unit { font-size: 13px; color: var(--fg-2); }
-.sub { font-size: 12px; color: var(--fg-2); min-width: 0; overflow-wrap: anywhere; }
-.sub a { color: var(--accent-hi); text-decoration: underline; text-decoration-color: var(--accent-line); text-underline-offset: 3px; border-radius: 3px; }
-.sub a:hover { text-decoration-color: currentColor; }
-.diffRows { display: flex; flex-direction: column; gap: 6px; margin-top: 2px; }
-.diffRow { display: grid; grid-template-columns: 58px minmax(0, 1fr) auto; gap: 8px; align-items: center; font-size: 11.5px; color: var(--fg-2); }
-
-/* ── sections ───────────────────────────────────────────────── */
-.columns {
-  display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
-  gap: 16px;
-  align-items: start;
-}
-@media (max-width: 900px) { .columns { grid-template-columns: minmax(0, 1fr); } }
-.panel {
+/* ── cards and their heads ──────────────────────────────────── */
+.card {
   min-width: 0;
   background: var(--bg-1);
   border: 1px solid var(--line-2);
   border-radius: var(--r-lg);
   overflow: hidden;
 }
-.panelHead {
-  display: flex;
+.head { display: flex; align-items: center; justify-content: space-between; gap: 4px 16px; padding: 14px 18px 10px; }
+.title { margin: 0; font-size: var(--fs-lg); line-height: 1.3; font-weight: 600; letter-spacing: -0.2px; color: var(--fg-0); }
+.headEnd { display: flex; align-items: center; gap: 16px; min-width: 0; }
+.note { font-size: var(--fs-sm); color: var(--fg-2); white-space: nowrap; }
+.link {
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 14px 16px 10px;
+  gap: 4px;
+  font-size: var(--fs-sm);
+  color: var(--accent-hi);
+  text-decoration: none;
+  white-space: nowrap;
+  border-radius: var(--r-sm);
 }
-.panelTitle { margin: 0; font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--fg-2); }
-.panelLink { font-size: 12px; color: var(--accent-hi); text-decoration: none; display: inline-flex; align-items: center; gap: 4px; border-radius: 4px; }
-.panelLink:hover { text-decoration: underline; }
-.panelBody { padding: 0 16px 16px; }
-.empty { margin: 0; padding: 4px 16px 18px; font-size: 12.5px; color: var(--fg-2); }
-.stack { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.link:hover { text-decoration: underline; text-underline-offset: 3px; }
+.empty { margin: 0; padding: 0 18px 16px; font-size: var(--fs-md); line-height: 1.5; color: var(--fg-2); }
 
-/* ── recent submissions ─────────────────────────────────────── */
-.subs { list-style: none; margin: 0; padding: 0 0 6px; }
-.subRow {
-  display: grid;
-  grid-template-columns: 44px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 10px;
-  padding: 9px 16px;
+/* ── stats: three numbers and the difficulty breakdown; the rest behind "More stats" ── */
+.figures { display: flex; flex-wrap: wrap; gap: 14px 32px; margin: 0; padding: 16px 18px; }
+.figure { flex: 1 1 140px; margin: 0; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.figure:first-child { flex: 1.7 1 300px; }
+.figure > dd { margin: 0; }
+.figLabel { font-size: var(--fs-sm); color: var(--fg-2); }
+.figValue { display: flex; align-items: baseline; gap: 6px; }
+.num { font-size: var(--fs-xl); line-height: 1.3; font-weight: 600; letter-spacing: -0.3px; color: var(--fg-0); }
+.unit, .figSub { font-size: var(--fs-sm); color: var(--fg-2); }
+/* Easy · Medium · Hard as quiet marks with their counts — the same dot text the Map uses. */
+.levels { display: flex; flex-wrap: wrap; gap: 4px 18px; margin: 4px 0 0; padding: 0; list-style: none; }
+.levels li { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-sm); color: var(--fg-1); }
+
+/* the summary stays a block (Safari lays a flex summary out unreliably); its bar inside is the flex row */
+.more > summary {
+  display: block;
   border-top: 1px solid var(--line-1);
-  font-size: 13px;
-  color: var(--fg-1);
+  list-style: none;
+  cursor: pointer;
+  font-size: var(--fs-sm);
+  color: var(--fg-2);
 }
-/* The status pill keeps its own width (as in the submissions list) instead
- * of stretching across the 44 px column. */
-.subRow > :first-child { justify-self: start; }
-.subTitle { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.subTitle a { color: var(--fg-0); text-decoration: none; border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.subTitle a:hover { text-decoration: underline; }
-.subName { color: var(--fg-0); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.subMeta { font-size: 11.5px; color: var(--fg-2); display: inline-flex; align-items: center; gap: 6px; }
-.subSide { font-size: 12px; color: var(--fg-2); text-align: right; white-space: nowrap; }
+.moreBar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 18px; }
+.more > summary::-webkit-details-marker { display: none; }
+.more > summary:hover { background: var(--bg-2); color: var(--fg-1); }
+.more > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.chev { flex: none; display: inline-flex; transition: transform 0.15s; }
+.more[open] > summary .chev { transform: rotate(180deg); }
+@media (prefers-reduced-motion: reduce) {
+  .chev { transition: none; }
+}
+.moreBody { display: flex; flex-direction: column; gap: 10px; padding: 4px 18px 16px; }
+.moreList { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; }
+.moreRow { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 14px; font-size: var(--fs-md); color: var(--fg-1); }
+.moreRow > dt { flex: none; min-width: 108px; font-size: var(--fs-sm); color: var(--fg-2); }
+.moreRow > dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.moreRow a { color: var(--accent-hi); text-decoration: underline; text-decoration-color: var(--accent-line); text-underline-offset: 3px; border-radius: 3px; }
+.moreRow a:hover { text-decoration-color: currentColor; }
+.caption { margin: 0; font-size: var(--fs-sm); color: var(--fg-2); }
 
-/* ── bars (tokens, learn) ───────────────────────────────────── */
-.bars { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
-.barRow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 10px; font-size: 12.5px; color: var(--fg-1); }
-.barRow > :nth-child(3) { flex-basis: 100%; }
-.barRow a { color: var(--fg-0); text-decoration: none; border-radius: 3px; }
-.barRow a:hover { text-decoration: underline; }
-.barValue { font-size: 12px; color: var(--fg-2); white-space: nowrap; }
+/* ── page layout ────────────────────────────────────────────── */
+.columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+.stack { display: flex; flex-direction: column; gap: 24px; min-width: 0; }
+@media (max-width: 900px) {
+  .columns { grid-template-columns: minmax(0, 1fr); }
+}
 
-/* ── heatmap ────────────────────────────────────────────────── */
-.heat { padding: 0 16px 14px; }
-.heatScroll { overflow-x: auto; padding: 4px 2px 6px; }
-.heatInner { display: inline-grid; grid-template-columns: auto auto; gap: 4px 6px; }
-.months { grid-column: 2; position: relative; height: 14px; font-size: 10.5px; color: var(--fg-2); }
-.months span { position: absolute; top: 0; white-space: nowrap; }
-.weekdays { display: grid; grid-template-rows: repeat(7, 11px); row-gap: 3px; font-size: 10px; color: var(--fg-2); line-height: 11px; }
-.grid { display: grid; grid-template-rows: repeat(7, 11px); row-gap: 3px; outline: none; border-radius: 4px; }
-.gridRow { display: grid; grid-auto-flow: column; grid-auto-columns: 11px; column-gap: 3px; }
+/* ── recent submissions: glyph, problem, one quiet line ─────── */
+.subs { list-style: none; margin: 0; padding: 0; }
+.sub {
+  position: relative;
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) auto;
+  grid-template-areas:
+    'glyph title when'
+    'glyph meta meta';
+  align-items: start;
+  column-gap: 12px;
+  row-gap: 2px;
+  padding: 10px 18px;
+  border-top: 1px solid var(--line-1);
+}
+.sub:hover { background: var(--bg-2); }
+.glyph { grid-area: glyph; display: inline-flex; margin-top: 3px; color: var(--fg-2); }
+.glyph[data-tone='ok'] { color: var(--ok); }
+.glyph[data-tone='err'] { color: var(--err); }
+.glyph[data-tone='warn'] { color: var(--warn); }
+.glyph[data-tone='info'] { color: var(--info); }
+.glyph[data-tone='accent'] { color: var(--accent); }
+.subTitle { grid-area: title; min-width: 0; font-size: var(--fs-body); line-height: 1.4; color: var(--fg-0); overflow-wrap: anywhere; }
+.subTitle a { color: inherit; text-decoration: none; border-radius: 3px; }
+.subTitle a:hover { text-decoration: underline; text-underline-offset: 3px; }
+/* The whole row is the problem link's target; its focus ring outlines the row. */
+.subTitle a::after { content: ''; position: absolute; inset: 0; }
+.subTitle a:focus { outline: none; }
+.subTitle a:focus-visible::after { box-shadow: inset 0 0 0 2px var(--accent); }
+.subMeta { grid-area: meta; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 14px; font-size: var(--fs-sm); line-height: 1.5; color: var(--fg-2); }
+.subMeta > span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+/* Accepted is the usual case and stays quiet (its glyph is the green one); a verdict that needs a look is coloured. */
+.verdict[data-tone='ok'] { color: var(--fg-1); }
+.verdict[data-tone='err'] { color: var(--err-fg); }
+.verdict[data-tone='warn'] { color: var(--warn-fg); }
+.verdict[data-tone='info'] { color: var(--info-fg); }
+.verdict[data-tone='accent'] { color: var(--accent-hi); }
+/* The judge's short code (OK · WA · TLE …) is a small label beside the sentence-case verdict. */
+.code { font-size: var(--fs-xs); color: var(--fg-2); }
+.when { grid-area: when; font-size: var(--fs-sm); line-height: 1.5; color: var(--fg-2); white-space: nowrap; padding-top: 2px; }
+.when a { position: relative; z-index: 1; color: inherit; text-decoration: none; border-radius: 3px; }
+.when a:hover { color: var(--fg-0); text-decoration: underline; text-underline-offset: 3px; }
+
+/* ── badges, tokens, learn ──────────────────────────────────── */
+.body { padding: 0 18px 16px; }
+.bars { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+.barRow { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; font-size: var(--fs-md); color: var(--fg-0); }
+.barRow > :last-child { flex-basis: 100%; }
+.barRow a { color: inherit; text-decoration: none; border-radius: 3px; }
+.barRow a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.barName { min-width: 0; display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; }
+.quiet { font-size: var(--fs-sm); color: var(--fg-2); }
+.complete { display: inline-flex; align-items: center; gap: 4px; font-size: var(--fs-sm); color: var(--ok-fg); }
+.barValue { font-size: var(--fs-sm); color: var(--fg-2); white-space: nowrap; }
+
+/* ── activity heatmap (once there is a week of it) ──────────── */
+.heat { --cell: 12px; --gap: 3px; --step: calc(var(--cell) + var(--gap)); padding: 2px 18px 16px; }
+@media (min-width: 1180px) {
+  .heat { --cell: 14px; }
+}
+/* no padding on the left: the sticky weekday column must be the scrollport's edge, or the weeks peek out beside it */
+.heatScroll { overflow-x: auto; padding: 2px 4px 6px 0; scroll-padding-left: 48px; }
+.heatInner { display: inline-grid; grid-template-columns: auto auto; gap: 4px 8px; }
+.months { grid-column: 2; position: relative; height: 18px; font-size: var(--fs-xs); line-height: 18px; color: var(--fg-2); }
+.months span { position: absolute; top: 0; left: calc(var(--w) * var(--step)); white-space: nowrap; }
+/* the weekday names stay in view while the weeks scroll under them (a phone shows the latest weeks); the corner above them hides a month label cut by the edge */
+.corner { position: sticky; left: 0; z-index: 1; background: var(--bg-1); }
+.weekdays { position: sticky; left: 0; z-index: 1; display: grid; grid-template-rows: repeat(7, var(--cell)); row-gap: var(--gap); padding-right: 6px; background: var(--bg-1); font-size: var(--fs-xs); color: var(--fg-2); line-height: var(--cell); }
+.grid { display: grid; grid-template-rows: repeat(7, var(--cell)); row-gap: var(--gap); outline: none; border-radius: 4px; }
+.gridRow { display: grid; grid-auto-flow: column; grid-auto-columns: var(--cell); column-gap: var(--gap); }
 .cell {
-  width: 11px;
-  height: 11px;
+  width: var(--cell);
+  height: var(--cell);
   border-radius: 2px;
   background: var(--bg-3);
   box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--fg-0) 4%, transparent);
@@ -142,6 +170,29 @@
 .cell[data-level='4'] { background: var(--accent); }
 .cell[data-pad='true'] { background: transparent; box-shadow: none; }
 .cell:focus-visible { outline: 2px solid var(--fg-0); outline-offset: 1px; }
-.heatFoot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; margin-top: 10px; font-size: 12px; color: var(--fg-2); }
-.legend { display: inline-flex; align-items: center; gap: 4px; }
-.focusLine { min-height: 18px; color: var(--fg-1); }
+.heatFoot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 16px; margin-top: 10px; min-height: 20px; font-size: var(--fs-sm); color: var(--fg-2); }
+.legend { display: inline-flex; align-items: center; gap: 4px; font-size: var(--fs-xs); }
+
+/* ── phones ─────────────────────────────────────────────────── */
+@media (max-width: 720px) {
+  /* the empty state's one button is a 44 px target */
+  .cta.cta { height: auto; min-height: 44px; padding: 0 18px; font-size: var(--fs-md); }
+  .identity { gap: 12px; }
+  .head { min-height: 48px; padding: 0 14px; }
+  .link { min-height: 44px; }
+  .empty { padding: 0 14px 14px; }
+  .figures { padding: 14px; gap: 12px 24px; }
+  .figure:first-child { flex-basis: 100%; }
+  .moreBar { min-height: 44px; padding: 8px 14px; }
+  .moreBody { padding: 4px 14px 14px; }
+  .moreRow > dt { min-width: 100%; }
+  .sub { padding: 10px 14px; }
+  .code { display: none; }
+  /* a row's problem link and a learn track's link are 44 px targets: the box grows into the row's padding */
+  .subTitle a { display: block; padding: 12px 0; margin: -12px 0; }
+  .barRow a { display: inline-block; padding: 12px 0; margin: -12px 0; }
+  /* the link to a submission is a 44 px target: its box grows into the row's padding */
+  .when a { display: inline-flex; align-items: center; min-height: 44px; margin: -12px -14px -12px -8px; padding: 0 14px 0 8px; }
+  .body { padding: 0 14px 14px; }
+  .heat { padding: 2px 14px 14px; }
+}

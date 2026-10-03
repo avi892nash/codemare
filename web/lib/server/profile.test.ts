@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { completeLesson } from './learn';
-import { findProfileUser, getBadgeGalleryView, getProfile, loadBadgeStats } from './profile';
+import { HEATMAP_MIN_ACTIVE_DAYS, findProfileUser, getBadgeGalleryView, getProfile, loadBadgeStats, profileSections } from './profile';
 import { prisma, setupTestDatabase } from './test/db';
 import { grant, makeQuestion, makeSubmission, makeTier, makeTopic, makeUser, makeWorld } from './test/factories';
 
@@ -142,5 +142,62 @@ describe('badge gallery view', () => {
       bestPercentile: null,
       bestTrackFraction: 0,
     });
+  });
+});
+
+describe('profileSections', () => {
+  const view = (over: Partial<Parameters<typeof profileSections>[0]> = {}) => ({
+    solved: { total: 3 },
+    activity: { activeDays: HEATMAP_MIN_ACTIVE_DAYS },
+    tokens: { topics: [{}] },
+    learn: [{ started: true }],
+    ...over,
+  });
+
+  it('draws every block that has something to say', () => {
+    expect(profileSections(view())).toEqual({ stats: true, activity: true, tokens: true, learn: true });
+  });
+
+  it('draws no block that would be empty', () => {
+    const empty = profileSections(view({ solved: { total: 0 }, activity: { activeDays: 0 }, tokens: { topics: [] }, learn: [{ started: false }, { started: false }] }));
+    expect(empty).toEqual({ stats: false, activity: false, tokens: false, learn: false });
+    expect(profileSections(view({ learn: [] })).learn).toBe(false);
+  });
+
+  it('shows the activity map from a week of activity, not before', () => {
+    expect(HEATMAP_MIN_ACTIVE_DAYS).toBe(7);
+    expect(profileSections(view({ activity: { activeDays: 6 } })).activity).toBe(false);
+    expect(profileSections(view({ activity: { activeDays: 7 } })).activity).toBe(true);
+  });
+
+  it('counts the active days of a real profile (any submission kind counts)', async () => {
+    const w = await makeWorld();
+    const user = await makeUser({ handle: 'streaky' });
+    for (let d = 0; d < 6; d++) await makeSubmission(user.id, { questionId: w.q1.id, kind: d % 2 ? 'run' : 'submit', createdAt: daysAgo(d) });
+    const six = (await getProfile('streaky', null, NOW))!;
+    expect(six.activity.activeDays).toBe(6);
+    expect(profileSections(six).activity).toBe(false);
+    expect(profileSections(six).stats).toBe(true); // d=0 was an accepted submit
+
+    await makeSubmission(user.id, { questionId: w.q1.id, createdAt: daysAgo(6) });
+    const seven = (await getProfile('streaky', null, NOW))!;
+    expect(seven.activity.activeDays).toBe(7);
+    expect(profileSections(seven).activity).toBe(true);
+  });
+
+  it('shows the learn block once a track is started and the tokens block once there are tokens', async () => {
+    const tier = await makeTier(0);
+    const topic = await makeTopic(tier.id, { slug: 'arrays' });
+    const user = await makeUser({ handle: 'tokenless' });
+    const none = (await getProfile('tokenless', null, NOW))!;
+    expect(profileSections(none)).toEqual({ stats: false, activity: false, tokens: false, learn: false });
+
+    await grant(user.id, topic.id, 'Easy', 2);
+    const track = await prisma.track.create({ data: { slug: 't2', title: 'T2', summary: '', level: 'beginner', estHours: 1, ord: 0 } });
+    const mod = await prisma.learnModule.create({ data: { trackId: track.id, slug: 'm2', title: 'M2', summary: '', ord: 0 } });
+    const lesson = await prisma.lesson.create({ data: { moduleId: mod.id, slug: 'l2', title: 'L2', ord: 0, estMinutes: 3, bodyMd: 'x' } });
+    await prisma.lessonProgress.create({ data: { userId: user.id, lessonId: lesson.id, status: 'started' } });
+    const some = (await getProfile('tokenless', null, NOW))!;
+    expect(profileSections(some)).toEqual({ stats: false, activity: false, tokens: true, learn: true });
   });
 });
