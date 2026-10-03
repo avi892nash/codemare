@@ -7,7 +7,6 @@ import { Breadcrumb } from '@/components/ui/Breadcrumb';
 import { ButtonLink } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { Pill } from '@/components/ui/Pill';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { CheckpointStatus } from '@/components/Learn/ModuleCard';
 import { minutes, PageShell, SectionHead, StateIcon } from '@/components/Learn/parts';
@@ -166,24 +165,26 @@ export default async function TrackCompletePage({ params }: { params: Promise<Pa
         {c.badges.length === 0 ? (
           <p className={s.note}>No learning badges yet — they unlock as you complete lessons and tracks.</p>
         ) : (
-          <ul className={bs.grid}>
+          <ul className={bs.cards}>
             {c.badges.map((b) => (
               <li key={b.slug}>
                 <Link
                   href={viewer.handle ? `/u/${viewer.handle}/badges?badge=${b.slug}` : '/profile'}
-                  className={`${bs.tile} focus-ring`}
+                  className={`${bs.card} focus-ring`}
                   style={{ textDecoration: 'none' }}
                   data-earned="true"
                 >
-                  <BadgeMedallion icon={b.icon} rarity={b.rarity} size={56} />
-                  <span className={bs.tileName}>{b.name}</span>
-                  <Pill tone={RARITY[b.rarity].tone} size="xs">
-                    {RARITY[b.rarity].label}
-                  </Pill>
-                  <span className={bs.tileState}>
-                    <span className={bs.tileDate}>
-                      <Icon name="check-circle" size={12} />
-                      Earned {b.awardedAt ? fmtShort(b.awardedAt) : ''}
+                  <BadgeMedallion icon={b.icon} rarity={b.rarity} size={44} />
+                  <span className={bs.cardBody}>
+                    <span className={bs.cardTop}>
+                      <span className={bs.cardName}>{b.name}</span>
+                      <span className={bs.cardRarity}>{RARITY[b.rarity].label}</span>
+                    </span>
+                    <span className={bs.cardState}>
+                      <span className={bs.cardDate}>
+                        <Icon name="check-circle" size={12} />
+                        Earned {b.awardedAt ? fmtShort(b.awardedAt) : ''}
+                      </span>
                     </span>
                   </span>
                 </Link>
