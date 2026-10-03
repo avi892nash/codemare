@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { capPenalty, percentileOf, solveAward } from './scoring';
+import { capPenalty, MIN_PERCENTILE_SAMPLE, percentileOf, percentileToShow, solveAward } from './scoring';
 
 describe('solveAward', () => {
   it('pays BASE[difficulty] per topic at weight 1', () => {
@@ -60,5 +60,32 @@ describe('percentileOf', () => {
   it('rounds to two decimals and handles empty input', () => {
     expect(percentileOf(1, [1, 2, 3])).toBe(66.67);
     expect(percentileOf(1, [])).toBeNull();
+  });
+});
+
+describe('percentileToShow (presentation threshold, spec §3.8)', () => {
+  it('shows nothing until MIN_PERCENTILE_SAMPLE accepted solutions stand behind the number', () => {
+    expect(MIN_PERCENTILE_SAMPLE).toBe(30);
+    expect(percentileToShow(87.5, 29)).toBeNull();
+    expect(percentileToShow(87.5, 1)).toBeNull();
+    expect(percentileToShow(0, 0)).toBeNull();
+  });
+
+  it('shows the number itself from the threshold on — including an honest 0', () => {
+    expect(percentileToShow(87.5, 30)).toBe(87.5);
+    expect(percentileToShow(0, 30)).toBe(0);
+    expect(percentileToShow(100, 5_000)).toBe(100);
+  });
+
+  it('has nothing to show without a percentile, and takes a different minimum when asked', () => {
+    expect(percentileToShow(null, 100)).toBeNull();
+    expect(percentileToShow(undefined, 100)).toBeNull();
+    expect(percentileToShow(50, 5, 5)).toBe(50);
+    expect(percentileToShow(50, 4, 5)).toBeNull();
+  });
+
+  it('leaves the stored math alone: percentileOf still answers for a population of any size', () => {
+    expect(percentileOf(1, [1])).toBe(0);
+    expect(percentileOf(1, [1, 2])).toBe(50);
   });
 });

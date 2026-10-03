@@ -18,6 +18,7 @@ import { prisma, setupTestDatabase } from './test/db';
 import {
   balanceOf,
   makeGate,
+  makeSubmission,
   makeTier,
   makeTopic,
   makeUser,
@@ -262,21 +263,22 @@ describe('submit', () => {
     expect(first.verdict).toMatchObject({
       status: 'OK',
       totalPassed: 4,
-      percentile: 0,
       tokensAwarded: [{ topic: arrays.slug, amount: 1 }],
       badgesAwarded: [{ slug: 'first-accept', name: 'First Accept' }],
     });
+    // One solver is no comparison: the verdict carries no percentile to show (the stored one is 0).
+    expect(first.verdict?.percentile).toBeNull();
     // Hidden `actual` echoed by the judge never reaches the client.
     expect(first.tests[2]).not.toHaveProperty('actual');
 
     const second = await collect(await prepareQuestionRun(user.id, { kind: 'submit', questionId: q.id, language: 'python', code: 'b' }), client);
     expect(second.verdict).toMatchObject({ status: 'OK', tokensAwarded: [], badgesAwarded: [] });
-    expect(second.verdict?.percentile).toBe(0);
+    expect(second.verdict?.percentile).toBeNull();
     expect(await balanceOf(user.id, arrays.id)).toBe(1);
     expect(await prisma.tokenLedger.count({ where: { userId: user.id } })).toBe(1);
   });
 
-  it('computes "beats N%" against other users', async () => {
+  it('computes the percentile against other users, but only hands it on from 30 accepted solutions', async () => {
     const { q, user } = await world();
     const other = await makeUser();
     const slow = fakeCompile((req) => [
@@ -286,7 +288,22 @@ describe('submit', () => {
     await collect(await prepareQuestionRun(other.id, { kind: 'submit', questionId: q.id, language: 'java', code: 'a' }), slow.client);
     const fast = fakeCompile(allPass);
     const { verdict } = await collect(await prepareQuestionRun(user.id, { kind: 'submit', questionId: q.id, language: 'java', code: 'b' }), fast.client);
-    expect(verdict?.percentile).toBe(50);
+    // Two solvers: "faster than 50%" says nothing — not shown…
+    expect(verdict?.percentile).toBeNull();
+    // …but the real number is stored (the fast-solve badge reads it).
+    const stored = await prisma.submission.findFirstOrThrow({ where: { userId: user.id, questionId: q.id, kind: 'submit' } });
+    expect(stored.percentile).toBe(50);
+  });
+
+  it('shows the percentile once 30 learners’ accepted solutions stand behind it', async () => {
+    const { q, user } = await world();
+    for (let i = 0; i < 29; i++) {
+      const other = await makeUser();
+      await makeSubmission(other.id, { questionId: q.id, language: 'java', runtimeUs: 50_000_000 + i });
+    }
+    const fast = fakeCompile(allPass);
+    const { verdict } = await collect(await prepareQuestionRun(user.id, { kind: 'submit', questionId: q.id, language: 'java', code: 'b' }), fast.client);
+    expect(verdict?.percentile).toBe(96.67); // 29 of 30 are slower
   });
 
   it('passes a CE through with no test results', async () => {
