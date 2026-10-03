@@ -143,7 +143,7 @@ export function CasesPanel({ signature, samples, cases, onCasesChange, allowCust
                   autoCapitalize="off"
                   autoCorrect="off"
                   full
-                  textareaStyle={{ minHeight: 34, fontSize: 12.5 }}
+                  textareaStyle={{ minHeight: 34, fontSize: 'var(--fs-body)' }}
                   data-testid={`custom-arg-${i}`}
                 />
               );

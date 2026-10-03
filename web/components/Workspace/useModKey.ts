@@ -15,3 +15,20 @@ export function useModKey(): string {
   }, []);
   return mod;
 }
+
+/**
+ * True on a touch-only device (a phone or tablet with no mouse, `(hover: none)`),
+ * where "⌘↵" printed on a button is noise nobody can press. Starts false (what
+ * the server renders) and corrects itself after mount.
+ */
+export function useTouchOnly(): boolean {
+  const [touch, setTouch] = useState(false);
+  useEffect(() => {
+    const query = window.matchMedia('(hover: none)');
+    setTouch(query.matches);
+    const onChange = (e: MediaQueryListEvent) => setTouch(e.matches);
+    query.addEventListener('change', onChange);
+    return () => query.removeEventListener('change', onChange);
+  }, []);
+  return touch;
+}
