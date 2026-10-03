@@ -34,6 +34,8 @@ interface ResultsHeroProps {
   onLine?: (line: number, column?: number) => void;
   /** Offered after all samples pass on a `run`. */
   onSubmit?: () => void;
+  /** After a result that is not a pass, on a phone, where the editor is another pane (CSS shows it there only): back to it. */
+  onBackToCode?: () => void;
   /** The headline, so the page can move focus to a fresh result. */
   headingRef?: Ref<HTMLHeadingElement>;
 }
@@ -56,7 +58,8 @@ const LABEL = { fontSize: 'var(--fs-xs)' } as const;
  * The result card (artboard 03), in the order a learner reads it: the headline
  * and its one line; for an accepted solve what it earned and where to go next
  * (Next problem · Back to the map); for anything else what to try and the first
- * failing test, open, in words; then a quiet row of runtime, memory and speed.
+ * failing test, open, in words — and, where the editor is another pane (a
+ * phone), the way back to it; then a quiet row of runtime, memory and speed.
  * The verdict code and the language are small labels, not the headline.
  */
 export function ResultsHero({
@@ -71,6 +74,7 @@ export function ResultsHero({
   gateHref,
   onLine,
   onSubmit,
+  onBackToCode,
   headingRef,
 }: ResultsHeroProps) {
   const look = LOOK[verdict.status];
@@ -207,6 +211,14 @@ export function ResultsHero({
         <p className={s.hiddenNote} data-testid="first-failure">
           Every visible test passed; {testLabel(failures.any)} did not. Hidden tests show only whether they passed.
         </p>
+      )}
+
+      {!ok && verdict.status !== 'XX' && onBackToCode && (
+        <div className={`${s.actions} ${s.backToCode}`}>
+          <Button variant="default" size="lg" icon="code" onClick={onBackToCode} className={s.actionBtn} data-testid="back-to-code">
+            Back to code
+          </Button>
+        </div>
       )}
 
       {hasFacts && (

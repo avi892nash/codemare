@@ -5,7 +5,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { unlockTopicAction, type ActionError } from '@/app/(workspace)/map/actions';
 import { plural, toastBadges } from '@/components/Loop/awards';
 import { Button } from '@/components/ui/Button';
-import { DifficultyPill } from '@/components/ui/DifficultyPill';
+import { DifficultyText } from '@/components/ui/DifficultyText';
 import { Icon } from '@/components/ui/Icon';
 import { Modal } from '@/components/ui/Modal';
 import { Pill } from '@/components/ui/Pill';
@@ -178,7 +178,7 @@ function UnlockDialog({
       onClose={close}
       role="alertdialog"
       title={`Unlock ${topic.title}?`}
-      description={`Spend one recipe. Tokens come out of your cheapest qualifying buckets first, and ${topic.title} stays open for good.`}
+      description={`Spend one recipe — a set of tokens. ${topic.title} stays open for good.`}
       footer={
         <>
           <Button variant="ghost" onClick={close} disabled={pending}>
@@ -230,7 +230,7 @@ function UnlockDialog({
                 <span className={s.spendAmount}>−{line.amount}</span>
                 <Icon name={line.topic.icon} size={12} />
                 <span>{line.topic.title}</span>
-                <DifficultyPill level={line.difficulty} size="xs" />
+                <DifficultyText level={line.difficulty} />
               </li>
             ))}
           </ul>

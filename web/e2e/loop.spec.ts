@@ -15,7 +15,8 @@ import { expect, test, type Page } from '@playwright/test';
  *     its topic's row on the map), watching the navbar's token total rise
  *     with each accepted submit, and the map's list mark them solved
  *  3. /map: Core Techniques (tier 1) is one closed panel — its gate opens
- *     it; the gate is one line and one button
+ *     it; the gate is one line and one button, and the line above it says
+ *     what a gate is
  *  4. start the gate, solve three of its four problems in gate mode, finish
  *     → Core Techniques opens, and the line under the hero says that
  *     Binary Search is ready to unlock
@@ -108,12 +109,13 @@ test('sign-up → solve → submit → unlock', async ({ page }) => {
     for (const title of ['Two Sum', 'Valid Anagram']) {
       await expect(arrays.getByRole('listitem').filter({ has: page.getByRole('link', { name: title, exact: true }) })).toContainText('Solved');
     }
-    // none of the gate's problems is solved yet: no nudge about it
+    // none of the gate's problems is solved yet: no nudge about it (it says nothing before 3 of its 4 problems are solved)
     await expect(page.getByTestId('map-milestone')).toHaveCount(0);
+    await expect(page.getByTestId('map-progress')).toHaveText(/^3\/\d+ problems solved · 3\/10 topics unlocked · 1\/3 tiers open$/);
 
     const panel = page.getByTestId('tier-core-techniques');
     await expect(panel.getByTestId('tier-state')).toHaveText('Locked');
-    await expect(panel).toContainText('Opens after the Foundations Gate');
+    await expect(panel).toContainText('Opens after the Foundations Gate — a timed set of 4 problems');
     await panel.locator(':scope > summary').click();
     const topic = page.getByTestId('topic-binary-search');
     await expect(topic).toHaveAttribute('data-state', 'tier_closed');
@@ -157,6 +159,9 @@ test('sign-up → solve → submit → unlock', async ({ page }) => {
     await expect(topic.getByTestId('topic-state')).toHaveText('Ready to unlock');
     await topic.getByTestId('unlock-button').click();
     const dialog = page.getByRole('alertdialog', { name: 'Unlock Binary Search?' });
+    // one plain sentence: what is spent (a recipe — a set of tokens) and what is gained; the exact debits are below it
+    await expect(dialog).toContainText('Spend one recipe — a set of tokens. Binary Search stays open for good.');
+    await expect(dialog).not.toContainText('qualifying');
     await expect(dialog.getByRole('radio', { name: /Scan, then search/ })).toBeChecked();
     const spend = dialog.getByTestId('unlock-spend');
     await expect(spend).toContainText('You’ll spend 3 tokens');

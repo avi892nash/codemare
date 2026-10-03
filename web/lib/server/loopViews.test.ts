@@ -36,7 +36,7 @@ describe('loop views (DB)', () => {
       await makeRecipe(w.graphs.id, [{ topicId: w.arrays.id, quantity: 1 }], { title: 'Scan' });
       const map = await getMapView(user.id);
 
-      expect(map.totals).toEqual({ tokens: 0, topicsUnlocked: 2, topicsTotal: 4, tiersOpen: 1, tiersTotal: 2, solved: 0 });
+      expect(map.totals).toEqual({ tokens: 0, topicsUnlocked: 2, topicsTotal: 4, tiersOpen: 1, tiersTotal: 2, problems: 2, solved: 0 });
       const [tier0, tier1] = map.tiers;
       expect(tier0).toMatchObject({ open: true, gate: null });
       expect(tier0.topics.map((t) => t.state)).toEqual(['unlocked', 'unlocked']);
@@ -207,6 +207,51 @@ describe('loop views (DB)', () => {
       const two = await getMapView(user.id);
       expect(two.totals.solved).toBe(2);
       expect(two.tiers[1].gate).toMatchObject({ solvedCount: 1 });
+    });
+
+    it('counts every published problem once, a composite too (the header says “n/30 problems solved”)', async () => {
+      const w = await makeWorld();
+      const user = await makeUser();
+      expect((await getMapView(user.id)).totals).toMatchObject({ problems: 2, solved: 0 });
+      await makeQuestion({ slug: 'arrays-graphs', difficulty: 'Hard', topics: [{ topicId: w.arrays.id }, { topicId: w.graphs.id, weight: 0.5 }] });
+      await makeQuestion({ slug: 'no-topic' });
+      await makeQuestion({ slug: 'a-draft', status: 'draft', topics: [{ topicId: w.arrays.id }] });
+      await makeSubmission(user.id, { questionId: w.q1.id, kind: 'submit', status: 'OK' });
+      // two topics' lists hold the composite, the unfiled list holds the loose one: 2 + 1 + 1, drafts out
+      expect((await getMapView(user.id)).totals).toMatchObject({ problems: 4, solved: 1 });
+    });
+
+    it('names the unlocked topic of the problem touched last — a run counts, the latest wins (its row opens on the map)', async () => {
+      const w = await makeWorld();
+      const user = await makeUser();
+      expect((await getMapView(user.id)).lastTouchedTopic).toBeNull();
+
+      const now = Date.now();
+      await makeSubmission(user.id, { questionId: w.q1.id, kind: 'submit', status: 'OK', createdAt: new Date(now - 3000) });
+      await makeSubmission(user.id, { questionId: w.q2.id, kind: 'run', status: 'WA', createdAt: new Date(now - 2000) });
+      expect((await getMapView(user.id)).lastTouchedTopic).toBe('strings');
+      await makeSubmission(user.id, { questionId: w.q1.id, kind: 'submit', status: 'WA', createdAt: new Date(now - 1000) });
+      expect((await getMapView(user.id)).lastTouchedTopic).toBe('arrays');
+    });
+
+    it('takes the heaviest topic of the problem that is open, never a locked one (its row has no problems to show)', async () => {
+      const w = await makeWorld();
+      const user = await makeUser();
+      const now = Date.now();
+      // graphs weighs more but is locked: the composite sits in arrays' list too, and that row is the one to open
+      const composite = await makeQuestion({ slug: 'graphs-arrays', topics: [{ topicId: w.graphs.id, weight: 2 }, { topicId: w.arrays.id, weight: 1 }] });
+      await makeSubmission(user.id, { questionId: composite.id, kind: 'run', status: 'WA', createdAt: new Date(now - 2000) });
+      expect((await getMapView(user.id)).lastTouchedTopic).toBe('arrays');
+
+      // a problem of locked topics only (reachable through a gate attempt): nothing to open
+      const gated = await makeQuestion({ slug: 'graphs-only', topics: [{ topicId: w.graphs.id }] });
+      await makeSubmission(user.id, { questionId: gated.id, kind: 'gate', status: 'WA', createdAt: new Date(now - 1000) });
+      expect((await getMapView(user.id)).lastTouchedTopic).toBeNull();
+
+      // …until the topic is open
+      await openTier(user.id, w.tier1.id);
+      await prisma.unlock.create({ data: { userId: user.id, kind: 'topic', refId: w.graphs.id } });
+      expect((await getMapView(user.id)).lastTouchedTopic).toBe('graphs');
     });
 
     it('reports a running gate attempt with its progress', async () => {

@@ -4,9 +4,10 @@ import { pickMilestone, type MilestoneTierInput, type MilestoneTopicInput } from
 type Gate = NonNullable<MilestoneTierInput['gate']>;
 
 const topic = (slug: string, state: MilestoneTopicInput['state']): MilestoneTopicInput => ({ slug, title: slug.toUpperCase(), state });
-const gate = (id: string, state: Gate['state'], solvedCount: number): Gate => ({ id, title: `Gate ${id}`, state, solvedCount });
+/** A gate of 4 problems that passes with 3, of which the learner has solved `solvedCount`. */
+const gate = (id: string, state: Gate['state'], solvedCount: number, passThreshold = 3): Gate => ({ id, title: `Gate ${id}`, state, solvedCount, passThreshold, questionCount: 4 });
 const tier = (slug: string, topics: MilestoneTopicInput[], g: Gate | null = null): MilestoneTierInput => ({ slug, title: slug.toUpperCase(), gate: g, topics });
-const hero = (reason: 'start' | 'continue' | 'unlock' | 'missing' | 'done', slug: string) => ({ reason, topic: { slug } });
+const hero = (reason: 'start' | 'continue' | 'unlock' | 'gate' | 'missing' | 'done', slug: string, gateId?: string) => ({ reason, topic: { slug }, gate: gateId ? { id: gateId } : null });
 
 describe('pickMilestone: a topic that is ready to unlock', () => {
   const tiers = [tier('t0', [topic('arrays', 'unlocked')]), tier('t1', [topic('search', 'unlockable'), topic('window', 'needs_tokens')], gate('g1', 'passed', 4))];
@@ -15,9 +16,10 @@ describe('pickMilestone: a topic that is ready to unlock', () => {
     for (const reason of ['start', 'continue'] as const) {
       expect(pickMilestone(tiers, hero(reason, 'arrays'))).toEqual({
         kind: 'unlock',
+        lead: '',
         subject: 'SEARCH',
-        text: 'is ready to unlock',
-        cta: { label: 'Unlock', href: '#topic-search' },
+        text: ' is ready to unlock',
+        cta: { label: 'Unlock', href: '#topic-search', sr: ' SEARCH' },
       });
     }
   });
@@ -42,41 +44,59 @@ describe('pickMilestone: a topic that is ready to unlock', () => {
   });
 });
 
-describe('pickMilestone: a gate that is open', () => {
+describe('pickMilestone: a gate the learner is ready for', () => {
   const closed = (g: Gate) => [tier('t0', [topic('arrays', 'unlocked')]), tier('t1', [topic('search', 'tier_closed')], g)];
 
-  it('says so once the learner has solved at least one of its problems, and links to the gate’s card', () => {
-    expect(pickMilestone(closed(gate('g1', 'eligible', 1)), hero('start', 'arrays'))).toEqual({
+  it('says so, plainly and with the count, once they have solved as many of its problems as it takes to pass', () => {
+    expect(pickMilestone(closed(gate('g1', 'eligible', 3)), hero('start', 'arrays'))).toEqual({
       kind: 'gate',
+      lead: 'You can take the ',
       subject: 'Gate g1',
-      text: 'is open',
-      cta: { label: 'View', href: '#gate-g1' },
+      text: ' now — 3 of its 4 problems solved',
+      cta: { label: 'Take the gate', href: '#gate-g1' },
     });
-    expect(pickMilestone(closed(gate('g1', 'eligible', 4)), hero('missing', 'search'))).toMatchObject({ kind: 'gate' });
+    expect(pickMilestone(closed(gate('g1', 'eligible', 4)), hero('missing', 'search'))).toMatchObject({ kind: 'gate', text: ' now — 4 of its 4 problems solved' });
   });
 
-  it('does not nudge at zero solved: an open gate nobody has touched is not a milestone', () => {
-    expect(pickMilestone(closed(gate('g1', 'eligible', 0)), hero('start', 'arrays'))).toBeNull();
-  });
-
-  it('only an open gate counts: not one that is running (it has its banner), cooling down, passed or behind a closed tier', () => {
-    for (const state of ['running', 'cooldown', 'passed', 'previous_tier_closed'] as const) {
-      expect(pickMilestone(closed(gate('g1', state, 3)), hero('start', 'arrays')), state).toBeNull();
+  it('says nothing earlier: at zero, one or two solved of four the gate is not a milestone', () => {
+    for (const solved of [0, 1, 2]) {
+      expect(pickMilestone(closed(gate('g1', 'eligible', solved)), hero('start', 'arrays')), `${solved} solved`).toBeNull();
     }
   });
 
-  it('takes the first open gate in curriculum order', () => {
-    const tiers = [tier('t0', []), tier('t1', [], gate('g1', 'eligible', 2)), tier('t2', [], gate('g2', 'eligible', 3))];
+  it('follows the gate’s own pass threshold, not a fixed number', () => {
+    expect(pickMilestone(closed(gate('g1', 'eligible', 3, 4)), hero('start', 'arrays'))).toBeNull();
+    expect(pickMilestone(closed(gate('g1', 'eligible', 4, 4)), hero('start', 'arrays'))).toMatchObject({ kind: 'gate' });
+    expect(pickMilestone(closed(gate('g1', 'eligible', 2, 2)), hero('start', 'arrays'))).toMatchObject({ kind: 'gate', text: ' now — 2 of its 4 problems solved' });
+  });
+
+  it('only a gate that can be taken counts: not one that is running (it has its banner), cooling down, passed or behind a closed tier', () => {
+    for (const state of ['running', 'cooldown', 'passed', 'previous_tier_closed'] as const) {
+      expect(pickMilestone(closed(gate('g1', state, 4)), hero('start', 'arrays')), state).toBeNull();
+    }
+  });
+
+  it('is not said twice: when the hero is already offering that gate there is no line', () => {
+    expect(pickMilestone(closed(gate('g1', 'eligible', 4)), hero('gate', 'search', 'g1'))).toBeNull();
+  });
+
+  it('takes the first such gate in curriculum order', () => {
+    const tiers = [tier('t0', []), tier('t1', [], gate('g1', 'eligible', 3)), tier('t2', [], gate('g2', 'eligible', 4))];
     expect(pickMilestone(tiers, null)).toMatchObject({ kind: 'gate', cta: { href: '#gate-g1' } });
   });
 
-  it('puts a ready topic before an open gate: one line, the more exciting one', () => {
-    const tiers = [tier('t0', [topic('arrays', 'unlocked')]), tier('t1', [topic('search', 'unlockable')], gate('g1', 'passed', 4)), tier('t2', [topic('graphs', 'tier_closed')], gate('g2', 'eligible', 2))];
+  it('skips one that is not ready for the next that is', () => {
+    const tiers = [tier('t0', []), tier('t1', [], gate('g1', 'eligible', 1)), tier('t2', [], gate('g2', 'eligible', 3))];
+    expect(pickMilestone(tiers, null)).toMatchObject({ kind: 'gate', subject: 'Gate g2' });
+  });
+
+  it('puts a ready topic before a gate: one line, the more exciting one', () => {
+    const tiers = [tier('t0', [topic('arrays', 'unlocked')]), tier('t1', [topic('search', 'unlockable')], gate('g1', 'passed', 4)), tier('t2', [topic('graphs', 'tier_closed')], gate('g2', 'eligible', 3))];
     expect(pickMilestone(tiers, hero('start', 'arrays'))).toMatchObject({ kind: 'unlock', subject: 'SEARCH' });
   });
 
   it('falls through to the gate when the only ready topic is the hero’s own', () => {
-    const tiers = [tier('t1', [topic('search', 'unlockable')], gate('g1', 'passed', 4)), tier('t2', [topic('graphs', 'tier_closed')], gate('g2', 'eligible', 2))];
+    const tiers = [tier('t1', [topic('search', 'unlockable')], gate('g1', 'passed', 4)), tier('t2', [topic('graphs', 'tier_closed')], gate('g2', 'eligible', 3))];
     expect(pickMilestone(tiers, hero('unlock', 'search'))).toMatchObject({ kind: 'gate', cta: { href: '#gate-g2' } });
   });
 });

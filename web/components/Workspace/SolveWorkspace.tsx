@@ -23,7 +23,7 @@ import { GateBanner } from './GateBanner';
 import { RunErrorNotice } from './RunErrorNotice';
 import { StatementPane } from './StatementPane';
 import type { GateContext, NextProblem, SubmissionSummary, WorkspaceMode, WorkspaceProblem } from './types';
-import { useModKey, useTouchOnly } from './useModKey';
+import { layoutNow, useLayout, useModKey, useTouchOnly } from './useModKey';
 import { useSplit } from './useSplit';
 import s from './Workspace.module.css';
 
@@ -62,7 +62,7 @@ export interface SolveWorkspaceProps {
 }
 
 type ConsoleTab = 'cases' | 'result';
-/** Below 1024 px one pane shows at a time. */
+/** Below 1024 px a pane shows at a time: on a phone Problem · Code · Result, on a tablet Problem · Code (the console is under the editor). */
 type PhoneView = 'problem' | 'code' | 'result';
 
 const PHONE_VIEWS = [
@@ -70,9 +70,10 @@ const PHONE_VIEWS = [
   { value: 'code', label: 'Code' },
   { value: 'result', label: 'Result' },
 ];
+const TABLET_VIEWS = PHONE_VIEWS.slice(0, 2);
 
-/** The phone layout (one pane at a time) — keep in step with the 1023 px breakpoint in Workspace.module.css. */
-const isNarrow = () => window.matchMedia('(max-width: 1023px)').matches;
+/** Where a result is read: its own pane on a phone, under the editor — the Code pane — on a tablet. */
+const resultView = (): PhoneView => (layoutNow() === 'tablet' ? 'code' : 'result');
 const prefersReducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 function markersFrom(error: string): EditorMarker[] {
@@ -89,13 +90,15 @@ function markersFrom(error: string): EditorMarker[] {
  * statement · editor · console. Monaco loads lazily; drafts persist per
  * problem and language; ⌘/Ctrl+Enter runs and ⌘/Ctrl+Shift+Enter submits.
  * Two resizable columns from 1024 px up; below, one pane at a time
- * (Problem · Code · Result) so nothing sits between the learner and the
+ * (Problem · Code · Result on a phone; Problem · Code on a tablet, where the
+ * console sits under the editor) so nothing sits between the learner and the
  * editor, and a new result takes the screen.
  */
 export function SolveWorkspace(props: SolveWorkspaceProps) {
   const { mode, problem, gate } = props;
   const mod = useModKey();
   const touch = useTouchOnly();
+  const layout = useLayout();
   const scope = `q:${problem.id}`;
   const languages = problem.languages;
   const starter = useCallback((l: SupportedLanguage) => problem.starterCode[l] ?? '', [problem.starterCode]);
@@ -110,6 +113,8 @@ export function SolveWorkspace(props: SolveWorkspaceProps) {
   const [consoleTab, setConsoleTab] = useState<ConsoleTab>('cases');
   const [view, setView] = useState<PhoneView>('problem');
   const [notice, setNotice] = useState<string | null>(null);
+  // Monaco comes from a CDN and is the slowest thing on the page: until it has mounted there is nothing to edit, so nothing to run.
+  const [editorReady, setEditorReady] = useState(false);
   const [cases, setCases] = useState<CustomCase[]>([]);
   const [selectedCase, setSelectedCase] = useState('s0');
   const [casesError, setCasesError] = useState<string | null>(null);
@@ -121,6 +126,7 @@ export function SolveWorkspace(props: SolveWorkspaceProps) {
   const [gateOver, setGateOver] = useState(false);
   const editor = useRef<CodeEditorHandle | null>(null);
   const consoleBody = useRef<HTMLDivElement>(null);
+  const viewSwitch = useRef<HTMLDivElement>(null);
   const verdictHeading = useRef<HTMLHeadingElement>(null);
   const run = useRunStream();
 
@@ -178,7 +184,7 @@ export function SolveWorkspace(props: SolveWorkspaceProps) {
 
   const execute = useCallback(
     async (action: 'run' | 'submit') => {
-      if (run.busy) return;
+      if (run.busy || !editorReady) return;
       if (!code.trim()) {
         setNotice('Nothing to run — write some code first.');
         return;
@@ -193,7 +199,7 @@ export function SolveWorkspace(props: SolveWorkspaceProps) {
         const custom = customInputs(problem.signature, cases, language);
         if (!custom.ok) {
           setConsoleTab('cases');
-          setView('result');
+          setView(resultView());
           setSelectedCase(cases[custom.index].id);
           setCasesError(`Custom ${custom.index + 1} has an invalid value — fix it or remove the case.`);
           return;
@@ -239,7 +245,7 @@ export function SolveWorkspace(props: SolveWorkspaceProps) {
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [run.busy, run.start, code, language, cases, mode, problem.id, problem.signature, gate, gateOver, currentSlug, router]
+    [run.busy, run.start, editorReady, code, language, cases, mode, problem.id, problem.signature, gate, gateOver, currentSlug, router]
   );
 
   const executeRef = useRef(execute);
@@ -267,6 +273,13 @@ export function SolveWorkspace(props: SolveWorkspaceProps) {
     window.requestAnimationFrame(() => editor.current?.revealLine(line, column));
   }, []);
 
+  // "Back to code" on a result: the Code pane is one tap away at the top, and this is the same tap from where the learner is reading.
+  // Focus goes to the switch's Code segment, not into the editor — on a phone that would bring the keyboard up over what they came to look at.
+  const onBackToCode = useCallback(() => {
+    setView('code');
+    window.requestAnimationFrame(() => viewSwitch.current?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')?.focus());
+  }, []);
+
   // A result has arrived (or the run never started): start it from its top. Below
   // 1024 px it also takes the screen, and — the editor's pane being hidden then —
   // focus moves to its headline, so assistive technology lands on it. Smooth scrolling
@@ -274,10 +287,10 @@ export function SolveWorkspace(props: SolveWorkspaceProps) {
   useEffect(() => {
     const arrived = run.phase === 'done' ? run.verdict : run.phase === 'failed' ? run.error : null;
     if (!arrived) return;
-    const narrow = isNarrow();
-    consoleBody.current?.scrollTo({ top: 0, behavior: narrow || prefersReducedMotion() ? 'auto' : 'smooth' });
-    if (!narrow) return;
-    setView('result');
+    const wide = layoutNow() === 'wide';
+    consoleBody.current?.scrollTo({ top: 0, behavior: !wide || prefersReducedMotion() ? 'auto' : 'smooth' });
+    if (wide) return;
+    setView(resultView());
     let inner = 0;
     const outer = window.requestAnimationFrame(() => {
       inner = window.requestAnimationFrame(() => verdictHeading.current?.focus({ preventScroll: true }));
@@ -295,6 +308,11 @@ export function SolveWorkspace(props: SolveWorkspaceProps) {
   const rows = useSplit('rows', rightRef, { initial: 56, min: 25, max: 82, axis: 'y', label: 'Resize the editor and console' });
   const layoutStyle = { '--left': `${cols.ratio}%`, '--top': `${rows.ratio}%` } as CSSProperties;
 
+  // Turned from a phone to a tablet's width (a rotation): the Result pane is gone, its content is under the editor.
+  useEffect(() => {
+    if (layout === 'tablet' && view === 'result') setView('code');
+  }, [layout, view]);
+
   const verdict = run.phase === 'done' ? run.verdict : null;
   const kbd = (suffix: string) => (touch ? undefined : `${mod}${suffix}`);
 
@@ -302,17 +320,17 @@ export function SolveWorkspace(props: SolveWorkspaceProps) {
     <main className={s.root} data-mode={mode} data-view={view} style={layoutStyle}>
       {gate && <GateBanner gate={gate} currentSlug={currentSlug} solved={gateSolved} onExpire={() => setGateOver(true)} />}
 
-      {/* Below 1024 px: which pane is showing. Hidden on a desktop, where all three are. */}
-      <div className={s.viewSwitch}>
+      {/* Below 1024 px: which pane is showing. Hidden on a desktop, where all of them are. */}
+      <div ref={viewSwitch} className={s.viewSwitch}>
         <Tabs
-          tabs={PHONE_VIEWS}
-          value={view}
+          tabs={layout === 'tablet' ? TABLET_VIEWS : PHONE_VIEWS}
+          value={layout === 'tablet' && view === 'result' ? 'code' : view}
           onChange={(v) => {
             setView(v as PhoneView);
             if (v === 'result') setConsoleTab('result'); // "Result" opens on the result (the test cases are its other tab)
           }}
           variant="pills"
-          aria-label="Problem, code or result"
+          aria-label={layout === 'tablet' ? 'Problem or code' : 'Problem, code or result'}
         />
       </div>
 
@@ -353,7 +371,8 @@ export function SolveWorkspace(props: SolveWorkspaceProps) {
                   icon="play"
                   onClick={onRun}
                   loading={run.busy && run.kind !== 'submit'}
-                  disabled={run.busy && run.kind === 'submit'}
+                  disabled={!editorReady || (run.busy && run.kind === 'submit')}
+                  title={editorReady ? undefined : 'Loading the editor…'}
                   kbd={kbd('↵')}
                   data-testid="run-button"
                 >
@@ -365,7 +384,8 @@ export function SolveWorkspace(props: SolveWorkspaceProps) {
                   icon="send"
                   onClick={onSubmit}
                   loading={run.busy && run.kind === 'submit'}
-                  disabled={(run.busy && run.kind !== 'submit') || (mode === 'gate' && gateOver)}
+                  disabled={!editorReady || (run.busy && run.kind !== 'submit') || (mode === 'gate' && gateOver)}
+                  title={editorReady ? undefined : 'Loading the editor…'}
                   kbd={kbd('⇧↵')}
                   data-testid="submit-button"
                 >
@@ -392,6 +412,7 @@ export function SolveWorkspace(props: SolveWorkspaceProps) {
                 markers={markers}
                 ariaLabel={`${LANGUAGE_META[language].label} code for ${problem.title}`}
                 handleRef={editor}
+                onReady={() => setEditorReady(true)}
               />
             </div>
           </section>
@@ -403,7 +424,8 @@ export function SolveWorkspace(props: SolveWorkspaceProps) {
               <Tabs
                 tabs={[
                   { value: 'cases', label: 'Test cases', icon: 'list', count: problem.samples.length + cases.length || undefined },
-                  { value: 'result', label: 'Result', icon: 'terminal' },
+                  // One pane at a time, the switch above already has a "Result": this one is the last run's.
+                  { value: 'result', label: layout === 'phone' ? 'Last result' : 'Result', icon: 'terminal' },
                 ]}
                 value={consoleTab}
                 onChange={(v) => setConsoleTab(v as ConsoleTab)}
@@ -469,6 +491,7 @@ export function SolveWorkspace(props: SolveWorkspaceProps) {
                       aiReview={props.aiReview}
                       onLine={onLine}
                       onSubmit={onSubmit}
+                      onBackToCode={onBackToCode}
                       headingRef={verdictHeading}
                     />
                   )}

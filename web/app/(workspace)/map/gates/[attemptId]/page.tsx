@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { LoopHero, SectionHead } from '@/components/Loop/LoopHead';
+import { SectionHead } from '@/components/Loop/LoopHead';
 import { LoopPage } from '@/components/Loop/LoopPage';
 import { LocalTime } from '@/components/Loop/Countdown';
 import { requireViewer } from '@/components/Learn/viewer';
@@ -9,10 +9,11 @@ import { AttemptClock, AttemptLive, CooldownClock, FinishGateButton } from '@/co
 import s from '@/components/Map/attempt.module.css';
 import { Breadcrumb } from '@/components/ui/Breadcrumb';
 import { ButtonLink } from '@/components/ui/Button';
-import { DifficultyPill } from '@/components/ui/DifficultyPill';
+import { DifficultyText } from '@/components/ui/DifficultyText';
 import { Icon } from '@/components/ui/Icon';
-import { Pill } from '@/components/ui/Pill';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { ProgressBar } from '@/components/ui/ProgressBar';
+import { StatusDot } from '@/components/ui/StatusDot';
 import { NotFoundError } from '@/lib/server/errors';
 import { getGateAttemptView, type GateAttemptPageView } from '@/lib/server/loopViews';
 
@@ -30,25 +31,16 @@ function Questions({ view }: { view: GateAttemptPageView }) {
         note={view.running ? 'Submissions count while the clock runs' : `Solved in this attempt: ${view.solvedCount} of ${view.questions.length}`}
       />
       <ol className={s.qList} data-testid="gate-questions">
-        {view.questions.map((q, i) => (
+        {view.questions.map((q) => (
           <li key={q.slug} className={s.qRow} data-solved={q.solved || undefined} data-testid={`gate-question-${q.slug}`}>
-            <span className={`${s.qNum} mono`} aria-hidden="true">
-              {q.solved ? <Icon name="check" size={12} /> : i + 1}
+            {/* The Map's own glyphs: solved is a check, not yet is an empty circle; the words are for a screen reader. */}
+            <span className={s.qMark} aria-hidden="true">
+              <StatusDot status={q.solved ? 'solved' : 'unsolved'} />
             </span>
             <div className={s.qMain}>
+              <span className="sr-only">{q.solved ? 'Solved: ' : 'Not solved: '}</span>
               <span className={s.qTitle}>{q.title}</span>
-              <DifficultyPill level={q.difficulty} size="xs" />
-              {q.solved ? (
-                <Pill tone="ok" size="xs" icon="check-circle">
-                  Solved
-                </Pill>
-              ) : (
-                !view.running && (
-                  <Pill tone="muted" size="xs">
-                    Not solved
-                  </Pill>
-                )
-              )}
+              <DifficultyText level={q.difficulty} />
             </div>
             {view.running && (
               <div className={s.qAction}>
@@ -81,16 +73,10 @@ function Running({ view }: { view: GateAttemptPageView }) {
             <strong className="mono">
               {view.solvedCount}/{view.questions.length}
             </strong>
-            <span>solved · pass with {view.gate.passThreshold}</span>
-            {needed === 0 ? (
-              <Pill tone="ok" size="xs" icon="check">
-                Passing
-              </Pill>
-            ) : (
-              <Pill tone="muted" size="xs">
-                {needed} to go
-              </Pill>
-            )}
+            <span>
+              solved · pass with {view.gate.passThreshold}
+              {needed === 0 ? <span className={s.passing}> · passing</span> : ` · ${needed} to go`}
+            </span>
           </div>
           <ProgressBar
             value={Math.min(view.solvedCount, view.gate.passThreshold)}
@@ -169,9 +155,11 @@ function Result({ view }: { view: GateAttemptPageView }) {
               Back to the map
             </ButtonLink>
           )}
-          <ButtonLink href="/map" variant="ghost" icon="list">
-            Find a problem on the map
-          </ButtonLink>
+          {passed && (
+            <ButtonLink href="/map" variant="ghost" icon="list">
+              Find a problem on the map
+            </ButtonLink>
+          )}
         </div>
       </div>
     </div>
@@ -195,11 +183,9 @@ export default async function GateAttemptPage({ params }: { params: Params }) {
   }
 
   return (
-    <LoopPage narrow label={view.gate.title}>
-      <Breadcrumb items={[{ label: 'Tier map', href: '/map', icon: 'map' }, { label: view.gate.title }]} />
-      <LoopHero
-        icon="shield"
-        eyebrow={view.running ? 'Gate attempt · in progress' : 'Gate attempt · finished'}
+    <LoopPage label={view.gate.title}>
+      <Breadcrumb items={[{ label: 'Tier map', href: '/map' }, { label: view.gate.title }]} />
+      <PageHeader
         title={view.gate.title}
         subtitle={`Solve ${view.gate.passThreshold} of these ${view.questions.length} problems within ${view.gate.timeLimitMinutes} minutes to open ${view.tier.title}.`}
       />

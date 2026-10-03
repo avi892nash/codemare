@@ -7,7 +7,11 @@
  *   - in a gate attempt the next step is back to the gate;
  *   - at 375 px the page shows one pane at a time (Problem · Code · Result): Run and Submit are 44 px on one row with no
  *     keyboard glyphs, the statement's tabs all fit, nothing scrolls sideways, a new result takes the screen and is focused,
- *     and axe finds nothing in any of the three views, in both themes.
+ *     a failing result has a "Back to code" button, no two tabs share a name, a gate attempt's strip is one line that opens
+ *     for its problems, and axe finds nothing in any of the three views, in both themes;
+ *   - Run and Submit wait for the editor (Monaco loads from a CDN): disabled, and the editor says it is loading;
+ *   - a tablet upright (768 px) shows two panes — Problem, and the editor over the console — with the whole statement and a
+ *     result read beside the code; a phone on its side keeps the phone's one pane.
  *
  * PLAYWRIGHT_BASE_URL=http://localhost:4201 DATABASE_URL=<the app's database> npx playwright test e2e/results.spec.ts
  * (DATABASE_URL must be the database of the app under test: the percentile and gate tests seed rows into it and remove them.)
@@ -198,6 +202,8 @@ test.describe('what failed leads', () => {
 
     // Metrics come after it and are secondary; no reward, no way forward from a wrong answer.
     expect(await top(page, 'first-failure')).toBeLessThan(await top(page, 'verdict-metrics'));
+    // "Back to code" is for a screen where the editor is another pane: here it is right beside the result, so the button is not shown
+    await expect(page.getByTestId('back-to-code')).toBeHidden();
     await expect(page.getByTestId('rewards')).toHaveCount(0);
     await expect(page.getByTestId('next-problem')).toHaveCount(0);
     // The per-test list stays below, every test one row.
@@ -438,6 +444,47 @@ test.describe('on a phone (375 px)', () => {
     await expect(page.getByTestId('code-editor')).toBeVisible();
   });
 
+  test('a failing result has a “Back to code” button in view, and no two tabs on the page share a name', async ({ page }) => {
+    await signUp(page);
+    await openProblem(page, '/problems/contains-duplicate');
+    await viewTab(page, 'Code').tap();
+    await setCode(page, WRONG);
+    await page.getByTestId('submit-button').tap();
+    await expect(verdict(page)).toHaveText('Wrong answer', { timeout: 30_000 });
+
+    const back = page.getByTestId('back-to-code');
+    await expect(back).toBeInViewport({ ratio: 1 });
+    expect((await back.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    // the failing test comes first, then the way back: the order a learner reads it in
+    expect(await top(page, 'first-failure')).toBeLessThan(await top(page, 'back-to-code'));
+    expect(await top(page, 'back-to-code')).toBeLessThan(await top(page, 'verdict-metrics'));
+
+    // one pane at a time: the switch above says Problem · Code · Result, and the console's own two tabs are not both "Result"
+    const names = await page.getByRole('tab').evaluateAll((tabs) => tabs.filter((t) => t.getClientRects().length > 0 && getComputedStyle(t).visibility !== 'hidden').map((t) => (t.textContent ?? '').replace(/\d+$/, '').trim()));
+    expect(names.filter((n) => n === 'Result'), `tabs: ${names.join(' | ')}`).toHaveLength(1);
+    expect(names).toContain('Last result');
+    expect(new Set(names).size, `tabs: ${names.join(' | ')}`).toBe(names.length);
+
+    await back.tap();
+    await expect(viewTab(page, 'Code')).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByTestId('code-editor')).toBeVisible();
+    await expect(viewTab(page, 'Code')).toBeFocused(); // focus moves to the pane switch, not into the editor — that would raise the keyboard
+    expect(await overflow(page)).toEqual({ page: 0, main: 0 });
+
+    // the same for a run that did not compile; an accepted solve has other buttons and no "Back to code"
+    await page.selectOption('[data-testid="language-select"]', 'cpp');
+    await setCode(page, CPP_BROKEN);
+    await page.getByTestId('submit-button').tap();
+    await expect(verdict(page)).toHaveText('Compilation error', { timeout: 60_000 });
+    await expect(page.getByTestId('back-to-code')).toBeVisible();
+    await viewTab(page, 'Code').tap();
+    await page.selectOption('[data-testid="language-select"]', 'python');
+    await setCode(page, reference('contains-duplicate'));
+    await page.getByTestId('submit-button').tap();
+    await expect(verdict(page)).toHaveText('Accepted', { timeout: 30_000 });
+    await expect(page.getByTestId('back-to-code')).toHaveCount(0);
+  });
+
   for (const theme of ['dark', 'light'] as const) {
     test(`axe finds nothing serious in the Problem, Code and Result views (${theme})`, async ({ page, context }) => {
       test.setTimeout(120_000);
@@ -471,4 +518,216 @@ test.describe('on a phone (375 px)', () => {
       await audit('Result (accepted)');
     });
   }
+});
+
+test.describe('a gate attempt on a phone (375 px)', () => {
+  test.use({ viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });
+  let prisma: PrismaClient;
+  let email = '';
+  /** Sideways overflow of the page and of the workspace, in px (0 = none). */
+  const overflow = (page: Page) =>
+    page.evaluate(() => ({
+      page: Math.max(document.documentElement.scrollWidth, document.body.scrollWidth) - document.documentElement.clientWidth,
+      main: (() => {
+        const m = document.querySelector('main')!;
+        return m.scrollWidth - m.clientWidth;
+      })(),
+    }));
+
+  test.beforeAll(() => {
+    prisma = database();
+  });
+  test.afterAll(async () => {
+    if (email) await prisma.user.deleteMany({ where: { email } });
+    await prisma.$disconnect();
+  });
+
+  test('the strip is one line — the clock and “0/4 · pass with 3” — that opens for the gate’s name, a way back and its problems', async ({ page }) => {
+    email = await signUp(page);
+    const user = await prisma.user.findUniqueOrThrow({ where: { email }, select: { id: true } });
+    const gate = await prisma.gate.findFirstOrThrow({ where: { questions: { some: { question: { slug: 'contains-duplicate' } } } }, select: { id: true } });
+    const attempt = await prisma.gateAttempt.create({ data: { userId: user.id, gateId: gate.id, deadlineAt: new Date(Date.now() + 60 * 60_000) }, select: { id: true } });
+    await openProblem(page, `/problems/contains-duplicate?attempt=${attempt.id}`);
+
+    const bar = page.getByTestId('gate-banner');
+    await expect(bar).toBeVisible();
+    // one 44 px line, where it was 126 px
+    const box = (await bar.boundingBox())!;
+    expect(box.height).toBeLessThan(56);
+    await expect(page.getByTestId('gate-countdown')).toHaveText(/^\d+:\d\d$/);
+    await expect(bar).toContainText('0/4 · pass with 3');
+    // the rest is out of sight (and out of the tab order) until asked for
+    const toggle = page.getByRole('button', { name: 'Gate problems' });
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect((await toggle.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    await expect(bar.getByRole('link', { name: /Contains Duplicate/ })).toBeHidden();
+    await expect(bar.getByRole('link', { name: 'Gate' })).toBeHidden();
+    // the editor has the room: Code, with the strip above the switch
+    await viewTab(page, 'Code').tap();
+    const editor = (await page.getByTestId('code-editor').boundingBox())!;
+    expect(editor.height, 'the editor is at least 480 px tall (431 with the old strip)').toBeGreaterThanOrEqual(480);
+
+    await toggle.tap();
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    for (const title of ['Contains Duplicate', 'Valid Palindrome', 'Valid Parentheses', 'Product of Array Except Self']) {
+      const link = bar.getByRole('link', { name: new RegExp(title) });
+      await expect(link).toBeVisible();
+      expect((await link.boundingBox())!.height, title).toBeGreaterThanOrEqual(44);
+    }
+    await expect(bar.getByRole('link', { name: /Contains Duplicate/ })).toHaveAttribute('aria-current', 'page');
+    await expect(bar.getByRole('link', { name: 'Gate' })).toHaveAttribute('href', `/map/gates/${attempt.id}`);
+    await expect(bar.getByText('Foundations Gate')).toBeVisible();
+    expect(await overflow(page)).toEqual({ page: 0, main: 0 });
+
+    // an accepted submit counts for the gate: the strip's line follows, and the strip stays one line when closed again
+    await toggle.tap();
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await setCode(page, reference('contains-duplicate'));
+    await page.getByTestId('submit-button').tap();
+    await expect(verdict(page)).toHaveText('Accepted', { timeout: 30_000 });
+    await expect(bar).toContainText('1/4 · pass with 3');
+    expect((await bar.boundingBox())!.height).toBeLessThan(56);
+  });
+});
+
+test.describe('a tablet upright (768 px) and a phone on its side', () => {
+  /** Sideways overflow of the page and of the workspace, in px (0 = none). */
+  const overflow = (page: Page) =>
+    page.evaluate(() => ({
+      page: Math.max(document.documentElement.scrollWidth, document.body.scrollWidth) - document.documentElement.clientWidth,
+      main: (() => {
+        const m = document.querySelector('main')!;
+        return m.scrollWidth - m.clientWidth;
+      })(),
+    }));
+
+  test.describe('on an iPad upright', () => {
+    test.use({ viewport: { width: 768, height: 1024 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });
+
+    test('two panes: the whole statement, then the editor over the console — a result is read with the code in view', async ({ page }) => {
+      await signUp(page);
+      await openProblem(page, '/problems/contains-duplicate');
+      const switcher = page.getByRole('tablist', { name: 'Problem or code' });
+      await expect(switcher.getByRole('tab')).toHaveText(['Problem', 'Code']);
+      await expect(switcher.getByRole('tab', { name: 'Problem' })).toHaveAttribute('aria-selected', 'true');
+
+      // the statement has the room: nothing is behind "More", and the page is as tall as the screen, not a blank half of it
+      await expect(page.getByRole('button', { name: /^More/ })).toBeHidden();
+      await expect(page.getByRole('region', { name: 'Example 2' })).toBeVisible();
+      await expect(page.getByRole('region', { name: 'Constraints' })).toBeVisible();
+      expect(await overflow(page)).toEqual({ page: 0, main: 0 });
+      // the right column is out of sight and out of the way: what is at the middle of the statement is the statement
+      const hit = await page.evaluate(() => {
+        const pane = document.querySelector('section[aria-label="Problem"]')!.getBoundingClientRect();
+        const el = document.elementFromPoint(pane.left + pane.width / 2, pane.top + pane.height / 2);
+        return !!el?.closest('section[aria-label="Problem"]');
+      });
+      expect(hit).toBe(true);
+
+      await switcher.getByRole('tab', { name: 'Code' }).tap();
+      const editor = (await page.getByTestId('code-editor').boundingBox())!;
+      const console_ = (await page.getByTestId('console').boundingBox())!;
+      expect(editor.width, 'the editor has the whole width').toBeGreaterThan(700);
+      expect(console_.y, 'the console is under the editor').toBeGreaterThanOrEqual(editor.y + editor.height);
+      expect(console_.y + console_.height).toBeLessThanOrEqual(1024);
+      expect(await overflow(page)).toEqual({ page: 0, main: 0 });
+
+      // a result lands under the editor: no pane change, the code stays in view, and there is no "Back to code" to need
+      await setCode(page, WRONG);
+      await page.getByTestId('submit-button').tap();
+      await expect(verdict(page)).toHaveText('Wrong answer', { timeout: 30_000 });
+      await expect(switcher.getByRole('tab', { name: 'Code' })).toHaveAttribute('aria-selected', 'true');
+      await expect(page.getByTestId('code-editor')).toBeInViewport({ ratio: 1 });
+      await expect(verdict(page)).toBeInViewport({ ratio: 1 });
+      await expect(page.getByTestId('first-failure').getByRole('heading')).toBeInViewport({ ratio: 1 });
+      await expect(page.getByTestId('back-to-code')).toBeHidden();
+      // one pane has "Result" only once: the console's own tab keeps its name here
+      await expect(page.getByRole('tablist', { name: 'Console' }).getByRole('tab')).toHaveText(['Test cases 3', 'Result']);
+
+      await switcher.getByRole('tab', { name: 'Problem' }).tap();
+      await expect(page.getByTestId('code-editor')).toBeHidden();
+      await expect(page.getByTestId('problem-statement')).toBeVisible();
+    });
+
+    for (const theme of ['dark', 'light'] as const) {
+      test(`axe finds nothing serious in either pane, with a result open (${theme})`, async ({ page, context }) => {
+        test.setTimeout(120_000);
+        await context.addCookies([{ name: 'cm-theme', value: theme, url: test.info().project.use.baseURL ?? 'http://localhost:4001' }]);
+        await signUp(page);
+        await openProblem(page, '/problems/contains-duplicate');
+        const audit = async (label: string) => {
+          await page.addScriptTag({ url: AXE_URL });
+          const found = await page.evaluate(async () => {
+            const axe = (window as unknown as { axe: { run: (ctx: unknown, opts: unknown) => Promise<{ violations: { id: string; impact?: string | null; nodes: { target: string[] }[] }[] }> } }).axe;
+            const result = await axe.run(document, { exclude: [['nextjs-portal']], resultTypes: ['violations'] });
+            return result.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical').map((v) => `${v.id}: ${v.nodes.slice(0, 3).map((n) => n.target.join(' ')).join(' | ')}`);
+          });
+          expect(found, `${label} (${theme})`).toEqual([]);
+          expect(await overflow(page), `${label} overflow`).toEqual({ page: 0, main: 0 });
+        };
+        await audit('Problem');
+        await page.getByRole('tablist', { name: 'Problem or code' }).getByRole('tab', { name: 'Code' }).tap();
+        await audit('Code');
+        await setCode(page, WRONG);
+        await page.getByTestId('submit-button').tap();
+        await expect(verdict(page)).toHaveText('Wrong answer', { timeout: 30_000 });
+        await audit('Code, with a result');
+      });
+    }
+  });
+
+  test.describe('on a phone on its side', () => {
+    test.use({ viewport: { width: 844, height: 390 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });
+
+    test('is short, so it keeps the phone’s one pane — three views, "Back to code", "Last result"', async ({ page }) => {
+      await signUp(page);
+      await openProblem(page, '/problems/contains-duplicate');
+      const switcher = page.getByRole('tablist', { name: 'Problem, code or result' });
+      await expect(switcher.getByRole('tab')).toHaveText(['Problem', 'Code', 'Result']);
+      await expect(page.getByRole('button', { name: /^More/ })).toBeVisible(); // the statement's rest is still behind "More"
+      await switcher.getByRole('tab', { name: 'Code' }).tap();
+      await expect(page.getByTestId('console')).toBeHidden();
+      await setCode(page, WRONG);
+      await page.getByTestId('submit-button').tap();
+      await expect(verdict(page)).toHaveText('Wrong answer', { timeout: 30_000 });
+      await expect(switcher.getByRole('tab', { name: 'Result', exact: true })).toHaveAttribute('aria-selected', 'true');
+      await expect(page.getByRole('tablist', { name: 'Console' }).getByRole('tab', { name: 'Last result' })).toBeVisible();
+      await page.getByTestId('back-to-code').scrollIntoViewIfNeeded();
+      await expect(page.getByTestId('back-to-code')).toBeVisible();
+      await page.getByTestId('back-to-code').tap();
+      await expect(switcher.getByRole('tab', { name: 'Code' })).toHaveAttribute('aria-selected', 'true');
+      expect(await overflow(page)).toEqual({ page: 0, main: 0 });
+    });
+  });
+});
+
+test.describe('the editor loads from a CDN', () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+
+  test('Run and Submit wait for it — disabled, with the reason — and the editor says it is loading', async ({ page }) => {
+    let release!: () => void;
+    const released = new Promise<void>((resolve) => (release = resolve));
+    // hold Monaco's loader back, as a slow connection would
+    await page.route(/cdn\.jsdelivr\.net\/npm\/monaco-editor[^/]*\/min\/vs\/loader\.js/, async (route) => {
+      await released;
+      await route.continue();
+    });
+    await signUp(page);
+    await page.goto('/problems/contains-duplicate', { waitUntil: 'domcontentloaded' }); // the held script keeps `load` from firing
+    await expect(page.getByTestId('problem-title')).toHaveText('Contains Duplicate');
+
+    await expect(page.getByTestId('code-editor').getByText('Loading the editor…', { exact: true }).first()).toBeVisible();
+    await expect(page.getByTestId('run-button')).toBeDisabled();
+    await expect(page.getByTestId('submit-button')).toBeDisabled();
+    await expect(page.getByTestId('run-button')).toHaveAttribute('title', 'Loading the editor…');
+    await expect(page.getByTestId('code-editor')).not.toHaveAttribute('data-ready', 'true');
+
+    release();
+    await editorMounted(page);
+    await expect(page.getByTestId('run-button')).toBeEnabled();
+    await expect(page.getByTestId('submit-button')).toBeEnabled();
+    await expect(page.getByTestId('run-button')).not.toHaveAttribute('title', /.+/);
+    // and they work
+    await submitCode(page, reference('contains-duplicate'), 'Accepted');
+  });
 });

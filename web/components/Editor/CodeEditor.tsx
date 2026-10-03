@@ -62,6 +62,8 @@ interface CodeEditorProps {
   readOnly?: boolean;
   ariaLabel?: string;
   handleRef?: MutableRefObject<CodeEditorHandle | null>;
+  /** Monaco has loaded and the editor is on screen — the code can be edited from here on. */
+  onReady?: () => void;
 }
 
 /**
@@ -78,6 +80,7 @@ export function CodeEditor({
   readOnly = false,
   ariaLabel = 'Code editor',
   handleRef,
+  onReady,
 }: CodeEditorProps) {
   const { theme } = useTheme();
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -85,8 +88,10 @@ export function CodeEditor({
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const runRef = useRef(onRun);
   const submitRef = useRef(onSubmit);
+  const readyRef = useRef(onReady);
   runRef.current = onRun;
   submitRef.current = onSubmit;
+  readyRef.current = onReady;
 
   const applyTheme = useCallback(
     (monaco: Monaco) => {
@@ -163,6 +168,7 @@ export function CodeEditor({
     if (mono) instance.updateOptions({ fontFamily: `${mono}, ui-monospace, SFMono-Regular, Menlo, monospace` });
     void document.fonts?.ready.then(() => monaco.editor.remeasureFonts());
     wrapRef.current?.setAttribute('data-ready', 'true');
+    readyRef.current?.();
     if (handleRef) {
       handleRef.current = {
         focus: () => instance.focus(),
@@ -223,12 +229,12 @@ export function CodeEditor({
   );
 }
 
-/** Code-shaped skeleton shown while Monaco downloads. */
+/** Code-shaped skeleton shown while Monaco downloads, saying so: it is the editor's first download (about 1 MB, once per device). */
 export function EditorPlaceholder() {
   const widths = [46, 62, 38, 71, 55, 30, 66, 42, 24, 51];
   return (
     <div className={s.placeholder} role="status" aria-live="polite">
-      <span className="sr-only">Loading the editor…</span>
+      <p className={s.placeholderNote}>Loading the editor…</p>
       {widths.map((w, i) => (
         <div key={i} className={s.placeholderLine} aria-hidden="true">
           <span className={s.placeholderGutter}>{i + 1}</span>

@@ -358,6 +358,12 @@ button.testHead:hover { background: var(--bg-2); }
 }
 .actions .actionBtn { height: 40px; padding: 0 16px; font-size: var(--fs-md); }
 
+/* "Back to code" is for a phone, where the editor is another pane: not shown on a tablet or a desktop, where it is right there. */
+.backToCode { display: none; }
+@media (max-width: 767px), (max-width: 1023px) and (max-height: 599px) {
+  .backToCode { display: flex; }
+}
+
 /* The first failing test, in words and monospace. */
 .failure {
   display: flex;

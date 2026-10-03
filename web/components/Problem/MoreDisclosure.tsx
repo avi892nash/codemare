@@ -12,8 +12,9 @@ interface MoreDisclosureProps {
 
 /**
  * "More": the part of a statement a phone reads second (further examples,
- * constraints, tags, companies). Below 1024 px it is closed behind one 44 px
- * toggle; from 1024 px up the toggle is gone and everything is simply there —
+ * constraints, tags, companies). On a phone (narrow, or short) it is closed
+ * behind one 44 px toggle; on a tablet upright and up the toggle is gone and
+ * everything is simply there —
  * decided in CSS, so a desktop paints it open and nothing jumps after
  * hydration. The content is rendered by the server and handed in as children.
  */

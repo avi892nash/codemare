@@ -1,6 +1,6 @@
 /* Shared shell for the learning-loop pages (/map, gate attempts): a scrolling
- * main and a centered column. Tokens only. The page header (eyebrow, title,
- * stat tiles) and section heads are in loopHead.module.css — only the gate
+ * main and a centered column. Tokens only. The page's header is the shared
+ * PageHeader; the section heads are in loopHead.module.css — only the gate
  * attempt page has them, so the map does not ship them. */
 
 /* position: relative keeps absolutely positioned bits (sr-only text) inside
@@ -21,6 +21,8 @@
   gap: 24px;
 }
 .narrow { max-width: var(--page-narrow); }
+/* a page header that is a direct child of the column keeps its title and the content under it the column's 24 px apart (its own 24 px margin would double it) */
+.container > header { margin-bottom: 0; }
 @media (max-width: 720px) {
   .container { gap: 20px; }
 }
