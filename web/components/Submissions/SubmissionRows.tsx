@@ -1,9 +1,9 @@
 import Link from 'next/link';
-import { DifficultyPill } from '@/components/ui/DifficultyPill';
+import { DifficultyText } from '@/components/ui/DifficultyText';
 import { LangMark } from '@/components/ui/LangMark';
-import { Pill } from '@/components/ui/Pill';
 import { LANGUAGE_LABEL } from '@/components/ui/highlight';
 import type { SubmissionListRow, SubmissionSubject } from '@/lib/server/submissionHistory';
+import type { SubmissionKind } from '@/lib/types';
 import { fmtAbsolute, fmtKb, fmtMicros, fmtRelative } from './format';
 import { SubmissionStatus } from './SubmissionStatus';
 import s from './Submissions.module.css';
@@ -12,7 +12,10 @@ export function subjectTitle(subject: SubmissionSubject): string {
   return subject.type === 'question' ? subject.title : 'Deleted problem';
 }
 
-/** Visual column titles (rows carry their own screen-reader labels). */
+/** What a submission was: a run (samples), a submit (judged against every test) or a gate attempt's submit. */
+export const KIND_LABEL: Record<SubmissionKind, string> = { run: 'Run', submit: 'Submit', gate: 'Gate' };
+
+/** Visual column titles, in sentence case (rows carry their own screen-reader labels). */
 export function SubmissionColumnHead() {
   return (
     <div className={s.colHead} aria-hidden="true">
@@ -44,16 +47,14 @@ export function SubmissionRows({ rows, now }: { rows: SubmissionListRow[]; now: 
         <li key={r.id}>
           <Link href={`/submissions/${r.id}`} className={s.row}>
             <span className={s.cStatus}>
-              <SubmissionStatus status={r.status} size="sm" />
+              <SubmissionStatus status={r.status} kind={r.kind} />
             </span>
             <span className={s.cTitle}>
-              <span className={s.titleText}>
-                {subjectTitle(r.subject)}
-              </span>
-              {r.subject.type === 'question' && <DifficultyPill level={r.subject.difficulty} size="xs" />}
+              <span className={s.titleText}>{subjectTitle(r.subject)}</span>
+              {r.subject.type === 'question' && <DifficultyText level={r.subject.difficulty} />}
             </span>
             <span className={s.cLang}>
-              <LangMark lang={r.language} size={13} />
+              <LangMark lang={r.language} />
               {LANGUAGE_LABEL[r.language]}
             </span>
             <span className={s.cTime}>
@@ -65,9 +66,8 @@ export function SubmissionRows({ rows, now }: { rows: SubmissionListRow[]; now: 
               <Metric value={fmtKb(r.memoryKb)} />
             </span>
             <span className={s.cKind}>
-              <Pill tone="muted" size="xs" className="mono">
-                {r.kind}
-              </Pill>
+              <span className={s.label}>Kind </span>
+              {KIND_LABEL[r.kind]}
             </span>
             <span className={s.cWhen}>
               <time dateTime={r.createdAt.toISOString()} title={fmtAbsolute(r.createdAt)}>

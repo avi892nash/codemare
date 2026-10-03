@@ -1,30 +1,18 @@
 import { EmptyState } from '@/components/states/EmptyState';
-import { BigMetric } from '@/components/ui/BigMetric';
 import { Breadcrumb } from '@/components/ui/Breadcrumb';
 import { ButtonLink } from '@/components/ui/Button';
-import { Callout } from '@/components/ui/Callout';
 import { CodeBlock } from '@/components/ui/CodeBlock';
-import { DifficultyPill } from '@/components/ui/DifficultyPill';
+import { DifficultyText } from '@/components/ui/DifficultyText';
 import { Icon } from '@/components/ui/Icon';
 import { LangMark } from '@/components/ui/LangMark';
-import { MetricChip } from '@/components/ui/MetricChip';
-import { Pill } from '@/components/ui/Pill';
-import { ProgressBar } from '@/components/ui/ProgressBar';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { LANGUAGE_LABEL } from '@/components/ui/highlight';
+import { formatPercent } from '@/lib/client/format';
 import type { SubmissionTestView, SubmissionView } from '@/lib/server/submissionHistory';
-import { SOLUTION_FILE, fmtAbsolute, fmtKb, fmtMicros, fmtRelative, fmtValue } from './format';
-import { subjectTitle } from './SubmissionRows';
-import { SubmissionStatus } from './SubmissionStatus';
+import { SOLUTION_FILE, fmtAbsolute, fmtKb, fmtMicros, fmtRelative, fmtValue, submissionHeadline } from './format';
+import { KIND_LABEL, subjectTitle } from './SubmissionRows';
+import { VERDICT_LOOK } from './SubmissionStatus';
 import s from './Submissions.module.css';
-
-type Tone = 'ok' | 'err' | 'warn' | undefined;
-
-function toneOf(status: SubmissionView['status']): Tone {
-  if (status === 'OK') return 'ok';
-  if (status === 'WA' || status === 'RE') return 'err';
-  if (status === 'TLE' || status === 'MLE') return 'warn';
-  return undefined;
-}
 
 /** Why there is no runtime to show. */
 function noRuntimeNote(status: SubmissionView['status']): string {
@@ -42,119 +30,146 @@ function noRuntimeNote(status: SubmissionView['status']): string {
 }
 
 /**
- * 05 · Submission detail: verdict hero (runtime in µs, memory, percentile),
- * the code, and the per-test breakdown. Visible tests show input / expected /
- * output (and explain_on_fail when they failed); hidden tests only pass/fail.
- * Server component.
+ * 05 · Submission detail, in the result card's words: the problem as the title, the verdict as the headline
+ * ("Accepted — all 10 tests passed"), then one quiet row of runtime, memory and — only when 30 learners' solutions
+ * back it — how it compares; the code, and the per-test breakdown. Visible tests show input / expected / output (and
+ * the author's note when they failed); hidden tests only pass/fail. Server component.
  */
 export function SubmissionDetail({ view, now }: { view: SubmissionView; now: Date }) {
   const title = subjectTitle(view.subject);
   const lang = LANGUAGE_LABEL[view.language];
   const runtime = fmtMicros(view.runtimeUs);
   const memory = fmtKb(view.memoryKb);
-  const tone = toneOf(view.status);
+  const pending = view.status === 'queued' || view.status === 'running';
+  const look = pending ? { tone: 'muted' as const, icon: 'clock' as const } : VERDICT_LOOK[view.status as keyof typeof VERDICT_LOOK];
+  const headline = submissionHeadline(view);
   // A compile error (or a submission still judging) has nothing to measure.
-  const hasMetrics = view.runtimeUs != null || view.memoryKb != null || view.totalTests > 0 || view.compileMs != null;
-  const beats = view.status === 'OK' && view.percentile != null ? Math.round(view.percentile * 10) / 10 : null;
+  const hasRuntime = view.runtimeUs != null;
+  const perTest = fmtMicros(view.runtimeUs != null && view.totalTests > 0 ? Math.round(view.runtimeUs / view.totalTests) : null);
+  const hasFacts = hasRuntime || view.memoryKb != null || view.compileMs != null;
+  const faster = view.status === 'OK' && view.percentile != null ? formatPercent(view.percentile) : null;
   const lines = view.code.split('\n').length;
-  const perTest = fmtMicros(
-    view.runtimeUs != null && view.totalTests > 0 ? Math.round(view.runtimeUs / view.totalTests) : null
-  );
 
   return (
     <main className={`scroll ${s.main}`}>
       <div className={s.page}>
-        <Breadcrumb
-          className={s.crumbs}
-          items={[{ label: 'Submissions', href: '/submissions', icon: 'history' }, { label: title }]}
-        />
+        <Breadcrumb className={s.crumbs} items={[{ label: 'Submissions', href: '/submissions', icon: 'history' }, { label: title }]} />
 
-        <header className={s.detailHead}>
-          <div style={{ minWidth: 0 }}>
-            <p className={s.eyebrow}>
-              Submission ·{' '}
-              <time dateTime={view.createdAt.toISOString()} title={fmtAbsolute(view.createdAt)}>
-                {fmtRelative(view.createdAt, now)}
-              </time>
-            </p>
-            <h1 className={s.title}>
-              {title}
-            </h1>
-            <div className={s.headMeta}>
-              <SubmissionStatus status={view.status} size="md" long />
-              {view.totalTests > 0 && (
-                <span>
-                  <span className="mono" style={{ color: 'var(--fg-0)' }}>
-                    {view.totalPassed} / {view.totalTests}
-                  </span>{' '}
-                  tests passed
-                </span>
-              )}
-              <span className={s.dot} aria-hidden="true">·</span>
+        <PageHeader
+          title={title}
+          subtitle={
+            <span className={s.metaRow}>
+              <span>
+                Submitted{' '}
+                <time className={s.metaTime} dateTime={view.createdAt.toISOString()} title={fmtAbsolute(view.createdAt)}>
+                  {fmtRelative(view.createdAt, now)}
+                </time>
+                {!view.own && (
+                  <>
+                    {' by '}
+                    <span>@{view.owner.handle}</span>
+                  </>
+                )}
+              </span>
+              <span className={s.sep} aria-hidden="true">
+                ·
+              </span>
               <span className={s.metaLang}>
-                <LangMark lang={view.language} size={13} />
+                <LangMark lang={view.language} />
                 {lang}
               </span>
-              <Pill tone="muted" size="xs" className="mono">
-                {view.kind}
-              </Pill>
-              {view.subject.type === 'question' && <DifficultyPill level={view.subject.difficulty} size="xs" />}
-              {!view.own && (
-                <Pill tone="info" size="xs" icon="user">
-                  @{view.owner.handle}
-                </Pill>
+              <span className={s.sep} aria-hidden="true">
+                ·
+              </span>
+              <span>{KIND_LABEL[view.kind]}</span>
+              {view.subject.type === 'question' && (
+                <>
+                  <span className={s.sep} aria-hidden="true">
+                    ·
+                  </span>
+                  <DifficultyText level={view.subject.difficulty} />
+                </>
               )}
-            </div>
-          </div>
-          <div className={s.headActions}>
-            {view.subject.type === 'question' && (
-              <ButtonLink href={`/problems/${view.subject.slug}`} variant="primary" icon="code">
+            </span>
+          }
+          actions={
+            view.subject.type === 'question' && (
+              <ButtonLink href={`/problems/${view.subject.slug}`} variant="primary" icon="code" className={s.openBtn}>
                 Open problem
               </ButtonLink>
-            )}
-            <ButtonLink href="/submissions" variant="default" icon="history">
-              All submissions
-            </ButtonLink>
-          </div>
-        </header>
+            )
+          }
+        />
 
-        <section className={s.hero} data-tone={tone} data-single={!hasMetrics || undefined} aria-label="Result">
-          {view.runtimeUs != null ? (
-            <BigMetric
-              label="Runtime · CPU time, all tests"
-              primary={{ value: runtime[0], unit: runtime[1] }}
-              tone={view.status === 'OK' ? 'ok' : 'default'}
-              extra={
-                beats != null ? (
-                  <div style={{ maxWidth: 320 }}>
-                    <ProgressBar label="Beats" value={beats} max={100} showValue valueText={`${beats}%`} height={5} />
-                    <p className={s.sub} style={{ fontSize: 12 }}>
-                      of accepted {lang} submissions on this problem
-                    </p>
+        <section className={s.result} data-tone={look.tone} aria-label="Result" data-testid="submission-verdict">
+          <div className={s.resultTop}>
+            <span className={s.resultIcon} aria-hidden="true">
+              <Icon name={look.icon} size={20} strokeWidth={2} />
+            </span>
+            <div className={s.resultHeading}>
+              <h2 className={s.resultTitle} data-testid="submission-headline">
+                <span className={s.word}>{headline.word}</span>
+                {headline.rest && ` — ${headline.rest}`}
+              </h2>
+              {!hasFacts && <p className={s.resultNote}>{noRuntimeNote(view.status)}</p>}
+            </div>
+            {!pending && (
+              <span className={`${s.resultCode} mono`} aria-hidden="true">
+                {view.status}
+              </span>
+            )}
+          </div>
+
+          {hasFacts && (
+            <div className={s.facts} data-testid="submission-metrics">
+              <dl className={s.factList}>
+                {hasRuntime && (
+                  <div className={s.fact}>
+                    <dt>Runtime</dt>{' '}
+                    <dd className="mono">
+                      {runtime[0]} <abbr title={runtime[1] === 'µs' ? 'microseconds, a millionth of a second' : 'CPU time, all tests'}>{runtime[1]}</abbr>
+                    </dd>
                   </div>
-                ) : undefined
-              }
-            />
-          ) : (
-            <p className={s.heroNote}>{noRuntimeNote(view.status)}</p>
-          )}
-          {hasMetrics && (
-            <div className={s.heroSide}>
-              <MetricChip size="lg" icon="memory" label="Peak memory" value={memory[0]} unit={memory[1] || undefined} />
-              <MetricChip
-                size="lg"
-                icon="check-circle"
-                label="Tests passed"
-                value={view.totalTests > 0 ? `${view.totalPassed}/${view.totalTests}` : '—'}
-              />
-              <MetricChip
-                size="lg"
-                icon="cpu"
-                label="Compile"
-                value={view.compileMs != null ? view.compileMs : '—'}
-                unit={view.compileMs != null ? 'ms' : undefined}
-              />
-              <MetricChip size="lg" icon="clock" label="Avg per test" value={perTest[0]} unit={perTest[1] || undefined} />
+                )}
+                {view.memoryKb != null && (
+                  <div className={s.fact}>
+                    <dt>Memory</dt>{' '}
+                    <dd className="mono">
+                      {memory[0]} {memory[1]}
+                    </dd>
+                  </div>
+                )}
+                {view.compileMs != null && (
+                  <div className={s.fact}>
+                    <dt>Compile time</dt>{' '}
+                    <dd className="mono">{view.compileMs} ms</dd>
+                  </div>
+                )}
+                {hasRuntime && perTest[0] !== '—' && (
+                  <div className={s.fact}>
+                    <dt>Per test</dt>{' '}
+                    <dd className="mono">
+                      {perTest[0]} {perTest[1]}
+                    </dd>
+                  </div>
+                )}
+                {faster != null && (
+                  <div
+                    className={s.fact}
+                    data-testid="percentile"
+                    title={`By CPU time: each learner’s latest accepted ${lang} solution of this problem.`}
+                  >
+                    <dt className="sr-only">Speed</dt>{' '}
+                    <dd className={s.speed}>
+                      <Icon name="trend" size={14} />
+                      <span>
+                        Faster than <strong className="mono">{faster}%</strong> of other learners
+                      </span>
+                    </dd>
+                  </div>
+                )}
+              </dl>
+              {hasRuntime && runtime[1] === 'µs' && <p className={s.unitNote}>µs = microseconds. Runtime is CPU time over all tests.</p>}
             </div>
           )}
         </section>
@@ -176,7 +191,10 @@ export function SubmissionDetail({ view, now }: { view: SubmissionView; now: Dat
 
         <section className={s.section} aria-labelledby="sub-code">
           <h2 id="sub-code" className={s.sectionHead}>
-            Code <span>{lines} {lines === 1 ? 'line' : 'lines'}</span>
+            Code{' '}
+            <span>
+              {lines} {lines === 1 ? 'line' : 'lines'}
+            </span>
           </h2>
           <CodeBlock code={view.code} language={view.language} filename={SOLUTION_FILE[view.language]} copy maxHeight={560} />
         </section>
@@ -186,7 +204,7 @@ export function SubmissionDetail({ view, now }: { view: SubmissionView; now: Dat
             Tests{' '}
             {view.tests.length > 0 && (
               <span>
-                {view.tests.filter((t) => t.passed).length} / {view.tests.length} passed
+                {view.tests.filter((t) => t.passed).length} of {view.tests.length} passed
               </span>
             )}
           </h2>
@@ -219,8 +237,8 @@ export function SubmissionDetail({ view, now }: { view: SubmissionView; now: Dat
 
 function TestMark({ passed }: { passed: boolean }) {
   return (
-    <span className={s.testIcon} data-passed={passed} style={{ display: 'inline-flex' }}>
-      <Icon name={passed ? 'check-circle' : 'x'} size={15} />
+    <span className={s.testIcon} data-passed={passed}>
+      <Icon name={passed ? 'check-circle' : 'x'} size={16} />
       <span className="sr-only">{passed ? 'Passed' : 'Failed'}</span>
     </span>
   );
@@ -231,9 +249,10 @@ function HiddenTest({ test }: { test: SubmissionTestView }) {
     <div className={s.testHead}>
       <TestMark passed={test.passed} />
       <span className={s.testName}>Test {test.idx + 1}</span>
-      <Pill tone="muted" size="xs" icon="eye-off">
+      <span className={s.hiddenTag}>
+        <Icon name="eye-off" size={12} />
         Hidden
-      </Pill>
+      </span>
       <span className={s.testSpacer} />
       <span className={s.testStats} aria-hidden="true">
         {test.passed ? 'passed' : 'failed'}
@@ -290,9 +309,9 @@ function VisibleTest({ test }: { test: SubmissionTestView }) {
           )}
         </dl>
         {test.explainOnFail && (
-          <Callout kind="pitfall" title="What this test checks">
-            {test.explainOnFail}
-          </Callout>
+          <p className={s.explain} role="note" aria-label="What this test checks">
+            <strong>What this test checks.</strong> {test.explainOnFail}
+          </p>
         )}
       </div>
     </details>

@@ -5,7 +5,8 @@ import { Select } from '@/components/ui/Select';
 import { Spinner } from '@/components/ui/Spinner';
 import { LANGUAGE_LABEL } from '@/components/ui/highlight';
 import { useFilterNav, useSettledState } from '@/components/Filters/FilterNav';
-import { LANGUAGES, VERDICTS, VERDICT_LABEL, type SubmissionKind, type SupportedLanguage } from '@/lib/types';
+import { verdictTitle } from '@/lib/client/resultCopy';
+import { LANGUAGES, VERDICTS, type SubmissionKind, type SupportedLanguage } from '@/lib/types';
 import {
   EMPTY_SUBMISSION_QUERY,
   SUBMISSION_KINDS,
@@ -32,7 +33,6 @@ export function SubmissionFilters({ query, total }: { query: SubmissionQuery; to
       <Select
         className={s.select}
         size="sm"
-        icon="check-circle"
         aria-label="Status"
         value={local.status ?? ''}
         onChange={(e) => apply({ status: (e.target.value || null) as SubmissionStatusFilter | null })}
@@ -40,7 +40,7 @@ export function SubmissionFilters({ query, total }: { query: SubmissionQuery; to
         <option value="">All statuses</option>
         {VERDICTS.map((v) => (
           <option key={v} value={v}>
-            {VERDICT_LABEL[v]}
+            {verdictTitle(v, 'submit')}
           </option>
         ))}
         <option value="pending">Pending</option>
@@ -48,7 +48,6 @@ export function SubmissionFilters({ query, total }: { query: SubmissionQuery; to
       <Select
         className={s.select}
         size="sm"
-        icon="code"
         aria-label="Language"
         value={local.language ?? ''}
         onChange={(e) => apply({ language: (e.target.value || null) as SupportedLanguage | null })}
@@ -63,7 +62,6 @@ export function SubmissionFilters({ query, total }: { query: SubmissionQuery; to
       <Select
         className={s.select}
         size="sm"
-        icon="layers"
         aria-label="Kind"
         value={local.kind ?? ''}
         onChange={(e) => apply({ kind: (e.target.value || null) as SubmissionKind | null })}
@@ -76,7 +74,7 @@ export function SubmissionFilters({ query, total }: { query: SubmissionQuery; to
         ))}
       </Select>
       {hasSubmissionFilters(local) && (
-        <Button variant="ghost" size="xs" icon="x" onClick={() => apply({ ...EMPTY_SUBMISSION_QUERY })}>
+        <Button variant="ghost" size="sm" icon="x" onClick={() => apply({ ...EMPTY_SUBMISSION_QUERY })} className={s.clear}>
           Clear filters
         </Button>
       )}

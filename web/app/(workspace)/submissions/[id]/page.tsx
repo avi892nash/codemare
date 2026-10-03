@@ -3,9 +3,9 @@ import { notFound, redirect } from 'next/navigation';
 import { cache } from 'react';
 import { auth } from '@/auth';
 import { signInHref } from '@/components/Auth/routes';
+import { statusWord } from '@/components/Submissions/format';
 import { SubmissionDetail } from '@/components/Submissions/SubmissionDetail';
 import { subjectTitle } from '@/components/Submissions/SubmissionRows';
-import { VERDICT_LABEL } from '@/lib/types';
 import { getSubmissionView } from '@/lib/server/submissionHistory';
 
 type Params = Promise<{ id: string }>;
@@ -20,7 +20,7 @@ const loadView = cache(async (id: string) => {
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { view } = await loadView((await params).id);
   if (!view) return { title: 'Submission not found · Codemare', robots: { index: false } };
-  const verdict = view.status === 'queued' || view.status === 'running' ? 'Pending' : VERDICT_LABEL[view.status];
+  const verdict = view.status === 'queued' || view.status === 'running' ? 'Pending' : statusWord(view.status, view.kind);
   return { title: `${verdict} · ${subjectTitle(view.subject)} · Codemare`, robots: { index: false } };
 }
 
