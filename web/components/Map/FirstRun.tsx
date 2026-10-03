@@ -20,7 +20,8 @@ export function FirstRun() {
 
   const dismiss = () => {
     try {
-      document.cookie = `${FIRST_RUN_COOKIE}=hide; path=/; max-age=31536000; samesite=lax`;
+      const secure = window.location.protocol === 'https:' ? '; secure' : '';
+      document.cookie = `${FIRST_RUN_COOKIE}=hide; path=/; max-age=31536000; samesite=lax${secure}`;
     } catch {
       // cookies blocked: it is gone for this visit and will be back on the next
     }
