@@ -932,6 +932,8 @@ test.describe('on a phone', () => {
     expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
     // the progress line wraps between its parts, into two lines at most, and the hero's button is still in the first screen
     expect((await page.getByTestId('map-progress').boundingBox())!.height).toBeLessThan(56);
+    // "How it works" is a link in the line, with a thumb's hit area
+    expect((await howItWorks(page).boundingBox())!.height).toBeGreaterThanOrEqual(44);
   });
 
   test('a fresh learner’s first screen is the hero and its button, the three steps stack, and rows, panels and problems are tap-sized', async ({ page }) => {

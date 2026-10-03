@@ -1,8 +1,11 @@
 import { expect, test, type Page } from '@playwright/test';
+import { MONACO_FILES } from '../components/Editor/monacoFiles';
 
 /**
  * The solving flow end to end against a running app + compile service:
  * PLAYWRIGHT_BASE_URL=http://localhost:4201 npx playwright test e2e/editor.spec.ts
+ * — and the map's warm-up of the editor (Monaco comes from a CDN: the first problem a device opens waits for it, so the map
+ * fetches its files ahead, components/Editor/EditorPrefetch).
  */
 
 /** Sign up a throwaway user through the UI. The only place that knows the auth page's path. */
@@ -159,4 +162,41 @@ test('keeps a locked question behind the map and redirects the old /p route', as
 
   await page.goto('/p/two-sum');
   await expect(page).toHaveURL(/\/problems\/two-sum$/);
+});
+
+test('the map warms the files the editor will ask for — every one served, none missing (the list goes stale when Monaco is bumped)', async ({ browser, baseURL }) => {
+  test.setTimeout(150_000);
+  const CDN = 'https://cdn.jsdelivr.net/npm/monaco-editor@';
+  const record = (page: Page, into: Map<string, number>) =>
+    page.on('response', (r) => {
+      if (r.url().startsWith(CDN)) into.set(r.url(), r.status());
+    });
+
+  // what a problem asks for from the CDN on a cold cache (every browser context has a cache of its own)
+  const first = await browser.newContext({ baseURL });
+  const page = await first.newPage();
+  await signUp(page);
+  const asked = new Map<string, number>();
+  record(page, asked);
+  await openProblem(page, 'contains-duplicate', 'python');
+  expect(asked.size, 'the editor loaded from the CDN').toBeGreaterThan(5);
+  const cookies = await first.cookies();
+  await first.close();
+
+  // what the map fetches, in a context that has never asked: the lot, all of it served
+  const second = await browser.newContext({ baseURL });
+  await second.addCookies(cookies);
+  const map = await second.newPage();
+  const warmed = new Map<string, number>();
+  record(map, warmed);
+  await map.goto('/map', { waitUntil: 'load' });
+  await expect.poll(() => warmed.size, { timeout: 60_000 }).toBeGreaterThanOrEqual(MONACO_FILES.length);
+  expect([...warmed].filter(([, status]) => status >= 400), 'files the warm-up asks for that the CDN does not serve').toEqual([]);
+  const missing = [...asked.keys()].filter((url) => !MONACO_FILES.includes(url));
+  expect(missing, 'files the editor asks for that the warm-up does not know (update components/Editor/monacoFiles.ts)').toEqual([]);
+
+  // and it is used: the problem opened next finds them in the cache, so the editor is up at once
+  await map.goto('/problems/contains-duplicate', { waitUntil: 'load' });
+  await expect(map.locator('[data-testid="code-editor"][data-ready="true"]')).toBeVisible({ timeout: 20_000 });
+  await second.close();
 });

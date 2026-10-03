@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { cookies } from 'next/headers';
 import { HashScroll } from '@/components/Loop/HashScroll';
+import { EditorPrefetch } from '@/components/Editor/EditorPrefetch';
 import { LoopPage } from '@/components/Loop/LoopPage';
 import { requireViewer } from '@/components/Learn/viewer';
 import { FIRST_RUN_COOKIE } from '@/components/Map/firstRunCookie';
@@ -88,6 +89,7 @@ export default async function MapPage() {
         )}
       </div>
       <MapMemory />
+      <EditorPrefetch />
       <HashScroll />
     </LoopPage>
   );
