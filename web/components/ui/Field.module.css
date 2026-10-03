@@ -149,5 +149,8 @@
   .control .select,
   .control .textarea,
   .control .textarea.mono { font-size: var(--fs-lg); }
+  /* the element itself is the full 44 px box too (it reaches over the 1 px border) */
+  .control .input,
+  .control .select { height: calc(100% + 2px); margin: -1px 0; }
   .label { font-size: var(--fs-sm); }
 }

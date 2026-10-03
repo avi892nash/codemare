@@ -350,7 +350,9 @@ body {
   min-height: 100%;
 }
 @media (max-width: 900px) {
-  .auth-grid { grid-template-columns: minmax(0, 1fr); }
+  /* `start`: the banner and the form pack at the top; a short form (the dead-link card)
+   * does not get the leftover height spread between the two rows as a gap under the banner. */
+  .auth-grid { grid-template-columns: minmax(0, 1fr); align-content: start; }
   .auth-panel { order: -1; }
 }
 
