@@ -34,15 +34,19 @@ export function MapHeader({ totals }: { totals: MapView['totals'] }) {
       title="Tier map"
       subtitle={
         <>
-          <span data-testid="map-progress">
+          <span className={s.progressLine} data-testid="map-progress">
             <span className={s.nowrap}>
               {totals.solved}/{totals.problems} problems solved
-            </span>
-            {' · '}
+            </span>{' '}
+            <span className={s.dot} aria-hidden="true">
+              ·
+            </span>{' '}
             <span className={s.nowrap}>
               {totals.topicsUnlocked}/{totals.topicsTotal} topics unlocked
-            </span>
-            {' · '}
+            </span>{' '}
+            <span className={s.dot} aria-hidden="true">
+              ·
+            </span>{' '}
             <span className={s.nowrap}>
               {totals.tiersOpen}/{totals.tiersTotal} tiers open
             </span>
@@ -63,16 +67,17 @@ export function MapHeader({ totals }: { totals: MapView['totals'] }) {
  * decoration: the title, caption and button carry the meaning. On phones the
  * art stacks above the text.
  */
-export function MapHero({ featured, milestone }: { featured: Featured | null; milestone: Milestone | null }) {
+export function MapHero({ featured, milestone, gateRunning = false }: { featured: Featured | null; milestone: Milestone | null; gateRunning?: boolean }) {
   return (
     <>
-      {featured && <FeaturedBanner featured={featured} />}
+      {featured && <FeaturedBanner featured={featured} quiet={gateRunning} />}
       {milestone && <MilestoneLine milestone={milestone} />}
     </>
   );
 }
 
-function FeaturedBanner({ featured }: { featured: Featured }) {
+/** `quiet`: a gate attempt is running, and the banner under the hero owns the page's one primary action (the clock is ticking). */
+function FeaturedBanner({ featured, quiet }: { featured: Featured; quiet: boolean }) {
   const { topic, reason, gate } = featured;
   const meta = topicMeta(topic.slug);
   const done = reason === 'done';
@@ -104,7 +109,7 @@ function FeaturedBanner({ featured }: { featured: Featured }) {
             <Progress value={topic.solved} max={topic.total} tone="ok" height={4} />
           </div>
         )}
-        <ButtonLink href={featured.cta.href} id="map-hero-cta" variant="primary" size="lg" iconRight="arrow-right" className={s.featureCta} data-testid="map-hero-cta">
+        <ButtonLink href={featured.cta.href} id="map-hero-cta" variant={quiet ? 'default' : 'primary'} size="lg" iconRight="arrow-right" className={s.featureCta} data-testid="map-hero-cta">
           {featured.cta.label}
         </ButtonLink>
       </div>

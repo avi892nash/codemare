@@ -5,16 +5,8 @@ import { usePathname } from 'next/navigation';
 import { Avatar } from '@/components/ui/Avatar';
 import type { IconName } from '@/components/ui/Icon';
 import { DropdownMenu, type MenuItem } from '@/components/ui/Menu';
-import { Pill, type PillTone } from '@/components/ui/Pill';
-import { roleAtLeast, type NavRole, type NavUser } from './nav-model';
+import { roleAtLeast, type NavUser } from './nav-model';
 import s from './Navbar.module.css';
-
-const ROLE_TONE: Record<NavRole, PillTone> = {
-  learner: 'muted',
-  author: 'accent',
-  staff: 'info',
-  admin: 'warn',
-};
 
 /**
  * Avatar button → profile card + account links. Author appears for role ≥
@@ -56,9 +48,7 @@ export function ProfileMenu({ user, libraryVisible = false }: { user: NavUser; l
             <span className={s.cardName}>{user.name}</span>
             <span className={`${s.cardHandle} mono`}>{user.handle ? `@${user.handle}` : 'no handle yet'}</span>
           </div>
-          <Pill tone={ROLE_TONE[user.role]} size="xs" style={{ textTransform: 'capitalize' }}>
-            {user.role}
-          </Pill>
+          <span className={s.cardRole}>{user.role}</span>
         </div>
       }
       items={items}

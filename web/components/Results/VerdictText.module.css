@@ -14,10 +14,17 @@
 .verdict[data-tone='warn'] { --tone-fg: var(--warn-fg); }
 .verdict[data-tone='info'] { --tone-fg: var(--info-fg); }
 .verdict[data-tone='muted'] { --tone-fg: var(--fg-1); }
+.verdict[data-tone='pending'] { --tone-fg: var(--accent-hi); }
+.verdict[data-size='md'] { font-size: var(--fs-md); }
 .verdict svg { flex: none; }
 .code {
-  font-family: var(--font-mono);
   font-size: var(--fs-xs);
   font-weight: 400;
   color: var(--fg-2);
+}
+/* the code alone, in the tone: a playground case's one-word status */
+.codeOnly {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.2px;
 }

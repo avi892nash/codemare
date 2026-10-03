@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
-import { Pill } from '@/components/ui/Pill';
 import { Spinner } from '@/components/ui/Spinner';
 import { Markdown } from '@/components/Problem/Markdown';
 import type { AiReviewView, ReviewDepth } from '@/lib/server/aiReview';
@@ -58,12 +57,12 @@ export function AiReview({ submissionId }: { submissionId: string }) {
         <span className={s.note}>Advisory only — your verdict is the judge’s.</span>
         <span className={s.spacer} />
         {!hasQuick && (
-          <Button size="xs" variant="accent" icon="sparkle" loading={pending === 'quick'} disabled={pending !== null} onClick={() => void ask('quick')}>
+          <Button size="xs" tap variant="accent" icon="sparkle" loading={pending === 'quick'} disabled={pending !== null} onClick={() => void ask('quick')}>
             Review my code
           </Button>
         )}
         {hasQuick && !hasDeep && (
-          <Button size="xs" variant="outline" icon="layers" loading={pending === 'deep'} disabled={pending !== null} onClick={() => void ask('deep')}>
+          <Button size="xs" tap variant="outline" icon="layers" loading={pending === 'deep'} disabled={pending !== null} onClick={() => void ask('deep')}>
             Deeper review
           </Button>
         )}
@@ -81,9 +80,9 @@ export function AiReview({ submissionId }: { submissionId: string }) {
       {reviews.map((r) => (
         <article key={r.id} className={s.review}>
           <div className={s.meta}>
-            <Pill size="xs" tone={r.depth === 'deep' ? 'accent' : 'muted'} style={{ fontSize: 'var(--fs-xs)' }}>
+            <span className={s.depth} data-depth={r.depth}>
               {r.depth === 'deep' ? 'Deeper review' : 'Quick review'}
-            </Pill>
+            </span>
             <span className="mono">{r.model}</span>
             <span className="mono">
               {tokens(r.inputTokens + r.cacheReadTokens)} in · {tokens(r.outputTokens)} out

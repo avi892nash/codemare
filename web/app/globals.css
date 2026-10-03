@@ -47,6 +47,7 @@
   --fg-2: #a1a1aa;
   --fg-3: #71717a;
   --fg-4: #52525b;
+  --fg-ph: #85858f; /* placeholder text: 5:1 on --bg-1 and --bg-2 (--fg-3 was 3.8:1) */
 
   --accent: oklch(0.72 0.16 268);
   --accent-hi: oklch(0.78 0.16 268);
@@ -140,6 +141,7 @@
   --fg-2: #52525b;
   --fg-3: #71717a;
   --fg-4: #a1a1aa;
+  --fg-ph: #63636d; /* placeholder text: 5.4:1 on --bg-1 and --bg-2 (--fg-3 was 4.4:1) */
 
   --accent: oklch(0.55 0.20 270);
   --accent-hi: oklch(0.50 0.22 270);

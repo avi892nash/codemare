@@ -8,10 +8,10 @@ import { LangMark } from '@/components/ui/LangMark';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { LANGUAGE_LABEL } from '@/components/ui/highlight';
 import { formatPercent } from '@/lib/client/format';
+import { VERDICT_LOOK } from '@/lib/client/resultCopy';
 import type { SubmissionTestView, SubmissionView } from '@/lib/server/submissionHistory';
 import { SOLUTION_FILE, fmtAbsolute, fmtKb, fmtMicros, fmtRelative, fmtValue, submissionHeadline } from './format';
 import { KIND_LABEL, subjectTitle } from './SubmissionRows';
-import { VERDICT_LOOK } from './SubmissionStatus';
 import s from './Submissions.module.css';
 
 /** Why there is no runtime to show. */

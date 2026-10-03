@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/Button';
 import { DifficultyText } from '@/components/ui/DifficultyText';
 import { Icon } from '@/components/ui/Icon';
 import { Modal } from '@/components/ui/Modal';
-import { Pill } from '@/components/ui/Pill';
 import { useToast } from '@/components/ui/Toast';
 import type { RecipeCard, TopicCardState } from '@/lib/server/loopViews';
 import type { Difficulty } from '@/lib/types';
@@ -208,15 +207,10 @@ function UnlockDialog({
                 {r.items.map((i) => `${i.need} ${i.topic.title}${minText(i.minDifficulty)}`).join(' · ')}
               </span>
             </span>
-            {r.ready ? (
-              <Pill tone="ok" size="xs" icon="check">
-                Ready
-              </Pill>
-            ) : (
-              <Pill tone="muted" size="xs">
-                {r.missing} missing
-              </Pill>
-            )}
+            <span className={s.recipeState} data-ready={r.ready}>
+              {r.ready && <Icon name="check" size={12} />}
+              {r.ready ? 'Ready' : `${r.missing} missing`}
+            </span>
           </label>
         ))}
       </fieldset>

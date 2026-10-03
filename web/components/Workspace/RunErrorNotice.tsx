@@ -33,7 +33,7 @@ export function RunErrorNotice({ error, onRetry }: { error: RunRequestError; onR
   let title = 'That didn’t run';
   let message = error.message;
   let action = onRetry ? (
-    <Button size="sm" icon="refresh" onClick={onRetry}>
+    <Button size="sm" tap icon="refresh" onClick={onRetry}>
       Try again
     </Button>
   ) : null;
@@ -44,7 +44,7 @@ export function RunErrorNotice({ error, onRetry }: { error: RunRequestError; onR
     title = 'This gate attempt has ended';
     message = 'Submissions after the deadline don’t count. Your result is on the map.';
     action = (
-      <ButtonLink href="/map" size="sm" variant="primary" icon="map">
+      <ButtonLink href="/map" size="sm" tap variant="primary" icon="map">
         See the result
       </ButtonLink>
     );
@@ -53,7 +53,7 @@ export function RunErrorNotice({ error, onRetry }: { error: RunRequestError; onR
     title = 'This question is locked';
     details = ((body.blockers as BlockerView[] | undefined) ?? []).map(blockerLine);
     action = (
-      <ButtonLink href="/map" size="sm" variant="primary" icon="map">
+      <ButtonLink href="/map" size="sm" tap variant="primary" icon="map">
         Open the map
       </ButtonLink>
     );
@@ -64,7 +64,7 @@ export function RunErrorNotice({ error, onRetry }: { error: RunRequestError; onR
     icon = 'user';
     title = 'Signed out';
     action = (
-      <ButtonLink href={signInHref(typeof window !== 'undefined' ? window.location.pathname + window.location.search : '/')} size="sm" variant="primary" icon="user">
+      <ButtonLink href={signInHref(typeof window !== 'undefined' ? window.location.pathname + window.location.search : '/')} size="sm" tap variant="primary" icon="user">
         Sign in again
       </ButtonLink>
     );

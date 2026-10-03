@@ -1,5 +1,4 @@
 import { Fragment, type ReactNode } from 'react';
-import { Pill } from '@/components/ui/Pill';
 import type { Example } from '@/lib/types';
 import { Markdown } from './Markdown';
 import { MoreDisclosure } from './MoreDisclosure';
@@ -100,18 +99,16 @@ export function ProblemStatement({ statementMd, examples, constraints, topics = 
           )}
 
           {hasChips && (
-            <div className={s.chips}>
+            <p className={s.tags} data-testid="problem-tags">
               {topics.map((t) => (
-                <Pill key={t.slug} tone="accent" size="xs" icon={t.icon} style={{ fontSize: 'var(--fs-xs)' }}>
+                <span key={t.slug} className={s.topicTag}>
                   {t.title}
-                </Pill>
+                </span>
               ))}
               {extraTags.map((tag) => (
-                <Pill key={tag} tone="muted" size="xs" style={{ fontSize: 'var(--fs-xs)' }}>
-                  {tag}
-                </Pill>
+                <span key={tag}>{tag}</span>
               ))}
-            </div>
+            </p>
           )}
 
           {companies.length > 0 && (

@@ -117,7 +117,7 @@ test('runs the samples, then submits and gets Accepted with its reward (and no p
   await expect(page.getByTestId('rewards')).toContainText('Arrays & Hashing');
   // Hidden tests show pass/fail only.
   await expect(page.getByTestId('test-row-8')).toContainText('Hidden');
-  await expect(page.getByTestId('solved-pill')).toBeVisible();
+  await expect(page.getByTestId('solved-mark')).toBeVisible();
 });
 
 test('a wrong answer names the failing test and shows its explain_on_fail note', async ({ page }) => {

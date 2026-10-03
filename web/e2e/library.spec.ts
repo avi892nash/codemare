@@ -117,7 +117,7 @@ test('staff read an article: formula, runnable C++, visualization, mark as read'
   // Runnable C++ on the judge.
   await page.locator('#implementation').getByRole('button', { name: /^Run/ }).click();
   await expect(page.getByLabel('Program output')).toContainText('primes up to one million: 78498', { timeout: 60_000 });
-  await expect(page.locator('#implementation').getByText('Accepted', { exact: true })).toBeVisible();
+  await expect(page.locator('#implementation').getByText('Ran', { exact: true })).toBeVisible(); // the snippet's verdict, in words
 
   // The visualization loads lazily and steps.
   const viz = page.getByRole('group', { name: /Sieve of Eratosthenes · n = 40/ });

@@ -1,11 +1,11 @@
 import Link from 'next/link';
+import { VerdictText } from '@/components/Results/VerdictText';
 import { DifficultyText } from '@/components/ui/DifficultyText';
 import { LangMark } from '@/components/ui/LangMark';
 import { LANGUAGE_LABEL } from '@/components/ui/highlight';
 import type { SubmissionListRow, SubmissionSubject } from '@/lib/server/submissionHistory';
 import type { SubmissionKind } from '@/lib/types';
 import { fmtAbsolute, fmtKb, fmtMicros, fmtRelative } from './format';
-import { SubmissionStatus } from './SubmissionStatus';
 import s from './Submissions.module.css';
 
 export function subjectTitle(subject: SubmissionSubject): string {
@@ -47,7 +47,7 @@ export function SubmissionRows({ rows, now }: { rows: SubmissionListRow[]; now: 
         <li key={r.id}>
           <Link href={`/submissions/${r.id}`} className={s.row}>
             <span className={s.cStatus}>
-              <SubmissionStatus status={r.status} kind={r.kind} />
+              <VerdictText status={r.status} kind={r.kind} />
             </span>
             <span className={s.cTitle}>
               <span className={s.titleText}>{subjectTitle(r.subject)}</span>

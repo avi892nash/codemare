@@ -31,11 +31,11 @@ export function Pagination({ page, pageCount, pageSize, total, noun, hrefFor }: 
       {pageCount > 1 && (
         <div className={s.pagerLinks}>
           {page > 1 ? (
-            <ButtonLink href={hrefFor(page - 1)} size="sm" icon="chev-left" rel="prev">
+            <ButtonLink href={hrefFor(page - 1)} size="sm" tap icon="chev-left" rel="prev">
               Previous
             </ButtonLink>
           ) : (
-            <Button size="sm" icon="chev-left" disabled>
+            <Button size="sm" tap icon="chev-left" disabled>
               Previous
             </Button>
           )}
@@ -50,6 +50,7 @@ export function Pagination({ page, pageCount, pageSize, total, noun, hrefFor }: 
                   <ButtonLink
                     href={hrefFor(p)}
                     size="sm"
+                    tap
                     variant={p === page ? 'accent' : 'ghost'}
                     aria-current={p === page ? 'page' : undefined}
                     aria-label={`Page ${p}`}
@@ -65,11 +66,11 @@ export function Pagination({ page, pageCount, pageSize, total, noun, hrefFor }: 
             Page {page} of {pageCount}
           </span>
           {page < pageCount ? (
-            <ButtonLink href={hrefFor(page + 1)} size="sm" iconRight="chev-right" rel="next">
+            <ButtonLink href={hrefFor(page + 1)} size="sm" tap iconRight="chev-right" rel="next">
               Next
             </ButtonLink>
           ) : (
-            <Button size="sm" iconRight="chev-right" disabled>
+            <Button size="sm" tap iconRight="chev-right" disabled>
               Next
             </Button>
           )}

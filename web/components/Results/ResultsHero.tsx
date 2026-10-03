@@ -2,18 +2,16 @@
 
 import type { Ref } from 'react';
 import { Button, ButtonLink } from '@/components/ui/Button';
-import { Icon, type IconName } from '@/components/ui/Icon';
-import { Pill } from '@/components/ui/Pill';
-import { StatusPill } from '@/components/ui/StatusPill';
+import { Icon } from '@/components/ui/Icon';
 import type { NextProblem, WorkspaceMode } from '@/components/Workspace/types';
 import { formatKb, formatLimit, formatMicros, formatMillis, formatPercent } from '@/lib/client/format';
 import { languageLabel } from '@/lib/client/languages';
-import { firstFailures, testLabel, tokenPhrase, verdictAdvice, verdictSummary, verdictTitle } from '@/lib/client/resultCopy';
+import { firstFailures, testLabel, tokenPhrase, VERDICT_LOOK, verdictAdvice, verdictSummary, verdictTitle } from '@/lib/client/resultCopy';
 import type { RunKind } from '@/lib/client/runState';
 import type { TestEventData, VerdictEventData } from '@/lib/sse';
-import type { Signature, SupportedLanguage, Verdict } from '@/lib/types';
+import type { Signature, SupportedLanguage } from '@/lib/types';
 import { JudgeOutput } from './JudgeOutput';
-import { TestDetails, TestKindPill } from './TestBreakdown';
+import { TestDetails, TestKindLabel } from './TestBreakdown';
 import { TestStrip } from './TestStrip';
 import s from './Results.module.css';
 
@@ -40,20 +38,6 @@ interface ResultsHeroProps {
   headingRef?: Ref<HTMLHeadingElement>;
 }
 
-/** Per-verdict tone (spec §8 colors, via the StatusPill tones) and icon. */
-const LOOK: Record<Verdict, { tone: 'ok' | 'err' | 'warn' | 'info' | 'muted'; icon: IconName }> = {
-  OK: { tone: 'ok', icon: 'check-circle' },
-  WA: { tone: 'err', icon: 'x' },
-  RE: { tone: 'err', icon: 'alert' },
-  TLE: { tone: 'warn', icon: 'clock' },
-  MLE: { tone: 'warn', icon: 'memory' },
-  CE: { tone: 'info', icon: 'code' },
-  XX: { tone: 'muted', icon: 'alert-circle' },
-};
-
-/** Labels in the card are 12 px, like the rest of the result. */
-const LABEL = { fontSize: 'var(--fs-xs)' } as const;
-
 /**
  * The result card (artboard 03), in the order a learner reads it: the headline
  * and its one line; for an accepted solve what it earned and where to go next
@@ -77,7 +61,7 @@ export function ResultsHero({
   onBackToCode,
   headingRef,
 }: ResultsHeroProps) {
-  const look = LOOK[verdict.status];
+  const look = VERDICT_LOOK[verdict.status];
   const ok = verdict.status === 'OK';
   const accepted = ok && kind === 'submit';
   const ranTests = verdict.status !== 'CE' && tests.length > 0;
@@ -110,12 +94,12 @@ export function ResultsHero({
             {verdictSummary(verdict, kind, tests, { timeLimitMs, mode })}
           </p>
         </div>
-        <div className={s.heroTags}>
-          <StatusPill code={verdict.status} size="sm" withIcon style={LABEL} />
-          <Pill size="sm" tone="muted" style={LABEL}>
-            {languageLabel(language)}
-          </Pill>
-        </div>
+        <p className={s.heroMeta} data-testid="verdict-meta">
+          {languageLabel(language)}
+          <span className={`${s.heroCode} mono`} aria-hidden="true">
+            {verdict.status}
+          </span>
+        </p>
       </div>
 
       {accepted && (tokens.length > 0 || badges.length > 0) && (
@@ -202,7 +186,7 @@ export function ResultsHero({
       {failures.visible && (
         <div className={s.failure} data-testid="first-failure">
           <h3 className={s.failureTitle}>
-            Test {failures.visible.idx + 1} failed <TestKindPill test={failures.visible} />
+            Test {failures.visible.idx + 1} failed <TestKindLabel test={failures.visible} />
           </h3>
           <TestDetails test={failures.visible} signature={signature} onLine={onLine} quietError={verdict.status === 'TLE' || verdict.status === 'MLE'} />
         </div>

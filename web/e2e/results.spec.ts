@@ -20,6 +20,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, test, type BrowserContext, type Page } from '@playwright/test';
 import { PrismaClient } from '@prisma/client';
+import { capsules } from './capsules';
 
 const AXE_URL = 'https://cdnjs.cloudflare.com/ajax/libs/axe-core/4.10.2/axe.min.js';
 const run = `${Date.now().toString(36)}${Math.floor(Math.random() * 1e4)}`;
@@ -522,6 +523,18 @@ test.describe('on a phone (375 px)', () => {
       await audit('Result (accepted)');
     });
   }
+
+  test('a phone: the result card’s language and code are quiet labels, and nothing wears a capsule', async ({ page }) => {
+    await signUp(page);
+    await openProblem(page, '/problems/contains-duplicate');
+    await viewTab(page, 'Code').tap();
+    await submitCode(page, WRONG, 'Wrong answer');
+    await expect(page.getByTestId('verdict-meta')).toBeVisible();
+    await expect(page.getByTestId('verdict-meta')).toContainText('Python');
+    expect(await capsules(page), 'a wrong answer on a phone').toEqual([]);
+    await viewTab(page, 'Problem').tap();
+    expect(await capsules(page), 'the statement on a phone').toEqual([]);
+  });
 });
 
 test.describe('a gate attempt on a phone (375 px)', () => {
@@ -702,6 +715,48 @@ test.describe('a tablet upright (768 px) and a phone on its side', () => {
       await expect(switcher.getByRole('tab', { name: 'Code' })).toHaveAttribute('aria-selected', 'true');
       expect(await overflow(page)).toEqual({ page: 0, main: 0 });
     });
+  });
+});
+
+test.describe('the problem screen speaks the map’s language', () => {
+  test('a laptop: difficulty, solved and the tags are quiet words, and no screen of the loop wears a capsule', async ({ page }) => {
+    test.setTimeout(150_000);
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await signUp(page);
+    await openProblem(page, '/problems/contains-duplicate');
+
+    // The header: difficulty as a dot and a word, as on the map; nothing yet solved.
+    const head = page.locator('header').filter({ has: page.getByTestId('problem-title') });
+    await expect(head.locator('[data-level="Easy"]')).toHaveText('Easy');
+    await expect(page.getByTestId('solved-mark')).toHaveCount(0);
+    // The statement's topic and tags: one quiet line, the topic first.
+    const tags = page.getByTestId('problem-tags');
+    await expect(tags).toContainText('Arrays & Hashing');
+    await expect(tags).toContainText('hash-table');
+    expect(await capsules(page), 'a fresh problem').toEqual([]);
+
+    // The Hints tab: the cost of each hint is a word beside its name.
+    await page.getByRole('tab', { name: /^Hints/ }).click();
+    await expect(page.getByRole('heading', { name: 'Hints', exact: true })).toBeVisible();
+    await expect(page.getByText('Free', { exact: true }).first()).toBeVisible();
+    expect(await capsules(page), 'the hints').toEqual([]);
+
+    // A wrong answer: the card's language and code are quiet labels at its edge.
+    await submitCode(page, WRONG, 'Wrong answer');
+    await expect(page.getByTestId('verdict-meta')).toContainText('Python');
+    await expect(page.getByTestId('verdict-meta')).toContainText('WA');
+    await expect(page.getByTestId('first-failure')).toContainText('Sample');
+    expect(await capsules(page), 'a wrong answer').toEqual([]);
+
+    // Accepted: Solved joins the header as a word with a check, and the Submissions tab lists verdicts in words.
+    await submitCode(page, reference('contains-duplicate'), 'Accepted');
+    await expect(page.getByTestId('solved-mark')).toHaveText('Solved');
+    expect(await capsules(page), 'an accepted solve').toEqual([]);
+    await page.getByRole('tab', { name: /^Submissions/ }).click();
+    const rows = page.getByTestId('submissions-list');
+    await expect(rows).toContainText('Accepted');
+    await expect(rows).toContainText('Wrong answer');
+    expect(await capsules(page), 'the submissions tab').toEqual([]);
   });
 });
 

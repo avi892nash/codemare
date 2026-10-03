@@ -3,9 +3,8 @@
 import dynamic from 'next/dynamic';
 import { useId, useState, type ReactNode } from 'react';
 import { Button } from '@/components/ui/Button';
-import { DifficultyPill } from '@/components/ui/DifficultyPill';
+import { DifficultyText } from '@/components/ui/DifficultyText';
 import { Icon } from '@/components/ui/Icon';
-import { Pill } from '@/components/ui/Pill';
 import { TabPanel, Tabs, type TabItem } from '@/components/ui/Tabs';
 import { formatPercent } from '@/lib/client/format';
 import type { HintLadderProps } from '@/components/Hints/HintLadder';
@@ -73,16 +72,17 @@ export function StatementPane({ mode, problem, eyebrow, statement, editorial, su
           {problem.title}
         </h1>
         <div className={s.titleMeta}>
-          <DifficultyPill level={problem.difficulty} />
+          <DifficultyText level={problem.difficulty} />
           {solved && (
-            <Pill tone="ok" size="sm" icon="check-circle" data-testid="solved-pill" style={{ fontSize: 'var(--fs-xs)' }}>
+            <span className={s.solvedMark} data-testid="solved-mark">
+              <Icon name="check-circle" size={13} />
               Solved
-            </Pill>
+            </span>
           )}
           {bestPercentile != null && (
-            <Pill tone="muted" size="sm" icon="trend" title="Your best runtime on this problem, compared with other learners" style={{ fontSize: 'var(--fs-xs)' }}>
+            <span className={s.bestMark} title="Your best runtime on this problem, compared with other learners">
               Best: faster than {formatPercent(bestPercentile)}% of learners
-            </Pill>
+            </span>
           )}
         </div>
       </header>
@@ -103,7 +103,7 @@ export function StatementPane({ mode, problem, eyebrow, statement, editorial, su
                 <div className={s.spoiler}>
                   <Icon name="eye-off" size={18} />
                   <p>The editorial walks through the solution. Try it yourself first — or reveal it anyway.</p>
-                  <Button size="sm" icon="eye" onClick={() => setSpoilers(true)}>
+                  <Button size="sm" tap icon="eye" onClick={() => setSpoilers(true)}>
                     Show the editorial
                   </Button>
                 </div>

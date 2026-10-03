@@ -53,3 +53,6 @@
   font-size: var(--fs-xs);
   color: var(--fg-2);
 }
+/* which review this is: the first word of the line, not a tag */
+.depth { font-weight: 600; color: var(--fg-1); }
+.depth[data-depth='deep'] { color: var(--accent-hi); }

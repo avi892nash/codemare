@@ -4,7 +4,6 @@ import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
 import { Modal } from '@/components/ui/Modal';
-import { Pill } from '@/components/ui/Pill';
 import { Spinner } from '@/components/ui/Spinner';
 import { Markdown } from '@/components/Problem/Markdown';
 import type { HintLadder as HintLadderData, HintRung, RevealResult } from '@/lib/server/hints';
@@ -150,7 +149,7 @@ export function HintLadder({ target, initial, solved = false, onReveal }: HintLa
         {loadError ? (
           <>
             <p className={s.stateText}>{loadError}</p>
-            <Button size="sm" icon="refresh" onClick={() => void load()}>
+            <Button size="sm" tap icon="refresh" onClick={() => void load()}>
               Retry
             </Button>
           </>
@@ -200,13 +199,14 @@ export function HintLadder({ target, initial, solved = false, onReveal }: HintLa
           </p>
         </div>
         {solved ? (
-          <Pill tone="ok" size="xs" icon="check" style={{ fontSize: 'var(--fs-xs)' }}>
+          <span className={s.note} data-tone="ok">
+            <Icon name="check" size={12} />
             Solved · score costs waived
-          </Pill>
+          </span>
         ) : (
-          <Pill tone={penalty > 0 ? 'warn' : 'muted'} size="xs" title="Score penalty on this problem's token award" style={{ fontSize: 'var(--fs-xs)' }}>
+          <span className={s.note} data-tone={penalty > 0 ? 'warn' : 'muted'} title="Score penalty on this problem's token award">
             Penalty {penalty}%
-          </Pill>
+          </span>
         )}
       </header>
 

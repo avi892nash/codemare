@@ -1,7 +1,6 @@
 import { ButtonLink } from '@/components/ui/Button';
-import { DifficultyPill } from '@/components/ui/DifficultyPill';
+import { DifficultyText } from '@/components/ui/DifficultyText';
 import { Icon } from '@/components/ui/Icon';
-import { Pill } from '@/components/ui/Pill';
 import type { LockedTopicBlocker } from '@/lib/server/runner';
 import type { Difficulty } from '@/lib/types';
 import s from './Problem.module.css';
@@ -47,14 +46,17 @@ function BlockerBody({ b }: { b: LockedTopicBlocker }) {
           </>
         )}
       </p>
-      <div className={s.items}>
+      <ul className={s.items}>
         {r.items.map((it) => (
-          <Pill key={`${it.topic.id}-${it.minDifficulty}`} size="xs" tone={it.missing === 0 ? 'ok' : 'warn'} icon="coin">
-            {it.topic.title} {Math.min(it.have, it.need)}/{it.need}
-            {it.minDifficulty !== 'Easy' ? ` · ${it.minDifficulty}+` : ''}
-          </Pill>
+          <li key={`${it.topic.id}-${it.minDifficulty}`} data-ready={it.missing === 0}>
+            <Icon name={it.missing === 0 ? 'check-circle' : 'coin'} size={13} />
+            <span>
+              {it.topic.title} <span className="mono">{Math.min(it.have, it.need)}/{it.need}</span>
+              {it.minDifficulty !== 'Easy' ? ` · ${it.minDifficulty}+` : ''}
+            </span>
+          </li>
         ))}
-      </div>
+      </ul>
     </>
   );
 }
@@ -75,7 +77,7 @@ export function LockedQuestion({ title, difficulty, blockers }: { title: string;
             {title}
           </h1>
           <div style={{ marginTop: 8 }}>
-            <DifficultyPill level={difficulty} />
+            <DifficultyText level={difficulty} />
           </div>
           <p className={s.lockedLead}>
             This question builds on {blockers.length === 1 ? 'a topic' : 'topics'} you haven’t unlocked yet. Earn tokens on open topics,

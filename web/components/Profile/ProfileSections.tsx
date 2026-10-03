@@ -11,9 +11,9 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { Progress } from '@/components/ui/Progress';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { formatMicros, timeAgo } from '@/lib/client/format';
-import { verdictTitle } from '@/lib/client/resultCopy';
+import { VERDICT_LOOK, verdictTitle } from '@/lib/client/resultCopy';
 import type { ProfileView } from '@/lib/server/profile';
-import type { Difficulty, Role, SubmissionKind, SubmissionStatus, TrackLevel, Verdict } from '@/lib/types';
+import type { Difficulty, Role, SubmissionKind, SubmissionStatus, TrackLevel } from '@/lib/types';
 import s from './profile.module.css';
 
 const LANG_LABEL: Record<string, string> = { python: 'Python', javascript: 'JavaScript', typescript: 'TypeScript', cpp: 'C++', java: 'Java', go: 'Go' };
@@ -195,17 +195,6 @@ export function StatsCard({ view }: { view: ProfileView }) {
     </section>
   );
 }
-
-/** The result card's looks, as a glyph and a tone, for the verdicts a row can carry. */
-const VERDICT_LOOK: Record<Verdict, { icon: IconName; tone: 'ok' | 'err' | 'warn' | 'info' | 'muted' }> = {
-  OK: { icon: 'check-circle', tone: 'ok' },
-  WA: { icon: 'x', tone: 'err' },
-  RE: { icon: 'alert', tone: 'err' },
-  TLE: { icon: 'clock', tone: 'warn' },
-  MLE: { icon: 'memory', tone: 'warn' },
-  CE: { icon: 'code', tone: 'info' },
-  XX: { icon: 'alert-circle', tone: 'muted' },
-};
 
 /** "Accepted" · "Wrong answer" · "Time limit exceeded" (the result card's words) plus the judge's short code; queued and running say so. */
 function describeStatus(status: SubmissionStatus, kind: SubmissionKind) {

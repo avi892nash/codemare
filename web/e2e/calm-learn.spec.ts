@@ -21,6 +21,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, test, type Browser, type BrowserContext, type Page } from '@playwright/test';
 import { PrismaClient } from '@prisma/client';
+import { capsules } from './capsules';
 import bcrypt from 'bcryptjs';
 
 function envValue(key: string): string | undefined {
@@ -213,6 +214,7 @@ for (const [label, size] of [['laptop', DESKTOP], ['phone', PHONE]] as const) {
         expect.soft(a.overflow, `${p.name}: sideways scroll`).toBeLessThanOrEqual(0);
         expect.soft(a.small, `${p.name}: text under 12 px`).toEqual([]);
         expect.soft(a.upper, `${p.name}: uppercase labels`).toEqual([]);
+        expect.soft(await capsules(page), `${p.name}: tags (a filled or outlined pill) — words are quieter`).toEqual([]);
         if (p.sizes) expect.soft(a.sizes.length, `${p.name}: font sizes in use ${a.sizes.join(' ')}`).toBeLessThanOrEqual(p.sizes);
         await context.close();
       });
@@ -298,6 +300,23 @@ test.describe('a track and a lesson', () => {
 });
 
 test.describe('phone: touch targets, fields and shortcuts', () => {
+  test('page-level buttons are 44 px, and a long label wraps instead of scrolling the page sideways at 320 px', async ({ browser }) => {
+    const empty = await open(browser, fresh, PHONE);
+    await empty.page.goto('/submissions');
+    expect((await box(empty.page.getByRole('link', { name: 'Find a problem on the map' }))).height, 'a default-size button').toBeGreaterThanOrEqual(44);
+    await empty.context.close();
+
+    const narrow = await open(browser, resumer, { width: 320, height: 640 });
+    await narrow.page.goto('/learn/foundations/complete');
+    const cta = narrow.page.getByTestId('learn-primary-action');
+    await expect(cta).toContainText('Continue: Arrays and what operations cost');
+    const b = await box(cta);
+    expect(b.x + b.width, 'the button stays inside a 320 px screen').toBeLessThanOrEqual(320);
+    expect(b.height).toBeGreaterThanOrEqual(44);
+    expect((await audit(narrow.page)).overflow, 'sideways scroll at 320 px').toBeLessThanOrEqual(0);
+    await narrow.context.close();
+  });
+
   test('the primary actions are 44 px and the fields are 16 px', async ({ browser }) => {
     const { context, page } = await open(browser, active, PHONE);
 
@@ -389,6 +408,34 @@ test.describe('phone: touch targets, fields and shortcuts', () => {
     await tabs.getByRole('tab', { name: 'Code' }).click();
     await expect(page.getByTestId('ide-run')).toBeInViewport();
     await expect(page.getByTestId('ide-output')).toBeHidden();
+    await context.close();
+  });
+});
+
+test.describe('after a run', () => {
+  test('the playground shows verdicts as words, and its scrolling output can be reached with the keyboard', async ({ browser }) => {
+    const { context, page } = await open(browser, active, DESKTOP);
+    await page.goto('/ide');
+    await settle(page, 'ide');
+    await page.getByTestId('ide-run').click();
+    const output = page.getByTestId('ide-output');
+    await expect(output).toContainText('expected output', { timeout: 40_000 });
+    await expect(output).toContainText('All matched');
+    await expect(output.getByTestId('ide-case-0')).toContainText('OK');
+    expect(await capsules(page), 'the playground after a run').toEqual([]);
+    await expect(output.locator('[tabindex="0"]')).toHaveCount(1);
+    expect((await axeViolations(page)).filter((v) => v.startsWith('scrollable-region-focusable')), 'axe: scrollable region').toEqual([]);
+    await context.close();
+  });
+
+  test('a lesson’s snippet says it ran, in words', async ({ browser }) => {
+    const { context, page } = await open(browser, active, DESKTOP);
+    await page.goto('/learn/foundations/hash-maps');
+    await settle(page, 'lesson');
+    await page.getByRole('button', { name: /^Run/ }).nth(1).click();
+    await expect(page.getByLabel('Program output')).toContainText('[ 4, 5 ]', { timeout: 40_000 });
+    await expect(page.getByText('Ran', { exact: true })).toBeVisible();
+    expect(await capsules(page), 'a lesson after a snippet ran').toEqual([]);
     await context.close();
   });
 });

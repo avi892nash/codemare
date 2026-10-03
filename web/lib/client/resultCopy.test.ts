@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { TestEventData } from '@/lib/sse';
-import { firstFailures, testLabel, tokenPhrase, verdictAdvice, verdictSummary, verdictTitle } from './resultCopy';
+import { VERDICTS } from '@/lib/types';
+import { firstFailures, isVerdict, testLabel, tokenPhrase, VERDICT_LOOK, verdictAdvice, verdictSummary, verdictTitle } from './resultCopy';
 
 const test = (idx: number, over: Partial<TestEventData> = {}): TestEventData => ({ idx, passed: true, hidden: false, runtimeUs: 1, memoryKb: 1, ...over }) as TestEventData;
 
@@ -72,5 +73,30 @@ describe('tokenPhrase', () => {
   it('pluralises', () => {
     expect(tokenPhrase(1)).toBe('+1 token');
     expect(tokenPhrase(2)).toBe('+2 tokens');
+  });
+});
+
+describe('VERDICT_LOOK', () => {
+  it('gives every verdict a tone and a glyph — one look wherever a verdict is shown', () => {
+    expect(Object.keys(VERDICT_LOOK).sort()).toEqual([...VERDICTS].sort());
+    for (const v of VERDICTS) {
+      expect(VERDICT_LOOK[v].icon, v).toBeTruthy();
+      expect(['ok', 'err', 'warn', 'info', 'muted'], v).toContain(VERDICT_LOOK[v].tone);
+    }
+  });
+
+  it('follows the spec’s colours: OK ok, WA and RE err, TLE and MLE warn, CE info, XX neutral', () => {
+    expect(VERDICT_LOOK.OK.tone).toBe('ok');
+    expect(VERDICT_LOOK.WA.tone).toBe('err');
+    expect(VERDICT_LOOK.RE.tone).toBe('err');
+    expect(VERDICT_LOOK.TLE.tone).toBe('warn');
+    expect(VERDICT_LOOK.MLE.tone).toBe('warn');
+    expect(VERDICT_LOOK.CE.tone).toBe('info');
+    expect(VERDICT_LOOK.XX.tone).toBe('muted');
+  });
+
+  it('tells a verdict from a state before one', () => {
+    for (const v of VERDICTS) expect(isVerdict(v)).toBe(true);
+    for (const not of ['queued', 'running', 'PND', '', 'ok', null, undefined, 3]) expect(isVerdict(not)).toBe(false);
   });
 });

@@ -11,7 +11,7 @@
 }
 .pagerInfo {
   margin: 0;
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   color: var(--fg-2);
 }
 .pagerInfo span {
@@ -35,11 +35,11 @@
   padding: 0 6px;
   color: var(--fg-2);
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--fs-xs);
 }
 .pageOf {
   display: none;
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   color: var(--fg-2);
 }
 

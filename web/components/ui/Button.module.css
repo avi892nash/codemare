@@ -60,15 +60,31 @@
 .iconOnly.lg { width: var(--ctl-lg); }
 .full { width: 100%; justify-content: center; }
 
-/* Touch: on a phone (or any coarse pointer) a large button is a full 44 px
- * target, and any button that asks for `tap` grows to 44 px (the top bar's
- * theme toggle, a toast's buttons, a dialog's close). These carry no more
- * specificity than the sizes above, so a page that sizes its own buttons wins. */
+/* Touch: on a phone (or any coarse pointer) a medium or large button is a full
+ * 44 px target — the page-level actions: "Back to the map", "Browse lessons",
+ * "Finish attempt" — and any button that asks for `tap` grows to 44 px (the top
+ * bar's theme toggle, a toast's buttons, a dialog's close). Small and extra-small
+ * buttons stay as drawn: they sit in dense rows and ask for `tap` when they are
+ * the page's action. These carry no more specificity than the sizes above, so a
+ * page that sizes its own buttons wins.
+ * A long label wraps inside the button (two lines fit in 44 px) instead of
+ * pushing the page sideways on a 320 px screen. */
 @media (max-width: 720px), (pointer: coarse) {
+  .md,
   .lg { height: var(--tap); }
+  .iconOnly.md,
   .iconOnly.lg { width: var(--tap); }
   .tap { min-height: var(--tap); }
   .iconOnly.tap { min-width: var(--tap); }
+  .md,
+  .lg,
+  .tap {
+    max-width: 100%;
+    white-space: normal;
+    line-height: 1.2;
+    text-align: left;
+  }
+  .full { text-align: center; }
 }
 
 /* The shortcut hint on a button is noise on a device with no keyboard. */
