@@ -61,13 +61,14 @@
 .full { width: 100%; justify-content: center; }
 
 /* Touch: on a phone (or any coarse pointer) a large button is a full 44 px
- * target with 16 px text, and any button that asks for `tap` grows to 44 px
- * (the top bar's theme toggle, a toast's buttons, a dialog's close). */
+ * target, and any button that asks for `tap` grows to 44 px (the top bar's
+ * theme toggle, a toast's buttons, a dialog's close). These carry no more
+ * specificity than the sizes above, so a page that sizes its own buttons wins. */
 @media (max-width: 720px), (pointer: coarse) {
-  .btn.lg { height: var(--tap); font-size: var(--fs-lg); }
-  .btn.iconOnly.lg { width: var(--tap); }
-  .btn.tap { min-height: var(--tap); }
-  .btn.iconOnly.tap { min-width: var(--tap); }
+  .lg { height: var(--tap); }
+  .iconOnly.lg { width: var(--tap); }
+  .tap { min-height: var(--tap); }
+  .iconOnly.tap { min-width: var(--tap); }
 }
 
 /* The shortcut hint on a button is noise on a device with no keyboard. */

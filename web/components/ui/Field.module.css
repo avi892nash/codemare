@@ -138,16 +138,16 @@
 
 /* Phones and touch devices: a field is a full 44 px target and its text is
  * 16 px — iOS Safari zooms the whole page when a focused field is smaller.
- * Desktop sizes stay on the scale above. */
+ * Desktop sizes stay on the scale above. The height carries no more
+ * specificity than the sizes above (a page that sizes its own fields wins);
+ * the 16 px is deliberately stronger, because it is a platform requirement. */
 @media (max-width: 720px), (pointer: coarse) {
-  .control:not(.multiline) { height: var(--tap); }
+  .sm,
+  .md,
+  .lg { height: var(--tap); }
   .control .input,
   .control .select,
   .control .textarea,
-  .control .textarea.mono,
-  .lg .input,
-  .lg .select { font-size: var(--fs-lg); }
+  .control .textarea.mono { font-size: var(--fs-lg); }
   .label { font-size: var(--fs-sm); }
-  .hint,
-  .error { font-size: var(--fs-xs); }
 }
