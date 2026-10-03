@@ -23,7 +23,7 @@ import { GateBanner } from './GateBanner';
 import { RunErrorNotice } from './RunErrorNotice';
 import { StatementPane } from './StatementPane';
 import type { GateContext, NextProblem, SubmissionSummary, WorkspaceMode, WorkspaceProblem } from './types';
-import { useModKey, useNarrow, useTouchOnly } from './useModKey';
+import { layoutNow, useLayout, useModKey, useTouchOnly } from './useModKey';
 import { useSplit } from './useSplit';
 import s from './Workspace.module.css';
 
@@ -62,7 +62,7 @@ export interface SolveWorkspaceProps {
 }
 
 type ConsoleTab = 'cases' | 'result';
-/** Below 1024 px one pane shows at a time. */
+/** Below 1024 px a pane shows at a time: on a phone Problem · Code · Result, on a tablet Problem · Code (the console is under the editor). */
 type PhoneView = 'problem' | 'code' | 'result';
 
 const PHONE_VIEWS = [
@@ -70,9 +70,10 @@ const PHONE_VIEWS = [
   { value: 'code', label: 'Code' },
   { value: 'result', label: 'Result' },
 ];
+const TABLET_VIEWS = PHONE_VIEWS.slice(0, 2);
 
-/** The phone layout (one pane at a time) — keep in step with the 1023 px breakpoint in Workspace.module.css. */
-const isNarrow = () => window.matchMedia('(max-width: 1023px)').matches;
+/** Where a result is read: its own pane on a phone, under the editor — the Code pane — on a tablet. */
+const resultView = (): PhoneView => (layoutNow() === 'tablet' ? 'code' : 'result');
 const prefersReducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 function markersFrom(error: string): EditorMarker[] {
@@ -89,14 +90,15 @@ function markersFrom(error: string): EditorMarker[] {
  * statement · editor · console. Monaco loads lazily; drafts persist per
  * problem and language; ⌘/Ctrl+Enter runs and ⌘/Ctrl+Shift+Enter submits.
  * Two resizable columns from 1024 px up; below, one pane at a time
- * (Problem · Code · Result) so nothing sits between the learner and the
+ * (Problem · Code · Result on a phone; Problem · Code on a tablet, where the
+ * console sits under the editor) so nothing sits between the learner and the
  * editor, and a new result takes the screen.
  */
 export function SolveWorkspace(props: SolveWorkspaceProps) {
   const { mode, problem, gate } = props;
   const mod = useModKey();
   const touch = useTouchOnly();
-  const narrow = useNarrow();
+  const layout = useLayout();
   const scope = `q:${problem.id}`;
   const languages = problem.languages;
   const starter = useCallback((l: SupportedLanguage) => problem.starterCode[l] ?? '', [problem.starterCode]);
@@ -197,7 +199,7 @@ export function SolveWorkspace(props: SolveWorkspaceProps) {
         const custom = customInputs(problem.signature, cases, language);
         if (!custom.ok) {
           setConsoleTab('cases');
-          setView('result');
+          setView(resultView());
           setSelectedCase(cases[custom.index].id);
           setCasesError(`Custom ${custom.index + 1} has an invalid value — fix it or remove the case.`);
           return;
@@ -285,10 +287,10 @@ export function SolveWorkspace(props: SolveWorkspaceProps) {
   useEffect(() => {
     const arrived = run.phase === 'done' ? run.verdict : run.phase === 'failed' ? run.error : null;
     if (!arrived) return;
-    const narrow = isNarrow();
-    consoleBody.current?.scrollTo({ top: 0, behavior: narrow || prefersReducedMotion() ? 'auto' : 'smooth' });
-    if (!narrow) return;
-    setView('result');
+    const wide = layoutNow() === 'wide';
+    consoleBody.current?.scrollTo({ top: 0, behavior: !wide || prefersReducedMotion() ? 'auto' : 'smooth' });
+    if (wide) return;
+    setView(resultView());
     let inner = 0;
     const outer = window.requestAnimationFrame(() => {
       inner = window.requestAnimationFrame(() => verdictHeading.current?.focus({ preventScroll: true }));
@@ -306,6 +308,11 @@ export function SolveWorkspace(props: SolveWorkspaceProps) {
   const rows = useSplit('rows', rightRef, { initial: 56, min: 25, max: 82, axis: 'y', label: 'Resize the editor and console' });
   const layoutStyle = { '--left': `${cols.ratio}%`, '--top': `${rows.ratio}%` } as CSSProperties;
 
+  // Turned from a phone to a tablet's width (a rotation): the Result pane is gone, its content is under the editor.
+  useEffect(() => {
+    if (layout === 'tablet' && view === 'result') setView('code');
+  }, [layout, view]);
+
   const verdict = run.phase === 'done' ? run.verdict : null;
   const kbd = (suffix: string) => (touch ? undefined : `${mod}${suffix}`);
 
@@ -313,17 +320,17 @@ export function SolveWorkspace(props: SolveWorkspaceProps) {
     <main className={s.root} data-mode={mode} data-view={view} style={layoutStyle}>
       {gate && <GateBanner gate={gate} currentSlug={currentSlug} solved={gateSolved} onExpire={() => setGateOver(true)} />}
 
-      {/* Below 1024 px: which pane is showing. Hidden on a desktop, where all three are. */}
+      {/* Below 1024 px: which pane is showing. Hidden on a desktop, where all of them are. */}
       <div ref={viewSwitch} className={s.viewSwitch}>
         <Tabs
-          tabs={PHONE_VIEWS}
-          value={view}
+          tabs={layout === 'tablet' ? TABLET_VIEWS : PHONE_VIEWS}
+          value={layout === 'tablet' && view === 'result' ? 'code' : view}
           onChange={(v) => {
             setView(v as PhoneView);
             if (v === 'result') setConsoleTab('result'); // "Result" opens on the result (the test cases are its other tab)
           }}
           variant="pills"
-          aria-label="Problem, code or result"
+          aria-label={layout === 'tablet' ? 'Problem or code' : 'Problem, code or result'}
         />
       </div>
 
@@ -418,7 +425,7 @@ export function SolveWorkspace(props: SolveWorkspaceProps) {
                 tabs={[
                   { value: 'cases', label: 'Test cases', icon: 'list', count: problem.samples.length + cases.length || undefined },
                   // One pane at a time, the switch above already has a "Result": this one is the last run's.
-                  { value: 'result', label: narrow ? 'Last result' : 'Result', icon: 'terminal' },
+                  { value: 'result', label: layout === 'phone' ? 'Last result' : 'Result', icon: 'terminal' },
                 ]}
                 value={consoleTab}
                 onChange={(v) => setConsoleTab(v as ConsoleTab)}

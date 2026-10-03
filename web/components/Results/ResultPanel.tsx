@@ -27,7 +27,7 @@ interface ResultPanelProps {
   aiReview?: boolean;
   onLine?: (line: number, column?: number) => void;
   onSubmit?: () => void;
-  /** Below 1024 px, where the editor is another pane: the way back to it from a failing result. */
+  /** On a phone, where the editor is another pane: the way back to it from a failing result. */
   onBackToCode?: () => void;
   headingRef?: Ref<HTMLHeadingElement>;
 }

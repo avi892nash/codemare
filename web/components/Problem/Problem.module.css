@@ -11,7 +11,7 @@
 }
 
 /* "More": the second half of a statement. On a phone it is closed behind one
- * 44 px toggle; from 1024 px the toggle is gone and the content is just there. */
+ * 44 px toggle; from 768 px (on a tablet upright) the toggle is gone and the content is just there. */
 .more {
   display: flex;
   flex-direction: column;
@@ -23,7 +23,8 @@
   gap: 16px;
 }
 .moreToggle { display: none; }
-@media (max-width: 1023px) {
+/* A phone — narrow, or short (on its side) — keeps the rest of a statement behind "More"; a tablet upright has the room. */
+@media (max-width: 767px), (max-width: 1023px) and (max-height: 599px) {
   .moreToggle {
     display: flex;
     align-items: center;

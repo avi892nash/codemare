@@ -34,7 +34,7 @@ interface ResultsHeroProps {
   onLine?: (line: number, column?: number) => void;
   /** Offered after all samples pass on a `run`. */
   onSubmit?: () => void;
-  /** After a result that is not a pass, on a screen where the editor is another pane (shown below 1024 px only): back to it. */
+  /** After a result that is not a pass, on a phone, where the editor is another pane (CSS shows it there only): back to it. */
   onBackToCode?: () => void;
   /** The headline, so the page can move focus to a fresh result. */
   headingRef?: Ref<HTMLHeadingElement>;

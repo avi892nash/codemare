@@ -358,8 +358,11 @@ button.testHead:hover { background: var(--bg-2); }
 }
 .actions .actionBtn { height: 40px; padding: 0 16px; font-size: var(--fs-md); }
 
-/* "Back to code" is for a screen where the editor is another pane: not shown from 1024 px up, where it is right there. */
+/* "Back to code" is for a phone, where the editor is another pane: not shown on a tablet or a desktop, where it is right there. */
 .backToCode { display: none; }
+@media (max-width: 767px), (max-width: 1023px) and (max-height: 599px) {
+  .backToCode { display: flex; }
+}
 
 /* The first failing test, in words and monospace. */
 .failure {
@@ -426,7 +429,6 @@ button.testHead:hover { background: var(--bg-2); }
 /* ─── Narrow screens: bigger targets ─────────────────────────── */
 @media (max-width: 1023px) {
   .hero { padding: 14px; }
-  .backToCode { display: flex; }
   .actions .actionBtn { height: 44px; }
   .actions { gap: 8px; }
   .testHead { min-height: 44px; }

@@ -2,7 +2,10 @@
  * ≥ 1024 px: statement | editor over console, both splits resizable.
  * < 1024 px: one pane at a time — Problem · Code · Result — picked by the
  *            switch above them (data-view on the root), so the editor is
- *            one tap away and a new result takes the screen.            */
+ *            one tap away and a new result takes the screen.
+ * 768–1023 px and at least 600 px tall (a tablet upright): two panes —
+ *            Problem, and the editor over the console — so the result is
+ *            read with the code in view (see the last media query).      */
 .root {
   --nav-h: 48px; /* Navbar.module.css */
   flex: 1;
@@ -623,6 +626,31 @@
     padding: 0 12px;
     font-size: var(--fs-sm);
     border-radius: var(--r-md);
+  }
+}
+
+/* A tablet upright (an iPad: 768–1023 px wide, 600 px tall or more): the phone's one pane per view left most of the screen blank under
+ * the statement and under a result. Two panes instead — Problem, and the right column of the desktop layout, the editor over the console
+ * (its splitter back) — so a result is read with the code in view. The switch has two segments (see useLayout); the phone's rules above
+ * are undone here and nothing else changes. A phone on its side is not a tablet: it is short, and keeps the one pane. */
+@media (min-width: 768px) and (max-width: 1023px) and (min-height: 600px) {
+  .right {
+    display: grid;
+    grid-area: 1 / 1;
+    grid-template-rows: minmax(180px, var(--top, 56%)) 8px minmax(140px, 1fr);
+    min-width: 0;
+    min-height: 0;
+  }
+  .hsep { display: block; }
+  .split .right .pane { grid-area: auto; }
+  .root[data-view='problem'] .right {
+    visibility: hidden;
+    pointer-events: none;
+  }
+  .root[data-view='code'] .console,
+  .root[data-view='result'] .editorPane {
+    visibility: visible;
+    pointer-events: auto;
   }
 }
 
