@@ -12,7 +12,7 @@
 import { randomBytes } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Browser, type BrowserContext, type Page } from '@playwright/test';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
@@ -133,19 +133,38 @@ test.afterAll(async () => {
 
 test.describe.configure({ mode: 'serial' });
 
-/** Credentials sign-in through Auth.js's own endpoints, on a client address of its own (logins are rate-limited per IP). */
+const rb = () => randomBytes(1)[0];
+
+/**
+ * Credentials sign-in through Auth.js's own endpoints, on a client address of its own (logins are rate-limited per
+ * IP), until the session says who it is (a rejected attempt answers like an accepted one and leaves the old cookie).
+ */
 async function signIn(page: Page, who: Who) {
-  const ip = `10.80.${randomBytes(1)[0]}.${randomBytes(1)[0]}`;
-  const { csrfToken } = await (await page.request.get('/api/auth/csrf')).json();
-  const res = await page.request.post('/api/auth/callback/credentials', {
-    form: { email: who.email, password, csrfToken, callbackUrl: '/', json: 'true' },
-    headers: { 'x-forwarded-for': ip },
-    maxRedirects: 0,
-  });
-  expect([200, 302]).toContain(res.status());
-  const session = await (await page.request.get('/api/auth/session')).json();
-  expect(session?.user?.email).toBe(who.email);
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    const { csrfToken } = await (await page.request.get('/api/auth/csrf')).json();
+    await page.request.post('/api/auth/callback/credentials', {
+      form: { email: who.email, password, csrfToken, callbackUrl: '/', json: 'true' },
+      headers: { 'x-forwarded-for': `10.80.${rb()}.${rb()}` },
+      maxRedirects: 0,
+    });
+    const session = await (await page.request.get('/api/auth/session')).json();
+    if (session?.user?.email === who.email) return;
+  }
+  throw new Error(`could not sign in as ${who.handle}`);
 }
+
+/** A page of its own, signed in as `who`: one session per browser context, never swapped under a running test. */
+const opened: BrowserContext[] = [];
+async function pageFor(browser: Browser, who: Who, viewport = { width: 375, height: 812 }): Promise<Page> {
+  const context = await browser.newContext({ viewport });
+  opened.push(context);
+  const page = await context.newPage();
+  await signIn(page, who);
+  return page;
+}
+test.afterEach(async () => {
+  await Promise.all(opened.splice(0).map((c) => c.close()));
+});
 
 async function setTheme(page: Page, theme: 'dark' | 'light') {
   const base = test.info().project.use.baseURL ?? 'http://localhost:4001';
@@ -279,66 +298,65 @@ test('the activity map appears with a week of activity and not before', async ({
   await expect(page.getByRole('grid', { name: /7 submissions in the last year, on 7 days/ })).toBeVisible();
 });
 
-test('the identity header is the page header: one h1, the name, one line of context, no wrapping on a phone', async ({ page }) => {
-  await page.setViewportSize({ width: 375, height: 812 });
-  await signIn(page, short);
-  await visit(page, `/u/${short.handle}`);
-  // a sign-up names the account after its handle: said once, in the title; the context is "Joined … · This is you"
-  const h1 = page.getByRole('heading', { level: 1 });
-  await expect(h1).toHaveText(short.handle);
-  await expect(page.getByText(`@${short.handle}`)).toHaveCount(0);
-  await expect(page.getByText(/^Joined .* 20\d\d/).first()).toBeVisible();
-  await expect(page.getByText('This is you')).toBeVisible();
+test('the identity header is the page header: one h1, the name, one line of context, no wrapping on a phone', async ({ browser }) => {
   const box = async (loc: ReturnType<Page['locator']>) => (await loc.boundingBox())!;
+
+  // a sign-up names the account after its handle: said once, in the title; the context is "Joined … · This is you"
+  const a = await pageFor(browser, short);
+  await visit(a, `/u/${short.handle}`);
+  const h1 = a.getByRole('heading', { level: 1 });
+  await expect(h1).toHaveText(short.handle);
+  await expect(a.getByText(`@${short.handle}`)).toHaveCount(0);
+  await expect(a.getByText(/^Joined .* 20\d\d/).first()).toBeVisible();
+  await expect(a.getByText('This is you')).toBeVisible();
   // the title and the context are one line each (26 px × 1.2 and 14 px × 1.55 leave no room for a second); nothing scrolls sideways
   expect((await box(h1)).height).toBeLessThan(40);
-  expect((await box(page.locator('main header p'))).height).toBeLessThan(26);
-  expect(await sidewaysScroll(page)).toBe(0);
+  expect((await box(a.locator('main header p'))).height).toBeLessThan(26);
+  expect(await sidewaysScroll(a)).toBe(0);
 
   // the longest handle (24 characters, no break in it) wraps in the title instead of scrolling the page
-  await signIn(page, some);
-  await visit(page, `/u/${some.handle}`);
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText(some.handle);
-  expect(await sidewaysScroll(page)).toBe(0);
+  const b = await pageFor(browser, some);
+  await visit(b, `/u/${some.handle}`);
+  await expect(b.getByRole('heading', { level: 1 })).toHaveText(some.handle);
+  expect(await sidewaysScroll(b)).toBe(0);
 
   // a display name that is not the handle: the handle joins the context, in parts that never break inside
-  await signIn(page, named);
-  await visit(page, `/u/${named.handle}`);
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Ada Lovelace');
-  await expect(page.getByText(`@${named.handle}`)).toBeVisible();
-  await expect(page.getByText('Author', { exact: true })).toBeVisible();
-  const parts = await page.locator('main header p span').evaluateAll((els) =>
+  const c = await pageFor(browser, named);
+  await visit(c, `/u/${named.handle}`);
+  await expect(c.getByRole('heading', { level: 1 })).toHaveText('Ada Lovelace');
+  await expect(c.getByText(`@${named.handle}`)).toBeVisible();
+  await expect(c.getByText('Author', { exact: true })).toBeVisible();
+  const parts = await c.locator('main header p span').evaluateAll((els) =>
     els.filter((e) => (e.textContent ?? '').trim().length > 1).map((e) => ({ text: e.textContent, h: e.getBoundingClientRect().height }))
   );
   expect(parts.length).toBeGreaterThanOrEqual(3); // @handle, Joined …, Author
   for (const p of parts) expect(p.h, `"${p.text}" stays on one line`).toBeLessThan(26);
-  expect(await sidewaysScroll(page)).toBe(0);
+  expect(await sidewaysScroll(c)).toBe(0);
 });
 
-test('a profile with nothing on it is one empty state, not a page of empty blocks', async ({ page }) => {
-  await page.setViewportSize({ width: 375, height: 812 });
-  await signIn(page, fresh);
-  await visit(page, `/u/${fresh.handle}`);
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText(fresh.handle);
+test('a profile with nothing on it is one empty state, not a page of empty blocks', async ({ browser }) => {
+  const own = await pageFor(browser, fresh);
+  await visit(own, `/u/${fresh.handle}`);
+  await expect(own.getByRole('heading', { level: 1 })).toHaveText(fresh.handle);
   // no stats, no activity map, no tokens, no learn card — and no zeros
-  await expect(page.getByRole('region', { name: 'Stats' })).toHaveCount(0);
-  await expect(page.getByRole('grid')).toHaveCount(0);
-  await expect(page.getByRole('heading', { name: 'Tokens by topic' })).toHaveCount(0);
-  await expect(page.getByRole('heading', { name: 'Learn progress' })).toHaveCount(0);
+  await expect(own.getByRole('region', { name: 'Stats' })).toHaveCount(0);
+  await expect(own.getByRole('grid')).toHaveCount(0);
+  await expect(own.getByRole('heading', { name: 'Tokens by topic' })).toHaveCount(0);
+  await expect(own.getByRole('heading', { name: 'Learn progress' })).toHaveCount(0);
   // the owner is offered the one next step, as a 44 px target
-  await expect(page.getByRole('heading', { name: 'No submissions yet' })).toBeVisible();
-  const next = page.getByRole('link', { name: 'Open the tier map', exact: true });
+  await expect(own.getByRole('heading', { name: 'No submissions yet' })).toBeVisible();
+  const next = own.getByRole('link', { name: 'Open the tier map', exact: true });
   expect((await next.boundingBox())!.height).toBeGreaterThanOrEqual(44);
-  await expect(page.getByText('No badges yet')).toBeVisible();
-  const c = await census(page);
+  await expect(own.getByText('No badges yet')).toBeVisible();
+  const c = await census(own);
   expect(c.upper).toEqual([]);
 
   // someone else's empty profile has nothing to offer: no button
-  await signIn(page, short);
-  await visit(page, `/u/${fresh.handle}`);
-  await expect(page.getByRole('heading', { name: 'No submissions yet' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Open the tier map', exact: true })).toHaveCount(0);
-  await expect(page.getByText('This is you')).toHaveCount(0);
+  const visitor = await pageFor(browser, short);
+  await visit(visitor, `/u/${fresh.handle}`);
+  await expect(visitor.getByRole('heading', { name: 'No submissions yet' })).toBeVisible();
+  await expect(visitor.getByRole('link', { name: 'Open the tier map', exact: true })).toHaveCount(0);
+  await expect(visitor.getByText('This is you')).toHaveCount(0);
 });
 
 test('on a phone the page’s primary actions are 44 px targets', async ({ page }) => {
