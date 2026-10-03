@@ -77,9 +77,9 @@ test('sign-up → solve → submit → unlock', async ({ page }) => {
 
   await test.step('solve tier-0 questions and watch the token total rise', async () => {
     const solves = [
-      { slug: 'two-sum', reward: '+1 Arrays & Hashing' },
-      { slug: 'valid-anagram', reward: '+1 Arrays & Hashing' },
-      { slug: 'reverse-string', reward: '+1 Two Pointers' },
+      { slug: 'two-sum', reward: '+1 token · Arrays & Hashing' },
+      { slug: 'valid-anagram', reward: '+1 token · Arrays & Hashing' },
+      { slug: 'reverse-string', reward: '+1 token · Two Pointers' },
     ];
     // The first one opened the way a learner finds it: from its topic's list on the map.
     await page.getByRole('list', { name: 'Arrays & Hashing problems' }).getByRole('link', { name: 'Two Sum', exact: true }).click();
@@ -127,7 +127,7 @@ test('sign-up → solve → submit → unlock', async ({ page }) => {
       await setCode(page, questionReference(slug));
       await page.getByTestId('submit-button').click();
       await expect(verdict(page)).toHaveText('Accepted', { timeout: 60_000 });
-      await expect(page.getByText('Accepted — counts for the gate')).toBeVisible();
+      await expect(page.getByTestId('verdict-summary')).toContainText('This counts for the gate');
     }
     await page.goto(attemptUrl);
     await expect(page.getByTestId('gate-progress')).toContainText('3/4');
