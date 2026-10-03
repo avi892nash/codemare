@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import s from './profile.module.css';
 
 export interface HeatDay {
@@ -12,7 +12,6 @@ export interface HeatDay {
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const ROW_LABELS = ['', 'Mon', '', 'Wed', '', 'Fri', ''];
-const STEP = 14; // cell 11px + gap 3px
 
 /** Deterministic (server = client) long date for a UTC `YYYY-MM-DD`. */
 function longDate(day: string): string {
@@ -33,7 +32,9 @@ type Pos = { w: number; d: number };
  * grid: every day cell is labelled with its count and date, one cell is in
  * the tab order (roving tabindex), and ←/→ move a week, ↑/↓ a day,
  * Home/End to the ends of the row, Ctrl+Home/End to the first/last day.
- * The focused or hovered day is also spelled out under the grid.
+ * The focused or hovered day is spelled out under the grid, in place of the
+ * year's summary (which stays the grid's accessible name). The cell size is
+ * the stylesheet's (--cell, --gap): month labels sit at calc(week × --step).
  */
 export function ActivityHeatmap({ weeks, total, activeDays }: { weeks: Array<Array<HeatDay | null>>; total: number; activeDays: number }) {
   const labelId = useId();
@@ -115,9 +116,9 @@ export function ActivityHeatmap({ weeks, total, activeDays }: { weeks: Array<Arr
       <div className={`${s.heatScroll} scroll`} ref={scroller}>
         <div className={s.heatInner}>
           <span />
-          <div className={s.months} aria-hidden="true" style={{ width: weeks.length * STEP }}>
+          <div className={s.months} aria-hidden="true" style={{ width: `calc(${weeks.length} * var(--step))` }}>
             {months.map((m) => (
-              <span key={`${m.w}-${m.label}`} style={{ left: m.w * STEP }}>
+              <span key={`${m.w}-${m.label}`} style={{ '--w': m.w } as CSSProperties}>
                 {m.label}
               </span>
             ))}
@@ -167,7 +168,11 @@ export function ActivityHeatmap({ weeks, total, activeDays }: { weeks: Array<Arr
         </div>
       </div>
       <div className={s.heatFoot}>
-        <span id={labelId}>{summary}</span>
+        {/* The summary names the grid; while a day is focused or hovered it gives way (visually) to that day. */}
+        <span id={labelId} className={shown ? 'sr-only' : undefined}>
+          {summary}
+        </span>
+        {shown && <span aria-hidden="true">{describeDay(shown)}</span>}
         <span className={s.legend} aria-hidden="true">
           Less
           {[0, 1, 2, 3, 4].map((l) => (
@@ -175,10 +180,6 @@ export function ActivityHeatmap({ weeks, total, activeDays }: { weeks: Array<Arr
           ))}
           More
         </span>
-      </div>
-      {/* Visual echo of the focused/hovered cell; its label already reaches screen readers. */}
-      <div className={`${s.focusLine} mono`} aria-hidden="true" style={{ fontSize: 12, marginTop: 6 }}>
-        {shown ? describeDay(shown) : ''}
       </div>
     </div>
   );

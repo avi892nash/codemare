@@ -208,6 +208,29 @@ export interface ProfileView {
 
 const JUDGED: SubmissionStatus[] = ['OK', 'WA', 'TLE', 'MLE', 'RE', 'CE'];
 
+/** The activity map is shown from this many active days; before that a lone filled square says nothing. */
+export const HEATMAP_MIN_ACTIVE_DAYS = 7;
+
+/**
+ * Which blocks of the profile have anything to say. A block with nothing in it
+ * is not drawn: no stats until something is solved, no activity map before a
+ * week of it, no tokens or learn card while those are empty (Recent
+ * submissions and Badges always are — their empty line is the nudge).
+ */
+export function profileSections(view: {
+  solved: { total: number };
+  activity: { activeDays: number };
+  tokens: { topics: readonly unknown[] };
+  learn: readonly { started: boolean }[];
+}) {
+  return {
+    stats: view.solved.total > 0,
+    activity: view.activity.activeDays >= HEATMAP_MIN_ACTIVE_DAYS,
+    tokens: view.tokens.topics.length > 0,
+    learn: view.learn.some((t) => t.started),
+  };
+}
+
 export async function getProfile(handle: string, viewerId: string | null, now = new Date()): Promise<ProfileView | null> {
   const user = await findProfileUser(handle);
   if (!user) return null;
